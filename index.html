@@ -292,7 +292,7 @@ body { font-family:'Barlow',sans-serif; background:#f0f2f5; min-height:100vh; pa
           ondrop="event.preventDefault();this.classList.remove('dragover');handleTurnoCSV(event.dataTransfer.files[0])">
           <div class="drop-zone-icon">📋</div>
           <div class="drop-zone-text">Clique ou arraste o CSV de turno aqui</div>
-          <div class="drop-zone-sub">consulta_turno_*.csv — atualiza OK / Falta automaticamente</div>
+          <div class="drop-zone-sub">Importe consulta_turno_*.csv E editar_equipe_*.csv (qualquer ordem)</div>
         </div>
         <input type="file" id="csv-turno-file" accept=".csv" style="display:none" onchange="handleTurnoCSV(this.files[0])">
         <div class="msg" id="import-msg"></div>
@@ -656,6 +656,11 @@ function showImportMsg(text,type) {
   el.textContent=text; el.className='msg '+type;
   clearTimeout(el._t); el._t=setTimeout(()=>el.className='msg',5000);
 }
+// csvAbertura = lista de quem abriu (consulta_turno)
+// csvEquipes  = cadastro completo de equipes (editar_equipe)
+let csvAbertura = null; // nomes que abriram turno
+let csvEquipes  = null; // todas as equipes ativas
+
 async function handleTurnoCSV(file) {
   if (!file) return;
   const reader = new FileReader();
@@ -669,39 +674,53 @@ async function handleTurnoCSV(file) {
       const iEq = headers.findIndex(h=>h.toLowerCase()==='equipe');
       const iSt = headers.findIndex(h=>h.toLowerCase()==='situação' || h.toLowerCase()==='situacao');
       if (iEq < 0) { showImportMsg('Coluna "Equipe" nao encontrada.','error'); return; }
-      const novaOk = [];
-      const novaFalta = [];
+
+      const nomes = [];
+      const situacoes = new Set();
       for (let i=1; i<lines.length; i++) {
         const cols = lines[i].split(';').map(c=>c.trim().replace(/^"|"$/g,''));
         const eq = (cols[iEq]||'').trim().toUpperCase();
-        if (!eq) continue;
-        const st = iSt >= 0 ? (cols[iSt]||'').trim().toLowerCase() : 'aberto';
-        // Aberto = abriu turno; qualquer outra coisa = falta
-        if (st === 'aberto' || st === 'fechado') {
-          if (!novaOk.includes(eq)) novaOk.push(eq);
-        } else {
-          if (!novaFalta.includes(eq)) novaFalta.push(eq);
-        }
+        if (!eq || eq==='TESTE PDA JUPITER 2' || eq==='BA-TREINAMENTO') continue;
+        const st = iSt >= 0 ? (cols[iSt]||'').trim().toLowerCase() : '';
+        situacoes.add(st);
+        if (!nomes.includes(eq)) nomes.push(eq);
       }
-      // Mantem justificadas, move o resto
-      const justifNames = teams.justif.map(t=>t.name);
-      teams.ok    = novaOk.filter(n=>!justifNames.includes(n));
-      teams.falta = novaFalta.filter(n=>!justifNames.includes(n));
-      // Equipes que estavam em falta mas agora abriram: remove de falta
-      const todosNoCsv = [...novaOk, ...novaFalta];
-      // Equipes que nao estao no CSV ficam onde estavam
-      const allKnown = allNames();
-      allKnown.forEach(n=>{
-        if (!todosNoCsv.includes(n) && !justifNames.includes(n)) {
-          if (!teams.ok.includes(n) && !teams.falta.includes(n)) teams.falta.push(n);
-        }
-      });
-      render();
-      await dbSaveTurno();
-      showImportMsg(novaOk.length+' abriram turno, '+novaFalta.length+' faltaram. Dados salvos!','success');
+
+      // Detecta tipo de arquivo pelo conteudo das situacoes
+      const isAbertura = [...situacoes].some(s=>s==='aberto'||s==='fechado');
+      const isCadastro = [...situacoes].every(s=>s==='ativo'||s==='inativo'||s==='');
+
+      if (isAbertura) {
+        // consulta_turno: quem abriu turno
+        csvAbertura = nomes;
+        showImportMsg('✅ CSV de abertura carregado: '+nomes.length+' equipes. '+(csvEquipes?'Calculando faltas...':'Agora importe o CSV de equipes (editar_equipe).'), 'success');
+      } else if (isCadastro) {
+        // editar_equipe: cadastro completo
+        csvEquipes = nomes;
+        showImportMsg('✅ CSV de equipes carregado: '+nomes.length+' equipes. '+(csvAbertura?'Calculando faltas...':'Agora importe o CSV de abertura (consulta_turno).'), 'success');
+      } else {
+        showImportMsg('Formato de CSV nao reconhecido.','error'); return;
+      }
+
+      // Se tiver os dois, calcula
+      if (csvAbertura && csvEquipes) {
+        await aplicarTurno();
+      }
     } catch(err) { showImportMsg('Erro: '+err.message,'error'); }
   };
   reader.readAsText(file,'utf-8');
+}
+
+async function aplicarTurno() {
+  const justifNames = teams.justif.map(t=>t.name);
+  const novaOk    = csvAbertura.filter(n=>!justifNames.includes(n));
+  const novaFalta = csvEquipes.filter(n=>!csvAbertura.includes(n)&&!justifNames.includes(n));
+  teams.ok    = novaOk;
+  teams.falta = novaFalta;
+  render();
+  await dbSaveTurno();
+  showImportMsg('✅ '+novaOk.length+' abriram turno | ❌ '+novaFalta.length+' nao abriram. Salvo!','success');
+  csvAbertura = null; csvEquipes = null; // reset para proxima importacao
 }
 function openModal()  { document.getElementById('modal-overlay').classList.add('open'); }
 function closeModal() { document.getElementById('modal-overlay').classList.remove('open'); }
