@@ -286,29 +286,16 @@ body { font-family:'Barlow',sans-serif; background:#f0f2f5; min-height:100vh; pa
       </div>
 
       <div id="tab-import" style="display:none">
-        <p style="font-size:0.78rem;font-weight:700;color:#555;margin-bottom:12px;">Importe os 2 arquivos abaixo para calcular quem abriu/faltou automaticamente:</p>
-
-        <label style="display:block;font-size:0.75rem;font-weight:800;color:#1a7a4a;text-transform:uppercase;margin-bottom:4px;">1. CSV de Abertura (consulta_turno_*.csv)</label>
-        <div class="drop-zone" style="margin-bottom:12px;padding:18px" onclick="document.getElementById('csv-abertura-file').click()"
+        <p style="font-size:0.78rem;font-weight:700;color:#555;margin-bottom:12px;">Importe o CSV de abertura para atualizar automaticamente quem abriu e quem faltou:</p>
+        <div class="drop-zone" onclick="document.getElementById('csv-abertura-file').click()"
           ondragover="event.preventDefault();this.classList.add('dragover')"
           ondragleave="this.classList.remove('dragover')"
           ondrop="event.preventDefault();this.classList.remove('dragover');receberAbertura(event.dataTransfer.files[0])">
-          <div class="drop-zone-icon" style="font-size:1.4rem">📋</div>
-          <div class="drop-zone-text" id="lbl-abertura">Clique ou arraste aqui</div>
+          <div class="drop-zone-icon">📋</div>
+          <div class="drop-zone-text" id="lbl-abertura">Clique ou arraste o consulta_turno_*.csv aqui</div>
+          <div class="drop-zone-sub">Atualiza OK e NAO ABRIU automaticamente</div>
         </div>
         <input type="file" id="csv-abertura-file" accept=".csv" style="display:none" onchange="receberAbertura(this.files[0])">
-
-        <label style="display:block;font-size:0.75rem;font-weight:800;color:#c53030;text-transform:uppercase;margin-bottom:4px;">2. CSV de Equipes (editar_equipe_*.csv)</label>
-        <div class="drop-zone" style="margin-bottom:12px;padding:18px" onclick="document.getElementById('csv-cadastro-file').click()"
-          ondragover="event.preventDefault();this.classList.add('dragover')"
-          ondragleave="this.classList.remove('dragover')"
-          ondrop="event.preventDefault();this.classList.remove('dragover');receberCadastro(event.dataTransfer.files[0])">
-          <div class="drop-zone-icon" style="font-size:1.4rem">👥</div>
-          <div class="drop-zone-text" id="lbl-cadastro">Clique ou arraste aqui</div>
-        </div>
-        <input type="file" id="csv-cadastro-file" accept=".csv" style="display:none" onchange="receberCadastro(this.files[0])">
-
-        <button class="btn-primary" id="btn-aplicar" onclick="aplicarTurno()" style="display:none">✅ APLICAR E SALVAR</button>
         <div class="msg" id="import-msg"></div>
       </div>
 
@@ -670,67 +657,36 @@ function showImportMsg(text,type) {
   el.textContent=text; el.className='msg '+type;
   clearTimeout(el._t); el._t=setTimeout(()=>el.className='msg',5000);
 }
-let csvAbertura = null;
-let csvEquipes  = null;
+// Lista mestre de todas as equipes ativas
+const EQUIPES_ATIVAS = ['ESMERALDO-IRC','ENES-IRC','FELIPE-IRC','IRISMAR-IRC','JAILSON-IRC','JARBAS-IRC','VANILSON-IRC','WILIAN-IRC','EDILSON-IRC','ALEX-IRC','VAGNO-IRC','EDMILSON-IRC','DOUGLAS-JAC','RODRIGO-JAC','JAILTON-JAC','GERALDO-JAC','CLEBSON-JAC','DIOGO-JAC','LUCIANO-JAC','FABIANO-JAC','EMERSON-JAC','PATRICIO-JAC','MENEZES-IRC','WESLEY-IRC','MARCOS-IRC','GIORLAN-IRC','JULIO-JAC','VALMIR-JAC','CARLOS-JAC','JENILSON-JAC','JOAO-JAC','GABRIEL-IRC','WASHINGTON-IRC','ANDRE-JAC','ALAN-IRC','JAIR-JAC','TIAGO-JAC','REVERTON-IRC','ELIEZER-IRC','UBERDAN-IRC','ROMERO-IRC','CAIQUE-JAC','RIAN-IRC'];
 
-function lerNomesCSV(text) {
-  const lines = text.split(/\r?\n/).filter(l=>l.trim());
-  lines[0] = lines[0].replace(/^\uFEFF/,'');
-  const headers = lines[0].split(';').map(h=>h.trim().replace(/^"|"$/g,''));
-  const iEq = headers.findIndex(h=>h.toLowerCase()==='equipe');
-  if (iEq < 0) return null;
-  const nomes = [];
-  for (let i=1; i<lines.length; i++) {
-    const cols = lines[i].split(';').map(c=>c.trim().replace(/^"|"$/g,''));
-    const eq = (cols[iEq]||'').trim().toUpperCase();
-    if (eq && eq!=='TESTE PDA JUPITER 2' && eq!=='BA-TREINAMENTO' && !nomes.includes(eq))
-      nomes.push(eq);
-  }
-  return nomes;
-}
 function receberAbertura(file) {
   if (!file) return;
   const r = new FileReader();
-  r.onload = function(e) {
-    const nomes = lerNomesCSV(e.target.result);
-    if (!nomes) { showImportMsg('Coluna Equipe nao encontrada.','error'); return; }
-    csvAbertura = nomes;
-    document.getElementById('lbl-abertura').textContent = '✅ '+nomes.length+' equipes carregadas';
-    document.getElementById('drop-zone-import') // nao existe mais, ignora
-    verificarPronto();
+  r.onload = async function(e) {
+    try {
+      const text = e.target.result;
+      const lines = text.split(/\r?\n/).filter(l=>l.trim());
+      lines[0] = lines[0].replace(/^\uFEFF/,'');
+      const headers = lines[0].split(';').map(h=>h.trim().replace(/^"|"$/g,''));
+      const iEq = headers.findIndex(h=>h.toLowerCase()==='equipe');
+      if (iEq < 0) { showImportMsg('Coluna "Equipe" nao encontrada.','error'); return; }
+      const abriram = [];
+      for (let i=1; i<lines.length; i++) {
+        const cols = lines[i].split(';').map(c=>c.trim().replace(/^"|"$/g,''));
+        const eq = (cols[iEq]||'').trim().toUpperCase();
+        if (eq && !abriram.includes(eq)) abriram.push(eq);
+      }
+      const justifNames = teams.justif.map(t=>t.name);
+      teams.ok    = abriram.filter(n=>!justifNames.includes(n));
+      teams.falta = EQUIPES_ATIVAS.filter(n=>!abriram.includes(n)&&!justifNames.includes(n));
+      render();
+      await dbSaveTurno();
+      document.getElementById('lbl-abertura').textContent = '✅ '+abriram.length+' abriram turno';
+      showImportMsg('✅ '+teams.ok.length+' abriram | ❌ '+teams.falta.length+' nao abriram. Salvo!','success');
+    } catch(err) { showImportMsg('Erro: '+err.message,'error'); }
   };
   r.readAsText(file,'utf-8');
-}
-function receberCadastro(file) {
-  if (!file) return;
-  const r = new FileReader();
-  r.onload = function(e) {
-    const nomes = lerNomesCSV(e.target.result);
-    if (!nomes) { showImportMsg('Coluna Equipe nao encontrada.','error'); return; }
-    csvEquipes = nomes;
-    document.getElementById('lbl-cadastro').textContent = '✅ '+nomes.length+' equipes carregadas';
-    verificarPronto();
-  };
-  r.readAsText(file,'utf-8');
-}
-function verificarPronto() {
-  if (csvAbertura && csvEquipes) {
-    document.getElementById('btn-aplicar').style.display = 'block';
-    showImportMsg('Ambos os arquivos carregados! Clique em APLICAR E SALVAR.','success');
-  }
-}
-async function aplicarTurno() {
-  if (!csvAbertura || !csvEquipes) { showImportMsg('Importe os dois arquivos primeiro.','error'); return; }
-  const justifNames = teams.justif.map(t=>t.name);
-  teams.ok    = csvAbertura.filter(n=>!justifNames.includes(n));
-  teams.falta = csvEquipes.filter(n=>!csvAbertura.includes(n)&&!justifNames.includes(n));
-  render();
-  await dbSaveTurno();
-  showImportMsg('✅ '+teams.ok.length+' abriram | ❌ '+teams.falta.length+' nao abriram. Salvo!','success');
-  document.getElementById('btn-aplicar').style.display='none';
-  document.getElementById('lbl-abertura').textContent='Clique ou arraste aqui';
-  document.getElementById('lbl-cadastro').textContent='Clique ou arraste aqui';
-  csvAbertura=null; csvEquipes=null;
 }
 function openModal()  { document.getElementById('modal-overlay').classList.add('open'); }
 function closeModal() { document.getElementById('modal-overlay').classList.remove('open'); }
