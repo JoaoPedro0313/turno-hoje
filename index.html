@@ -608,7 +608,7 @@ async function handleCSV(file) {
         if(!nova[eq])nova[eq]={lancamentos:0,ots:[],valor:0,status:[],abertura:'',fechamento:'',responsavel:'',supervisor:''};
         nova[eq].lancamentos++;
         const ot=(cols[iOT]||'').trim(); if(ot&&!nova[eq].ots.includes(ot))nova[eq].ots.push(ot);
-        try{const v=parseFloat((cols[iVal]||'0').replace(',','.'));if(!isNaN(v))nova[eq].valor+=v;}catch(e){}
+        try{const v=parseFloat((cols[iVal]||'0').replace(/\./g,'').replace(',','.'));if(!isNaN(v))nova[eq].valor+=v;}catch(e){}
         const st=(cols[iSt]||'').trim(); if(st&&!nova[eq].status.includes(st))nova[eq].status.push(st);
         if(cols[iAb])nova[eq].abertura=cols[iAb].trim();
         if(cols[iFe])nova[eq].fechamento=cols[iFe].trim();
