@@ -166,9 +166,28 @@ body { font-family:'Barlow',sans-serif; background:#f0f2f5; min-height:100vh; pa
 .prod-stat-val { font-size:1.1rem; font-weight:800; color:#1a365d; display:block; }
 .prod-stat-lbl { font-size:0.68rem; font-weight:700; color:#888; text-transform:uppercase; }
 
+/* ── PAGE NAV ── */
+.page-nav { display:flex; gap:0; background:#fff; border-bottom:3px solid #e2e8f0; position:sticky; top:0; z-index:90; box-shadow:0 2px 8px rgba(0,0,0,0.08); }
+.page-nav-btn { flex:1; padding:14px 10px; border:none; background:transparent; font-family:'Barlow',sans-serif; font-size:0.88rem; font-weight:800; color:#888; cursor:pointer; letter-spacing:0.5px; text-transform:uppercase; border-bottom:3px solid transparent; margin-bottom:-3px; transition:all 0.2s; display:flex; align-items:center; justify-content:center; gap:8px; }
+.page-nav-btn:hover { background:#f7f9fc; color:#444; }
+.page-nav-btn.active-turno { color:#1a7a4a; border-bottom-color:#1a7a4a; background:#f0faf4; }
+.page-nav-btn.active-prod  { color:#2b6cb0; border-bottom-color:#2b6cb0; background:#ebf4ff; }
+/* ── PASSWORD GATE ── */
+.pwd-gate { display:flex; align-items:center; justify-content:center; min-height:60vh; }
+.pwd-box { background:#fff; border-radius:16px; padding:40px 36px; max-width:380px; width:100%; box-shadow:0 8px 40px rgba(0,0,0,0.12); text-align:center; }
+.pwd-icon { font-size:3rem; margin-bottom:12px; }
+.pwd-title { font-size:1.2rem; font-weight:800; color:#1a365d; margin-bottom:6px; }
+.pwd-sub { font-size:0.8rem; font-weight:600; color:#888; margin-bottom:24px; }
+.pwd-input { width:100%; padding:12px 16px; border:2px solid #e2e8f0; border-radius:10px; font-family:'Barlow',sans-serif; font-size:1rem; font-weight:700; color:#2d3748; outline:none; text-align:center; letter-spacing:4px; transition:border-color 0.15s; margin-bottom:12px; }
+.pwd-input:focus { border-color:#2b6cb0; }
+.pwd-input.error { border-color:#e53e3e; animation:shake 0.35s ease; }
+@keyframes shake { 0%,100%{transform:translateX(0)} 20%,60%{transform:translateX(-6px)} 40%,80%{transform:translateX(6px)} }
+.pwd-btn { width:100%; padding:13px; background:#2b6cb0; color:#fff; border:none; border-radius:10px; font-family:'Barlow',sans-serif; font-size:0.95rem; font-weight:800; cursor:pointer; transition:background 0.15s; }
+.pwd-btn:hover { background:#1a4a80; }
+.pwd-err { font-size:0.78rem; font-weight:700; color:#c53030; margin-top:10px; min-height:20px; }
 @media print {
   body { background:#fff; padding-bottom:0; }
-  .fab,.modal-overlay,.btn-print,.btn-refresh,.loading-overlay { display:none !important; }
+  .fab,.modal-overlay,.btn-print,.btn-refresh,.loading-overlay,.page-nav { display:none !important; }
   .section { box-shadow:none; border:1px solid #e0e0e0; }
   * { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
 }
@@ -196,44 +215,72 @@ body { font-family:'Barlow',sans-serif; background:#f0f2f5; min-height:100vh; pa
 </div>
 <div class="header-bar"></div>
 
-<div class="container">
-  <div class="section">
-    <div class="section-header green">
-      <div class="section-label"><div class="icon-check">&#10003;</div> ABRIU TURNO</div>
-      <div class="section-count green" id="ok-count">0</div>
-    </div>
-    <div class="grid" id="abriu-grid"></div>
-  </div>
-  <div class="section">
-    <div class="section-header orange">
-      <div class="section-label"><div class="icon-warn">!</div> FALTA JUSTIFICADA</div>
-      <div class="section-count orange" id="justif-count">0</div>
-    </div>
-    <div class="grid" id="justif-grid"></div>
-  </div>
-  <div class="section">
-    <div class="section-header red">
-      <div class="section-label"><div class="icon-dot"></div> NAO ABRIU TURNO</div>
-      <div class="section-count red" id="falta-count">0</div>
-    </div>
-    <div class="grid" id="falta-grid"></div>
-  </div>
-  <div class="section">
-    <div class="section-header blue">
-      <div class="section-label"><div class="icon-blue">&#128202;</div> LANCAMENTO DE PRODUCAO</div>
-      <div style="display:flex;gap:12px;align-items:center;">
-        <span style="font-size:0.72rem;font-weight:700;color:#2b6cb0;" id="prod-valor-total"></span>
-        <div class="section-count blue" id="prod-lancou-count">0</div>
-      </div>
-    </div>
-    <div class="section-divider">LANCOU &#8212; <span id="lbl-lancou">0</span> equipes</div>
-    <div class="grid" id="prod-lancou-grid"></div>
-    <div class="section-divider">AGUARDANDO &#8212; <span id="lbl-aguard">0</span> equipes</div>
-    <div class="grid" id="prod-aguard-grid"></div>
-  </div>
+<!-- NAVEGAÇÃO ENTRE ABAS -->
+<div class="page-nav">
+  <button class="page-nav-btn active-turno" id="nav-turno" onclick="switchPage('turno')">&#128203; TURNO DO DIA</button>
+  <button class="page-nav-btn" id="nav-prod" onclick="switchPage('prod')">&#128202; PRODUÇÃO &#128274;</button>
 </div>
 
-<div class="footer" id="footer-text"></div>
+<!-- PÁGINA 1: TURNO -->
+<div id="page-turno">
+  <div class="container">
+    <div class="section">
+      <div class="section-header green">
+        <div class="section-label"><div class="icon-check">&#10003;</div> ABRIU TURNO</div>
+        <div class="section-count green" id="ok-count">0</div>
+      </div>
+      <div class="grid" id="abriu-grid"></div>
+    </div>
+    <div class="section">
+      <div class="section-header orange">
+        <div class="section-label"><div class="icon-warn">!</div> FALTA JUSTIFICADA</div>
+        <div class="section-count orange" id="justif-count">0</div>
+      </div>
+      <div class="grid" id="justif-grid"></div>
+    </div>
+    <div class="section">
+      <div class="section-header red">
+        <div class="section-label"><div class="icon-dot"></div> NAO ABRIU TURNO</div>
+        <div class="section-count red" id="falta-count">0</div>
+      </div>
+      <div class="grid" id="falta-grid"></div>
+    </div>
+  </div>
+  <div class="footer" id="footer-text"></div>
+</div>
+
+<!-- PÁGINA 2: PRODUÇÃO (protegida por senha) -->
+<div id="page-prod" style="display:none;">
+  <div class="pwd-gate" id="pwd-gate">
+    <div class="pwd-box">
+      <div class="pwd-icon">&#128274;</div>
+      <div class="pwd-title">ÁREA RESTRITA</div>
+      <div class="pwd-sub">Digite a senha para acessar o Lançamento de Produção</div>
+      <input class="pwd-input" type="password" id="pwd-input" placeholder="••••••" maxlength="20"
+        onkeydown="if(event.key==='Enter')checkSenha()">
+      <button class="pwd-btn" onclick="checkSenha()">&#128275; ENTRAR</button>
+      <div class="pwd-err" id="pwd-err"></div>
+    </div>
+  </div>
+  <div id="prod-content" style="display:none;">
+    <div class="container">
+      <div class="section">
+        <div class="section-header blue">
+          <div class="section-label"><div class="icon-blue">&#128202;</div> LANCAMENTO DE PRODUCAO</div>
+          <div style="display:flex;gap:12px;align-items:center;">
+            <span style="font-size:0.72rem;font-weight:700;color:#2b6cb0;" id="prod-valor-total"></span>
+            <div class="section-count blue" id="prod-lancou-count">0</div>
+            <button onclick="lockProducao()" style="background:#e53e3e;color:#fff;border:none;border-radius:6px;padding:4px 10px;font-family:'Barlow',sans-serif;font-size:0.72rem;font-weight:800;cursor:pointer;">&#128274; BLOQUEAR</button>
+          </div>
+        </div>
+        <div class="section-divider">LANCOU &#8212; <span id="lbl-lancou">0</span> equipes</div>
+        <div class="grid" id="prod-lancou-grid"></div>
+        <div class="section-divider">AGUARDANDO &#8212; <span id="lbl-aguard">0</span> equipes</div>
+        <div class="grid" id="prod-aguard-grid"></div>
+      </div>
+    </div>
+  </div>
+</div>
 
 <button class="fab" onclick="openModal()">&#9881; GERENCIAR</button>
 <button class="btn-print" onclick="tirarPrint()">&#128248; SALVAR PRINT</button>
@@ -701,6 +748,52 @@ function showProdMsg(text,type) {
   el.textContent=text; el.className='msg '+type;
   clearTimeout(el._t); el._t=setTimeout(()=>el.className='msg',4000);
 }
+// ─── SENHA / PAGES ────────────────────────────────────────────────────────────
+const SENHA_PRODUCAO = 'obras2026'; // ← ALTERE A SENHA AQUI
+let prodUnlocked = false;
+
+function switchPage(page) {
+  document.getElementById('page-turno').style.display = page === 'turno' ? '' : 'none';
+  document.getElementById('page-prod').style.display  = page === 'prod'  ? '' : 'none';
+  document.getElementById('nav-turno').className = 'page-nav-btn' + (page === 'turno' ? ' active-turno' : '');
+  document.getElementById('nav-prod').className  = 'page-nav-btn' + (page === 'prod'  ? ' active-prod'  : '');
+  if (page === 'prod') {
+    if (prodUnlocked) {
+      document.getElementById('pwd-gate').style.display    = 'none';
+      document.getElementById('prod-content').style.display = '';
+      renderProducao();
+    } else {
+      document.getElementById('pwd-gate').style.display    = '';
+      document.getElementById('prod-content').style.display = 'none';
+      setTimeout(() => { const i = document.getElementById('pwd-input'); if(i) i.focus(); }, 100);
+    }
+  }
+}
+
+function checkSenha() {
+  const input = document.getElementById('pwd-input');
+  const err   = document.getElementById('pwd-err');
+  if (input.value === SENHA_PRODUCAO) {
+    prodUnlocked = true;
+    input.value = '';
+    err.textContent = '';
+    document.getElementById('pwd-gate').style.display     = 'none';
+    document.getElementById('prod-content').style.display = '';
+    renderProducao();
+  } else {
+    err.textContent = 'Senha incorreta. Tente novamente.';
+    input.classList.add('error');
+    input.value = '';
+    setTimeout(() => input.classList.remove('error'), 400);
+    input.focus();
+  }
+}
+
+function lockProducao() {
+  prodUnlocked = false;
+  switchPage('turno');
+}
+
 async function atualizarRelatorio() {
   const btn=document.getElementById('btn-refresh');
   btn.innerHTML='<span class="spinning-icon">&#8635;</span> ATUALIZANDO...'; btn.disabled=true;
