@@ -282,7 +282,7 @@ body { font-family:'Barlow',sans-serif; background:#f0f2f5; min-height:100vh; pa
   </div>
 </div>
 
-<button class="fab" onclick="openModal()">&#9881; GERENCIAR</button>
+<button class="fab" onclick="openAdmModal()">&#9881; GERENCIAR</button>
 <button class="btn-print" onclick="tirarPrint()">&#128248; SALVAR PRINT</button>
 <button class="btn-refresh" id="btn-refresh" onclick="atualizarRelatorio()">&#8635; ATUALIZAR</button>
 
@@ -749,6 +749,35 @@ function showProdMsg(text,type) {
   clearTimeout(el._t); el._t=setTimeout(()=>el.className='msg',4000);
 }
 // ─── SENHA / PAGES ────────────────────────────────────────────────────────────
+const SENHA_ADM = 'adm2026'; // ← ALTERE A SENHA ADM AQUI
+let admUnlocked = false;
+
+function openAdmModal() {
+  if (admUnlocked) { openModal(); return; }
+  document.getElementById('adm-modal-overlay').classList.add('open');
+  setTimeout(()=>{ document.getElementById('adm-pwd-input').focus(); }, 100);
+}
+function closeAdmModal() {
+  document.getElementById('adm-modal-overlay').classList.remove('open');
+  document.getElementById('adm-pwd-input').value = '';
+  document.getElementById('adm-pwd-err').textContent = '';
+}
+function checkAdmSenha() {
+  const input = document.getElementById('adm-pwd-input');
+  const err   = document.getElementById('adm-pwd-err');
+  if (input.value === SENHA_ADM) {
+    admUnlocked = true;
+    closeAdmModal();
+    openModal();
+  } else {
+    err.textContent = 'Senha incorreta. Tente novamente.';
+    input.classList.add('error');
+    input.value = '';
+    setTimeout(() => input.classList.remove('error'), 400);
+    input.focus();
+  }
+}
+
 const SENHA_PRODUCAO = 'obras2026'; // ← ALTERE A SENHA AQUI
 let prodUnlocked = false;
 
@@ -836,5 +865,24 @@ function hideLoading() {
   hideLoading();
 })();
 </script>
+
+<!-- MODAL SENHA ADM -->
+<div class="modal-overlay" id="adm-modal-overlay" onclick="if(event.target.id==='adm-modal-overlay')closeAdmModal()">
+  <div class="modal" style="max-width:380px;">
+    <div class="modal-header" style="background:linear-gradient(135deg,#1a365d,#2b6cb0);">
+      <h2>&#128272; ACESSO ADMINISTRATIVO</h2>
+      <button class="modal-close" onclick="closeAdmModal()">&#10005;</button>
+    </div>
+    <div class="modal-body" style="text-align:center;padding:32px 28px;">
+      <div style="font-size:2.5rem;margin-bottom:10px;">&#9881;</div>
+      <div style="font-size:1rem;font-weight:800;color:#1a365d;margin-bottom:6px;">ÁREA DO ADMINISTRADOR</div>
+      <div style="font-size:0.78rem;font-weight:600;color:#888;margin-bottom:22px;">Digite a senha ADM para continuar</div>
+      <input class="pwd-input" type="password" id="adm-pwd-input" placeholder="••••••" maxlength="20"
+        onkeydown="if(event.key==='Enter')checkAdmSenha()" style="margin-bottom:12px;">
+      <button class="pwd-btn" onclick="checkAdmSenha()" style="background:#1a7a4a;">&#128275; ENTRAR</button>
+      <div class="pwd-err" id="adm-pwd-err"></div>
+    </div>
+  </div>
+</div>
 </body>
 </html>
