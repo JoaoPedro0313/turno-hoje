@@ -286,15 +286,29 @@ body { font-family:'Barlow',sans-serif; background:#f0f2f5; min-height:100vh; pa
       </div>
 
       <div id="tab-import" style="display:none">
-        <div class="drop-zone" id="drop-zone-import" onclick="document.getElementById('csv-turno-file').click()"
+        <p style="font-size:0.78rem;font-weight:700;color:#555;margin-bottom:12px;">Importe os 2 arquivos abaixo para calcular quem abriu/faltou automaticamente:</p>
+
+        <label style="display:block;font-size:0.75rem;font-weight:800;color:#1a7a4a;text-transform:uppercase;margin-bottom:4px;">1. CSV de Abertura (consulta_turno_*.csv)</label>
+        <div class="drop-zone" style="margin-bottom:12px;padding:18px" onclick="document.getElementById('csv-abertura-file').click()"
           ondragover="event.preventDefault();this.classList.add('dragover')"
           ondragleave="this.classList.remove('dragover')"
-          ondrop="event.preventDefault();this.classList.remove('dragover');handleTurnoCSV(event.dataTransfer.files[0])">
-          <div class="drop-zone-icon">📋</div>
-          <div class="drop-zone-text">Clique ou arraste o CSV de turno aqui</div>
-          <div class="drop-zone-sub">Importe consulta_turno_*.csv E editar_equipe_*.csv (qualquer ordem)</div>
+          ondrop="event.preventDefault();this.classList.remove('dragover');receberAbertura(event.dataTransfer.files[0])">
+          <div class="drop-zone-icon" style="font-size:1.4rem">📋</div>
+          <div class="drop-zone-text" id="lbl-abertura">Clique ou arraste aqui</div>
         </div>
-        <input type="file" id="csv-turno-file" accept=".csv" style="display:none" onchange="handleTurnoCSV(this.files[0])">
+        <input type="file" id="csv-abertura-file" accept=".csv" style="display:none" onchange="receberAbertura(this.files[0])">
+
+        <label style="display:block;font-size:0.75rem;font-weight:800;color:#c53030;text-transform:uppercase;margin-bottom:4px;">2. CSV de Equipes (editar_equipe_*.csv)</label>
+        <div class="drop-zone" style="margin-bottom:12px;padding:18px" onclick="document.getElementById('csv-cadastro-file').click()"
+          ondragover="event.preventDefault();this.classList.add('dragover')"
+          ondragleave="this.classList.remove('dragover')"
+          ondrop="event.preventDefault();this.classList.remove('dragover');receberCadastro(event.dataTransfer.files[0])">
+          <div class="drop-zone-icon" style="font-size:1.4rem">👥</div>
+          <div class="drop-zone-text" id="lbl-cadastro">Clique ou arraste aqui</div>
+        </div>
+        <input type="file" id="csv-cadastro-file" accept=".csv" style="display:none" onchange="receberCadastro(this.files[0])">
+
+        <button class="btn-primary" id="btn-aplicar" onclick="aplicarTurno()" style="display:none">✅ APLICAR E SALVAR</button>
         <div class="msg" id="import-msg"></div>
       </div>
 
@@ -305,7 +319,7 @@ body { font-family:'Barlow',sans-serif; background:#f0f2f5; min-height:100vh; pa
           ondrop="event.preventDefault();this.classList.remove('dragover');handleCSV(event.dataTransfer.files[0])">
           <div class="drop-zone-icon">&#128193;</div>
           <div class="drop-zone-text">Clique ou arraste o CSV aqui</div>
-          <div class="drop-zone-sub">apontamento_faturamento_*.csv (separado por ponto e virgula)</div>
+          <div class="drop-zone-sub">apontamento_faturamento_*.csv — use o arquivo do ZIP</div>
         </div>
         <input type="file" id="csv-file" accept=".csv" style="display:none" onchange="handleCSV(this.files[0])">
         <div class="prod-summary" id="prod-summary">
@@ -589,16 +603,16 @@ async function handleCSV(file) {
       lines[0] = lines[0].replace(/^\uFEFF/,'');
       const headers = lines[0].split(';').map(h=>h.trim().replace(/^"|"$/g,''));
       const idx = col => headers.findIndex(h=>h.replace(/^\uFEFF/,'').toLowerCase()===col.toLowerCase());
-      // Suporta formato novo (Equipe, Situação...) e formato antigo (des_equipe...)
-      const iEq  = idx('Equipe')    >= 0 ? idx('Equipe')    : idx('des_equipe');
+      const iEq  = idx('des_equipe');
       const iVal = idx('valor_total');
-      const iSt  = idx('Situação')  >= 0 ? idx('Situação')  : idx('retorno_campo');
-      const iAb  = idx('Data início') >= 0 ? idx('Data início') : idx('abertura_turno');
-      const iFe  = idx('Data fim')  >= 0 ? idx('Data fim')  : idx('fechamento_turno');
-      const iRe  = idx('Responsável') >= 0 ? idx('Responsável') : idx('responsavel');
+      const iSt  = idx('retorno_campo');
+      const iAb  = idx('abertura_turno');
+      const iFe  = idx('fechamento_turno');
+      const iRe  = idx('responsavel');
       const iSup = idx('Supervisor');
       const iOT  = idx('OT');
-      if(iEq<0){showProdMsg('Coluna de equipe nao encontrada no CSV.','error');return;}
+      if(iEq<0){showProdMsg('Coluna "des_equipe" nao encontrada. Use o arquivo apontamento_faturamento_*.csv','error');return;}
+      if(iVal<0){showProdMsg('Coluna "valor_total" nao encontrada.','error');return;}
       const nova={};
       for(let i=1;i<lines.length;i++){
         const cols=parseCsvLine(lines[i]);
@@ -656,71 +670,67 @@ function showImportMsg(text,type) {
   el.textContent=text; el.className='msg '+type;
   clearTimeout(el._t); el._t=setTimeout(()=>el.className='msg',5000);
 }
-// csvAbertura = lista de quem abriu (consulta_turno)
-// csvEquipes  = cadastro completo de equipes (editar_equipe)
-let csvAbertura = null; // nomes que abriram turno
-let csvEquipes  = null; // todas as equipes ativas
+let csvAbertura = null;
+let csvEquipes  = null;
 
-async function handleTurnoCSV(file) {
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = async function(e) {
-    try {
-      const text = e.target.result;
-      const lines = text.split(/\r?\n/).filter(l=>l.trim());
-      if (lines.length < 2) { showImportMsg('Arquivo vazio.','error'); return; }
-      lines[0] = lines[0].replace(/^\uFEFF/,'');
-      const headers = lines[0].split(';').map(h=>h.trim().replace(/^"|"$/g,''));
-      const iEq = headers.findIndex(h=>h.toLowerCase()==='equipe');
-      const iSt = headers.findIndex(h=>h.toLowerCase()==='situação' || h.toLowerCase()==='situacao');
-      if (iEq < 0) { showImportMsg('Coluna "Equipe" nao encontrada.','error'); return; }
-
-      const nomes = [];
-      const situacoes = new Set();
-      for (let i=1; i<lines.length; i++) {
-        const cols = lines[i].split(';').map(c=>c.trim().replace(/^"|"$/g,''));
-        const eq = (cols[iEq]||'').trim().toUpperCase();
-        if (!eq || eq==='TESTE PDA JUPITER 2' || eq==='BA-TREINAMENTO') continue;
-        const st = iSt >= 0 ? (cols[iSt]||'').trim().toLowerCase() : '';
-        situacoes.add(st);
-        if (!nomes.includes(eq)) nomes.push(eq);
-      }
-
-      // Detecta tipo de arquivo pelo conteudo das situacoes
-      const isAbertura = [...situacoes].some(s=>s==='aberto'||s==='fechado');
-      const isCadastro = [...situacoes].every(s=>s==='ativo'||s==='inativo'||s==='');
-
-      if (isAbertura) {
-        // consulta_turno: quem abriu turno
-        csvAbertura = nomes;
-        showImportMsg('✅ CSV de abertura carregado: '+nomes.length+' equipes. '+(csvEquipes?'Calculando faltas...':'Agora importe o CSV de equipes (editar_equipe).'), 'success');
-      } else if (isCadastro) {
-        // editar_equipe: cadastro completo
-        csvEquipes = nomes;
-        showImportMsg('✅ CSV de equipes carregado: '+nomes.length+' equipes. '+(csvAbertura?'Calculando faltas...':'Agora importe o CSV de abertura (consulta_turno).'), 'success');
-      } else {
-        showImportMsg('Formato de CSV nao reconhecido.','error'); return;
-      }
-
-      // Se tiver os dois, calcula
-      if (csvAbertura && csvEquipes) {
-        await aplicarTurno();
-      }
-    } catch(err) { showImportMsg('Erro: '+err.message,'error'); }
-  };
-  reader.readAsText(file,'utf-8');
+function lerNomesCSV(text) {
+  const lines = text.split(/\r?\n/).filter(l=>l.trim());
+  lines[0] = lines[0].replace(/^\uFEFF/,'');
+  const headers = lines[0].split(';').map(h=>h.trim().replace(/^"|"$/g,''));
+  const iEq = headers.findIndex(h=>h.toLowerCase()==='equipe');
+  if (iEq < 0) return null;
+  const nomes = [];
+  for (let i=1; i<lines.length; i++) {
+    const cols = lines[i].split(';').map(c=>c.trim().replace(/^"|"$/g,''));
+    const eq = (cols[iEq]||'').trim().toUpperCase();
+    if (eq && eq!=='TESTE PDA JUPITER 2' && eq!=='BA-TREINAMENTO' && !nomes.includes(eq))
+      nomes.push(eq);
+  }
+  return nomes;
 }
-
+function receberAbertura(file) {
+  if (!file) return;
+  const r = new FileReader();
+  r.onload = function(e) {
+    const nomes = lerNomesCSV(e.target.result);
+    if (!nomes) { showImportMsg('Coluna Equipe nao encontrada.','error'); return; }
+    csvAbertura = nomes;
+    document.getElementById('lbl-abertura').textContent = '✅ '+nomes.length+' equipes carregadas';
+    document.getElementById('drop-zone-import') // nao existe mais, ignora
+    verificarPronto();
+  };
+  r.readAsText(file,'utf-8');
+}
+function receberCadastro(file) {
+  if (!file) return;
+  const r = new FileReader();
+  r.onload = function(e) {
+    const nomes = lerNomesCSV(e.target.result);
+    if (!nomes) { showImportMsg('Coluna Equipe nao encontrada.','error'); return; }
+    csvEquipes = nomes;
+    document.getElementById('lbl-cadastro').textContent = '✅ '+nomes.length+' equipes carregadas';
+    verificarPronto();
+  };
+  r.readAsText(file,'utf-8');
+}
+function verificarPronto() {
+  if (csvAbertura && csvEquipes) {
+    document.getElementById('btn-aplicar').style.display = 'block';
+    showImportMsg('Ambos os arquivos carregados! Clique em APLICAR E SALVAR.','success');
+  }
+}
 async function aplicarTurno() {
+  if (!csvAbertura || !csvEquipes) { showImportMsg('Importe os dois arquivos primeiro.','error'); return; }
   const justifNames = teams.justif.map(t=>t.name);
-  const novaOk    = csvAbertura.filter(n=>!justifNames.includes(n));
-  const novaFalta = csvEquipes.filter(n=>!csvAbertura.includes(n)&&!justifNames.includes(n));
-  teams.ok    = novaOk;
-  teams.falta = novaFalta;
+  teams.ok    = csvAbertura.filter(n=>!justifNames.includes(n));
+  teams.falta = csvEquipes.filter(n=>!csvAbertura.includes(n)&&!justifNames.includes(n));
   render();
   await dbSaveTurno();
-  showImportMsg('✅ '+novaOk.length+' abriram turno | ❌ '+novaFalta.length+' nao abriram. Salvo!','success');
-  csvAbertura = null; csvEquipes = null; // reset para proxima importacao
+  showImportMsg('✅ '+teams.ok.length+' abriram | ❌ '+teams.falta.length+' nao abriram. Salvo!','success');
+  document.getElementById('btn-aplicar').style.display='none';
+  document.getElementById('lbl-abertura').textContent='Clique ou arraste aqui';
+  document.getElementById('lbl-cadastro').textContent='Clique ou arraste aqui';
+  csvAbertura=null; csvEquipes=null;
 }
 function openModal()  { document.getElementById('modal-overlay').classList.add('open'); }
 function closeModal() { document.getElementById('modal-overlay').classList.remove('open'); }
