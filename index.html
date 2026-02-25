@@ -411,6 +411,23 @@ body { font-family:'Barlow',sans-serif; background:#f0f4f5; min-height:100vh; pa
         <!-- ABA: Gerenciar -->
         <div id="tab-manage" style="display:none">
           <div class="section-title">&#9998; Gerenciar Equipes</div>
+
+          <!-- Controle de Tamanho das Letras -->
+          <div class="font-size-control" style="background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:12px;padding:14px 16px;margin-bottom:16px;">
+            <div style="font-size:0.68rem;font-weight:800;color:#666;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:10px;">&#128292; Tamanho das Letras nos Cards</div>
+            <div style="display:flex;align-items:center;gap:12px;">
+              <button onclick="adjustFontSize(-1)" style="width:32px;height:32px;border:1.5px solid #e2e8f0;background:#fff;border-radius:8px;font-size:1.1rem;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#555;transition:all 0.15s;flex-shrink:0;" onmouseover="this.style.background='#f0f0f0'" onmouseout="this.style.background='#fff'">−</button>
+              <div style="flex:1;position:relative;">
+                <input type="range" id="font-size-slider" min="70" max="150" value="100" step="5"
+                  oninput="applyFontSize(this.value)"
+                  style="width:100%;accent-color:#0d7377;cursor:pointer;height:4px;">
+              </div>
+              <button onclick="adjustFontSize(1)" style="width:32px;height:32px;border:1.5px solid #e2e8f0;background:#fff;border-radius:8px;font-size:1.1rem;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#555;transition:all 0.15s;flex-shrink:0;" onmouseover="this.style.background='#f0f0f0'" onmouseout="this.style.background='#fff'">+</button>
+              <div id="font-size-label" style="font-size:0.8rem;font-weight:800;color:#0d7377;min-width:38px;text-align:right;">100%</div>
+              <button onclick="resetFontSize()" style="padding:5px 10px;border:1.5px solid #e2e8f0;background:#fff;border-radius:7px;font-family:'Barlow',sans-serif;font-size:0.68rem;font-weight:800;cursor:pointer;color:#888;white-space:nowrap;transition:all 0.15s;" onmouseover="this.style.background='#f0f0f0'" onmouseout="this.style.background='#fff'">&#8635; Reset</button>
+            </div>
+          </div>
+
           <div class="search-wrapper">
             <span class="search-icon">&#128269;</span>
             <input class="form-input search-input" type="text" id="search-input" placeholder="Buscar equipe pelo nome..." oninput="renderManageList()">
@@ -840,7 +857,7 @@ function showProdMsg(text,type) {
   clearTimeout(el._t); el._t=setTimeout(()=>el.className='msg',4000);
 }
 // ─── SENHA / PAGES ────────────────────────────────────────────────────────────
-const SENHA_ADM = 'adm2026'; // ← ALTERE A SENHA ADM AQUI
+const SENHA_ADM = 'mariua2026'; // ← ALTERE A SENHA ADM AQUI
 let admUnlocked = false;
 
 function openAdmModal() {
@@ -869,7 +886,7 @@ function checkAdmSenha() {
   }
 }
 
-const SENHA_PRODUCAO = 'obras2026'; // ← ALTERE A SENHA AQUI
+const SENHA_PRODUCAO = 'mariua2026'; // ← ALTERE A SENHA AQUI
 let prodUnlocked = false;
 
 function switchPage(page) {
@@ -938,6 +955,44 @@ function tirarPrint() {
   if(window.html2canvas){load();}
   else{const s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';s.onload=load;document.head.appendChild(s);}
 }
+
+// ─── TAMANHO DAS LETRAS ────────────────────────────────────────────────────────
+function applyFontSize(pct) {
+  pct = Math.min(150, Math.max(70, parseInt(pct)));
+  const scale = pct / 100;
+  // Aplica escala nas classes de texto dos cards
+  const style = document.getElementById('font-size-style') || (() => {
+    const s = document.createElement('style');
+    s.id = 'font-size-style';
+    document.head.appendChild(s);
+    return s;
+  })();
+  style.textContent = `
+    .card-name  { font-size: calc(0.82rem * ${scale}) !important; }
+    .prod-name  { font-size: calc(0.82rem * ${scale}) !important; }
+    .prod-info  { font-size: calc(0.68rem * ${scale}) !important; }
+    .badge      { font-size: calc(0.68rem * ${scale}) !important; }
+    .section-label { font-size: calc(1rem * ${scale}) !important; }
+    .section-count { font-size: calc(1.3rem * ${scale}) !important; }
+    .section-divider { font-size: calc(0.7rem * ${scale}) !important; }
+  `;
+  const slider = document.getElementById('font-size-slider');
+  const label  = document.getElementById('font-size-label');
+  if (slider) slider.value = pct;
+  if (label)  label.textContent = pct + '%';
+  localStorage.setItem('cardFontSize', pct);
+}
+function adjustFontSize(dir) {
+  const slider = document.getElementById('font-size-slider');
+  if (!slider) return;
+  applyFontSize(parseInt(slider.value) + dir * 5);
+}
+function resetFontSize() { applyFontSize(100); }
+// Restaura preferência salva
+(function() {
+  const saved = localStorage.getItem('cardFontSize');
+  if (saved) { window.addEventListener('DOMContentLoaded', () => applyFontSize(saved)); applyFontSize(saved); }
+})();
 
 // ─── INIT ─────────────────────────────────────────────────────────────────────
 function hideLoading() {
