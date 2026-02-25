@@ -93,12 +93,13 @@ body { font-family:'Barlow',sans-serif; background:#f0f4f5; min-height:100vh; pa
 .loading-text { color:#fff; font-weight:800; font-size:1rem; letter-spacing:0.5px; }
 @keyframes spin2 { to{transform:rotate(360deg)} }
 
-.fab        { position:fixed; bottom:28px; right:28px; background:#0d7377; color:#fff; border:none; border-radius:50px; padding:14px 24px; font-family:'Barlow',sans-serif; font-size:0.9rem; font-weight:800; letter-spacing:0.5px; cursor:pointer; box-shadow:0 4px 20px rgba(13,115,119,0.45); display:flex; align-items:center; gap:8px; transition:all 0.2s; z-index:100; }
-.fab:hover  { background:#0a5c60; transform:translateY(-2px); }
-.btn-print  { position:fixed; bottom:28px; left:28px; background:#2b6cb0; color:#fff; border:none; border-radius:50px; padding:14px 24px; font-family:'Barlow',sans-serif; font-size:0.9rem; font-weight:800; letter-spacing:0.5px; cursor:pointer; box-shadow:0 4px 20px rgba(43,108,176,0.4); display:flex; align-items:center; gap:8px; transition:all 0.2s; z-index:100; }
-.btn-print:hover { background:#1a4a80; transform:translateY(-2px); }
-.btn-refresh { position:fixed; bottom:28px; left:220px; background:#6b46c1; color:#fff; border:none; border-radius:50px; padding:14px 24px; font-family:'Barlow',sans-serif; font-size:0.9rem; font-weight:800; letter-spacing:0.5px; cursor:pointer; box-shadow:0 4px 20px rgba(107,70,193,0.4); display:flex; align-items:center; gap:8px; transition:all 0.2s; z-index:100; }
-.btn-refresh:hover { background:#553c9a; transform:translateY(-2px); }
+.bottom-bar { position:fixed; bottom:0; left:0; right:0; z-index:100; display:flex; justify-content:center; align-items:center; gap:10px; padding:14px 20px; background:rgba(255,255,255,0.92); backdrop-filter:blur(10px); border-top:1px solid rgba(0,0,0,0.08); box-shadow:0 -4px 24px rgba(0,0,0,0.1); }
+.fab        { background:#0d7377; color:#fff; border:none; border-radius:12px; padding:12px 22px; font-family:'Barlow',sans-serif; font-size:0.88rem; font-weight:800; letter-spacing:0.5px; cursor:pointer; box-shadow:0 4px 14px rgba(13,115,119,0.35); display:flex; align-items:center; gap:8px; transition:all 0.2s; }
+.fab:hover  { background:#0a5c60; transform:translateY(-2px); box-shadow:0 6px 20px rgba(13,115,119,0.45); }
+.btn-print  { background:#2b6cb0; color:#fff; border:none; border-radius:12px; padding:12px 22px; font-family:'Barlow',sans-serif; font-size:0.88rem; font-weight:800; letter-spacing:0.5px; cursor:pointer; box-shadow:0 4px 14px rgba(43,108,176,0.35); display:flex; align-items:center; gap:8px; transition:all 0.2s; }
+.btn-print:hover { background:#1a4a80; transform:translateY(-2px); box-shadow:0 6px 20px rgba(43,108,176,0.45); }
+.btn-refresh { background:#6b46c1; color:#fff; border:none; border-radius:12px; padding:12px 22px; font-family:'Barlow',sans-serif; font-size:0.88rem; font-weight:800; letter-spacing:0.5px; cursor:pointer; box-shadow:0 4px 14px rgba(107,70,193,0.35); display:flex; align-items:center; gap:8px; transition:all 0.2s; }
+.btn-refresh:hover { background:#553c9a; transform:translateY(-2px); box-shadow:0 6px 20px rgba(107,70,193,0.45); }
 @keyframes spin { to{transform:rotate(360deg)} }
 .spinning-icon { display:inline-block; animation:spin 0.7s linear infinite; }
 
@@ -222,7 +223,7 @@ body { font-family:'Barlow',sans-serif; background:#f0f4f5; min-height:100vh; pa
 .pwd-err { font-size:0.78rem; font-weight:700; color:#c53030; margin-top:10px; min-height:20px; }
 @media print {
   body { background:#fff; padding-bottom:0; }
-  .fab,.modal-overlay,.btn-print,.btn-refresh,.loading-overlay,.page-nav { display:none !important; }
+  .bottom-bar,.modal-overlay,.loading-overlay,.page-nav { display:none !important; }
   .section { box-shadow:none; border:1px solid #e0e0e0; }
   * { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
 }
@@ -231,7 +232,7 @@ body { font-family:'Barlow',sans-serif; background:#f0f4f5; min-height:100vh; pa
   .card:nth-child(4n),.prod-card:nth-child(4n) { border-right:1px solid #edf0f2; }
   .card:nth-child(2n),.prod-card:nth-child(2n) { border-right:none; }
   .header-title { font-size:1.6rem; }
-  .btn-refresh { left:auto; right:28px; bottom:90px; }
+  .btn-refresh { right:auto; bottom:auto; }
   .modal-sidebar { width:54px; }
   .sidebar-label { display:none; }
   .sidebar-icon { width:30px; height:30px; font-size:0.9rem; }
@@ -323,9 +324,11 @@ body { font-family:'Barlow',sans-serif; background:#f0f4f5; min-height:100vh; pa
   </div>
 </div>
 
-<button class="fab" onclick="openAdmModal()">&#9881; GERENCIAR</button>
-<button class="btn-print" onclick="tirarPrint()">&#128248; SALVAR PRINT</button>
-<button class="btn-refresh" id="btn-refresh" onclick="atualizarRelatorio()">&#8635; ATUALIZAR</button>
+<div class="bottom-bar" id="bottom-bar">
+  <button class="btn-print"  onclick="tirarPrint()">&#128248; SALVAR PRINT</button>
+  <button class="btn-refresh" id="btn-refresh" onclick="atualizarRelatorio()">&#8635; ATUALIZAR</button>
+  <button class="fab"        onclick="openAdmModal()">&#9881; GERENCIAR</button>
+</div>
 
 <div class="modal-overlay" id="modal-overlay">
   <div class="modal">
@@ -941,15 +944,13 @@ async function atualizarRelatorio() {
   btn.innerHTML='&#8635; ATUALIZAR'; btn.disabled=false;
 }
 function tirarPrint() {
-  const b1=document.querySelector('.fab'),b2=document.querySelector('.btn-print'),b3=document.querySelector('.btn-refresh');
-  [b1,b2,b3].forEach(b=>{if(b)b.style.display='none';});
-  b2.textContent='Gerando...';
+  const bar=document.getElementById('bottom-bar');
+  if(bar) bar.style.display='none';
   const load=()=>{
     html2canvas(document.body,{scale:2,useCORS:true,backgroundColor:'#f0f2f5',scrollY:-window.scrollY,windowHeight:document.body.scrollHeight}).then(canvas=>{
       const a=document.createElement('a');
       a.download='turno_'+currentDate.replace(/\//g,'-')+'.png'; a.href=canvas.toDataURL('image/png'); a.click();
-      [b1,b2,b3].forEach(b=>{if(b)b.style.display='';});
-      b2.textContent='SALVAR PRINT';
+      if(bar) bar.style.display='';
     });
   };
   if(window.html2canvas){load();}
