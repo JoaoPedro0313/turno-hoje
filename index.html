@@ -208,6 +208,7 @@ body { font-family:'Barlow',sans-serif; background:#f0f4f5; min-height:100vh; pa
 .page-nav-btn:hover { background:#f7f9fc; color:#444; }
 .page-nav-btn.active-turno { color:#0d7377; border-bottom-color:#0d7377; background:#f0fafa; }
 .page-nav-btn.active-prod  { color:#2b6cb0; border-bottom-color:#2b6cb0; background:#ebf4ff; }
+.page-nav-btn.active-apr   { color:#b97400; border-bottom-color:#f0a500; background:#fffbf0; }
 .page-nav-btn.active-comp  { color:#0d7377; border-bottom-color:#0d7377; background:#f0fafa; }
 
 /* ── COMPARADOR CAVA & POSTES ── */
@@ -330,6 +331,7 @@ body { font-family:'Barlow',sans-serif; background:#f0f4f5; min-height:100vh; pa
 <div class="page-nav">
   <button class="page-nav-btn active-turno" id="nav-turno" onclick="switchPage('turno')">&#128203; TURNO DO DIA</button>
   <button class="page-nav-btn" id="nav-prod" onclick="switchPage('prod')">&#128202; PRODUÇÃO &#128274;</button>
+  <button class="page-nav-btn" id="nav-apr" onclick="switchPage('apr')">&#9888; APR</button>
   <button class="page-nav-btn" id="nav-comp" onclick="switchPage('comp')">&#9889; COMPARADOR</button>
 </div>
 
@@ -359,6 +361,103 @@ body { font-family:'Barlow',sans-serif; background:#f0f4f5; min-height:100vh; pa
     </div>
   </div>
   <div class="footer" id="footer-text"></div>
+</div>
+
+<!-- PÁGINA APR -->
+<div id="page-apr" style="display:none;">
+  <div class="container">
+    <!-- Stats bar -->
+    <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:20px;">
+      <div class="section" style="flex:1;min-width:130px;margin-bottom:0;">
+        <div style="padding:14px 18px;text-align:center;">
+          <div style="font-size:1.8rem;font-weight:800;color:#0d7377;" id="apr-count-total">0</div>
+          <div style="font-size:0.68rem;font-weight:800;color:#aaa;text-transform:uppercase;letter-spacing:1px;margin-top:2px;">Total APRs</div>
+        </div>
+      </div>
+      <div class="section" style="flex:1;min-width:130px;margin-bottom:0;">
+        <div style="padding:14px 18px;text-align:center;">
+          <div style="font-size:1.8rem;font-weight:800;color:#14a085;" id="apr-count-apr">0</div>
+          <div style="font-size:0.68rem;font-weight:800;color:#aaa;text-transform:uppercase;letter-spacing:1px;margin-top:2px;">APR - Obras BA</div>
+        </div>
+      </div>
+      <div class="section" style="flex:1;min-width:130px;margin-bottom:0;">
+        <div style="padding:14px 18px;text-align:center;">
+          <div style="font-size:1.8rem;font-weight:800;color:#c05621;" id="apr-count-naorealizada">0</div>
+          <div style="font-size:0.68rem;font-weight:800;color:#aaa;text-transform:uppercase;letter-spacing:1px;margin-top:2px;">Não Realizadas</div>
+        </div>
+      </div>
+      <div class="section" style="flex:1;min-width:130px;margin-bottom:0;">
+        <div style="padding:14px 18px;text-align:center;">
+          <div style="font-size:1.8rem;font-weight:800;color:#2b6cb0;" id="apr-count-outras">0</div>
+          <div style="font-size:0.68rem;font-weight:800;color:#aaa;text-transform:uppercase;letter-spacing:1px;margin-top:2px;">Outros Tipos</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Upload CSV APR -->
+    <div class="section" style="margin-bottom:20px;">
+      <div class="section-header" style="background:#fff8f0;border-bottom-color:#fde8b0;">
+        <div class="section-label"><div class="icon-warn">&#9888;</div> IMPORTAR CSV APR</div>
+      </div>
+      <div style="padding:16px 20px;">
+        <div class="drop-zone" id="apr-drop-zone"
+          onclick="document.getElementById('apr-csv-file').click()"
+          ondragover="event.preventDefault();this.classList.add('dragover')"
+          ondragleave="this.classList.remove('dragover')"
+          ondrop="event.preventDefault();this.classList.remove('dragover');handleAprCSV(event.dataTransfer.files[0])">
+          <span class="drop-zone-icon">&#9888;</span>
+          <div class="drop-zone-text" id="lbl-apr">Clique ou arraste o consulta_checklist_apr_*.csv aqui</div>
+          <div class="drop-zone-sub">Mostra quem fez APR no sistema</div>
+        </div>
+        <input type="file" id="apr-csv-file" accept=".csv" style="display:none" onchange="handleAprCSV(this.files[0])">
+        <div class="msg" id="apr-import-msg"></div>
+      </div>
+    </div>
+
+    <!-- Grid de APRs por equipe -->
+    <div class="section" id="apr-results-section" style="display:none;">
+      <div class="section-header green">
+        <div class="section-label"><div class="icon-check">&#10003;</div> FEZ APR</div>
+        <div class="section-count green" id="apr-fez-count">0</div>
+      </div>
+      <div class="grid" id="apr-fez-grid"></div>
+    </div>
+
+    <div class="section" id="apr-naofez-section" style="display:none;">
+      <div class="section-header red">
+        <div class="section-label"><div class="icon-dot"></div> NÃO FEZ APR</div>
+        <div class="section-count red" id="apr-naofez-count">0</div>
+      </div>
+      <div class="grid" id="apr-naofez-grid"></div>
+    </div>
+
+    <!-- Tabela detalhada -->
+    <div class="section" id="apr-table-section" style="display:none;">
+      <div class="section-header" style="background:#f8fafc;border-bottom-color:#e2e8f0;">
+        <div class="section-label"><div class="icon-blue">&#128203;</div> DETALHE DAS APRs</div>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <input type="text" id="apr-search" placeholder="🔍 Buscar equipe..." oninput="aprFilterTable()"
+            style="padding:6px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-family:'Barlow',sans-serif;font-size:0.78rem;font-weight:700;outline:none;color:#2d3748;">
+          <span style="font-size:0.78rem;font-weight:800;color:#2b6cb0;" id="apr-table-count">0 registros</span>
+        </div>
+      </div>
+      <div style="overflow-x:auto;">
+        <table style="width:100%;border-collapse:collapse;font-family:'Barlow',sans-serif;">
+          <thead>
+            <tr style="background:#f8fafc;border-bottom:2px solid #e2e8f0;">
+              <th style="padding:10px 14px;text-align:left;font-size:0.72rem;font-weight:800;color:#666;letter-spacing:1px;text-transform:uppercase;">Equipe</th>
+              <th style="padding:10px 14px;text-align:left;font-size:0.72rem;font-weight:800;color:#666;letter-spacing:1px;text-transform:uppercase;">Tipo</th>
+              <th style="padding:10px 14px;text-align:left;font-size:0.72rem;font-weight:800;color:#666;letter-spacing:1px;text-transform:uppercase;">Ordem de Serviço</th>
+              <th style="padding:10px 14px;text-align:left;font-size:0.72rem;font-weight:800;color:#666;letter-spacing:1px;text-transform:uppercase;">Data/Hora</th>
+              <th style="padding:10px 14px;text-align:left;font-size:0.72rem;font-weight:800;color:#666;letter-spacing:1px;text-transform:uppercase;">Duração</th>
+            </tr>
+          </thead>
+          <tbody id="apr-table-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
 </div>
 
 <!-- PÁGINA 2: PRODUÇÃO (protegida por senha) -->
@@ -1108,13 +1207,15 @@ let prodUnlocked = false;
 function switchPage(page) {
   document.getElementById('page-turno').style.display = page === 'turno' ? '' : 'none';
   document.getElementById('page-prod').style.display  = page === 'prod'  ? '' : 'none';
+  document.getElementById('page-apr').style.display   = page === 'apr'   ? '' : 'none';
   document.getElementById('page-comp').style.display  = page === 'comp'  ? '' : 'none';
   document.getElementById('nav-turno').className = 'page-nav-btn' + (page === 'turno' ? ' active-turno' : '');
   document.getElementById('nav-prod').className  = 'page-nav-btn' + (page === 'prod'  ? ' active-prod'  : '');
+  document.getElementById('nav-apr').className   = 'page-nav-btn' + (page === 'apr'   ? ' active-apr'   : '');
   document.getElementById('nav-comp').className  = 'page-nav-btn' + (page === 'comp'  ? ' active-comp'  : '');
   // hide bottom bar on comparador
   const bar = document.getElementById('bottom-bar');
-  if (bar) bar.style.display = page === 'comp' ? 'none' : '';
+  if (bar) bar.style.display = (page === 'comp' || page === 'apr') ? 'none' : '';
   if (page === 'prod') {
     if (prodUnlocked) {
       document.getElementById('pwd-gate').style.display    = 'none';
@@ -1502,6 +1603,133 @@ async function compResetBase() {
     setDbStatus('online','Base removida');
     setTimeout(()=>setDbStatus('online','Banco online'),1500);
   } catch(e) { setDbStatus('offline','Erro ao resetar'); }
+}
+
+// ─── APR ───────────────────────────────────────────────────────────────────────
+let aprData = []; // all parsed rows
+
+function showAprMsg(text, type) {
+  const el = document.getElementById('apr-import-msg');
+  el.textContent = text; el.className = 'msg ' + type;
+  clearTimeout(el._t); el._t = setTimeout(() => el.className = 'msg', 5000);
+}
+
+function handleAprCSV(file) {
+  if (!file) return;
+  const r = new FileReader();
+  r.onload = function(e) {
+    try {
+      const text = e.target.result.replace(/^\uFEFF/, '');
+      const lines = text.split(/\r?\n/).filter(l => l.trim());
+      const headers = parseCsvLine(lines[0]);
+      const idx = col => headers.findIndex(h => h.trim().replace(/^"|"$/g,'').toLowerCase() === col.toLowerCase());
+      const iCod  = idx('Código APR');
+      const iEq   = idx('Equipe');
+      const iTipo = idx('Tipo');
+      const iOS   = idx('Ordem de Serviço');
+      const iData = idx('Data de Cadastro');
+      const iDur  = idx('Qtd. Horas Preenchimento');
+      if (iEq < 0) { showAprMsg('Coluna "Equipe" não encontrada.', 'error'); return; }
+      aprData = [];
+      for (let i = 1; i < lines.length; i++) {
+        const cols = parseCsvLine(lines[i]);
+        if (cols.length < 3) continue;
+        aprData.push({
+          codigo: (cols[iCod]  || '').trim(),
+          equipe: (cols[iEq]   || '').trim().toUpperCase(),
+          tipo:   (cols[iTipo] || '').trim(),
+          os:     (cols[iOS]   || '').trim(),
+          data:   (cols[iData] || '').trim(),
+          dur:    (cols[iDur]  || '').trim(),
+        });
+      }
+      renderApr();
+      document.getElementById('lbl-apr').textContent = '✅ ' + aprData.length + ' registros carregados';
+      showAprMsg('✅ ' + aprData.length + ' registros importados!', 'success');
+    } catch(err) { showAprMsg('Erro: ' + err.message, 'error'); }
+  };
+  r.readAsText(file, 'utf-8');
+}
+
+function renderApr() {
+  const allActive = EQUIPES_ATIVAS;
+  // equipes que aparecem no CSV (fizeram algum tipo de APR/checklist)
+  const equipesNoCSV = [...new Set(aprData.map(r => r.equipe))];
+  const fezApr  = allActive.filter(n => equipesNoCSV.includes(n));
+  const naoFez  = allActive.filter(n => !equipesNoCSV.includes(n));
+
+  // counts
+  const totalApr   = aprData.length;
+  const cntApr     = aprData.filter(r => r.tipo.includes('APR')).length;
+  const cntNaoReal = aprData.filter(r => r.tipo === 'ATIVIDADE NÃO REALIZADA').length;
+  const cntOutras  = totalApr - cntApr - cntNaoReal;
+
+  document.getElementById('apr-count-total').textContent       = totalApr;
+  document.getElementById('apr-count-apr').textContent         = cntApr;
+  document.getElementById('apr-count-naorealizada').textContent = cntNaoReal;
+  document.getElementById('apr-count-outras').textContent      = cntOutras;
+  document.getElementById('apr-fez-count').textContent         = fezApr.length;
+  document.getElementById('apr-naofez-count').textContent      = naoFez.length;
+
+  // Grid fez APR
+  const gFez = document.getElementById('apr-fez-grid'); gFez.innerHTML = '';
+  if (!fezApr.length) {
+    gFez.innerHTML = '<div style="padding:18px;color:#bbb;font-size:0.82rem;font-weight:600;grid-column:1/-1;text-align:center;">Nenhuma equipe</div>';
+  } else {
+    fezApr.sort().forEach(name => {
+      const registros = aprData.filter(r => r.equipe === name);
+      const tipos = [...new Set(registros.map(r => r.tipo))];
+      const temApr = tipos.some(t => t.includes('APR'));
+      const temNR  = tipos.some(t => t === 'ATIVIDADE NÃO REALIZADA');
+      let badgeHtml = '';
+      if (temApr) badgeHtml += '<span class="badge ok" style="font-size:0.58rem;padding:2px 7px;">APR</span>';
+      if (temNR)  badgeHtml += '<span class="badge semac" style="font-size:0.58rem;padding:2px 7px;margin-left:2px;">N/R</span>';
+      const d = document.createElement('div'); d.className = 'card';
+      d.innerHTML = '<span class="card-name">' + name + '</span><span style="display:flex;gap:2px;flex-shrink:0;">' + badgeHtml + '</span>';
+      gFez.appendChild(d);
+    });
+  }
+
+  // Grid não fez
+  const gNao = document.getElementById('apr-naofez-grid'); gNao.innerHTML = '';
+  if (!naoFez.length) {
+    gNao.innerHTML = '<div style="padding:18px;color:#bbb;font-size:0.82rem;font-weight:600;grid-column:1/-1;text-align:center;">Todas as equipes fizeram APR!</div>';
+  } else {
+    naoFez.sort().forEach(name => {
+      const d = document.createElement('div'); d.className = 'card absent';
+      d.innerHTML = '<span class="card-name">' + name + '</span><span class="badge falta" style="font-size:0.6rem;">SEM APR</span>';
+      gNao.appendChild(d);
+    });
+  }
+
+  document.getElementById('apr-results-section').style.display = '';
+  document.getElementById('apr-naofez-section').style.display  = '';
+  document.getElementById('apr-table-section').style.display   = '';
+  aprFilterTable();
+}
+
+function aprFilterTable() {
+  const q = (document.getElementById('apr-search') ? document.getElementById('apr-search').value : '').toLowerCase();
+  const filtered = aprData.filter(r => !q || r.equipe.toLowerCase().includes(q));
+  document.getElementById('apr-table-count').textContent = filtered.length + ' registros';
+  const tbody = document.getElementById('apr-table-body');
+  if (!filtered.length) {
+    tbody.innerHTML = '<tr><td colspan="5" style="padding:18px;text-align:center;color:#bbb;font-size:0.82rem;font-weight:600;">Nenhum registro</td></tr>';
+    return;
+  }
+  const tipoClass = tipo => {
+    if (tipo.includes('APR')) return '#0d7377';
+    if (tipo === 'ATIVIDADE NÃO REALIZADA') return '#c05621';
+    return '#2b6cb0';
+  };
+  tbody.innerHTML = filtered.map(r => `
+    <tr style="border-bottom:1px solid #f0f2f5;">
+      <td style="padding:10px 14px;font-size:0.82rem;font-weight:800;color:#2d3748;">${r.equipe}</td>
+      <td style="padding:10px 14px;"><span style="font-size:0.72rem;font-weight:800;color:${tipoClass(r.tipo)};background:${tipoClass(r.tipo)}18;padding:3px 9px;border-radius:5px;">${r.tipo}</span></td>
+      <td style="padding:10px 14px;font-size:0.78rem;font-weight:700;color:#666;">${r.os || '—'}</td>
+      <td style="padding:10px 14px;font-size:0.78rem;font-weight:700;color:#555;">${r.data || '—'}</td>
+      <td style="padding:10px 14px;font-size:0.78rem;font-weight:700;color:#888;">${r.dur || '—'}</td>
+    </tr>`).join('');
 }
 
 // Inicializa listeners do comparador
