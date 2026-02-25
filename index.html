@@ -398,31 +398,43 @@ body { font-family:'Barlow',sans-serif; background:#f0f4f5; min-height:100vh; pa
 <div id="page-comp" style="display:none;">
   <div class="comp-container">
 
+    <!-- Info da base salva -->
+    <div style="background:#fff;border-radius:12px;padding:14px 20px;margin-bottom:16px;box-shadow:0 2px 12px rgba(0,0,0,0.07);display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div class="icon-blue" style="flex-shrink:0;">🗄️</div>
+        <div>
+          <div style="font-size:0.72rem;font-weight:800;color:#666;letter-spacing:1px;text-transform:uppercase;margin-bottom:3px;">Base de Comparação (Banco)</div>
+          <div id="comp-base-info"><span style="color:#aaa;font-size:0.72rem;font-weight:600;">Carregando...</span></div>
+        </div>
+      </div>
+      <button onclick="compResetBase()" style="padding:6px 14px;border:1.5px solid #fde8e8;background:#fff;border-radius:8px;font-family:'Barlow',sans-serif;font-size:0.72rem;font-weight:800;cursor:pointer;color:#c53030;transition:all 0.15s;white-space:nowrap;" onmouseover="this.style.background='#fde8e8'" onmouseout="this.style.background='#fff'">🗑️ Resetar Base</button>
+    </div>
+
     <!-- Upload -->
     <div class="upload-section">
-      <div class="upload-card" id="comp-card-anterior">
-        <input type="file" id="comp-file-anterior" accept=".csv">
-        <div class="tag anterior">📂 Arquivo Anterior</div>
-        <div class="icon">⬆️</div>
-        <div class="label">Clique para selecionar o CSV anterior</div>
-        <div class="sub">Arraste ou clique aqui</div>
-        <div class="filename" id="comp-name-anterior"></div>
+      <div id="comp-upload-anterior">
+        <div class="upload-card" id="comp-card-anterior" style="height:100%;">
+          <input type="file" id="comp-file-anterior" accept=".csv">
+          <div class="tag anterior">📂 Base Anterior</div>
+          <div class="icon">⬆️</div>
+          <div class="label">Suba o CSV base aqui</div>
+          <div class="sub">Necessário apenas na primeira vez</div>
+          <div class="filename" id="comp-name-anterior"></div>
+        </div>
       </div>
       <div class="upload-card" id="comp-card-atual">
         <input type="file" id="comp-file-atual" accept=".csv">
-        <div class="tag atual">📂 Arquivo Atual</div>
+        <div class="tag atual">📂 Arquivo Novo</div>
         <div class="icon">⬆️</div>
-        <div class="label">Clique para selecionar o CSV atual</div>
-        <div class="sub">Arraste ou clique aqui</div>
+        <div class="label">Suba o CSV mais recente aqui</div>
+        <div class="sub">Será comparado com a base salva</div>
         <div class="filename" id="comp-name-atual"></div>
       </div>
     </div>
-    <button class="btn-compare" id="comp-btn-compare" disabled onclick="compCompare()">🔍 COMPARAR ARQUIVOS</button>
+    <button class="btn-compare" id="comp-btn-compare" disabled onclick="compCompare()">🔍 COMPARAR E SALVAR NOVA BASE</button>
 
     <!-- Resultados -->
     <div id="comp-results" style="display:none; margin-top:24px;">
-
-      <!-- Stats -->
       <div class="stats-bar">
         <div class="stat-card blue"><div class="val" id="comp-stat-total">0</div><div class="lbl">Obras com alteração</div></div>
         <div class="stat-card green"><div class="val" id="comp-stat-cava-inc">0</div><div class="lbl">Cava aumentou</div></div>
@@ -430,14 +442,9 @@ body { font-family:'Barlow',sans-serif; background:#f0f4f5; min-height:100vh; pa
         <div class="stat-card green"><div class="val" id="comp-stat-postes-inc">0</div><div class="lbl">Postes realiz. aumentou</div></div>
         <div class="stat-card red"><div class="val" id="comp-stat-postes-dec">0</div><div class="lbl">Postes realiz. reduziu</div></div>
       </div>
-
-      <!-- Tabela -->
       <div class="comp-section">
         <div class="comp-section-header">
-          <div class="comp-section-title">
-            <div class="icon-blue">⚡</div>
-            DETALHAMENTO DE ALTERAÇÕES
-          </div>
+          <div class="comp-section-title"><div class="icon-blue">⚡</div> DETALHAMENTO DE ALTERAÇÕES</div>
           <span class="count-tag" id="comp-count-label">0</span>
         </div>
         <div class="toolbar">
@@ -468,6 +475,10 @@ body { font-family:'Barlow',sans-serif; background:#f0f4f5; min-height:100vh; pa
           </table>
         </div>
       </div>
+    </div>
+
+  </div>
+</div>
     </div>
 
   </div>
@@ -677,6 +688,11 @@ async function dbLoad() {
         if (row.key === 'producao') {
           producao = row.value || {};
         }
+        if (row.key === 'comparador_base') {
+          compDataAnterior = row.value.data || null;
+          compBaseInfo     = row.value.info || null;
+          compUpdateBaseUI();
+        }
       });
     }
     setDbStatus('online', 'Banco online');
@@ -720,6 +736,34 @@ async function dbSaveProducao() {
     setDbStatus('online', 'Banco online');
   } catch(e) {
     setDbStatus('offline', 'Erro ao salvar');
+  }
+}
+
+async function dbSaveComparador(data, filename) {
+  try {
+    setDbStatus('syncing', 'Salvando base...');
+    const now = new Date();
+    const pad = n => String(n).padStart(2,'0');
+    const info = {
+      filename,
+      savedAt: pad(now.getDate())+'/'+pad(now.getMonth()+1)+'/'+now.getFullYear()+' às '+pad(now.getHours())+':'+pad(now.getMinutes()),
+      count: data.length
+    };
+    const res = await fetch(SUPA_URL + '/rest/v1/turno_data', {
+      method: 'POST',
+      headers: {
+        'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY,
+        'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates'
+      },
+      body: JSON.stringify({ key: 'comparador_base', value: { data, info }, updated_at: now.toISOString() })
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    compBaseInfo = info;
+    compUpdateBaseUI();
+    setDbStatus('online', 'Base salva!');
+    setTimeout(() => setDbStatus('online', 'Banco online'), 1500);
+  } catch(e) {
+    setDbStatus('offline', 'Erro ao salvar base');
   }
 }
 // ─── RENDER ────────────────────────────────────────────────────────────────────
@@ -1154,6 +1198,25 @@ let compDataAnterior = null;
 let compDataAtual    = null;
 let compAllChanges   = [];
 let compActiveFilter = 'todos';
+let compBaseInfo     = null;
+
+function compUpdateBaseUI() {
+  const baseCard  = document.getElementById('comp-card-anterior');
+  const baseName  = document.getElementById('comp-name-anterior');
+  const baseInfo  = document.getElementById('comp-base-info');
+  const uploadSec = document.getElementById('comp-upload-anterior');
+  if (compDataAnterior && compBaseInfo) {
+    baseCard.classList.add('loaded');
+    baseName.textContent = compBaseInfo.filename;
+    if (baseInfo) baseInfo.innerHTML = `<span style="color:#0d7377;font-size:0.72rem;font-weight:700;">✅ Base carregada do banco · ${compBaseInfo.count} obras · salvo em ${compBaseInfo.savedAt}</span>`;
+    if (uploadSec) uploadSec.style.display = 'none';
+    // Se já tem atual, habilita comparar
+    if (compDataAtual) document.getElementById('comp-btn-compare').disabled = false;
+  } else {
+    if (baseInfo) baseInfo.innerHTML = `<span style="color:#aaa;font-size:0.72rem;font-weight:600;">Nenhuma base salva no banco ainda</span>`;
+    if (uploadSec) uploadSec.style.display = '';
+  }
+}
 
 function compHandleFile(inputId, cardId, nameId, side) {
   const input = document.getElementById(inputId);
@@ -1191,12 +1254,16 @@ function compParseFile(file, side) {
         headers.forEach((h, idx) => { obj[h] = String(row[idx] || '').trim(); });
         if (obj['PEP OBRA'] && obj['PEP OBRA'] !== '') data.push(obj);
       }
-      if (side === 'anterior') compDataAnterior = data;
-      else compDataAtual = data;
-      if (compDataAnterior && compDataAtual) document.getElementById('comp-btn-compare').disabled = false;
+      if (side === 'anterior') { compDataAnterior = data; }
+      else { compDataAtual = data; compAtualFilename = file.name; }
+      const hasAnt = compDataAnterior !== null;
+      const hasAtual = compDataAtual !== null;
+      document.getElementById('comp-btn-compare').disabled = !(hasAnt && hasAtual);
     }
   });
 }
+
+let compAtualFilename = '';
 
 function compCompare() {
   const mapAnt = {};
@@ -1232,6 +1299,15 @@ function compCompare() {
   document.getElementById('comp-results').style.display = 'block';
   compRenderTable();
   document.getElementById('comp-results').scrollIntoView({behavior:'smooth'});
+  // Salva o arquivo atual como nova base no banco
+  compDataAnterior = compDataAtual;
+  dbSaveComparador(compDataAtual, compAtualFilename);
+  compDataAtual = null;
+  // Reseta o card de upload do novo arquivo
+  const card = document.getElementById('comp-card-atual');
+  if (card) card.classList.remove('loaded');
+  document.getElementById('comp-name-atual').textContent = '';
+  document.getElementById('comp-btn-compare').disabled = true;
 }
 
 function compParseNum(v) {
@@ -1263,9 +1339,9 @@ function compRenderTable() {
     return;
   }
   tbody.innerHTML = rows.map(r => {
-    const newTag = r.isNew ? `<span style="color:#f0a500;font-size:11px;font-weight:700;margin-left:6px">NOVA</span>` : '';
+    const newTag = r.isNew ? `<span style="color:#0d7377;font-size:0.68rem;font-weight:800;background:#d0f0ee;padding:2px 7px;border-radius:4px;margin-left:6px">NOVA</span>` : '';
     return `<tr>
-      <td><code style="color:#f0a500;font-size:12px">${r.pep}</code></td>
+      <td><code style="color:#0d7377;font-size:0.78rem;font-weight:800;">${r.pep}</code></td>
       <td class="td-title"><div class="main">${r.titulo}${newTag}</div></td>
       <td><span class="status-badge ${`status-${r.status}`} status-DEFAULT">${r.status.replace(/_/g,' ')}</span></td>
       <td class="diff-cell">${compDiffCell(r.cavaAnt,r.cavaAtual,r.cavaDiff)}</td>
@@ -1283,6 +1359,22 @@ function compDiffCell(ant, atual, diff) {
   const sign = diff>0?'+':'';
   const cls = diff>0?'pos':'neg';
   return `<div class="diff-val"><span class="old-val">${antD}</span><span class="arrow">→</span><span class="new-val">${atualD}</span><span class="delta ${cls}">${sign}${diff}</span></div>`;
+}
+
+async function compResetBase() {
+  if (!confirm('Resetar a base salva no banco? Você precisará subir dois arquivos na próxima comparação.')) return;
+  try {
+    setDbStatus('syncing','Removendo base...');
+    await fetch(SUPA_URL+'/rest/v1/turno_data?key=eq.comparador_base',{
+      method:'DELETE',
+      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}
+    });
+    compDataAnterior = null;
+    compBaseInfo = null;
+    compUpdateBaseUI();
+    setDbStatus('online','Base removida');
+    setTimeout(()=>setDbStatus('online','Banco online'),1500);
+  } catch(e) { setDbStatus('offline','Erro ao resetar'); }
 }
 
 // Inicializa listeners do comparador
