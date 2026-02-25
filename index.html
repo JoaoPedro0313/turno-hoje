@@ -400,14 +400,30 @@ body { font-family:'Barlow',sans-serif; background:#f0f4f5; min-height:100vh; pa
 
     <!-- Info da base salva -->
     <div style="background:#fff;border-radius:12px;padding:14px 20px;margin-bottom:16px;box-shadow:0 2px 12px rgba(0,0,0,0.07);display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
-      <div style="display:flex;align-items:center;gap:10px;">
+      <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:0;">
         <div class="icon-blue" style="flex-shrink:0;">🗄️</div>
-        <div>
+        <div style="min-width:0;">
           <div style="font-size:0.72rem;font-weight:800;color:#666;letter-spacing:1px;text-transform:uppercase;margin-bottom:3px;">Base de Comparação (Banco)</div>
           <div id="comp-base-info"><span style="color:#aaa;font-size:0.72rem;font-weight:600;">Carregando...</span></div>
         </div>
       </div>
-      <button onclick="compResetBase()" style="padding:6px 14px;border:1.5px solid #fde8e8;background:#fff;border-radius:8px;font-family:'Barlow',sans-serif;font-size:0.72rem;font-weight:800;cursor:pointer;color:#c53030;transition:all 0.15s;white-space:nowrap;" onmouseover="this.style.background='#fde8e8'" onmouseout="this.style.background='#fff'">🗑️ Resetar Base</button>
+      <button onclick="compResetBase()" style="padding:6px 14px;border:1.5px solid #fde8e8;background:#fff;border-radius:8px;font-family:'Barlow',sans-serif;font-size:0.72rem;font-weight:800;cursor:pointer;color:#c53030;transition:all 0.15s;white-space:nowrap;flex-shrink:0;" onmouseover="this.style.background='#fde8e8'" onmouseout="this.style.background='#fff'">🗑️ Resetar Base</button>
+    </div>
+
+    <!-- Adicionar arquivo à base -->
+    <div style="background:#fff;border-radius:12px;padding:16px 20px;margin-bottom:20px;box-shadow:0 2px 12px rgba(0,0,0,0.07);">
+      <div style="font-size:0.72rem;font-weight:800;color:#666;letter-spacing:1px;text-transform:uppercase;margin-bottom:12px;">➕ Adicionar Arquivo à Base</div>
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+        <div class="upload-card" id="comp-card-add" style="flex:1;min-width:200px;padding:16px 20px;display:flex;align-items:center;gap:12px;text-align:left;">
+          <input type="file" id="comp-file-add" accept=".csv">
+          <span style="font-size:1.5rem;flex-shrink:0;">📂</span>
+          <div>
+            <div style="font-size:0.82rem;font-weight:700;color:#2b6cb0;">Selecione um CSV para adicionar à base</div>
+            <div class="filename" id="comp-name-add" style="color:#0d7377;font-size:0.75rem;font-weight:700;margin-top:3px;"></div>
+          </div>
+        </div>
+        <button id="comp-btn-add" disabled onclick="compAdicionarNaBase()" style="padding:12px 24px;background:linear-gradient(135deg,#2b6cb0,#3182ce);color:#fff;border:none;border-radius:10px;font-family:'Barlow',sans-serif;font-size:0.85rem;font-weight:800;cursor:pointer;transition:all 0.2s;box-shadow:0 4px 12px rgba(43,108,176,0.25);white-space:nowrap;flex-shrink:0;" onmouseover="if(!this.disabled)this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">➕ ADICIONAR À BASE</button>
+      </div>
     </div>
 
     <!-- Upload -->
@@ -739,15 +755,18 @@ async function dbSaveProducao() {
   }
 }
 
-async function dbSaveComparador(data, filename) {
+async function dbSaveComparador(mergedData, filename) {
   try {
     setDbStatus('syncing', 'Salvando base...');
     const now = new Date();
     const pad = n => String(n).padStart(2,'0');
+    // Atualiza histórico de arquivos
+    const arquivos = (compBaseInfo && compBaseInfo.arquivos) ? [...compBaseInfo.arquivos] : [];
+    arquivos.push({ filename, addedAt: pad(now.getDate())+'/'+pad(now.getMonth()+1)+'/'+now.getFullYear()+' às '+pad(now.getHours())+':'+pad(now.getMinutes()), count: mergedData.length });
     const info = {
-      filename,
-      savedAt: pad(now.getDate())+'/'+pad(now.getMonth()+1)+'/'+now.getFullYear()+' às '+pad(now.getHours())+':'+pad(now.getMinutes()),
-      count: data.length
+      arquivos,
+      count: mergedData.length,
+      updatedAt: pad(now.getDate())+'/'+pad(now.getMonth()+1)+'/'+now.getFullYear()+' às '+pad(now.getHours())+':'+pad(now.getMinutes())
     };
     const res = await fetch(SUPA_URL + '/rest/v1/turno_data', {
       method: 'POST',
@@ -755,9 +774,10 @@ async function dbSaveComparador(data, filename) {
         'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY,
         'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates'
       },
-      body: JSON.stringify({ key: 'comparador_base', value: { data, info }, updated_at: now.toISOString() })
+      body: JSON.stringify({ key: 'comparador_base', value: { data: mergedData, info }, updated_at: now.toISOString() })
     });
     if (!res.ok) throw new Error('HTTP ' + res.status);
+    compDataAnterior = mergedData;
     compBaseInfo = info;
     compUpdateBaseUI();
     setDbStatus('online', 'Base salva!');
@@ -1201,21 +1221,46 @@ let compActiveFilter = 'todos';
 let compBaseInfo     = null;
 
 function compUpdateBaseUI() {
-  const baseCard  = document.getElementById('comp-card-anterior');
-  const baseName  = document.getElementById('comp-name-anterior');
   const baseInfo  = document.getElementById('comp-base-info');
   const uploadSec = document.getElementById('comp-upload-anterior');
   if (compDataAnterior && compBaseInfo) {
-    baseCard.classList.add('loaded');
-    baseName.textContent = compBaseInfo.filename;
-    if (baseInfo) baseInfo.innerHTML = `<span style="color:#0d7377;font-size:0.72rem;font-weight:700;">✅ Base carregada do banco · ${compBaseInfo.count} obras · salvo em ${compBaseInfo.savedAt}</span>`;
+    const arqs = compBaseInfo.arquivos || [];
+    const fileList = arqs.length > 0
+      ? arqs.map(a => `<span style="display:inline-flex;align-items:center;gap:5px;background:#f0fafa;border:1px solid #c0e8e5;border-radius:6px;padding:2px 8px;font-size:0.68rem;font-weight:700;color:#0d7377;">📄 ${a.filename}</span>`).join(' ')
+      : '';
+    if (baseInfo) baseInfo.innerHTML = `
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+        <span style="color:#0d7377;font-size:0.75rem;font-weight:800;">✅ ${compBaseInfo.count} obras · atualizado em ${compBaseInfo.updatedAt}</span>
+        ${fileList}
+      </div>`;
     if (uploadSec) uploadSec.style.display = 'none';
-    // Se já tem atual, habilita comparar
     if (compDataAtual) document.getElementById('comp-btn-compare').disabled = false;
   } else {
-    if (baseInfo) baseInfo.innerHTML = `<span style="color:#aaa;font-size:0.72rem;font-weight:600;">Nenhuma base salva no banco ainda</span>`;
+    if (baseInfo) baseInfo.innerHTML = `<span style="color:#aaa;font-size:0.72rem;font-weight:600;">Nenhuma base salva no banco ainda — adicione o primeiro arquivo abaixo</span>`;
     if (uploadSec) uploadSec.style.display = '';
   }
+}
+
+// Mescla novos dados na base existente por PEP OBRA (upsert)
+function compMergeIntoBase(newData) {
+  const base = compDataAnterior ? [...compDataAnterior] : [];
+  const map = {};
+  base.forEach(r => { map[r['PEP OBRA']] = r; });
+  newData.forEach(r => { map[r['PEP OBRA']] = r; }); // sobrescreve/adiciona
+  return Object.values(map);
+}
+
+// Adiciona arquivo direto na base sem comparar
+function compAdicionarNaBase() {
+  if (!compDataAdd) return;
+  const merged = compMergeIntoBase(compDataAdd);
+  dbSaveComparador(merged, compAddFilename);
+  compDataAdd = null;
+  compAddFilename = '';
+  const card = document.getElementById('comp-card-add');
+  if (card) card.classList.remove('loaded');
+  document.getElementById('comp-name-add').textContent = '';
+  document.getElementById('comp-btn-add').disabled = true;
 }
 
 function compHandleFile(inputId, cardId, nameId, side) {
@@ -1225,12 +1270,12 @@ function compHandleFile(inputId, cardId, nameId, side) {
     if (!file) return;
     document.getElementById(nameId).textContent = file.name;
     document.getElementById(cardId).classList.add('loaded');
+    const load = () => compParseFile(file, side);
     if (!window.Papa) {
       const s = document.createElement('script');
       s.src = 'https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js';
-      s.onload = () => compParseFile(file, side);
-      document.head.appendChild(s);
-    } else { compParseFile(file, side); }
+      s.onload = load; document.head.appendChild(s);
+    } else { load(); }
   });
 }
 
@@ -1255,8 +1300,9 @@ function compParseFile(file, side) {
         if (obj['PEP OBRA'] && obj['PEP OBRA'] !== '') data.push(obj);
       }
       if (side === 'anterior') { compDataAnterior = data; }
-      else { compDataAtual = data; compAtualFilename = file.name; }
-      const hasAnt = compDataAnterior !== null;
+      else if (side === 'atual') { compDataAtual = data; compAtualFilename = file.name; }
+      else if (side === 'add')  { compDataAdd = data; compAddFilename = file.name; document.getElementById('comp-btn-add').disabled = false; }
+      const hasAnt   = compDataAnterior !== null;
       const hasAtual = compDataAtual !== null;
       document.getElementById('comp-btn-compare').disabled = !(hasAnt && hasAtual);
     }
@@ -1264,6 +1310,8 @@ function compParseFile(file, side) {
 }
 
 let compAtualFilename = '';
+let compDataAdd = null;
+let compAddFilename = '';
 
 function compCompare() {
   const mapAnt = {};
@@ -1299,11 +1347,10 @@ function compCompare() {
   document.getElementById('comp-results').style.display = 'block';
   compRenderTable();
   document.getElementById('comp-results').scrollIntoView({behavior:'smooth'});
-  // Salva o arquivo atual como nova base no banco
-  compDataAnterior = compDataAtual;
-  dbSaveComparador(compDataAtual, compAtualFilename);
+  // Mescla o arquivo novo na base (upsert por PEP) e salva
+  const merged = compMergeIntoBase(compDataAtual);
+  dbSaveComparador(merged, compAtualFilename);
   compDataAtual = null;
-  // Reseta o card de upload do novo arquivo
   const card = document.getElementById('comp-card-atual');
   if (card) card.classList.remove('loaded');
   document.getElementById('comp-name-atual').textContent = '';
@@ -1380,6 +1427,7 @@ async function compResetBase() {
 // Inicializa listeners do comparador
 compHandleFile('comp-file-anterior','comp-card-anterior','comp-name-anterior','anterior');
 compHandleFile('comp-file-atual','comp-card-atual','comp-name-atual','atual');
+compHandleFile('comp-file-add','comp-card-add','comp-name-add','add');
 
 // ─── INIT ─────────────────────────────────────────────────────────────────────
 function hideLoading() {
