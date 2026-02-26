@@ -1277,8 +1277,7 @@ function switchPage(page) {
   document.getElementById('nav-apr').className   = 'page-nav-btn' + (page === 'apr'   ? ' active-apr'   : '');
   document.getElementById('nav-comp').className  = 'page-nav-btn' + (page === 'comp'  ? ' active-comp'  : '');
   // hide bottom bar on comparador
-  const bar = document.getElementById('bottom-bar');
-  if (bar) bar.style.display = (page === 'comp' || page === 'apr') ? 'none' : '';
+  // bottom bar always visible on all pages
   if (page === 'prod') {
     if (prodUnlocked) {
       document.getElementById('pwd-gate').style.display    = 'none';
