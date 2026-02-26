@@ -291,6 +291,11 @@ body { font-family:'Barlow',sans-serif; background:#f0f4f5; min-height:100vh; pa
 .pwd-btn { width:100%; padding:13px; background:#2b6cb0; color:#fff; border:none; border-radius:10px; font-family:'Barlow',sans-serif; font-size:0.95rem; font-weight:800; cursor:pointer; transition:background 0.15s; }
 .pwd-btn:hover { background:#1a4a80; }
 .pwd-err { font-size:0.78rem; font-weight:700; color:#c53030; margin-top:10px; min-height:20px; }
+
+/* ── APR BASE FILTER BUTTONS ── */
+.apr-base-btn { padding:8px 22px; border:2px solid #e2e8f0; background:#fff; border-radius:10px; font-family:'Barlow',sans-serif; font-size:0.85rem; font-weight:800; cursor:pointer; color:#888; transition:all 0.15s; letter-spacing:0.5px; }
+.apr-base-btn:hover { border-color:#0d7377; color:#0d7377; }
+.apr-base-active { background:#0d7377; border-color:#0d7377; color:#fff !important; box-shadow:0 4px 12px rgba(13,115,119,0.3); }
 @media print {
   body { background:#fff; padding-bottom:0; }
   .bottom-bar,.modal-overlay,.loading-overlay,.page-nav { display:none !important; }
@@ -366,6 +371,15 @@ body { font-family:'Barlow',sans-serif; background:#f0f4f5; min-height:100vh; pa
 <!-- PÁGINA APR -->
 <div id="page-apr" style="display:none;">
   <div class="container">
+
+    <!-- Filtro de Base -->
+    <div style="background:#fff;border-radius:12px;padding:14px 20px;margin-bottom:16px;box-shadow:0 2px 12px rgba(0,0,0,0.07);display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+      <span style="font-size:0.72rem;font-weight:800;color:#666;letter-spacing:1.5px;text-transform:uppercase;white-space:nowrap;">&#127981; BASE:</span>
+      <button id="apr-filter-todas" onclick="setAprBase('TODAS')" class="apr-base-btn apr-base-active">TODAS</button>
+      <button id="apr-filter-IRC"   onclick="setAprBase('IRC')"   class="apr-base-btn">IRC</button>
+      <button id="apr-filter-JAC"   onclick="setAprBase('JAC')"   class="apr-base-btn">JAC</button>
+    </div>
+
     <!-- Stats bar -->
     <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:20px;">
       <div class="section" style="flex:1;min-width:130px;margin-bottom:0;">
@@ -390,6 +404,18 @@ body { font-family:'Barlow',sans-serif; background:#f0f4f5; min-height:100vh; pa
         <div style="padding:14px 18px;text-align:center;">
           <div style="font-size:1.8rem;font-weight:800;color:#2b6cb0;" id="apr-count-outras">0</div>
           <div style="font-size:0.68rem;font-weight:800;color:#aaa;text-transform:uppercase;letter-spacing:1px;margin-top:2px;">Outros Tipos</div>
+        </div>
+      </div>
+      <div class="section" style="flex:1;min-width:130px;margin-bottom:0;border-top:3px solid #14a085;">
+        <div style="padding:14px 18px;text-align:center;">
+          <div style="font-size:1.8rem;font-weight:800;color:#14a085;" id="apr-count-fez">0</div>
+          <div style="font-size:0.68rem;font-weight:800;color:#aaa;text-transform:uppercase;letter-spacing:1px;margin-top:2px;">Fizeram APR</div>
+        </div>
+      </div>
+      <div class="section" style="flex:1;min-width:130px;margin-bottom:0;border-top:3px solid #e53e3e;">
+        <div style="padding:14px 18px;text-align:center;">
+          <div style="font-size:1.8rem;font-weight:800;color:#e53e3e;" id="apr-count-naofez">0</div>
+          <div style="font-size:0.68rem;font-weight:800;color:#aaa;text-transform:uppercase;letter-spacing:1px;margin-top:2px;">Sem APR</div>
         </div>
       </div>
     </div>
@@ -1676,26 +1702,62 @@ async function handleAprCSV(file) {
   r.readAsText(file, 'utf-8');
 }
 
+// ─── APR BASE FILTER ──────────────────────────────────────────────────────────
+let aprBaseFilter = 'TODAS';
+
+function setAprBase(base) {
+  aprBaseFilter = base;
+  ['TODAS','IRC','JAC'].forEach(b => {
+    const btn = document.getElementById('apr-filter-' + b);
+    if (btn) btn.className = 'apr-base-btn' + (b === base ? ' apr-base-active' : '');
+  });
+  renderApr();
+}
+
+function aprTeamBase(name) {
+  if (name.endsWith('-IRC')) return 'IRC';
+  if (name.endsWith('-JAC')) return 'JAC';
+  return 'OUTRAS';
+}
+
 function renderApr() {
   if (!document.getElementById('apr-count-total')) return; // DOM not ready
-  const allActive = EQUIPES_ATIVAS;
-  // equipes que aparecem no CSV (fizeram algum tipo de APR/checklist)
-  const equipesNoCSV = [...new Set(aprData.map(r => r.equipe))];
-  const fezApr  = allActive.filter(n => equipesNoCSV.includes(n));
-  const naoFez  = allActive.filter(n => !equipesNoCSV.includes(n));
 
-  // counts
-  const totalApr   = aprData.length;
-  const cntApr     = aprData.filter(r => r.tipo.includes('APR')).length;
-  const cntNaoReal = aprData.filter(r => r.tipo === 'ATIVIDADE NÃO REALIZADA').length;
+  // Filtra equipes e dados pela base selecionada
+  const allActive = aprBaseFilter === 'TODAS'
+    ? EQUIPES_ATIVAS
+    : EQUIPES_ATIVAS.filter(n => aprTeamBase(n) === aprBaseFilter);
+  const dataFiltrada = aprBaseFilter === 'TODAS'
+    ? aprData
+    : aprData.filter(r => aprTeamBase(r.equipe) === aprBaseFilter);
+
+  const equipesNoCSV = [...new Set(dataFiltrada.map(r => r.equipe))];
+  const fezApr = allActive.filter(n => equipesNoCSV.includes(n));
+  const naoFez = allActive.filter(n => !equipesNoCSV.includes(n));
+
+  // Counts (sempre do total geral para os cards de tipo)
+  const totalApr   = dataFiltrada.length;
+  const cntApr     = dataFiltrada.filter(r => r.tipo.includes('APR')).length;
+  const cntNaoReal = dataFiltrada.filter(r => r.tipo === 'ATIVIDADE NÃO REALIZADA').length;
   const cntOutras  = totalApr - cntApr - cntNaoReal;
 
-  document.getElementById('apr-count-total').textContent       = totalApr;
-  document.getElementById('apr-count-apr').textContent         = cntApr;
+  document.getElementById('apr-count-total').textContent        = totalApr;
+  document.getElementById('apr-count-apr').textContent          = cntApr;
   document.getElementById('apr-count-naorealizada').textContent = cntNaoReal;
-  document.getElementById('apr-count-outras').textContent      = cntOutras;
-  document.getElementById('apr-fez-count').textContent         = fezApr.length;
-  document.getElementById('apr-naofez-count').textContent      = naoFez.length;
+  document.getElementById('apr-count-outras').textContent       = cntOutras;
+  document.getElementById('apr-count-fez').textContent          = fezApr.length;
+  document.getElementById('apr-count-naofez').textContent       = naoFez.length;
+
+  // Label dos grids com a base selecionada
+  const baseLabel = aprBaseFilter === 'TODAS' ? '' : ' — ' + aprBaseFilter;
+
+  // Atualiza cabeçalho das seções
+  const secFez = document.getElementById('apr-results-section');
+  if (secFez) secFez.querySelector('.section-label').innerHTML =
+    '<div class="icon-check">&#10003;</div> FEZ APR' + baseLabel;
+  const secNao = document.getElementById('apr-naofez-section');
+  if (secNao) secNao.querySelector('.section-label').innerHTML =
+    '<div class="icon-dot"></div> NÃO FEZ APR' + baseLabel;
 
   // Grid fez APR
   const gFez = document.getElementById('apr-fez-grid'); gFez.innerHTML = '';
@@ -1703,7 +1765,7 @@ function renderApr() {
     gFez.innerHTML = '<div style="padding:18px;color:#bbb;font-size:0.82rem;font-weight:600;grid-column:1/-1;text-align:center;">Nenhuma equipe</div>';
   } else {
     fezApr.sort().forEach(name => {
-      const registros = aprData.filter(r => r.equipe === name);
+      const registros = dataFiltrada.filter(r => r.equipe === name);
       const tipos = [...new Set(registros.map(r => r.tipo))];
       const temApr = tipos.some(t => t.includes('APR'));
       const temNR  = tipos.some(t => t === 'ATIVIDADE NÃO REALIZADA');
@@ -1736,7 +1798,10 @@ function renderApr() {
 
 function aprFilterTable() {
   const q = (document.getElementById('apr-search') ? document.getElementById('apr-search').value : '').toLowerCase();
-  const filtered = aprData.filter(r => !q || r.equipe.toLowerCase().includes(q));
+  const dataFiltrada = aprBaseFilter === 'TODAS'
+    ? aprData
+    : aprData.filter(r => aprTeamBase(r.equipe) === aprBaseFilter);
+  const filtered = dataFiltrada.filter(r => !q || r.equipe.toLowerCase().includes(q));
   document.getElementById('apr-table-count').textContent = filtered.length + ' registros';
   const tbody = document.getElementById('apr-table-body');
   if (!filtered.length) {
@@ -1750,7 +1815,9 @@ function aprFilterTable() {
   };
   tbody.innerHTML = filtered.map(r => `
     <tr style="border-bottom:1px solid #f0f2f5;">
-      <td style="padding:10px 14px;font-size:0.82rem;font-weight:800;color:#2d3748;">${r.equipe}</td>
+      <td style="padding:10px 14px;font-size:0.82rem;font-weight:800;color:#2d3748;">${r.equipe}
+        <span style="font-size:0.6rem;font-weight:800;padding:1px 6px;border-radius:4px;margin-left:5px;background:${aprTeamBase(r.equipe)==='IRC'?'#ebf4ff':'#fff8f0'};color:${aprTeamBase(r.equipe)==='IRC'?'#2b6cb0':'#c05621'};">${aprTeamBase(r.equipe)}</span>
+      </td>
       <td style="padding:10px 14px;"><span style="font-size:0.72rem;font-weight:800;color:${tipoClass(r.tipo)};background:${tipoClass(r.tipo)}18;padding:3px 9px;border-radius:5px;">${r.tipo}</span></td>
       <td style="padding:10px 14px;font-size:0.78rem;font-weight:700;color:#666;">${r.os || '—'}</td>
       <td style="padding:10px 14px;font-size:0.78rem;font-weight:700;color:#555;">${r.data || '—'}</td>
