@@ -296,6 +296,11 @@ body { font-family:'Barlow',sans-serif; background:#f0f4f5; min-height:100vh; pa
 .apr-base-btn { padding:8px 22px; border:2px solid #e2e8f0; background:#fff; border-radius:10px; font-family:'Barlow',sans-serif; font-size:0.85rem; font-weight:800; cursor:pointer; color:#888; transition:all 0.15s; letter-spacing:0.5px; }
 .apr-base-btn:hover { border-color:#0d7377; color:#0d7377; }
 .apr-base-active { background:#0d7377; border-color:#0d7377; color:#fff !important; box-shadow:0 4px 12px rgba(13,115,119,0.3); }
+
+/* ── APR TIPO FILTER BUTTONS ── */
+.apr-tipo-btn { padding:5px 14px; border:1.5px solid #e2e8f0; background:#fff; border-radius:8px; font-family:'Barlow',sans-serif; font-size:0.72rem; font-weight:800; cursor:pointer; color:#888; transition:all 0.15s; letter-spacing:0.3px; white-space:nowrap; }
+.apr-tipo-btn:hover { border-color:#2b6cb0; color:#2b6cb0; }
+.apr-tipo-active { background:#2b6cb0 !important; border-color:#2b6cb0 !important; color:#fff !important; }
 @media print {
   body { background:#fff; padding-bottom:0; }
   .bottom-bar,.modal-overlay,.loading-overlay,.page-nav { display:none !important; }
@@ -466,6 +471,11 @@ body { font-family:'Barlow',sans-serif; background:#f0f4f5; min-height:100vh; pa
             style="padding:6px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-family:'Barlow',sans-serif;font-size:0.78rem;font-weight:700;outline:none;color:#2d3748;">
           <span style="font-size:0.78rem;font-weight:800;color:#2b6cb0;" id="apr-table-count">0 registros</span>
         </div>
+      </div>
+      <!-- Filtro por tipo -->
+      <div id="apr-tipo-filter-bar" style="padding:12px 20px;border-bottom:1px solid #edf0f2;background:#fafbfc;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+        <span style="font-size:0.68rem;font-weight:800;color:#aaa;letter-spacing:1.5px;text-transform:uppercase;white-space:nowrap;">TIPO:</span>
+        <button class="apr-tipo-btn apr-tipo-active" id="apr-tipo-TODOS" onclick="setAprTipo('TODOS',this)">Todos</button>
       </div>
       <div style="overflow-x:auto;">
         <table style="width:100%;border-collapse:collapse;font-family:'Barlow',sans-serif;">
@@ -1702,8 +1712,40 @@ async function handleAprCSV(file) {
   r.readAsText(file, 'utf-8');
 }
 
-// ─── APR BASE FILTER ──────────────────────────────────────────────────────────
+// ─── APR BASE & TIPO FILTER ───────────────────────────────────────────────────
 let aprBaseFilter = 'TODAS';
+let aprTipoFilter = 'TODOS';
+
+function setAprTipo(tipo, btn) {
+  aprTipoFilter = tipo;
+  document.querySelectorAll('.apr-tipo-btn').forEach(b => b.classList.remove('apr-tipo-active'));
+  if (btn) btn.classList.add('apr-tipo-active');
+  aprFilterTable();
+}
+
+function buildTipoFilterBar() {
+  const bar = document.getElementById('apr-tipo-filter-bar');
+  if (!bar) return;
+  // Get unique tipos from current base-filtered data
+  const dataFiltrada = aprBaseFilter === 'TODAS'
+    ? aprData
+    : aprData.filter(r => aprTeamBase(r.equipe) === aprBaseFilter);
+  const tipos = ['TODOS', ...new Set(dataFiltrada.map(r => r.tipo).filter(Boolean))].sort((a,b) => a === 'TODOS' ? -1 : b === 'TODOS' ? 1 : a.localeCompare(b));
+
+  bar.innerHTML = '<span style="font-size:0.68rem;font-weight:800;color:#aaa;letter-spacing:1.5px;text-transform:uppercase;white-space:nowrap;">TIPO:</span>';
+  tipos.forEach(tipo => {
+    const btn = document.createElement('button');
+    btn.className = 'apr-tipo-btn' + (tipo === aprTipoFilter ? ' apr-tipo-active' : '');
+    btn.id = 'apr-tipo-' + tipo.replace(/[^a-zA-Z0-9]/g,'_');
+    btn.textContent = tipo === 'TODOS' ? 'Todos' : tipo;
+    btn.onclick = () => setAprTipo(tipo, btn);
+    bar.appendChild(btn);
+  });
+  // Reset filter if current tipo no longer exists
+  if (aprTipoFilter !== 'TODOS' && !tipos.includes(aprTipoFilter)) {
+    aprTipoFilter = 'TODOS';
+  }
+}
 
 function setAprBase(base) {
   aprBaseFilter = base;
@@ -1793,6 +1835,7 @@ function renderApr() {
   document.getElementById('apr-results-section').style.display = '';
   document.getElementById('apr-naofez-section').style.display  = '';
   document.getElementById('apr-table-section').style.display   = '';
+  buildTipoFilterBar();
   aprFilterTable();
 }
 
@@ -1801,7 +1844,11 @@ function aprFilterTable() {
   const dataFiltrada = aprBaseFilter === 'TODAS'
     ? aprData
     : aprData.filter(r => aprTeamBase(r.equipe) === aprBaseFilter);
-  const filtered = dataFiltrada.filter(r => !q || r.equipe.toLowerCase().includes(q));
+  const filtered = dataFiltrada.filter(r => {
+    if (q && !r.equipe.toLowerCase().includes(q)) return false;
+    if (aprTipoFilter !== 'TODOS' && r.tipo !== aprTipoFilter) return false;
+    return true;
+  });
   document.getElementById('apr-table-count').textContent = filtered.length + ' registros';
   const tbody = document.getElementById('apr-table-body');
   if (!filtered.length) {
