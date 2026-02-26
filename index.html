@@ -1662,10 +1662,7 @@ function aprFilterTable() {
     </tr>`).join('');
 }
 
-// Inicializa listeners do comparador
-compHandleFile('comp-file-anterior','comp-card-anterior','comp-name-anterior','anterior');
-compHandleFile('comp-file-atual','comp-card-atual','comp-name-atual','atual');
-compHandleFile('comp-file-add','comp-card-add','comp-name-add','add');
+// Comparador inicializado via compHandleFileAtual()
 
 // ─── INIT ─────────────────────────────────────────────────────────────────────
 function hideLoading() {
@@ -1732,12 +1729,18 @@ function startAutoRefresh() {
 }
 
 (async function() {
+  // ── FAILSAFE: force hide loading overlay after 8s no matter what ──
+  const _loadTimeout = setTimeout(() => {
+    const lo = document.getElementById('loading-overlay');
+    if (lo) { lo.classList.remove('show'); lo.style.display = 'none'; }
+  }, 8000);
   const now=new Date(); const pad=n=>String(n).padStart(2,'0');
   document.getElementById('page-time').textContent =
     'Gerado em: '+pad(now.getDate())+'/'+pad(now.getMonth()+1)+'/'+now.getFullYear()+' as '+pad(now.getHours())+':'+pad(now.getMinutes());
   try { await dbLoad(); } catch(e) {}
   try { render(); } catch(e) {}
   if (aprData && aprData.length > 0) { try { renderApr(); } catch(e) {} }
+  clearTimeout(_loadTimeout);
   try { hideLoading(); } catch(e) { document.getElementById('loading-overlay').style.display='none'; }
   // Busca o timestamp inicial antes de iniciar o loop
   try {
