@@ -771,13 +771,21 @@ CREATE POLICY "allow_all" ON turno_data
         </div>
       </div>
     </div>
-    <div id="mapa-stats-bar" style="display:none;background:#fff;border-radius:14px;box-shadow:0 2px 14px rgba(0,0,0,0.08);padding:12px 18px;margin-bottom:14px;">
+    <div id="mapa-stats-bar" style="display:none;">
+      <!-- Filtros principais: Todas / Irecê / Jacobina -->
+      <div style="background:#fff;border-radius:14px;box-shadow:0 2px 14px rgba(0,0,0,0.08);padding:14px 20px;margin-bottom:10px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+        <span style="font-size:0.68rem;font-weight:800;color:#888;letter-spacing:1.5px;text-transform:uppercase;white-space:nowrap;">🏗️ UTD:</span>
+        <div id="mapa-utd-bar" style="display:flex;gap:8px;flex-wrap:wrap;"></div>
+      </div>
+      <!-- Filtros secundários: por status -->
+      <div style="background:#fff;border-radius:14px;box-shadow:0 2px 14px rgba(0,0,0,0.08);padding:12px 18px;margin-bottom:14px;">
       <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
         <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;" id="mapa-filter-btns"></div>
         <div style="display:flex;align-items:center;gap:8px;">
           <input type="text" id="mapa-search" placeholder="🔍 Buscar PEP ou título..." oninput="mapaFiltrar()" style="padding:6px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-family:'Barlow',sans-serif;font-size:0.8rem;font-weight:600;color:#333;width:210px;outline:none;">
           <span style="font-size:0.78rem;font-weight:800;color:#38a169;white-space:nowrap;" id="mapa-count-label">0 obras</span>
         </div>
+      </div>
       </div>
     </div>
     <div style="background:#fff;border-radius:14px;box-shadow:0 2px 14px rgba(0,0,0,0.08);overflow:hidden;position:relative;margin-bottom:14px;">
@@ -1866,10 +1874,25 @@ function aprFilterTable() {
 }
 
 // ─── MAPA ─────────────────────────────────────────────────────────────────────
-let mapaMap=null, mapaLayerGroup=null, mapaData=[], mapaFiltroAtivo='TODOS';
+let mapaMap=null, mapaLayerGroup=null, mapaData=[], mapaFiltroAtivo='TODOS', mapaUTDFiltro='TODAS';
 const MAPA_CORES = {'ENERGIZADA':'#38a169','EM EXECUÇÃO':'#2b6cb0','EM EXECUCAO':'#2b6cb0','PROGRAMADA':'#d69e2e','PARALISADA':'#e53e3e','CANCELADA':'#718096','RETIRADA DA CARTEIRA':'#718096'};
 function mapaGetCor(s) { return MAPA_CORES[(s||'').toUpperCase().trim()]||'#a0aec0'; }
 function mapaParseCoord(s) { if(!s)return null; const v=String(s).trim().split('\n')[0].trim().replace(',','.'); const n=parseFloat(v); return isNaN(n)?null:n; }
+
+function mapaSetUTD(utd) {
+  mapaUTDFiltro = utd;
+  mapaFiltroAtivo = 'TODOS'; // reset filtro de status ao trocar UTD
+  ['TODAS','IRECÊ','JACOBINA'].forEach(u => {
+    const btn = document.getElementById('mapa-utd-btn-' + u.replace('Ê','E'));
+    if (!btn) return;
+    const isActive = u === utd;
+    btn.style.background = isActive ? '#0d7377' : '#fff';
+    btn.style.color       = isActive ? '#fff'    : '#555';
+    btn.style.borderColor = isActive ? '#0d7377' : '#e2e8f0';
+  });
+  mapaRenderFiltros();
+  mapaFiltrar();
+}
 
 function mapaCarregarDoBanco() {
   if(!bancoDB||!bancoDB.length)return;
@@ -1905,20 +1928,54 @@ function mapaEnsureLeaflet(cb) {
 }
 
 function mapaRenderFiltros() {
-  const withCoord=mapaData.filter(d=>d.temCoord);
-  const statusCount={},utdCount={};
-  withCoord.forEach(d=>{const s=d.status.trim()||'SEM STATUS';statusCount[s]=(statusCount[s]||0)+1;if(d.utd)utdCount[d.utd]=(utdCount[d.utd]||0)+1;});
-  const bar=document.getElementById('mapa-filter-btns'); bar.innerHTML='';
-  const mkBtn=(label,key,count,bg)=>{
-    const btn=document.createElement('button');
-    btn.style.cssText=`padding:4px 12px;border-radius:20px;border:2px solid ${bg||'#e2e8f0'};background:#fff;font-family:'Barlow',sans-serif;font-size:0.7rem;font-weight:800;cursor:pointer;color:#555;transition:all 0.15s;white-space:nowrap;`;
-    btn.textContent=label+' ('+count+')';btn.id='mfbtn-'+key.replace(/[^a-z0-9]/gi,'_');
-    btn.onclick=()=>{mapaFiltroAtivo=key;mapaFiltrar();};bar.appendChild(btn);
+  const withCoord = mapaData.filter(d => d.temCoord);
+
+  // Contagens por UTD
+  const totalTodas   = withCoord.length;
+  const totalIrece   = withCoord.filter(d => d.utd === 'IRECÊ').length;
+  const totalJacobina= withCoord.filter(d => d.utd === 'JACOBINA').length;
+
+  // Injeta botões UTD fixos no container dedicado
+  const utdBar = document.getElementById('mapa-utd-bar');
+  if (utdBar) {
+    const mkUTD = (label, key, count, idSuffix) => {
+      const isActive = mapaUTDFiltro === key;
+      return `<button id="mapa-utd-btn-${idSuffix}"
+        onclick="mapaSetUTD('${key}')"
+        style="padding:8px 20px;border-radius:10px;border:2px solid ${isActive?'#0d7377':'#e2e8f0'};
+               background:${isActive?'#0d7377':'#fff'};font-family:'Barlow',sans-serif;
+               font-size:0.82rem;font-weight:800;cursor:pointer;
+               color:${isActive?'#fff':'#555'};transition:all 0.15s;white-space:nowrap;
+               box-shadow:${isActive?'0 3px 10px rgba(13,115,119,0.3)':'none'};">
+        ${label} <span style="opacity:0.75;font-size:0.72rem;">(${count})</span>
+      </button>`;
+    };
+    utdBar.innerHTML =
+      mkUTD('🗺️ Todas', 'TODAS',    totalTodas,    'TODAS') +
+      mkUTD('📍 Irecê',  'IRECÊ',    totalIrece,    'IRECE') +
+      mkUTD('📍 Jacobina','JACOBINA', totalJacobina, 'JACOBINA');
+  }
+
+  // Filtros de status (dinâmicos, respeitam o UTD selecionado)
+  const base = mapaUTDFiltro === 'TODAS' ? withCoord
+             : withCoord.filter(d => d.utd === mapaUTDFiltro);
+  const statusCount = {};
+  base.forEach(d => { const s = d.status.trim()||'SEM STATUS'; statusCount[s]=(statusCount[s]||0)+1; });
+
+  const bar = document.getElementById('mapa-filter-btns'); bar.innerHTML = '';
+  const mkStatus = (label, key, count, bg) => {
+    const btn = document.createElement('button');
+    btn.style.cssText = `padding:4px 12px;border-radius:20px;border:2px solid ${bg||'#e2e8f0'};background:#fff;font-family:'Barlow',sans-serif;font-size:0.7rem;font-weight:800;cursor:pointer;color:#555;transition:all 0.15s;white-space:nowrap;`;
+    btn.textContent = label + ' (' + count + ')';
+    btn.id = 'mfbtn-' + key.replace(/[^a-z0-9]/gi,'_');
+    btn.onclick = () => { mapaFiltroAtivo = key; mapaFiltrar(); };
+    bar.appendChild(btn);
   };
-  mkBtn('Todas','TODOS',withCoord.length);
-  if(Object.keys(utdCount).length>1){const sep=document.createElement('span');sep.style.cssText='border-left:1.5px solid #e2e8f0;height:18px;align-self:center;margin:0 2px;';bar.appendChild(sep);Object.entries(utdCount).sort().forEach(([u,c])=>mkBtn(u,'UTD:'+u,c,'#bee3f8'));}
-  const sep2=document.createElement('span');sep2.style.cssText='border-left:1.5px solid #e2e8f0;height:18px;align-self:center;margin:0 2px;';bar.appendChild(sep2);
-  Object.entries(statusCount).sort((a,b)=>b[1]-a[1]).forEach(([s,c])=>mkBtn(s,s,c,mapaGetCor(s)+'44'));
+  mkStatus('Todos', 'TODOS', base.length);
+  const sep = document.createElement('span');
+  sep.style.cssText = 'border-left:1.5px solid #e2e8f0;height:18px;align-self:center;margin:0 2px;';
+  bar.appendChild(sep);
+  Object.entries(statusCount).sort((a,b)=>b[1]-a[1]).forEach(([s,c]) => mkStatus(s, s, c, mapaGetCor(s)+'44'));
 }
 
 function mapaFiltrar() {
@@ -1927,11 +1984,14 @@ function mapaFiltrar() {
   const search=(document.getElementById('mapa-search').value||'').toLowerCase();
   const filtered=mapaData.filter(d=>{
     if(!d.temCoord)return false;
-    if(mapaFiltroAtivo!=='TODOS'){if(mapaFiltroAtivo.startsWith('UTD:')){if(d.utd!==mapaFiltroAtivo.slice(4))return false;}else{if(d.status.trim()!==mapaFiltroAtivo)return false;}}
+    // Filtro de UTD principal
+    if(mapaUTDFiltro!=='TODAS' && d.utd!==mapaUTDFiltro) return false;
+    // Filtro de status
+    if(mapaFiltroAtivo!=='TODOS' && d.status.trim()!==mapaFiltroAtivo) return false;
     if(search&&!d.pep.toLowerCase().includes(search)&&!d.titulo.toLowerCase().includes(search)&&!d.mun.toLowerCase().includes(search))return false;
     return true;
   });
-  document.querySelectorAll('[id^="mfbtn-"]').forEach(b=>{const key=b.id.replace('mfbtn-','').replace(/_/g,' ');const active=mapaFiltroAtivo===key||(b.id==='mfbtn-TODOS'&&mapaFiltroAtivo==='TODOS');b.style.background=active?'#38a169':'#fff';b.style.color=active?'#fff':'#555';b.style.borderColor=active?'#38a169':'#e2e8f0';});
+  document.querySelectorAll('[id^="mfbtn-"]').forEach(b=>{const active=(b.id==='mfbtn-TODOS'&&mapaFiltroAtivo==='TODOS')||(b.id==='mfbtn-'+mapaFiltroAtivo.replace(/[^a-z0-9]/gi,'_'));b.style.background=active?'#38a169':'#fff';b.style.color=active?'#fff':'#555';b.style.borderColor=active?'#38a169':'#e2e8f0';});
   document.getElementById('mapa-count-label').textContent=filtered.length+' obra'+(filtered.length!==1?'s':'');
   const bounds=[];
   filtered.forEach(d=>{
