@@ -1745,6 +1745,57 @@ function hideLoading() {
   el.style.pointerEvents = 'none';
 }
 
+// ─── AUTO-REFRESH (todos os usuários veem as atualizações do adm) ──────────────
+const AUTO_REFRESH_MS = 15000; // 15 segundos
+let autoRefreshTimer = null;
+let lastUpdatedAt = null; // guarda o timestamp da última versão conhecida
+
+async function checkForUpdates() {
+  // Verifica silenciosamente se houve alteração no banco
+  try {
+    const res = await fetch(SUPA_URL + '/rest/v1/turno_data?select=key,updated_at', {
+      headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY }
+    });
+    if (!res.ok) return;
+    const data = await res.json();
+    if (!Array.isArray(data)) return;
+
+    // Pega o updated_at mais recente de todos os registros
+    const latestTs = data.reduce((max, row) => {
+      const ts = row.updated_at || '';
+      return ts > max ? ts : max;
+    }, '');
+
+    if (lastUpdatedAt === null) {
+      // Primeira vez: apenas registra o timestamp
+      lastUpdatedAt = latestTs;
+    } else if (latestTs && latestTs !== lastUpdatedAt) {
+      // Houve atualização! Recarrega silenciosamente
+      lastUpdatedAt = latestTs;
+      await dbLoad();
+      render();
+      // Pisca o badge para indicar atualização
+      const badge = document.getElementById('db-badge');
+      badge.style.transition = 'opacity 0.3s';
+      badge.style.opacity = '0.3';
+      setTimeout(() => { badge.style.opacity = '1'; }, 300);
+      // Atualiza o horário exibido
+      const now = new Date();
+      const pad = n => String(n).padStart(2,'0');
+      document.getElementById('page-time').textContent =
+        'Atualizado em: ' + pad(now.getDate()) + '/' + pad(now.getMonth()+1) + '/' + now.getFullYear() +
+        ' as ' + pad(now.getHours()) + ':' + pad(now.getMinutes());
+    }
+  } catch(e) {
+    // Silencioso — não interrompe a experiência do usuário
+  }
+}
+
+function startAutoRefresh() {
+  if (autoRefreshTimer) clearInterval(autoRefreshTimer);
+  autoRefreshTimer = setInterval(checkForUpdates, AUTO_REFRESH_MS);
+}
+
 (async function() {
   const now=new Date(); const pad=n=>String(n).padStart(2,'0');
   document.getElementById('page-time').textContent =
@@ -1752,6 +1803,22 @@ function hideLoading() {
   try { await dbLoad(); } catch(e) {}
   render();
   hideLoading();
+  // Busca o timestamp inicial antes de iniciar o loop
+  try {
+    const res = await fetch(SUPA_URL + '/rest/v1/turno_data?select=key,updated_at', {
+      headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY }
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        lastUpdatedAt = data.reduce((max, row) => {
+          const ts = row.updated_at || '';
+          return ts > max ? ts : max;
+        }, '');
+      }
+    }
+  } catch(e) {}
+  startAutoRefresh();
 })();
 </script>
 
