@@ -425,25 +425,7 @@ body { font-family:'Barlow',sans-serif; background:#f0f4f5; min-height:100vh; pa
       </div>
     </div>
 
-    <!-- Upload CSV APR -->
-    <div class="section" style="margin-bottom:20px;">
-      <div class="section-header" style="background:#fff8f0;border-bottom-color:#fde8b0;">
-        <div class="section-label"><div class="icon-warn">&#9888;</div> IMPORTAR CSV APR</div>
-      </div>
-      <div style="padding:16px 20px;">
-        <div class="drop-zone" id="apr-drop-zone"
-          onclick="document.getElementById('apr-csv-file').click()"
-          ondragover="event.preventDefault();this.classList.add('dragover')"
-          ondragleave="this.classList.remove('dragover')"
-          ondrop="event.preventDefault();this.classList.remove('dragover');handleAprCSV(event.dataTransfer.files[0])">
-          <span class="drop-zone-icon">&#9888;</span>
-          <div class="drop-zone-text" id="lbl-apr">Clique ou arraste o consulta_checklist_apr_*.csv aqui</div>
-          <div class="drop-zone-sub">Mostra quem fez APR no sistema</div>
-        </div>
-        <input type="file" id="apr-csv-file" accept=".csv" style="display:none" onchange="handleAprCSV(this.files[0])">
-        <div class="msg" id="apr-import-msg"></div>
-      </div>
-    </div>
+
 
     <!-- Grid de APRs por equipe -->
     <div class="section" id="apr-results-section" style="display:none;">
@@ -693,6 +675,12 @@ body { font-family:'Barlow',sans-serif; background:#f0f4f5; min-height:100vh; pa
             <div class="sidebar-label">Produção CSV</div>
           </div>
         </button>
+        <button class="sidebar-item" id="tab-apr-btn" onclick="switchTab('apr')">
+          <div class="sidebar-icon">&#9888;</div>
+          <div>
+            <div class="sidebar-label">APR CSV</div>
+          </div>
+        </button>
       </div>
 
       <!-- Conteúdo das abas -->
@@ -782,6 +770,21 @@ body { font-family:'Barlow',sans-serif; background:#f0f4f5; min-height:100vh; pa
           </div>
           <button class="btn-danger" onclick="limparProducao()">&#128465; Limpar todos os dados de produção</button>
           <div class="msg" id="prod-msg"></div>
+        </div>
+
+        <!-- ABA: APR CSV -->
+        <div id="tab-apr" style="display:none">
+          <div class="section-title">&#9888; Importar CSV de APR</div>
+          <div class="drop-zone" id="apr-drop-zone" onclick="document.getElementById('apr-csv-file').click()"
+            ondragover="event.preventDefault();this.classList.add('dragover')"
+            ondragleave="this.classList.remove('dragover')"
+            ondrop="event.preventDefault();this.classList.remove('dragover');handleAprCSV(event.dataTransfer.files[0])">
+            <span class="drop-zone-icon">&#9888;</span>
+            <div class="drop-zone-text" id="lbl-apr">Clique ou arraste o consulta_checklist_apr_*.csv aqui</div>
+            <div class="drop-zone-sub">Mostra quem fez APR no sistema</div>
+          </div>
+          <input type="file" id="apr-csv-file" accept=".csv" style="display:none" onchange="handleAprCSV(this.files[0])">
+          <div class="msg" id="apr-import-msg"></div>
         </div>
 
       </div><!-- /modal-content -->
@@ -1176,7 +1179,7 @@ function selectStatus(s) {
   document.getElementById('obs-group').style.display=s==='justif'?'block':'none';
 }
 function switchTab(tab) {
-  ['add','manage','import','prod'].forEach(t=>{
+  ['add','manage','import','prod','apr'].forEach(t=>{
     document.getElementById('tab-'+t).style.display=t===tab?'block':'none';
     document.getElementById('tab-'+t+'-btn').className='sidebar-item'+(t===tab?' active':'');
   });
