@@ -1641,7 +1641,7 @@ function showAprMsg(text, type) {
 async function handleAprCSV(file) {
   if (!file) return;
   const r = new FileReader();
-  r.onload = function(e) {
+  r.onload = async function(e) {
     try {
       const text = e.target.result.replace(/^\uFEFF/, '');
       const lines = text.split(/\r?\n/).filter(l => l.trim());
@@ -1832,9 +1832,9 @@ function startAutoRefresh() {
   document.getElementById('page-time').textContent =
     'Gerado em: '+pad(now.getDate())+'/'+pad(now.getMonth()+1)+'/'+now.getFullYear()+' as '+pad(now.getHours())+':'+pad(now.getMinutes());
   try { await dbLoad(); } catch(e) {}
-  render();
+  try { render(); } catch(e) {}
   if (aprData && aprData.length > 0) { try { renderApr(); } catch(e) {} }
-  hideLoading();
+  try { hideLoading(); } catch(e) { document.getElementById('loading-overlay').style.display='none'; }
   // Busca o timestamp inicial antes de iniciar o loop
   try {
     const res = await fetch(SUPA_URL + '/rest/v1/turno_data?select=key,updated_at', {
