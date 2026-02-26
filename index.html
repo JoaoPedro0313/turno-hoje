@@ -1565,38 +1565,30 @@ function compCompare() {
   const mapAnt = {};
   compDataAnterior.forEach(r => { mapAnt[r['PEP OBRA']] = r; });
   compAllChanges = [];
-  // Busca flexível: testa múltiplas variantes de keyword
+  // Busca coluna por nome: normaliza removendo espaços e acentos para comparação
+  const normalizeCol = s => s.toUpperCase()
+    .replace(/\s+/g,'')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,''); // remove acentos
   const findVal = (row, ...keywords) => {
     if (!row) return null;
     for (const keyword of keywords) {
-      const kw = keyword.toUpperCase().replace(/\s+/g,'');
-      const k = Object.keys(row).find(k => {
-        const col = k.toUpperCase().replace(/\s+/g,'');
-        return col.includes(kw) || kw.includes(col.slice(0, Math.min(col.length, kw.length)));
-      });
+      const kw = normalizeCol(keyword);
+      const k = Object.keys(row).find(k => normalizeCol(k).includes(kw));
       if (k) return compParseNum(row[k]);
     }
     return null;
   };
-  // Log de diagnóstico das colunas disponíveis (apenas 1x)
-  if (compDataAtual.length > 0) {
-    const cols = Object.keys(compDataAtual[0]);
-    console.log('[COMPARADOR] Colunas encontradas no CSV atual:', cols);
-    console.log('[COMPARADOR] Colunas sem espaço (uppercase):', cols.map(c => c.toUpperCase().replace(/\s+/g,'')));
-  }
   compDataAtual.forEach(rowAtual => {
     const pep = rowAtual['PEP OBRA'];
     const rowAnt = mapAnt[pep];
-    // Busca colunas de CAVA com múltiplas variações possíveis
-    const cavaAnt = rowAnt ? findVal(rowAnt,'CAVAREALIZADA','CAVA REALIZADA','QTDCAVA','CAVA') : null;
-    const cavaAtual = findVal(rowAtual,'CAVAREALIZADA','CAVA REALIZADA','QTDCAVA','CAVA');
-    // Busca colunas de POSTES REALIZADOS com múltiplas variações
-    const postesRealAnt = rowAnt ? findVal(rowAnt,'POSTESREALIZADO','POSTESREALIZADOS','POSTES REALIZADO','POSTES REALIZADOS','QTDPOSTES') : null;
-    const postesRealAtual = findVal(rowAtual,'POSTESREALIZADO','POSTESREALIZADOS','POSTES REALIZADO','POSTES REALIZADOS','QTDPOSTES');
-    // Busca colunas de POSTES IMPLANTADOS
-    const postesImpAnt = rowAnt ? findVal(rowAnt,'POSTESIMPLAN','POSTESIMPLANTADO','POSTES IMPL','IMPLANTADOS') : null;
-    const postesImpAtual = findVal(rowAtual,'POSTESIMPLAN','POSTESIMPLANTADO','POSTES IMPL','IMPLANTADOS');
-    const postesPrevAtual = findVal(rowAtual,'POSTESPREVISTOS','POSTES PREVISTOS','PREVISTO','POSTESPREV');
+    // Nomes reais no CSV: "CAVA REALIZADA", "POSTES REALIZADO", "POSTES A IMPLANTA", "POSTES PREVISTOS"
+    const cavaAnt        = rowAnt ? findVal(rowAnt, 'CAVA REALIZADA', 'CAVAREALIZADA') : null;
+    const cavaAtual      = findVal(rowAtual, 'CAVA REALIZADA', 'CAVAREALIZADA');
+    const postesRealAnt  = rowAnt ? findVal(rowAnt, 'POSTES REALIZADO', 'POSTESREALIZADO') : null;
+    const postesRealAtual= findVal(rowAtual, 'POSTES REALIZADO', 'POSTESREALIZADO');
+    const postesImpAnt   = rowAnt ? findVal(rowAnt, 'POSTES A IMPLANTA', 'POSTES IMPLANTA', 'POSTESAIMPLANTA', 'POSTESIMPLAN') : null;
+    const postesImpAtual = findVal(rowAtual, 'POSTES A IMPLANTA', 'POSTES IMPLANTA', 'POSTESAIMPLANTA', 'POSTESIMPLAN');
+    const postesPrevAtual= findVal(rowAtual, 'POSTES PREVISTOS', 'POSTESPREVISTOS');
     const cavaDiff = (cavaAnt!==null||cavaAtual!==null)?(cavaAtual||0)-(cavaAnt||0):0;
     const postesRealDiff = (postesRealAnt!==null||postesRealAtual!==null)?(postesRealAtual||0)-(postesRealAnt||0):0;
     const postesImpDiff = (postesImpAnt!==null||postesImpAtual!==null)?(postesImpAtual||0)-(postesImpAnt||0):0;
