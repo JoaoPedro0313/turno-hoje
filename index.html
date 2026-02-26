@@ -799,8 +799,9 @@ const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
 // SDK removido - usando fetch nativo para evitar bloqueio no carregamento
 
 // ─── STATE ─────────────────────────────────────────────────────────────────────
+function todayDate() { const d=new Date(); const p=n=>String(n).padStart(2,'0'); return p(d.getDate())+'/'+p(d.getMonth()+1)+'/'+d.getFullYear(); }
 const DEFAULTS = {
-  date: '23/02/2026',
+  date: todayDate(),
   ok: ['ALAN-IRC','ALEX-IRC','ANDRE-JAC','CAIQUE-JAC','CLEBSON-JAC','DIOGO-JAC','DOUGLAS-JAC','EDILSON-IRC','EDMILSON-IRC','ELIEZER-IRC','EMERSON-JAC','ENES-IRC','ESMERALDO-IRC','FABIANO-JAC','FELIPE-IRC','GABRIEL-IRC','GIORLAN-IRC','IRISMAR-IRC','JAILSON-IRC','JARBAS-IRC','JOAO-JAC','MARCOS-IRC','PATRICIO-JAC','RIAN-IRC','ROMERO-IRC','TIAGO-JAC','UBERDAN-IRC','VALMIR-JAC','VANILSON-IRC','WILIAN-IRC'],
   justif: [],
   falta: ['CARLOS-JAC','GERALDO-JAC','JAILTON-JAC','JAIR-JAC','JENILSON-JAC','JULIO-JAC','LUCIANO-JAC','MENEZES-IRC','REVERTON-IRC','RODRIGO-JAC','VAGNO-IRC','WASHINGTON-IRC','WESLEY-IRC']
