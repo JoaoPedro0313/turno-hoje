@@ -1669,8 +1669,6 @@ async function handleAprCSV(file) {
       }
       renderApr();
       document.getElementById('lbl-apr').textContent = '✅ ' + aprData.length + ' registros carregados';
-      renderApr();
-      document.getElementById('lbl-apr').textContent = '✅ ' + aprData.length + ' registros carregados';
       showAprMsg('✅ ' + aprData.length + ' registros importados!', 'success');
       await dbSaveApr();
     } catch(err) { showAprMsg('Erro: ' + err.message, 'error'); }
@@ -1679,6 +1677,7 @@ async function handleAprCSV(file) {
 }
 
 function renderApr() {
+  if (!document.getElementById('apr-count-total')) return; // DOM not ready
   const allActive = EQUIPES_ATIVAS;
   // equipes que aparecem no CSV (fizeram algum tipo de APR/checklist)
   const equipesNoCSV = [...new Set(aprData.map(r => r.equipe))];
@@ -1800,9 +1799,9 @@ async function checkForUpdates() {
       // Houve atualização! Recarrega silenciosamente
       lastUpdatedAt = latestTs;
       await dbLoad();
-      render();
+      try { render(); } catch(e) {}
       if (aprData && aprData.length > 0) {
-        renderApr();
+        try { renderApr(); } catch(e) {}
         const lbl = document.getElementById('lbl-apr');
         if (lbl) lbl.textContent = '✅ ' + aprData.length + ' registros carregados';
       }
@@ -1834,6 +1833,7 @@ function startAutoRefresh() {
     'Gerado em: '+pad(now.getDate())+'/'+pad(now.getMonth()+1)+'/'+now.getFullYear()+' as '+pad(now.getHours())+':'+pad(now.getMinutes());
   try { await dbLoad(); } catch(e) {}
   render();
+  if (aprData && aprData.length > 0) { try { renderApr(); } catch(e) {} }
   hideLoading();
   // Busca o timestamp inicial antes de iniciar o loop
   try {
