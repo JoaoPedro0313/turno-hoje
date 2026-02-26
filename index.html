@@ -819,6 +819,71 @@ CREATE POLICY "allow_all" ON turno_data
         </table>
       </div>
     </div>
+
+    <!-- ── PROGRAMAÇÃO DIÁRIA ── -->
+    <div style="background:#fff;border-radius:14px;box-shadow:0 2px 14px rgba(0,0,0,0.08);overflow:hidden;margin-top:14px;">
+      <div style="background:linear-gradient(135deg,#1a365d,#2b6cb0);padding:16px 22px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+        <div style="display:flex;align-items:center;gap:12px;">
+          <div style="width:36px;height:36px;background:rgba(255,255,255,0.15);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.1rem;">📅</div>
+          <div>
+            <div style="color:#fff;font-size:1rem;font-weight:800;letter-spacing:0.5px;">PROGRAMAÇÃO DIÁRIA DAS EQUIPES</div>
+            <div style="color:rgba(255,255,255,0.65);font-size:0.72rem;font-weight:600;margin-top:1px;">Importe o CSV para ver obras + encarregados + localização</div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:0.72rem;font-weight:800;color:rgba(255,255,255,0.75);" id="prog-count-label"></span>
+          <button onclick="progLimpar()" id="prog-btn-limpar" style="display:none;padding:6px 14px;background:rgba(229,62,62,0.3);border:1px solid rgba(229,62,62,0.5);color:#ffc0c0;border-radius:8px;font-family:'Barlow',sans-serif;font-size:0.72rem;font-weight:800;cursor:pointer;">🗑️ Limpar</button>
+        </div>
+      </div>
+
+      <!-- Upload -->
+      <div id="prog-upload-area" style="padding:20px 22px;border-bottom:1px solid #edf0f2;">
+        <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
+          <label style="flex:1;min-width:200px;cursor:pointer;">
+            <div style="border:2px dashed #bee3f8;border-radius:10px;padding:16px 20px;display:flex;align-items:center;gap:12px;background:#ebf4ff;transition:all 0.2s;" id="prog-drop-zone" ondragover="event.preventDefault();this.style.background='#cce8ff'" ondragleave="this.style.background='#ebf4ff'" ondrop="event.preventDefault();this.style.background='#ebf4ff';progHandleFile(event.dataTransfer.files[0])">
+              <span style="font-size:1.8rem;flex-shrink:0;">📋</span>
+              <div>
+                <div style="font-size:0.78rem;font-weight:800;color:#2b6cb0;">Clique ou arraste o CSV da Programação Diária</div>
+                <div style="font-size:0.68rem;font-weight:600;color:#888;margin-top:2px;" id="prog-file-name">Colunas: DATA · SUPERVISOR · ENCARREGADO · NOME DA OBRA · MUNICIPIO · PEP OBRA · ATIVIDADES</div>
+              </div>
+            </div>
+            <input type="file" accept=".csv" style="display:none;" onchange="progHandleFile(this.files[0]);this.value=''">
+          </label>
+          <div style="display:flex;flex-direction:column;gap:6px;min-width:180px;">
+            <input type="text" id="prog-search" placeholder="🔍 Buscar obra ou encarregado..." oninput="progRender()" style="padding:8px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-family:'Barlow',sans-serif;font-size:0.78rem;font-weight:600;color:#333;outline:none;transition:border-color 0.15s;" onfocus="this.style.borderColor='#2b6cb0'" onblur="this.style.borderColor='#e2e8f0'">
+            <div style="display:flex;gap:6px;flex-wrap:wrap;" id="prog-sup-filtros"></div>
+          </div>
+        </div>
+        <div id="prog-msg" style="margin-top:10px;font-size:0.78rem;font-weight:700;display:none;padding:8px 12px;border-radius:7px;"></div>
+      </div>
+
+      <!-- Tabela resultado -->
+      <div id="prog-resultado" style="display:none;">
+        <div style="overflow-x:auto;">
+          <table style="width:100%;border-collapse:collapse;font-family:'Barlow',sans-serif;font-size:0.8rem;">
+            <thead>
+              <tr style="background:linear-gradient(135deg,#ebf4ff,#dbeffe);border-bottom:2px solid #bee3f8;position:sticky;top:0;z-index:5;">
+                <th style="padding:10px 14px;text-align:left;font-size:0.62rem;font-weight:800;color:#2b6cb0;letter-spacing:1.5px;text-transform:uppercase;white-space:nowrap;">Data</th>
+                <th style="padding:10px 14px;text-align:left;font-size:0.62rem;font-weight:800;color:#2b6cb0;letter-spacing:1.5px;text-transform:uppercase;white-space:nowrap;">Supervisor</th>
+                <th style="padding:10px 14px;text-align:left;font-size:0.62rem;font-weight:800;color:#2b6cb0;letter-spacing:1.5px;text-transform:uppercase;white-space:nowrap;">Encarregado</th>
+                <th style="padding:10px 14px;text-align:left;font-size:0.62rem;font-weight:800;color:#2b6cb0;letter-spacing:1.5px;text-transform:uppercase;">Nome da Obra</th>
+                <th style="padding:10px 14px;text-align:left;font-size:0.62rem;font-weight:800;color:#2b6cb0;letter-spacing:1.5px;text-transform:uppercase;white-space:nowrap;">Município</th>
+                <th style="padding:10px 14px;text-align:left;font-size:0.62rem;font-weight:800;color:#2b6cb0;letter-spacing:1.5px;text-transform:uppercase;white-space:nowrap;">PEP</th>
+                <th style="padding:10px 14px;text-align:left;font-size:0.62rem;font-weight:800;color:#2b6cb0;letter-spacing:1.5px;text-transform:uppercase;">Atividades</th>
+                <th style="padding:10px 14px;text-align:center;font-size:0.62rem;font-weight:800;color:#2b6cb0;letter-spacing:1.5px;text-transform:uppercase;white-space:nowrap;">Localização</th>
+              </tr>
+            </thead>
+            <tbody id="prog-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+      <div id="prog-empty" style="padding:48px;text-align:center;color:#aaa;">
+        <div style="font-size:3rem;margin-bottom:12px;">📅</div>
+        <div style="font-size:0.9rem;font-weight:700;color:#555;">Importe o CSV da Programação Diária</div>
+        <div style="font-size:0.75rem;margin-top:5px;">Você verá as obras, encarregados e links de localização no mapa</div>
+      </div>
+    </div>
+
   </div>
 </div>
 
@@ -2066,6 +2131,202 @@ function startAutoRefresh() {
   } catch(e) {}
   startAutoRefresh();
 })();
+// ─── PROGRAMAÇÃO DIÁRIA ───────────────────────────────────────────────────────
+let progData = [];         // registros do CSV
+let progSupFiltro = 'TODOS'; // filtro de supervisor ativo
+
+function progShowMsg(text, type) {
+  const el = document.getElementById('prog-msg');
+  el.textContent = text;
+  el.style.display = 'block';
+  el.style.background = type === 'success' ? '#d0f0ee' : '#fde8e8';
+  el.style.color       = type === 'success' ? '#0d7377'  : '#c53030';
+  clearTimeout(el._t); el._t = setTimeout(() => el.style.display = 'none', 5000);
+}
+
+function progHandleFile(file) {
+  if (!file) return;
+  document.getElementById('prog-file-name').textContent = '⏳ Lendo ' + file.name + '…';
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const text = e.target.result.replace(/^\uFEFF/, '');
+      const lines = text.split(/\r?\n/).filter(l => l.trim());
+
+      // Detecta separador (; ou ,)
+      const sep = lines[0].includes(';') ? ';' : ',';
+      const headers = lines[0].split(sep).map(h => h.trim().replace(/^"|"$/g, '').toUpperCase());
+
+      const col = kw => headers.findIndex(h => h.includes(kw.toUpperCase()));
+      const iData  = col('DATA');
+      const iSup   = col('SUPERVISOR');
+      const iEnc   = col('ENCARREGADO');
+      const iObra  = col('NOME DA OBRA');
+      const iMun   = col('MUNICIPIO');
+      const iPEP   = col('PEP OBRA');
+      const iAtiv  = col('ATIVIDADES');
+      const iColab = col('QTD COLAB');
+      const iAloj  = col('ALOJADOS');
+
+      if (iEnc < 0 || iObra < 0) {
+        progShowMsg('Colunas "ENCARREGADO" e "NOME DA OBRA" não encontradas. Verifique o CSV.', 'error');
+        document.getElementById('prog-file-name').textContent = 'Colunas esperadas: DATA · SUPERVISOR · ENCARREGADO · NOME DA OBRA · MUNICIPIO · PEP OBRA · ATIVIDADES';
+        return;
+      }
+
+      progData = [];
+      for (let i = 1; i < lines.length; i++) {
+        // parse respeitando aspas
+        const cols = [];
+        let cur = '', inQ = false;
+        for (let c of lines[i]) {
+          if (c === '"') { inQ = !inQ; continue; }
+          if (c === sep && !inQ) { cols.push(cur.trim()); cur = ''; continue; }
+          cur += c;
+        }
+        cols.push(cur.trim());
+        if (!cols[iEnc] && !cols[iObra]) continue;
+
+        const pep  = iPEP >= 0  ? (cols[iPEP]  || '').trim() : '';
+        const lat  = progGetCoordsFromBanco(pep);
+
+        progData.push({
+          data:  iData >= 0  ? (cols[iData]  || '').trim() : '',
+          sup:   iSup  >= 0  ? (cols[iSup]   || '').trim().toUpperCase() : '',
+          enc:   (cols[iEnc] || '').trim(),
+          obra:  (cols[iObra]|| '').trim(),
+          mun:   iMun  >= 0  ? (cols[iMun]   || '').trim() : '',
+          pep,
+          ativ:  iAtiv >= 0  ? (cols[iAtiv]  || '').trim() : '',
+          colab: iColab>= 0  ? (cols[iColab] || '').trim() : '',
+          aloj:  iAloj >= 0  ? (cols[iAloj]  || '').trim() : '',
+          lat:   lat ? lat.lat : null,
+          lon:   lat ? lat.lon : null,
+        });
+      }
+
+      document.getElementById('prog-file-name').textContent = '✅ ' + file.name + ' — ' + progData.length + ' registros';
+      document.getElementById('prog-resultado').style.display = '';
+      document.getElementById('prog-empty').style.display = 'none';
+      document.getElementById('prog-btn-limpar').style.display = '';
+      progShowMsg('✅ ' + progData.length + ' registros importados!', 'success');
+      progRenderSupFiltros();
+      progRender();
+    } catch (err) {
+      progShowMsg('Erro ao ler CSV: ' + err.message, 'error');
+    }
+  };
+  reader.readAsText(file, 'utf-8');
+}
+
+// Busca lat/lon pelo PEP no banco de obras já carregado
+function progGetCoordsFromBanco(pep) {
+  if (!pep || !bancoDB) return null;
+  const row = bancoDB.find(r => (r['PEP OBRA'] || '').trim() === pep.trim());
+  if (!row) return null;
+  const lat = mapaParseCoord(row['LATITUDE']);
+  const lon = mapaParseCoord(row['LONGITUDE']);
+  if (lat === null || lon === null) return null;
+  return { lat, lon };
+}
+
+function progRenderSupFiltros() {
+  const sups = ['TODOS', ...new Set(progData.map(r => r.sup).filter(Boolean))].sort((a,b) => a==='TODOS'?-1:b==='TODOS'?1:a.localeCompare(b));
+  const bar = document.getElementById('prog-sup-filtros');
+  bar.innerHTML = sups.map(s => {
+    const active = s === progSupFiltro;
+    return `<button onclick="progSetSup('${s}')" style="padding:4px 11px;border-radius:20px;border:1.5px solid ${active?'#2b6cb0':'#e2e8f0'};background:${active?'#2b6cb0':'#fff'};font-family:'Barlow',sans-serif;font-size:0.65rem;font-weight:800;cursor:pointer;color:${active?'#fff':'#888'};white-space:nowrap;transition:all 0.15s;">${s==='TODOS'?'Todos':s}</button>`;
+  }).join('');
+}
+
+function progSetSup(sup) {
+  progSupFiltro = sup;
+  progRenderSupFiltros();
+  progRender();
+}
+
+function progRender() {
+  const q = (document.getElementById('prog-search').value || '').toLowerCase();
+  const filtered = progData.filter(r => {
+    if (progSupFiltro !== 'TODOS' && r.sup !== progSupFiltro) return false;
+    if (q && !r.obra.toLowerCase().includes(q) && !r.enc.toLowerCase().includes(q) && !r.pep.toLowerCase().includes(q) && !r.mun.toLowerCase().includes(q)) return false;
+    return true;
+  });
+
+  document.getElementById('prog-count-label').textContent = filtered.length + ' registros';
+  const tbody = document.getElementById('prog-tbody');
+
+  if (!filtered.length) {
+    tbody.innerHTML = '<tr><td colspan="8" style="padding:28px;text-align:center;color:#aaa;font-size:0.82rem;font-weight:600;">Nenhum registro encontrado</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = filtered.map((r, i) => {
+    // Link de localização: usa coords do banco se disponível, senão busca por nome de município no Google Maps
+    let linkHtml;
+    if (r.lat !== null && r.lon !== null) {
+      const gmaps = `https://www.google.com/maps?q=${r.lat},${r.lon}`;
+      const waze  = `https://waze.com/ul?ll=${r.lat},${r.lon}&navigate=yes`;
+      linkHtml = `
+        <div style="display:flex;flex-direction:column;gap:4px;align-items:center;">
+          <a href="${gmaps}" target="_blank" style="display:flex;align-items:center;gap:5px;padding:5px 10px;background:#4285f4;color:#fff;border-radius:6px;font-size:0.65rem;font-weight:800;text-decoration:none;white-space:nowrap;">
+            🗺️ Google Maps
+          </a>
+          <a href="${waze}" target="_blank" style="display:flex;align-items:center;gap:5px;padding:5px 10px;background:#1ccad8;color:#fff;border-radius:6px;font-size:0.65rem;font-weight:800;text-decoration:none;white-space:nowrap;">
+            🚗 Waze
+          </a>
+          <button onclick="progFocarMapa(${r.lat},${r.lon})" style="padding:4px 8px;background:#38a169;color:#fff;border:none;border-radius:6px;font-family:'Barlow',sans-serif;font-size:0.62rem;font-weight:800;cursor:pointer;white-space:nowrap;">
+            📍 Ver no Mapa
+          </button>
+        </div>`;
+    } else if (r.mun) {
+      const busca = encodeURIComponent(r.mun + ', Bahia, Brasil');
+      linkHtml = `
+        <div style="display:flex;flex-direction:column;gap:4px;align-items:center;">
+          <a href="https://www.google.com/maps/search/${busca}" target="_blank" style="display:flex;align-items:center;gap:5px;padding:5px 10px;background:#4285f4;color:#fff;border-radius:6px;font-size:0.65rem;font-weight:800;text-decoration:none;white-space:nowrap;">
+            🗺️ Ver Município
+          </a>
+          <span style="font-size:0.6rem;color:#aaa;font-weight:600;">Sem coords exatas</span>
+        </div>`;
+    } else {
+      linkHtml = `<span style="font-size:0.68rem;color:#ccc;font-weight:700;">—</span>`;
+    }
+
+    const encTag = r.enc ? `<div style="display:flex;align-items:center;gap:6px;"><div style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#2b6cb0,#4299e1);display:flex;align-items:center;justify-content:center;font-size:0.75rem;flex-shrink:0;color:#fff;font-weight:800;">${r.enc.charAt(0)}</div><div><div style="font-size:0.82rem;font-weight:800;color:#1a365d;">${r.enc}</div>${r.colab?`<div style="font-size:0.62rem;color:#888;font-weight:700;">${r.colab} colab${r.aloj?' · '+r.aloj:''}</div>`:''}</div></div>` : '—';
+
+    const rowBg = i % 2 === 0 ? '#fff' : '#f9fbff';
+    return `<tr style="border-bottom:1px solid #edf0f2;background:${rowBg};transition:background 0.1s;" onmouseover="this.style.background='#ebf4ff'" onmouseout="this.style.background='${rowBg}'">
+      <td style="padding:10px 14px;font-size:0.75rem;font-weight:700;color:#718096;white-space:nowrap;">${r.data||'—'}</td>
+      <td style="padding:10px 14px;font-size:0.75rem;font-weight:800;color:#0d7377;white-space:nowrap;">${r.sup||'—'}</td>
+      <td style="padding:10px 14px;">${encTag}</td>
+      <td style="padding:10px 14px;font-size:0.78rem;font-weight:700;color:#2d3748;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${r.obra}">${r.obra||'—'}</td>
+      <td style="padding:10px 14px;font-size:0.75rem;font-weight:700;color:#555;white-space:nowrap;">${r.mun||'—'}</td>
+      <td style="padding:10px 14px;"><code style="background:#f0f7ff;color:#2b6cb0;padding:2px 8px;border-radius:4px;font-size:0.72rem;font-weight:800;">${r.pep||'—'}</code></td>
+      <td style="padding:10px 14px;font-size:0.75rem;font-weight:600;color:#555;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${r.ativ}">${r.ativ||'—'}</td>
+      <td style="padding:10px 14px;text-align:center;">${linkHtml}</td>
+    </tr>`;
+  }).join('');
+}
+
+function progFocarMapa(lat, lon) {
+  mapaEnsureLeaflet(() => {
+    mapaMap.setView([lat, lon], 16, { animate: true });
+    document.getElementById('mapa-container').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  });
+}
+
+function progLimpar() {
+  progData = [];
+  progSupFiltro = 'TODOS';
+  document.getElementById('prog-tbody').innerHTML = '';
+  document.getElementById('prog-resultado').style.display = 'none';
+  document.getElementById('prog-empty').style.display = '';
+  document.getElementById('prog-btn-limpar').style.display = 'none';
+  document.getElementById('prog-count-label').textContent = '';
+  document.getElementById('prog-file-name').textContent = 'Colunas: DATA · SUPERVISOR · ENCARREGADO · NOME DA OBRA · MUNICIPIO · PEP OBRA · ATIVIDADES';
+  document.getElementById('prog-sup-filtros').innerHTML = '';
+}
+
 </script>
 </body>
 </html>
