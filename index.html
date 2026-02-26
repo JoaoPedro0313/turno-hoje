@@ -209,7 +209,7 @@ body { font-family:'Barlow',sans-serif; background:#f0f4f5; min-height:100vh; pa
 .page-nav-btn.active-turno { color:#0d7377; border-bottom-color:#0d7377; background:#f0fafa; }
 .page-nav-btn.active-prod  { color:#2b6cb0; border-bottom-color:#2b6cb0; background:#ebf4ff; }
 .page-nav-btn.active-apr   { color:#b97400; border-bottom-color:#f0a500; background:#fffbf0; }
-.page-nav-btn.active-comp  { color:#0d7377; border-bottom-color:#0d7377; background:#f0fafa; }
+.page-nav-btn.active-mapa  { color:#38a169; border-bottom-color:#38a169; background:#f0fff4; }
 
 /* ── COMPARADOR CAVA & POSTES ── */
 #page-comp { background:#f0f4f5; min-height:100vh; padding-bottom:80px; }
@@ -343,6 +343,7 @@ body { font-family:'Barlow',sans-serif; background:#f0f4f5; min-height:100vh; pa
   <button class="page-nav-btn" id="nav-prod" onclick="switchPage('prod')">&#128202; PRODUÇÃO &#128274;</button>
   <button class="page-nav-btn" id="nav-apr" onclick="switchPage('apr')">&#9888; APR</button>
   <button class="page-nav-btn" id="nav-comp" onclick="switchPage('comp')">&#9889; COMPARADOR</button>
+  <button class="page-nav-btn" id="nav-mapa" onclick="switchPage('mapa')">&#128205; MAPA</button>
 </div>
 
 <!-- PÁGINA 1: TURNO -->
@@ -1275,10 +1276,16 @@ function switchPage(page) {
   document.getElementById('page-prod').style.display  = page === 'prod'  ? '' : 'none';
   document.getElementById('page-apr').style.display   = page === 'apr'   ? '' : 'none';
   document.getElementById('page-comp').style.display  = page === 'comp'  ? '' : 'none';
+  document.getElementById('page-mapa').style.display  = page === 'mapa'  ? '' : 'none';
   document.getElementById('nav-turno').className = 'page-nav-btn' + (page === 'turno' ? ' active-turno' : '');
   document.getElementById('nav-prod').className  = 'page-nav-btn' + (page === 'prod'  ? ' active-prod'  : '');
   document.getElementById('nav-apr').className   = 'page-nav-btn' + (page === 'apr'   ? ' active-apr'   : '');
   document.getElementById('nav-comp').className  = 'page-nav-btn' + (page === 'comp'  ? ' active-comp'  : '');
+  document.getElementById('nav-mapa').className  = 'page-nav-btn' + (page === 'mapa'  ? ' active-mapa'  : '');
+  // Invalidar tamanho do mapa ao entrar na aba
+  if (page === 'mapa' && mapaMap) {
+    setTimeout(() => mapaMap.invalidateSize(), 100);
+  }
   // hide bottom bar on comparador
   // bottom bar always visible on all pages
   if (page === 'prod') {
@@ -2018,5 +2025,363 @@ function startAutoRefresh() {
     </div>
   </div>
 </div>
+
+<!-- PÁGINA MAPA -->
+<div id="page-mapa" style="display:none;">
+  <div style="max-width:1200px;margin:0 auto;padding:20px 16px 80px;">
+
+    <!-- Header + upload -->
+    <div style="background:#fff;border-radius:14px;box-shadow:0 2px 14px rgba(0,0,0,0.08);padding:20px 24px;margin-bottom:16px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+        <div>
+          <div style="font-size:0.68rem;font-weight:800;color:#38a169;letter-spacing:2px;text-transform:uppercase;margin-bottom:4px;">📍 MAPA DE OBRAS</div>
+          <div style="font-size:1rem;font-weight:800;color:#1a365d;" id="mapa-titulo">Carregue um CSV para visualizar as obras</div>
+        </div>
+        <label style="display:flex;align-items:center;gap:10px;background:#38a169;color:#fff;padding:10px 20px;border-radius:10px;cursor:pointer;font-family:'Barlow',sans-serif;font-size:0.85rem;font-weight:800;letter-spacing:0.5px;">
+          📂 CARREGAR CSV
+          <input type="file" id="mapa-csv-input" accept=".csv" style="display:none;" onchange="mapaHandleCSV(this)">
+        </label>
+      </div>
+
+      <!-- Legenda de status -->
+      <div id="mapa-legenda" style="display:none;margin-top:16px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;">
+        <span style="font-size:0.68rem;font-weight:800;color:#888;text-transform:uppercase;letter-spacing:1px;margin-right:4px;">Legenda:</span>
+        <span style="display:flex;align-items:center;gap:5px;font-size:0.75rem;font-weight:700;"><span style="width:13px;height:13px;border-radius:50%;background:#38a169;display:inline-block;"></span>Energizada</span>
+        <span style="display:flex;align-items:center;gap:5px;font-size:0.75rem;font-weight:700;"><span style="width:13px;height:13px;border-radius:50%;background:#2b6cb0;display:inline-block;"></span>Em Execução</span>
+        <span style="display:flex;align-items:center;gap:5px;font-size:0.75rem;font-weight:700;"><span style="width:13px;height:13px;border-radius:50%;background:#d69e2e;display:inline-block;"></span>Programada</span>
+        <span style="display:flex;align-items:center;gap:5px;font-size:0.75rem;font-weight:700;"><span style="width:13px;height:13px;border-radius:50%;background:#e53e3e;display:inline-block;"></span>Paralisada</span>
+        <span style="display:flex;align-items:center;gap:5px;font-size:0.75rem;font-weight:700;"><span style="width:13px;height:13px;border-radius:50%;background:#718096;display:inline-block;"></span>Cancelada/Retirada</span>
+        <span style="display:flex;align-items:center;gap:5px;font-size:0.75rem;font-weight:700;"><span style="width:13px;height:13px;border-radius:50%;background:#a0aec0;display:inline-block;"></span>Outros</span>
+      </div>
+    </div>
+
+    <!-- Filtros e stats -->
+    <div id="mapa-stats-bar" style="display:none;background:#fff;border-radius:14px;box-shadow:0 2px 14px rgba(0,0,0,0.08);padding:14px 20px;margin-bottom:16px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;" id="mapa-filter-btns"></div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <input type="text" id="mapa-search" placeholder="🔍 Buscar PEP ou título..." oninput="mapaFiltrar()"
+            style="padding:7px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-family:'Barlow',sans-serif;font-size:0.8rem;font-weight:600;color:#333;width:220px;outline:none;">
+          <span style="font-size:0.78rem;font-weight:800;color:#38a169;" id="mapa-count-label">0 obras</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Mapa -->
+    <div style="background:#fff;border-radius:14px;box-shadow:0 2px 14px rgba(0,0,0,0.08);overflow:hidden;position:relative;">
+      <div id="mapa-container" style="height:600px;width:100%;"></div>
+      <div id="mapa-placeholder" style="height:600px;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#aaa;font-family:'Barlow',sans-serif;">
+        <div style="font-size:4rem;margin-bottom:16px;">🗺️</div>
+        <div style="font-size:1rem;font-weight:700;">Carregue um CSV para ver as obras no mapa</div>
+        <div style="font-size:0.8rem;margin-top:6px;">Use os mesmos arquivos CSV do Comparador</div>
+      </div>
+    </div>
+
+    <!-- Tabela resumo -->
+    <div id="mapa-tabela-section" style="display:none;background:#fff;border-radius:14px;box-shadow:0 2px 14px rgba(0,0,0,0.08);margin-top:16px;overflow:hidden;">
+      <div style="padding:14px 20px;background:#f7f9fc;border-bottom:1px solid #edf0f2;display:flex;align-items:center;justify-content:space-between;">
+        <span style="font-size:0.85rem;font-weight:800;color:#1a365d;">📋 Lista de Obras com Localização</span>
+        <span style="font-size:0.75rem;font-weight:700;color:#38a169;" id="mapa-tabela-count"></span>
+      </div>
+      <div style="overflow-x:auto;">
+        <table style="width:100%;border-collapse:collapse;font-family:'Barlow',sans-serif;font-size:0.78rem;">
+          <thead>
+            <tr style="background:#f0fff4;">
+              <th style="padding:10px 14px;text-align:left;font-size:0.65rem;font-weight:800;color:#38a169;letter-spacing:1.5px;text-transform:uppercase;border-bottom:2px solid #c6f6d5;white-space:nowrap;">PEP</th>
+              <th style="padding:10px 14px;text-align:left;font-size:0.65rem;font-weight:800;color:#38a169;letter-spacing:1.5px;text-transform:uppercase;border-bottom:2px solid #c6f6d5;">Título</th>
+              <th style="padding:10px 14px;text-align:left;font-size:0.65rem;font-weight:800;color:#38a169;letter-spacing:1.5px;text-transform:uppercase;border-bottom:2px solid #c6f6d5;white-space:nowrap;">Status</th>
+              <th style="padding:10px 14px;text-align:center;font-size:0.65rem;font-weight:800;color:#38a169;letter-spacing:1.5px;text-transform:uppercase;border-bottom:2px solid #c6f6d5;white-space:nowrap;">Cava Real.</th>
+              <th style="padding:10px 14px;text-align:center;font-size:0.65rem;font-weight:800;color:#38a169;letter-spacing:1.5px;text-transform:uppercase;border-bottom:2px solid #c6f6d5;white-space:nowrap;">Postes Real.</th>
+              <th style="padding:10px 14px;text-align:center;font-size:0.65rem;font-weight:800;color:#38a169;letter-spacing:1.5px;text-transform:uppercase;border-bottom:2px solid #c6f6d5;white-space:nowrap;">À Implantar</th>
+              <th style="padding:10px 14px;text-align:left;font-size:0.65rem;font-weight:800;color:#38a169;letter-spacing:1.5px;text-transform:uppercase;border-bottom:2px solid #c6f6d5;white-space:nowrap;">Município</th>
+            </tr>
+          </thead>
+          <tbody id="mapa-tabela-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── MAPA ────────────────────────────────────────────────────────────────────
+let mapaMap = null;
+let mapaMarkers = [];
+let mapaData = [];
+let mapaFiltroAtivo = 'TODOS';
+let mapaLayerGroup = null;
+
+const MAPA_CORES = {
+  'ENERGIZADA':            '#38a169',
+  'EM EXECUÇÃO':           '#2b6cb0',
+  'EM EXECUCAO':           '#2b6cb0',
+  'PROGRAMADA':            '#d69e2e',
+  'PARALISADA':            '#e53e3e',
+  'CANCELADA':             '#718096',
+  'RETIRADA DA CARTEIRA':  '#718096',
+};
+function mapaGetCor(status) {
+  const s = (status||'').toUpperCase().trim();
+  return MAPA_CORES[s] || '#a0aec0';
+}
+
+function mapaParseCoord(s) {
+  if (!s) return null;
+  const v = String(s).trim().split('\n')[0].trim().replace(',','.');
+  const n = parseFloat(v);
+  return isNaN(n) ? null : n;
+}
+
+function mapaNormalize(s) {
+  return (s||'').toUpperCase().replace(/\s+/g,'').normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+}
+
+function mapaFindCol(headers, ...kws) {
+  for (const kw of kws) {
+    const k = mapaNormalize(kw);
+    const h = headers.find(h => mapaNormalize(h).includes(k));
+    if (h !== undefined) return h;
+  }
+  return null;
+}
+
+function mapaHandleCSV(input) {
+  const file = input.files[0];
+  if (!file) return;
+  document.getElementById('mapa-titulo').textContent = '⏳ Carregando ' + file.name + '...';
+
+  const load = () => {
+    Papa.parse(file, {
+      skipEmptyLines: true,
+      complete: function(results) {
+        const rows = results.data;
+        let headerIdx = -1;
+        for (let i = 0; i < rows.length; i++) {
+          const r = rows[i].map(c => String(c).trim().toUpperCase());
+          if (r.includes('NOTA') && r.some(c => c.includes('PEP'))) { headerIdx = i; break; }
+        }
+        if (headerIdx === -1) { alert('Cabeçalho não encontrado no CSV.'); return; }
+        const rawHeaders = rows[headerIdx].map(c => String(c).trim().replace(/\n/g,' ').toUpperCase());
+
+        const hPep    = mapaFindCol(rawHeaders, 'PEP OBRA');
+        const hTitulo = mapaFindCol(rawHeaders, 'TITULO', 'TÍTULO');
+        const hStatus = mapaFindCol(rawHeaders, 'STATUS DA OBRA', 'STATUS');
+        const hMun    = mapaFindCol(rawHeaders, 'MUNICIPIO', 'MUNICÍPIO');
+        const hLat    = mapaFindCol(rawHeaders, 'LATITUDE', 'LAT');
+        const hLon    = mapaFindCol(rawHeaders, 'LONGITUDE', 'LON');
+        const hCava   = mapaFindCol(rawHeaders, 'CAVA REALIZADA', 'CAVAREALIZADA');
+        const hPostR  = mapaFindCol(rawHeaders, 'POSTES REALIZADO', 'POSTESREALIZADO');
+        const hPostI  = mapaFindCol(rawHeaders, 'POSTES A IMPLANTA', 'POSTES IMPLANTA');
+        const hEnc    = mapaFindCol(rawHeaders, 'ENCARREGADO');
+
+        mapaData = [];
+        for (let i = headerIdx + 1; i < rows.length; i++) {
+          const row = rows[i];
+          if (!row.some(c => String(c).trim())) continue;
+          const obj = {};
+          rawHeaders.forEach((h, idx) => { obj[h] = String(row[idx] || '').trim(); });
+          const pep = hPep ? obj[hPep] : '';
+          if (!pep) continue;
+          const lat = mapaParseCoord(hLat ? obj[hLat] : '');
+          const lon = mapaParseCoord(hLon ? obj[hLon] : '');
+          mapaData.push({
+            pep,
+            titulo:  hTitulo ? obj[hTitulo] : '',
+            status:  hStatus ? obj[hStatus] : '',
+            mun:     hMun    ? obj[hMun]    : '',
+            lat, lon,
+            cava:    hCava  ? obj[hCava]  : '',
+            postR:   hPostR ? obj[hPostR] : '',
+            postI:   hPostI ? obj[hPostI] : '',
+            enc:     hEnc   ? obj[hEnc]   : '',
+            temCoord: lat !== null && lon !== null,
+          });
+        }
+
+        const comCoord = mapaData.filter(d => d.temCoord).length;
+        document.getElementById('mapa-titulo').textContent =
+          file.name + ' — ' + mapaData.length + ' obras (' + comCoord + ' com coordenadas)';
+
+        mapaInicializar();
+        mapaRenderFiltros();
+        mapaFiltrar();
+        document.getElementById('mapa-stats-bar').style.display = '';
+        document.getElementById('mapa-tabela-section').style.display = '';
+        document.getElementById('mapa-legenda').style.display = 'flex';
+      }
+    });
+  };
+
+  if (!window.Papa) {
+    const s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js';
+    s.onload = load; document.head.appendChild(s);
+  } else { load(); }
+  input.value = '';
+}
+
+function mapaInicializar() {
+  // Carrega Leaflet se necessário
+  if (!window.L) {
+    // CSS
+    if (!document.getElementById('leaflet-css')) {
+      const link = document.createElement('link');
+      link.id = 'leaflet-css';
+      link.rel = 'stylesheet';
+      link.href = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css';
+      document.head.appendChild(link);
+    }
+    const s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js';
+    s.onload = () => mapaIniciarLeaflet();
+    document.head.appendChild(s);
+  } else {
+    mapaIniciarLeaflet();
+  }
+}
+
+function mapaIniciarLeaflet() {
+  document.getElementById('mapa-placeholder').style.display = 'none';
+  document.getElementById('mapa-container').style.display = '';
+
+  if (!mapaMap) {
+    mapaMap = L.map('mapa-container', { zoomControl: true });
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors',
+      maxZoom: 18
+    }).addTo(mapaMap);
+    mapaLayerGroup = L.layerGroup().addTo(mapaMap);
+  } else {
+    mapaLayerGroup.clearLayers();
+  }
+}
+
+function mapaRenderFiltros() {
+  const statusCount = {};
+  mapaData.filter(d => d.temCoord).forEach(d => {
+    const s = d.status.trim() || 'SEM STATUS';
+    statusCount[s] = (statusCount[s]||0) + 1;
+  });
+  const bar = document.getElementById('mapa-filter-btns');
+  const total = mapaData.filter(d => d.temCoord).length;
+  bar.innerHTML = '';
+
+  const mkBtn = (label, key, count) => {
+    const btn = document.createElement('button');
+    btn.style.cssText = 'padding:5px 14px;border-radius:20px;border:2px solid #e2e8f0;background:#fff;font-family:\'Barlow\',sans-serif;font-size:0.72rem;font-weight:800;cursor:pointer;color:#555;transition:all 0.15s;white-space:nowrap;';
+    btn.textContent = label + ' (' + count + ')';
+    btn.onclick = () => { mapaFiltroAtivo = key; mapaFiltrar(); };
+    btn.id = 'mapa-fbtn-' + key.replace(/\s/g,'_');
+    bar.appendChild(btn);
+  };
+
+  mkBtn('Todas', 'TODOS', total);
+  Object.entries(statusCount).sort((a,b)=>b[1]-a[1]).forEach(([s,c]) => mkBtn(s, s, c));
+}
+
+function mapaFiltrar() {
+  if (!mapaMap || !mapaLayerGroup) return;
+  mapaLayerGroup.clearLayers();
+
+  const search = (document.getElementById('mapa-search').value||'').toLowerCase();
+  const filtered = mapaData.filter(d => {
+    if (!d.temCoord) return false;
+    if (mapaFiltroAtivo !== 'TODOS' && d.status.trim() !== mapaFiltroAtivo) return false;
+    if (search && !d.pep.toLowerCase().includes(search) && !d.titulo.toLowerCase().includes(search) && !d.mun.toLowerCase().includes(search)) return false;
+    return true;
+  });
+
+  // Atualiza botões ativos
+  document.querySelectorAll('[id^="mapa-fbtn-"]').forEach(b => {
+    const key = b.id.replace('mapa-fbtn-','').replace(/_/g,' ');
+    const isActive = (mapaFiltroAtivo === key) || (b.id === 'mapa-fbtn-TODOS' && mapaFiltroAtivo === 'TODOS');
+    b.style.background = isActive ? '#38a169' : '#fff';
+    b.style.color = isActive ? '#fff' : '#555';
+    b.style.borderColor = isActive ? '#38a169' : '#e2e8f0';
+  });
+
+  document.getElementById('mapa-count-label').textContent = filtered.length + ' obra' + (filtered.length!==1?'s':'');
+
+  const bounds = [];
+  filtered.forEach(d => {
+    const cor = mapaGetCor(d.status);
+    const icon = L.divIcon({
+      className: '',
+      html: `<div style="
+        width:14px;height:14px;border-radius:50%;
+        background:${cor};border:2.5px solid #fff;
+        box-shadow:0 1px 5px rgba(0,0,0,0.4);
+        cursor:pointer;
+      "></div>`,
+      iconSize: [14,14],
+      iconAnchor: [7,7],
+    });
+
+    const cavaV = d.cava || '—';
+    const postRV = d.postR || '—';
+    const postIV = d.postI || '—';
+    const popup = `
+      <div style="font-family:'Barlow',sans-serif;min-width:220px;max-width:280px;">
+        <div style="font-size:0.72rem;font-weight:800;color:${cor};letter-spacing:1px;text-transform:uppercase;margin-bottom:4px;">${d.status||'–'}</div>
+        <div style="font-size:0.88rem;font-weight:800;color:#1a365d;margin-bottom:8px;line-height:1.3;">${d.titulo||d.pep}</div>
+        <div style="font-size:0.72rem;color:#718096;font-weight:700;margin-bottom:8px;">
+          <span style="background:#f7fafc;padding:2px 8px;border-radius:4px;font-family:monospace;">${d.pep}</span>
+          ${d.mun ? ' · ' + d.mun : ''}
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:8px;">
+          <div style="background:#f0fff4;border-radius:6px;padding:6px 4px;text-align:center;">
+            <div style="font-size:1rem;font-weight:800;color:#38a169;">${cavaV}</div>
+            <div style="font-size:0.6rem;font-weight:700;color:#888;text-transform:uppercase;">Cava</div>
+          </div>
+          <div style="background:#ebf4ff;border-radius:6px;padding:6px 4px;text-align:center;">
+            <div style="font-size:1rem;font-weight:800;color:#2b6cb0;">${postRV}</div>
+            <div style="font-size:0.6rem;font-weight:700;color:#888;text-transform:uppercase;">Postes Real.</div>
+          </div>
+          <div style="background:#fffbf0;border-radius:6px;padding:6px 4px;text-align:center;">
+            <div style="font-size:1rem;font-weight:800;color:#d69e2e;">${postIV}</div>
+            <div style="font-size:0.6rem;font-weight:700;color:#888;text-transform:uppercase;">À Implantar</div>
+          </div>
+        </div>
+        ${d.enc ? `<div style="font-size:0.72rem;color:#555;font-weight:700;">👷 ${d.enc}</div>` : ''}
+      </div>`;
+
+    const marker = L.marker([d.lat, d.lon], {icon}).addTo(mapaLayerGroup);
+    marker.bindPopup(popup, {maxWidth:300});
+    bounds.push([d.lat, d.lon]);
+  });
+
+  if (bounds.length > 0) {
+    mapaMap.fitBounds(bounds, {padding:[30,30]});
+  }
+
+  // Tabela
+  const tbody = document.getElementById('mapa-tabela-body');
+  document.getElementById('mapa-tabela-count').textContent = filtered.length + ' obras exibidas';
+  if (!filtered.length) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:20px;color:#aaa;font-family:\'Barlow\',sans-serif;font-size:0.82rem;font-weight:600;">Nenhuma obra encontrada</td></tr>';
+    return;
+  }
+  const cor2badge = cor => `background:${cor}22;color:${cor};padding:2px 10px;border-radius:4px;font-size:0.68rem;font-weight:800;`;
+  tbody.innerHTML = filtered.map(d => {
+    const cor = mapaGetCor(d.status);
+    return `<tr style="border-bottom:1px solid #f0f4f5;cursor:pointer;" onclick="mapaFocarObra(${d.lat},${d.lon})">
+      <td style="padding:9px 14px;font-family:monospace;font-size:0.75rem;font-weight:800;color:#0d7377;white-space:nowrap;">${d.pep}</td>
+      <td style="padding:9px 14px;font-size:0.78rem;font-weight:700;color:#1a365d;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${d.titulo}</td>
+      <td style="padding:9px 14px;white-space:nowrap;"><span style="${cor2badge(cor)}">${d.status||'–'}</span></td>
+      <td style="padding:9px 14px;text-align:center;font-weight:800;color:#38a169;">${d.cava||'—'}</td>
+      <td style="padding:9px 14px;text-align:center;font-weight:800;color:#2b6cb0;">${d.postR||'—'}</td>
+      <td style="padding:9px 14px;text-align:center;font-weight:800;color:#d69e2e;">${d.postI||'—'}</td>
+      <td style="padding:9px 14px;font-size:0.75rem;color:#555;font-weight:600;">${d.mun}</td>
+    </tr>`;
+  }).join('');
+}
+
+function mapaFocarObra(lat, lon) {
+  if (!mapaMap) return;
+  mapaMap.setView([lat, lon], 15, {animate:true});
+  // Scroll suave até o mapa
+  document.getElementById('mapa-container').scrollIntoView({behavior:'smooth', block:'center'});
+}
+</script>
 </body>
 </html>
