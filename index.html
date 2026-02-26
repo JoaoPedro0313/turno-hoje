@@ -516,58 +516,68 @@ body { font-family:'Barlow',sans-serif; background:#f0f4f5; min-height:100vh; pa
 <div id="page-comp" style="display:none;">
   <div class="comp-container">
 
-    <!-- Info da base salva -->
-    <div style="background:#fff;border-radius:12px;padding:14px 20px;margin-bottom:16px;box-shadow:0 2px 12px rgba(0,0,0,0.07);display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
-      <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:0;">
-        <div class="icon-blue" style="flex-shrink:0;">🗄️</div>
-        <div style="min-width:0;">
-          <div style="font-size:0.72rem;font-weight:800;color:#666;letter-spacing:1px;text-transform:uppercase;margin-bottom:3px;">Base de Comparação (Banco)</div>
-          <div id="comp-base-info"><span style="color:#aaa;font-size:0.72rem;font-weight:600;">Carregando...</span></div>
-        </div>
-      </div>
-      <button onclick="compResetBase()" style="padding:6px 14px;border:1.5px solid #fde8e8;background:#fff;border-radius:8px;font-family:'Barlow',sans-serif;font-size:0.72rem;font-weight:800;cursor:pointer;color:#c53030;transition:all 0.15s;white-space:nowrap;flex-shrink:0;" onmouseover="this.style.background='#fde8e8'" onmouseout="this.style.background='#fff'">🗑️ Resetar Base</button>
-    </div>
-
-    <!-- Adicionar arquivo à base -->
-    <div style="background:#fff;border-radius:12px;padding:16px 20px;margin-bottom:20px;box-shadow:0 2px 12px rgba(0,0,0,0.07);">
-      <div style="font-size:0.72rem;font-weight:800;color:#666;letter-spacing:1px;text-transform:uppercase;margin-bottom:12px;">➕ Adicionar Arquivo à Base</div>
-      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
-        <div class="upload-card" id="comp-card-add" style="flex:1;min-width:200px;padding:16px 20px;display:flex;align-items:center;gap:12px;text-align:left;">
-          <input type="file" id="comp-file-add" accept=".csv">
-          <span style="font-size:1.5rem;flex-shrink:0;">📂</span>
-          <div>
-            <div style="font-size:0.82rem;font-weight:700;color:#2b6cb0;">Selecione um CSV para adicionar à base</div>
-            <div class="filename" id="comp-name-add" style="color:#0d7377;font-size:0.75rem;font-weight:700;margin-top:3px;"></div>
+    <!-- Banco de Obras -->
+    <div style="background:#fff;border-radius:12px;padding:14px 20px;margin-bottom:16px;box-shadow:0 2px 12px rgba(0,0,0,0.07);">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+        <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:0;">
+          <div class="icon-blue" style="flex-shrink:0;">🗄️</div>
+          <div style="min-width:0;">
+            <div style="font-size:0.72rem;font-weight:800;color:#666;letter-spacing:1px;text-transform:uppercase;margin-bottom:3px;">Banco de Obras</div>
+            <div id="comp-base-info"><span style="color:#aaa;font-size:0.72rem;font-weight:600;">Carregando...</span></div>
           </div>
         </div>
-        <button id="comp-btn-add" disabled onclick="compAdicionarNaBase()" style="padding:12px 24px;background:linear-gradient(135deg,#2b6cb0,#3182ce);color:#fff;border:none;border-radius:10px;font-family:'Barlow',sans-serif;font-size:0.85rem;font-weight:800;cursor:pointer;transition:all 0.2s;box-shadow:0 4px 12px rgba(43,108,176,0.25);white-space:nowrap;flex-shrink:0;" onmouseover="if(!this.disabled)this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">➕ ADICIONAR À BASE</button>
+        <button onclick="compResetBase()" style="padding:6px 14px;border:1.5px solid #fde8e8;background:#fff;border-radius:8px;font-family:'Barlow',sans-serif;font-size:0.72rem;font-weight:800;cursor:pointer;color:#c53030;transition:all 0.15s;white-space:nowrap;flex-shrink:0;" onmouseover="this.style.background='#fde8e8'" onmouseout="this.style.background='#fff'">🗑️ Resetar Base</button>
       </div>
     </div>
 
-    <!-- Upload -->
-    <div class="upload-section">
-      <div id="comp-upload-anterior">
-        <div class="upload-card" id="comp-card-anterior" style="height:100%;">
-          <input type="file" id="comp-file-anterior" accept=".csv">
-          <div class="tag anterior">📂 Base Anterior</div>
-          <div class="icon">⬆️</div>
-          <div class="label">Suba o CSV base aqui</div>
-          <div class="sub">Necessário apenas na primeira vez</div>
-          <div class="filename" id="comp-name-anterior"></div>
-        </div>
+    <!-- Painel carregar banco -->
+    <div style="background:#fff;border-radius:12px;padding:20px;margin-bottom:20px;box-shadow:0 2px 12px rgba(0,0,0,0.07);">
+      <div style="font-size:0.72rem;font-weight:800;color:#0d7377;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:14px;">📥 CARREGAR BANCO DE OBRAS (CSVs)</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
+        <label style="display:block;cursor:pointer;">
+          <div class="upload-card" id="comp-card-irece" style="padding:16px;display:flex;align-items:center;gap:12px;text-align:left;">
+            <input type="file" id="comp-file-irece" accept=".csv" style="display:none;" onchange="compHandleBancoCSV(this,'IRECÊ')">
+            <span style="font-size:1.8rem;flex-shrink:0;">📂</span>
+            <div>
+              <div style="font-size:0.72rem;font-weight:800;color:#0d7377;letter-spacing:1px;text-transform:uppercase;margin-bottom:2px;">UTD Irecê</div>
+              <div style="font-size:0.8rem;font-weight:700;color:#2b6cb0;" id="comp-name-irece">Selecione o CSV de Irecê</div>
+            </div>
+          </div>
+        </label>
+        <label style="display:block;cursor:pointer;">
+          <div class="upload-card" id="comp-card-jacobina" style="padding:16px;display:flex;align-items:center;gap:12px;text-align:left;">
+            <input type="file" id="comp-file-jacobina" accept=".csv" style="display:none;" onchange="compHandleBancoCSV(this,'JACOBINA')">
+            <span style="font-size:1.8rem;flex-shrink:0;">📂</span>
+            <div>
+              <div style="font-size:0.72rem;font-weight:800;color:#0d7377;letter-spacing:1px;text-transform:uppercase;margin-bottom:2px;">UTD Jacobina</div>
+              <div style="font-size:0.8rem;font-weight:700;color:#2b6cb0;" id="comp-name-jacobina">Selecione o CSV de Jacobina</div>
+            </div>
+          </div>
+        </label>
       </div>
-      <div class="upload-card" id="comp-card-atual">
-        <input type="file" id="comp-file-atual" accept=".csv">
+      <button id="comp-btn-salvar-banco" disabled onclick="compSalvarBanco()" style="display:block;width:100%;padding:13px;background:linear-gradient(135deg,#0d7377,#14a085);color:#fff;border:none;border-radius:10px;font-family:'Barlow',sans-serif;font-size:0.9rem;font-weight:800;cursor:pointer;letter-spacing:0.5px;opacity:0.4;transition:all 0.2s;box-shadow:0 4px 12px rgba(13,115,119,0.3);">
+        💾 SALVAR COMO BANCO DE OBRAS
+      </button>
+      <div id="comp-alerta-novas" style="display:none;margin-top:14px;padding:14px 16px;background:#fffbf0;border:1.5px solid #f6ad55;border-radius:10px;">
+        <div style="font-size:0.78rem;font-weight:800;color:#c05621;margin-bottom:8px;">⚠️ OBRAS NOVAS DETECTADAS — não existem no banco atual!</div>
+        <div id="comp-alerta-lista" style="font-size:0.75rem;font-weight:700;color:#744210;max-height:140px;overflow-y:auto;line-height:1.6;"></div>
+        <div style="margin-top:8px;font-size:0.72rem;color:#975a16;">Clique em "Salvar como Banco de Obras" para atualizar o banco com as obras novas.</div>
+      </div>
+    </div>
+
+    <!-- Comparador -->
+    <div style="background:#fff;border-radius:12px;padding:20px;margin-bottom:20px;box-shadow:0 2px 12px rgba(0,0,0,0.07);">
+      <div style="font-size:0.72rem;font-weight:800;color:#2b6cb0;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:14px;">🔍 COMPARAR PROGRESSO COM O BANCO</div>
+      <div class="upload-card" id="comp-card-atual" style="padding:20px;text-align:center;margin-bottom:16px;position:relative;">
+        <input type="file" id="comp-file-atual" accept=".csv" style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;">
         <div class="tag atual">📂 Arquivo Novo</div>
         <div class="icon">⬆️</div>
         <div class="label">Suba o CSV mais recente aqui</div>
-        <div class="sub">Será comparado com a base salva</div>
+        <div class="sub">Será comparado com o banco salvo</div>
         <div class="filename" id="comp-name-atual"></div>
       </div>
+      <button class="btn-compare" id="comp-btn-compare" disabled onclick="compCompare()">🔍 COMPARAR COM BANCO</button>
     </div>
-    <button class="btn-compare" id="comp-btn-compare" disabled onclick="compCompare()">🔍 COMPARAR E SALVAR NOVA BASE</button>
-    <button id="comp-btn-diag" onclick="compDiagnostico()" style="display:none; background:#2b6cb0; color:#fff; border:none; padding:8px 20px; border-radius:8px; font-family:'Barlow',sans-serif; font-size:0.8rem; font-weight:800; cursor:pointer; margin:8px auto 0; display:block;">🔬 VER COLUNAS DO CSV</button>
-    <div id="comp-diag-box" style="display:none; margin:12px 0; padding:12px 16px; background:#f0f4ff; border:1px solid #bee3f8; border-radius:8px; font-family:monospace; font-size:0.75rem; color:#1a365d; white-space:pre-wrap; word-break:break-all;"></div>
 
     <!-- Resultados -->
     <div id="comp-results" style="display:none; margin-top:24px;">
@@ -600,7 +610,7 @@ body { font-family:'Barlow',sans-serif; background:#f0f4f5; min-height:100vh; pa
           <table>
             <thead>
               <tr>
-                <th>PEP Obra</th><th>Título</th><th>Status</th>
+                <th>PEP Obra</th><th>Título</th><th>UTD</th><th>Status</th>
                 <th class="diff-cell">Cava Realizada</th>
                 <th class="diff-cell">Postes Realizados</th>
                 <th class="diff-cell">Postes à Implantar</th>
@@ -615,7 +625,6 @@ body { font-family:'Barlow',sans-serif; background:#f0f4f5; min-height:100vh; pa
 
   </div>
 </div>
-    </div>
 
   </div>
 </div>
@@ -847,9 +856,14 @@ async function dbLoad() {
           producao = row.value || {};
         }
         if (row.key === 'comparador_base') {
-          compDataAnterior = row.value.data || null;
-          compBaseInfo     = row.value.info || null;
+          // legado — ignorar, migrado para obras_base
+        }
+        if (row.key === 'obras_base') {
+          bancoDB     = row.value.data || null;
+          bancoDBInfo = row.value.info || null;
           compUpdateBaseUI();
+          // Alimenta mapa se já estiver na aba
+          if (bancoDB) setTimeout(mapaCarregarDoBanco, 300);
         }
         if (row.key === 'apr_data') {
           if (Array.isArray(row.value) && row.value.length > 0) {
@@ -921,37 +935,6 @@ async function dbSaveApr() {
   }
 }
 
-async function dbSaveComparador(mergedData, filename) {
-  try {
-    setDbStatus('syncing', 'Salvando base...');
-    const now = new Date();
-    const pad = n => String(n).padStart(2,'0');
-    // Atualiza histórico de arquivos
-    const arquivos = (compBaseInfo && compBaseInfo.arquivos) ? [...compBaseInfo.arquivos] : [];
-    arquivos.push({ filename, addedAt: pad(now.getDate())+'/'+pad(now.getMonth()+1)+'/'+now.getFullYear()+' às '+pad(now.getHours())+':'+pad(now.getMinutes()), count: mergedData.length });
-    const info = {
-      arquivos,
-      count: mergedData.length,
-      updatedAt: pad(now.getDate())+'/'+pad(now.getMonth()+1)+'/'+now.getFullYear()+' às '+pad(now.getHours())+':'+pad(now.getMinutes())
-    };
-    const res = await fetch(SUPA_URL + '/rest/v1/turno_data', {
-      method: 'POST',
-      headers: {
-        'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY,
-        'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates'
-      },
-      body: JSON.stringify({ key: 'comparador_base', value: { data: mergedData, info }, updated_at: now.toISOString() })
-    });
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    compDataAnterior = mergedData;
-    compBaseInfo = info;
-    compUpdateBaseUI();
-    setDbStatus('online', 'Base salva!');
-    setTimeout(() => setDbStatus('online', 'Banco online'), 1500);
-  } catch(e) {
-    setDbStatus('offline', 'Erro ao salvar base');
-  }
-}
 // ─── RENDER ────────────────────────────────────────────────────────────────────
 function render() {
   buildGridOk('abriu-grid', [...teams.ok].sort());
@@ -1282,9 +1265,21 @@ function switchPage(page) {
   document.getElementById('nav-apr').className   = 'page-nav-btn' + (page === 'apr'   ? ' active-apr'   : '');
   document.getElementById('nav-comp').className  = 'page-nav-btn' + (page === 'comp'  ? ' active-comp'  : '');
   document.getElementById('nav-mapa').className  = 'page-nav-btn' + (page === 'mapa'  ? ' active-mapa'  : '');
-  // Invalidar tamanho do mapa ao entrar na aba
-  if (page === 'mapa' && mapaMap) {
-    setTimeout(() => mapaMap.invalidateSize(), 100);
+  // Ao entrar na aba mapa: garante Leaflet e renderiza do banco
+  if (page === 'mapa') {
+    setTimeout(() => {
+      if (bancoDB && bancoDB.length) {
+        if (!mapaData.length) {
+          mapaCarregarDoBanco();
+        } else {
+          mapaEnsureLeaflet(() => {
+            if (mapaMap) mapaMap.invalidateSize();
+            mapaRenderFiltros();
+            mapaFiltrar();
+          });
+        }
+      }
+    }, 120);
   }
   // hide bottom bar on comparador
   // bottom bar always visible on all pages
@@ -1466,242 +1461,360 @@ function resetFontSize() { applyFontSize(100); }
   if (saved) { window.addEventListener('DOMContentLoaded', () => applyFontSize(saved)); applyFontSize(saved); }
 })();
 
-// ─── COMPARADOR CAVA & POSTES ──────────────────────────────────────────────────
-let compDataAnterior = null;
-let compDataAtual    = null;
+// ─── COMPARADOR & BANCO DE OBRAS ──────────────────────────────────────────────
+
+// ── BANCO DE OBRAS & COMPARADOR ──────────────────────────────────────────────
+
+let bancoDB          = null;  // array de todas as obras (IRECÊ + JACOBINA)
+let bancoDBInfo      = null;  // metadados do banco
+let compDataAtual    = null;  // CSV carregado para comparar
+let compAtualFilename = '';
 let compAllChanges   = [];
 let compActiveFilter = 'todos';
-let compBaseInfo     = null;
+let compBancoTemp    = { 'IRECÊ': null, 'JACOBINA': null };
 
+// ── Normalização ──────────────────────────────────────────────────────────
+function compNorm(s) {
+  return (s || '').toUpperCase().replace(/\s+/g, '').normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+
+// ── Parse número ──────────────────────────────────────────────────────────
+function compParseNum(v) {
+  if (v === '' || v === null || v === undefined) return null;
+  const n = parseFloat(String(v).replace(',', '.'));
+  return isNaN(n) ? null : n;
+}
+
+// ── Parse CSV → array de objetos ─────────────────────────────────────────
+function compParseCSVText(text, utdLabel) {
+  const rows = Papa.parse(text.replace(/^\uFEFF/, ''), { skipEmptyLines: true }).data;
+  let headerIdx = -1;
+  for (let i = 0; i < Math.min(rows.length, 10); i++) {
+    const r = rows[i].map(c => String(c).trim().toUpperCase());
+    if (r.some(c => c === 'NOTA') && r.some(c => c.includes('PEP'))) { headerIdx = i; break; }
+  }
+  if (headerIdx === -1) return null;
+  const headers = rows[headerIdx].map(c => String(c).trim().replace(/\n/g, ' ').toUpperCase());
+  const data = [];
+  for (let i = headerIdx + 1; i < rows.length; i++) {
+    const row = rows[i];
+    if (!row.some(c => String(c).trim())) continue;
+    const obj = { _UTD: utdLabel || '' };
+    headers.forEach((h, idx) => { obj[h] = String(row[idx] || '').trim(); });
+    if (obj['PEP OBRA']) data.push(obj);
+  }
+  return data;
+}
+
+// ── Garante PapaParse carregado, depois chama callback ───────────────────
+function compWithPapa(cb) {
+  if (window.Papa) { cb(); return; }
+  const s = document.createElement('script');
+  s.src = 'https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js';
+  s.onload = cb;
+  document.head.appendChild(s);
+}
+
+// ── UI do banco ───────────────────────────────────────────────────────────
 function compUpdateBaseUI() {
-  const baseInfo  = document.getElementById('comp-base-info');
-  const uploadSec = document.getElementById('comp-upload-anterior');
-  if (compDataAnterior && compBaseInfo) {
-    const arqs = compBaseInfo.arquivos || [];
-    const fileList = arqs.length > 0
-      ? arqs.map(a => `<span style="display:inline-flex;align-items:center;gap:5px;background:#f0fafa;border:1px solid #c0e8e5;border-radius:6px;padding:2px 8px;font-size:0.68rem;font-weight:700;color:#0d7377;">📄 ${a.filename}</span>`).join(' ')
-      : '';
-    if (baseInfo) baseInfo.innerHTML = `
-      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-        <span style="color:#0d7377;font-size:0.75rem;font-weight:800;">✅ ${compBaseInfo.count} obras · atualizado em ${compBaseInfo.updatedAt}</span>
-        ${fileList}
-      </div>`;
-    if (uploadSec) uploadSec.style.display = 'none';
-    if (compDataAtual) document.getElementById('comp-btn-compare').disabled = false;
-  } else {
-    if (baseInfo) baseInfo.innerHTML = `<span style="color:#aaa;font-size:0.72rem;font-weight:600;">Nenhuma base salva no banco ainda — adicione o primeiro arquivo abaixo</span>`;
-    if (uploadSec) uploadSec.style.display = '';
+  const el = document.getElementById('comp-base-info');
+  if (!bancoDB || !bancoDBInfo) {
+    el.innerHTML = '<span style="color:#aaa;font-size:0.72rem;font-weight:600;">Nenhum banco salvo — carregue os 2 CSVs abaixo e clique em Salvar</span>';
+    document.getElementById('comp-btn-compare').disabled = true;
+    return;
+  }
+  const { count, updatedAt, utds } = bancoDBInfo;
+  const tags = (utds || []).map(u =>
+    `<span style="background:#ebf4ff;color:#2b6cb0;padding:1px 8px;border-radius:4px;font-size:0.68rem;font-weight:800;margin-left:4px;">${u}</span>`
+  ).join('');
+  el.innerHTML = `<span style="font-weight:800;color:#0d7377;font-size:0.82rem;">✅ ${count} obras</span>`
+    + `<span style="font-size:0.72rem;color:#888;margin-left:8px;">· atualizado em ${updatedAt}</span>${tags}`;
+  document.getElementById('comp-btn-compare').disabled = !compDataAtual;
+}
+
+// ── Carregar CSV para o banco (Irecê ou Jacobina) ─────────────────────────
+function compHandleBancoCSV(input, utd) {
+  const file = input.files[0];
+  if (!file) return;
+  const cardKey = utd === 'IRECÊ' ? 'irece' : 'jacobina';
+  const nameEl = document.getElementById('comp-name-' + cardKey);
+  const cardEl = document.getElementById('comp-card-' + cardKey);
+  nameEl.textContent = '⏳ Lendo ' + file.name + '…';
+
+  const reader = new FileReader();
+  reader.onload = e => {
+    compWithPapa(() => {
+      const data = compParseCSVText(e.target.result, utd);
+      if (!data || !data.length) { nameEl.textContent = '❌ Arquivo inválido — verifique o CSV'; return; }
+
+      compBancoTemp[utd] = data;
+      cardEl.classList.add('loaded');
+      nameEl.textContent = '✅ ' + file.name + ' (' + data.length + ' obras)';
+
+      // Habilita botão salvar quando ambos estão carregados
+      const ambos = compBancoTemp['IRECÊ'] && compBancoTemp['JACOBINA'];
+      const btn = document.getElementById('comp-btn-salvar-banco');
+      btn.disabled = !ambos;
+      btn.style.opacity = ambos ? '1' : '0.4';
+
+      // Detecta obras novas em relação ao banco atual
+      if (bancoDB) {
+        const pepsBanco = new Set(bancoDB.map(r => r['PEP OBRA']));
+        const novas = data.filter(r => !pepsBanco.has(r['PEP OBRA']));
+        if (novas.length) {
+          document.getElementById('comp-alerta-novas').style.display = '';
+          const lista = document.getElementById('comp-alerta-lista');
+          novas.forEach(n => {
+            lista.innerHTML += `<div>📌 ${n['PEP OBRA']} — ${n['TÍTULO'] || n['TITULO'] || ''} <span style="color:#2b6cb0;">(${utd})</span></div>`;
+          });
+        }
+      }
+    });
+  };
+  reader.readAsText(file, 'utf-8');
+  input.value = '';
+}
+
+// ── Salvar banco no Supabase ──────────────────────────────────────────────
+async function compSalvarBanco() {
+  const irece    = compBancoTemp['IRECÊ'];
+  const jacobina = compBancoTemp['JACOBINA'];
+  if (!irece || !jacobina) return;
+
+  const merged = [...irece, ...jacobina];
+  const now = new Date();
+  const pad = n => String(n).padStart(2, '0');
+  const updatedAt = pad(now.getDate()) + '/' + pad(now.getMonth() + 1) + '/' + now.getFullYear()
+    + ' às ' + pad(now.getHours()) + ':' + pad(now.getMinutes());
+  const info = {
+    count: merged.length,
+    updatedAt,
+    utds: ['IRECÊ (' + irece.length + ')', 'JACOBINA (' + jacobina.length + ')'],
+  };
+
+  try {
+    setDbStatus('syncing', 'Salvando banco…');
+    const res = await fetch(SUPA_URL + '/rest/v1/turno_data', {
+      method: 'POST',
+      headers: {
+        'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY,
+        'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates'
+      },
+      body: JSON.stringify({ key: 'obras_base', value: { data: merged, info }, updated_at: now.toISOString() })
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+
+    bancoDB     = merged;
+    bancoDBInfo = info;
+    compUpdateBaseUI();
+
+    // Limpa estado temporário
+    document.getElementById('comp-alerta-novas').style.display = 'none';
+    document.getElementById('comp-alerta-lista').innerHTML = '';
+    compBancoTemp = { 'IRECÊ': null, 'JACOBINA': null };
+    ['irece', 'jacobina'].forEach(id => {
+      document.getElementById('comp-card-' + id)?.classList.remove('loaded');
+      document.getElementById('comp-name-' + id).textContent =
+        id === 'irece' ? 'Selecione o CSV de Irecê' : 'Selecione o CSV de Jacobina';
+    });
+    document.getElementById('comp-btn-salvar-banco').disabled = true;
+    document.getElementById('comp-btn-salvar-banco').style.opacity = '0.4';
+
+    setDbStatus('online', '✅ Banco salvo! ' + merged.length + ' obras');
+    setTimeout(() => setDbStatus('online', 'Banco online'), 2500);
+
+    // Atualiza mapa automaticamente
+    mapaCarregarDoBanco();
+
+  } catch (e) {
+    console.error(e);
+    setDbStatus('offline', 'Erro ao salvar banco');
   }
 }
 
-// Mescla novos dados na base existente por PEP OBRA (upsert)
-function compMergeIntoBase(newData) {
-  const base = compDataAnterior ? [...compDataAnterior] : [];
-  const map = {};
-  base.forEach(r => { map[r['PEP OBRA']] = r; });
-  newData.forEach(r => { map[r['PEP OBRA']] = r; }); // sobrescreve/adiciona
-  return Object.values(map);
-}
-
-// Adiciona arquivo direto na base sem comparar
-function compAdicionarNaBase() {
-  if (!compDataAdd) return;
-  const merged = compMergeIntoBase(compDataAdd);
-  dbSaveComparador(merged, compAddFilename);
-  compDataAdd = null;
-  compAddFilename = '';
-  const card = document.getElementById('comp-card-add');
-  if (card) card.classList.remove('loaded');
-  document.getElementById('comp-name-add').textContent = '';
-  document.getElementById('comp-btn-add').disabled = true;
-}
-
-function compHandleFile(inputId, cardId, nameId, side) {
-  const input = document.getElementById(inputId);
-  input.addEventListener('change', function() {
+// ── Handle CSV para comparação (arquivo novo) ─────────────────────────────
+function compHandleFileAtual() {
+  document.getElementById('comp-file-atual').addEventListener('change', function () {
     const file = this.files[0];
     if (!file) return;
-    document.getElementById(nameId).textContent = file.name;
-    document.getElementById(cardId).classList.add('loaded');
-    const load = () => compParseFile(file, side);
-    if (!window.Papa) {
-      const s = document.createElement('script');
-      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js';
-      s.onload = load; document.head.appendChild(s);
-    } else { load(); }
+    document.getElementById('comp-name-atual').textContent = '⏳ Lendo…';
+
+    const reader = new FileReader();
+    reader.onload = e => {
+      compWithPapa(() => {
+        const utd = /JACOBINA/i.test(file.name) ? 'JACOBINA' : /IREC/i.test(file.name) ? 'IRECÊ' : '';
+        compDataAtual     = compParseCSVText(e.target.result, utd);
+        compAtualFilename = file.name;
+
+        if (!compDataAtual) { document.getElementById('comp-name-atual').textContent = '❌ CSV inválido'; return; }
+        document.getElementById('comp-name-atual').textContent = file.name + ' (' + compDataAtual.length + ' obras)';
+        document.getElementById('comp-card-atual').classList.add('loaded');
+        document.getElementById('comp-btn-compare').disabled = !bancoDB;
+
+        // Avisa obras novas
+        if (bancoDB) {
+          const pepsBanco = new Set(bancoDB.map(r => r['PEP OBRA']));
+          const novas = compDataAtual.filter(r => !pepsBanco.has(r['PEP OBRA']));
+          if (novas.length) {
+            const alertEl = document.getElementById('comp-alerta-novas');
+            const listaEl = document.getElementById('comp-alerta-lista');
+            alertEl.style.display = '';
+            listaEl.innerHTML = `<div style="font-weight:800;margin-bottom:4px;">Arquivo: ${file.name}</div>`
+              + novas.map(n =>
+                `<div>📌 ${n['PEP OBRA']} — ${n['TÍTULO'] || n['TITULO'] || ''} <span style="color:#2b6cb0;">(${utd || 'CSV'})</span></div>`
+              ).join('');
+          }
+        }
+      });
+    };
+    reader.readAsText(file, 'utf-8');
+    this.value = '';
   });
 }
 
-function compParseFile(file, side) {
-  Papa.parse(file, {
-    skipEmptyLines: true,
-    complete: function(results) {
-      const rows = results.data;
-      let headerIdx = -1;
-      for (let i = 0; i < rows.length; i++) {
-        const r = rows[i].map(c => String(c).trim().toUpperCase());
-        if (r.includes('NOTA') && r.some(c => c.includes('PEP'))) { headerIdx = i; break; }
-      }
-      if (headerIdx === -1) { alert('Não encontrei cabeçalho válido no arquivo.'); return; }
-      const headers = rows[headerIdx].map(c => String(c).trim().replace(/\n/g,' ').toUpperCase());
-      const data = [];
-      for (let i = headerIdx + 1; i < rows.length; i++) {
-        const row = rows[i];
-        if (!row.some(c => String(c).trim())) continue;
-        const obj = {};
-        headers.forEach((h, idx) => { obj[h] = String(row[idx] || '').trim(); });
-        if (obj['PEP OBRA'] && obj['PEP OBRA'] !== '') data.push(obj);
-      }
-      if (side === 'anterior') { compDataAnterior = data; }
-      else if (side === 'atual') { compDataAtual = data; compAtualFilename = file.name; }
-      else if (side === 'add')  { compDataAdd = data; compAddFilename = file.name; document.getElementById('comp-btn-add').disabled = false; }
-      const hasAnt   = compDataAnterior !== null;
-      const hasAtual = compDataAtual !== null;
-      document.getElementById('comp-btn-compare').disabled = !(hasAnt && hasAtual);
-      const diagBtn = document.getElementById('comp-btn-diag');
-      if (diagBtn) diagBtn.style.display = (hasAnt || hasAtual) ? 'block' : 'none';
-    }
-  });
-}
-
-let compAtualFilename = '';
-let compDataAdd = null;
-let compAddFilename = '';
-
+// ── Comparação principal ──────────────────────────────────────────────────
 function compCompare() {
+  if (!bancoDB || !compDataAtual) return;
+
   const mapAnt = {};
-  compDataAnterior.forEach(r => { mapAnt[r['PEP OBRA']] = r; });
+  bancoDB.forEach(r => { mapAnt[r['PEP OBRA']] = r; });
   compAllChanges = [];
-  // Busca coluna por nome: normaliza removendo espaços e acentos para comparação
-  const normalizeCol = s => s.toUpperCase()
-    .replace(/\s+/g,'')
-    .normalize('NFD').replace(/[\u0300-\u036f]/g,''); // remove acentos
-  const findVal = (row, ...keywords) => {
+
+  function findVal(row, ...kws) {
     if (!row) return null;
-    for (const keyword of keywords) {
-      const kw = normalizeCol(keyword);
-      const k = Object.keys(row).find(k => normalizeCol(k).includes(kw));
-      if (k) return compParseNum(row[k]);
+    for (const kw of kws) {
+      const k = compNorm(kw);
+      const col = Object.keys(row).find(c => compNorm(c).includes(k));
+      if (col !== undefined) return compParseNum(row[col]);
     }
     return null;
-  };
+  }
+
   compDataAtual.forEach(rowAtual => {
-    const pep = rowAtual['PEP OBRA'];
+    const pep    = rowAtual['PEP OBRA'];
     const rowAnt = mapAnt[pep];
-    // Nomes reais no CSV: "CAVA REALIZADA", "POSTES REALIZADO", "POSTES A IMPLANTA", "POSTES PREVISTOS"
-    const cavaAnt        = rowAnt ? findVal(rowAnt, 'CAVA REALIZADA', 'CAVAREALIZADA') : null;
-    const cavaAtual      = findVal(rowAtual, 'CAVA REALIZADA', 'CAVAREALIZADA');
-    const postesRealAnt  = rowAnt ? findVal(rowAnt, 'POSTES REALIZADO', 'POSTESREALIZADO') : null;
-    const postesRealAtual= findVal(rowAtual, 'POSTES REALIZADO', 'POSTESREALIZADO');
-    const postesImpAnt   = rowAnt ? findVal(rowAnt, 'POSTES A IMPLANTA', 'POSTES IMPLANTA', 'POSTESAIMPLANTA', 'POSTESIMPLAN') : null;
-    const postesImpAtual = findVal(rowAtual, 'POSTES A IMPLANTA', 'POSTES IMPLANTA', 'POSTESAIMPLANTA', 'POSTESIMPLAN');
-    const postesPrevAtual= findVal(rowAtual, 'POSTES PREVISTOS', 'POSTESPREVISTOS');
-    const cavaDiff = (cavaAnt!==null||cavaAtual!==null)?(cavaAtual||0)-(cavaAnt||0):0;
-    const postesRealDiff = (postesRealAnt!==null||postesRealAtual!==null)?(postesRealAtual||0)-(postesRealAnt||0):0;
-    const postesImpDiff = (postesImpAnt!==null||postesImpAtual!==null)?(postesImpAtual||0)-(postesImpAnt||0):0;
-    if (!cavaDiff && !postesRealDiff && !postesImpDiff && rowAnt) return;
-    const statusRaw = String(rowAtual['STATUS DA OBRA']||rowAtual['STATUS']||'').trim().toUpperCase().replace(/\s+/g,'_');
-    compAllChanges.push({ pep, titulo:rowAtual['TÍTULO']||rowAtual['TITULO']||'', status:statusRaw, isNew:!rowAnt, cavaAnt, cavaAtual, cavaDiff, postesRealAnt, postesRealAtual, postesRealDiff, postesImpAnt, postesImpAtual, postesImpDiff, postesPrevAtual });
+
+    const cavaAnt  = findVal(rowAnt,  'CAVA REALIZADA', 'CAVAREALIZADA');
+    const cavaAt   = findVal(rowAtual, 'CAVA REALIZADA', 'CAVAREALIZADA');
+    const pRealAnt = findVal(rowAnt,  'POSTES REALIZADO', 'POSTESREALIZADO');
+    const pRealAt  = findVal(rowAtual, 'POSTES REALIZADO', 'POSTESREALIZADO');
+    const pImpAnt  = findVal(rowAnt,  'POSTES A IMPLANTA', 'POSTESAIMPLANTA', 'POSTES IMPLANTA');
+    const pImpAt   = findVal(rowAtual, 'POSTES A IMPLANTA', 'POSTESAIMPLANTA', 'POSTES IMPLANTA');
+    const pPrevAt  = findVal(rowAtual, 'POSTES PREVISTOS', 'POSTESPREVISTOS');
+
+    const cavaDiff  = (cavaAnt  !== null || cavaAt  !== null) ? (cavaAt  || 0) - (cavaAnt  || 0) : 0;
+    const pRealDiff = (pRealAnt !== null || pRealAt !== null) ? (pRealAt || 0) - (pRealAnt || 0) : 0;
+    const pImpDiff  = (pImpAnt  !== null || pImpAt  !== null) ? (pImpAt  || 0) - (pImpAnt  || 0) : 0;
+
+    // Só mostra se houve mudança, ou se é obra nova
+    if (!cavaDiff && !pRealDiff && !pImpDiff && rowAnt) return;
+
+    compAllChanges.push({
+      pep,
+      titulo:   rowAtual['TÍTULO'] || rowAtual['TITULO'] || '',
+      utd:      rowAtual['_UTD'] || (rowAnt && rowAnt['_UTD']) || '',
+      status:   (rowAtual['STATUS DA OBRA'] || '').trim(),
+      isNew:    !rowAnt,
+      cavaAnt,  cavaAt,  cavaDiff,
+      pRealAnt, pRealAt, pRealDiff,
+      pImpAnt,  pImpAt,  pImpDiff,
+      pPrevAt,
+    });
   });
-  document.getElementById('comp-stat-total').textContent = compAllChanges.length;
-  document.getElementById('comp-stat-cava-inc').textContent = compAllChanges.filter(r=>r.cavaDiff>0).length;
-  document.getElementById('comp-stat-cava-dec').textContent = compAllChanges.filter(r=>r.cavaDiff<0).length;
-  document.getElementById('comp-stat-postes-inc').textContent = compAllChanges.filter(r=>r.postesRealDiff>0).length;
-  document.getElementById('comp-stat-postes-dec').textContent = compAllChanges.filter(r=>r.postesRealDiff<0).length;
+
+  // Stats
+  document.getElementById('comp-stat-total').textContent    = compAllChanges.length;
+  document.getElementById('comp-stat-cava-inc').textContent  = compAllChanges.filter(r => r.cavaDiff  > 0).length;
+  document.getElementById('comp-stat-cava-dec').textContent  = compAllChanges.filter(r => r.cavaDiff  < 0).length;
+  document.getElementById('comp-stat-postes-inc').textContent = compAllChanges.filter(r => r.pRealDiff > 0).length;
+  document.getElementById('comp-stat-postes-dec').textContent = compAllChanges.filter(r => r.pRealDiff < 0).length;
+
   document.getElementById('comp-results').style.display = 'block';
-  compRenderTable();
-  document.getElementById('comp-results').scrollIntoView({behavior:'smooth'});
-  // Mescla o arquivo novo na base (upsert por PEP) e salva
-  const merged = compMergeIntoBase(compDataAtual);
-  dbSaveComparador(merged, compAtualFilename);
+  compSetFilter('todos', document.querySelector('#page-comp .filter-btn'));
+  document.getElementById('comp-results').scrollIntoView({ behavior: 'smooth' });
+
+  // Limpa o arquivo carregado
   compDataAtual = null;
-  const card = document.getElementById('comp-card-atual');
-  if (card) card.classList.remove('loaded');
+  document.getElementById('comp-card-atual').classList.remove('loaded');
   document.getElementById('comp-name-atual').textContent = '';
   document.getElementById('comp-btn-compare').disabled = true;
+  document.getElementById('comp-alerta-novas').style.display = 'none';
+  document.getElementById('comp-alerta-lista').innerHTML = '';
 }
 
-function compParseNum(v) {
-  if (v===''||v===null||v===undefined||v==='nan'||v==='NaN') return null;
-  const n = parseFloat(String(v).replace(',','.'));
-  return isNaN(n)?null:n;
-}
-
-function compDiagnostico() {
-  const box = document.getElementById('comp-diag-box');
-  const datasets = [];
-  if (compDataAtual && compDataAtual.length > 0) {
-    const cols = Object.keys(compDataAtual[0]);
-    datasets.push('📄 ARQUIVO NOVO — Colunas encontradas:\n' + cols.map((c,i) => `  [${i}] "${c}" → sem espaços: "${c.toUpperCase().replace(/\s+/g,'')}"`).join('\n'));
-  }
-  if (compDataAnterior && compDataAnterior.length > 0) {
-    const cols = Object.keys(compDataAnterior[0]);
-    datasets.push('🗄️ BASE ANTERIOR — Colunas encontradas:\n' + cols.map((c,i) => `  [${i}] "${c}" → sem espaços: "${c.toUpperCase().replace(/\s+/g,'')}"`).join('\n'));
-  }
-  if (!datasets.length) { box.textContent = '⚠️ Nenhum arquivo carregado ainda.'; box.style.display=''; return; }
-  box.textContent = datasets.join('\n\n');
-  box.style.display = '';
-}
-
+// ── Filtros e tabela ──────────────────────────────────────────────────────
 function compSetFilter(f, btn) {
   compActiveFilter = f;
-  document.querySelectorAll('#page-comp .filter-btn').forEach(b=>b.classList.remove('active'));
-  btn.classList.add('active');
+  document.querySelectorAll('#page-comp .filter-btn').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
   compRenderTable();
 }
 
 function compRenderTable() {
-  const search = (document.getElementById('comp-search').value||'').toLowerCase();
-  let rows = compAllChanges.filter(r => {
+  const search = (document.getElementById('comp-search').value || '').toLowerCase();
+  const rows = compAllChanges.filter(r => {
     if (search && !r.titulo.toLowerCase().includes(search) && !r.pep.toLowerCase().includes(search)) return false;
-    if (compActiveFilter==='cava' && r.cavaDiff===0) return false;
-    if (compActiveFilter==='postes' && r.postesRealDiff===0) return false;
-    if (compActiveFilter==='implantados' && r.postesImpDiff===0) return false;
+    if (compActiveFilter === 'cava'        && r.cavaDiff  === 0) return false;
+    if (compActiveFilter === 'postes'      && r.pRealDiff === 0) return false;
+    if (compActiveFilter === 'implantados' && r.pImpDiff  === 0) return false;
     return true;
   });
+
   document.getElementById('comp-count-label').textContent = rows.length;
   const tbody = document.getElementById('comp-table-body');
+
   if (!rows.length) {
-    tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state"><div class="big">🔍</div><div class="msg">Nenhuma alteração encontrada</div></div></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state"><div class="big">🔍</div><div class="msg">Nenhuma alteração encontrada</div></div></td></tr>`;
     return;
   }
+
   tbody.innerHTML = rows.map(r => {
-    const newTag = r.isNew ? `<span style="color:#0d7377;font-size:0.68rem;font-weight:800;background:#d0f0ee;padding:2px 7px;border-radius:4px;margin-left:6px">NOVA</span>` : '';
+    const newTag = r.isNew
+      ? `<span style="background:#d0f0ee;color:#0d7377;font-size:0.65rem;font-weight:800;padding:2px 7px;border-radius:4px;margin-left:6px;">NOVA</span>`
+      : '';
+    const utdTag = r.utd
+      ? `<span style="background:#ebf4ff;color:#2b6cb0;font-size:0.65rem;font-weight:800;padding:1px 6px;border-radius:4px;">${r.utd}</span>`
+      : '';
     return `<tr>
       <td><code style="color:#0d7377;font-size:0.78rem;font-weight:800;">${r.pep}</code></td>
       <td class="td-title"><div class="main">${r.titulo}${newTag}</div></td>
-      <td><span class="status-badge ${`status-${r.status}`} status-DEFAULT">${r.status.replace(/_/g,' ')}</span></td>
-      <td class="diff-cell">${compDiffCell(r.cavaAnt,r.cavaAtual,r.cavaDiff)}</td>
-      <td class="diff-cell">${compDiffCell(r.postesRealAnt,r.postesRealAtual,r.postesRealDiff)}</td>
-      <td class="diff-cell">${compDiffCell(r.postesImpAnt,r.postesImpAtual,r.postesImpDiff)}</td>
-      <td class="diff-cell"><span style="color:#5a6478">${r.postesPrevAtual!==null?r.postesPrevAtual:'—'}</span></td>
+      <td>${utdTag}</td>
+      <td><span class="status-badge status-DEFAULT">${r.status}</span></td>
+      <td class="diff-cell">${compDiffCell(r.cavaAnt,  r.cavaAt,  r.cavaDiff)}</td>
+      <td class="diff-cell">${compDiffCell(r.pRealAnt, r.pRealAt, r.pRealDiff)}</td>
+      <td class="diff-cell">${compDiffCell(r.pImpAnt,  r.pImpAt,  r.pImpDiff)}</td>
+      <td class="diff-cell"><span style="color:#5a6478">${r.pPrevAt !== null ? r.pPrevAt : '—'}</span></td>
     </tr>`;
   }).join('');
 }
 
-function compDiffCell(ant, atual, diff) {
-  const antD = ant!==null?ant:'—';
-  const atualD = atual!==null?atual:'—';
-  if (diff===0) return `<span class="no-change">${atualD}</span>`;
-  const sign = diff>0?'+':'';
-  const cls = diff>0?'pos':'neg';
-  return `<div class="diff-val"><span class="old-val">${antD}</span><span class="arrow">→</span><span class="new-val">${atualD}</span><span class="delta ${cls}">${sign}${diff}</span></div>`;
+function compDiffCell(ant, at, diff) {
+  const a = ant !== null ? ant : '—';
+  const b = at  !== null ? at  : '—';
+  if (diff === 0) return `<span class="no-change">${b}</span>`;
+  const sign = diff > 0 ? '+' : '';
+  const cls  = diff > 0 ? 'inc' : 'dec';
+  return `<span class="${cls}">${a} → ${b} <span class="delta">${sign}${diff}</span></span>`;
 }
 
+// ── Reset banco ───────────────────────────────────────────────────────────
 async function compResetBase() {
-  if (!confirm('Resetar a base salva no banco? Você precisará subir dois arquivos na próxima comparação.')) return;
+  if (!confirm('Apagar o banco de obras salvo? Você precisará subir os 2 CSVs novamente.')) return;
   try {
-    setDbStatus('syncing','Removendo base...');
-    await fetch(SUPA_URL+'/rest/v1/turno_data?key=eq.comparador_base',{
-      method:'DELETE',
-      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}
+    setDbStatus('syncing', 'Removendo banco…');
+    await fetch(SUPA_URL + '/rest/v1/turno_data?key=eq.obras_base', {
+      method: 'DELETE',
+      headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY }
     });
-    compDataAnterior = null;
-    compBaseInfo = null;
+    bancoDB = null; bancoDBInfo = null;
     compUpdateBaseUI();
-    setDbStatus('online','Base removida');
-    setTimeout(()=>setDbStatus('online','Banco online'),1500);
-  } catch(e) { setDbStatus('offline','Erro ao resetar'); }
+    mapaData = [];
+    document.getElementById('mapa-titulo').textContent = 'Carregue um CSV para visualizar as obras';
+    document.getElementById('mapa-stats-bar').style.display = 'none';
+    document.getElementById('mapa-tabela-section').style.display = 'none';
+    setDbStatus('online', 'Banco removido');
+    setTimeout(() => setDbStatus('online', 'Banco online'), 1500);
+  } catch (e) { setDbStatus('offline', 'Erro ao resetar'); }
 }
 
 // ─── APR ───────────────────────────────────────────────────────────────────────
@@ -1911,10 +2024,8 @@ function aprFilterTable() {
     </tr>`).join('');
 }
 
-// Inicializa listeners do comparador
-compHandleFile('comp-file-anterior','comp-card-anterior','comp-name-anterior','anterior');
-compHandleFile('comp-file-atual','comp-card-atual','comp-name-atual','atual');
-compHandleFile('comp-file-add','comp-card-add','comp-name-add','add');
+// Inicializa listener do comparador (arquivo novo para comparar com banco)
+compHandleFileAtual();
 
 // ─── INIT ─────────────────────────────────────────────────────────────────────
 function hideLoading() {
@@ -2028,359 +2139,314 @@ function startAutoRefresh() {
 
 <!-- PÁGINA MAPA -->
 <div id="page-mapa" style="display:none;">
-  <div style="max-width:1200px;margin:0 auto;padding:20px 16px 80px;">
+  <div style="max-width:1220px;margin:0 auto;padding:20px 16px 80px;">
 
-    <!-- Header + upload -->
-    <div style="background:#fff;border-radius:14px;box-shadow:0 2px 14px rgba(0,0,0,0.08);padding:20px 24px;margin-bottom:16px;">
+    <!-- Header com status do banco -->
+    <div style="background:#fff;border-radius:14px;box-shadow:0 2px 14px rgba(0,0,0,0.08);padding:18px 24px;margin-bottom:14px;">
       <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
         <div>
           <div style="font-size:0.68rem;font-weight:800;color:#38a169;letter-spacing:2px;text-transform:uppercase;margin-bottom:4px;">📍 MAPA DE OBRAS</div>
-          <div style="font-size:1rem;font-weight:800;color:#1a365d;" id="mapa-titulo">Carregue um CSV para visualizar as obras</div>
+          <div style="font-size:0.95rem;font-weight:800;color:#1a365d;" id="mapa-titulo">Aguardando banco de dados...</div>
         </div>
-        <label style="display:flex;align-items:center;gap:10px;background:#38a169;color:#fff;padding:10px 20px;border-radius:10px;cursor:pointer;font-family:'Barlow',sans-serif;font-size:0.85rem;font-weight:800;letter-spacing:0.5px;">
-          📂 CARREGAR CSV
-          <input type="file" id="mapa-csv-input" accept=".csv" style="display:none;" onchange="mapaHandleCSV(this)">
-        </label>
-      </div>
-
-      <!-- Legenda de status -->
-      <div id="mapa-legenda" style="display:none;margin-top:16px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;">
-        <span style="font-size:0.68rem;font-weight:800;color:#888;text-transform:uppercase;letter-spacing:1px;margin-right:4px;">Legenda:</span>
-        <span style="display:flex;align-items:center;gap:5px;font-size:0.75rem;font-weight:700;"><span style="width:13px;height:13px;border-radius:50%;background:#38a169;display:inline-block;"></span>Energizada</span>
-        <span style="display:flex;align-items:center;gap:5px;font-size:0.75rem;font-weight:700;"><span style="width:13px;height:13px;border-radius:50%;background:#2b6cb0;display:inline-block;"></span>Em Execução</span>
-        <span style="display:flex;align-items:center;gap:5px;font-size:0.75rem;font-weight:700;"><span style="width:13px;height:13px;border-radius:50%;background:#d69e2e;display:inline-block;"></span>Programada</span>
-        <span style="display:flex;align-items:center;gap:5px;font-size:0.75rem;font-weight:700;"><span style="width:13px;height:13px;border-radius:50%;background:#e53e3e;display:inline-block;"></span>Paralisada</span>
-        <span style="display:flex;align-items:center;gap:5px;font-size:0.75rem;font-weight:700;"><span style="width:13px;height:13px;border-radius:50%;background:#718096;display:inline-block;"></span>Cancelada/Retirada</span>
-        <span style="display:flex;align-items:center;gap:5px;font-size:0.75rem;font-weight:700;"><span style="width:13px;height:13px;border-radius:50%;background:#a0aec0;display:inline-block;"></span>Outros</span>
+        <!-- Legenda inline -->
+        <div id="mapa-legenda" style="display:none;flex-wrap:wrap;gap:8px;align-items:center;">
+          <span style="font-size:0.65rem;font-weight:800;color:#888;text-transform:uppercase;letter-spacing:1px;">Legenda:</span>
+          <span style="display:flex;align-items:center;gap:4px;font-size:0.72rem;font-weight:700;"><span style="width:11px;height:11px;border-radius:50%;background:#38a169;display:inline-block;"></span>Energizada</span>
+          <span style="display:flex;align-items:center;gap:4px;font-size:0.72rem;font-weight:700;"><span style="width:11px;height:11px;border-radius:50%;background:#2b6cb0;display:inline-block;"></span>Em Execução</span>
+          <span style="display:flex;align-items:center;gap:4px;font-size:0.72rem;font-weight:700;"><span style="width:11px;height:11px;border-radius:50%;background:#d69e2e;display:inline-block;"></span>Programada</span>
+          <span style="display:flex;align-items:center;gap:4px;font-size:0.72rem;font-weight:700;"><span style="width:11px;height:11px;border-radius:50%;background:#e53e3e;display:inline-block;"></span>Paralisada</span>
+          <span style="display:flex;align-items:center;gap:4px;font-size:0.72rem;font-weight:700;"><span style="width:11px;height:11px;border-radius:50%;background:#718096;display:inline-block;"></span>Cancelada/Retirada</span>
+        </div>
       </div>
     </div>
 
-    <!-- Filtros e stats -->
-    <div id="mapa-stats-bar" style="display:none;background:#fff;border-radius:14px;box-shadow:0 2px 14px rgba(0,0,0,0.08);padding:14px 20px;margin-bottom:16px;">
+    <!-- Filtros -->
+    <div id="mapa-stats-bar" style="display:none;background:#fff;border-radius:14px;box-shadow:0 2px 14px rgba(0,0,0,0.08);padding:12px 18px;margin-bottom:14px;">
       <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
-        <div style="display:flex;gap:8px;flex-wrap:wrap;" id="mapa-filter-btns"></div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;" id="mapa-filter-btns"></div>
         <div style="display:flex;align-items:center;gap:8px;">
           <input type="text" id="mapa-search" placeholder="🔍 Buscar PEP ou título..." oninput="mapaFiltrar()"
-            style="padding:7px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-family:'Barlow',sans-serif;font-size:0.8rem;font-weight:600;color:#333;width:220px;outline:none;">
-          <span style="font-size:0.78rem;font-weight:800;color:#38a169;" id="mapa-count-label">0 obras</span>
+            style="padding:6px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-family:'Barlow',sans-serif;font-size:0.8rem;font-weight:600;color:#333;width:210px;outline:none;">
+          <span style="font-size:0.78rem;font-weight:800;color:#38a169;white-space:nowrap;" id="mapa-count-label">0 obras</span>
         </div>
       </div>
     </div>
 
     <!-- Mapa -->
-    <div style="background:#fff;border-radius:14px;box-shadow:0 2px 14px rgba(0,0,0,0.08);overflow:hidden;position:relative;">
-      <div id="mapa-container" style="height:600px;width:100%;"></div>
-      <div id="mapa-placeholder" style="height:600px;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#aaa;font-family:'Barlow',sans-serif;">
+    <div style="background:#fff;border-radius:14px;box-shadow:0 2px 14px rgba(0,0,0,0.08);overflow:hidden;position:relative;margin-bottom:14px;">
+      <div id="mapa-container" style="height:580px;width:100%;display:none;"></div>
+      <div id="mapa-placeholder" style="height:580px;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#aaa;font-family:'Barlow',sans-serif;">
         <div style="font-size:4rem;margin-bottom:16px;">🗺️</div>
-        <div style="font-size:1rem;font-weight:700;">Carregue um CSV para ver as obras no mapa</div>
-        <div style="font-size:0.8rem;margin-top:6px;">Use os mesmos arquivos CSV do Comparador</div>
+        <div style="font-size:1rem;font-weight:700;color:#555;">Aguardando banco de obras</div>
+        <div style="font-size:0.8rem;margin-top:6px;">Salve os CSVs no Comparador para carregar o mapa</div>
       </div>
     </div>
 
-    <!-- Tabela resumo -->
-    <div id="mapa-tabela-section" style="display:none;background:#fff;border-radius:14px;box-shadow:0 2px 14px rgba(0,0,0,0.08);margin-top:16px;overflow:hidden;">
-      <div style="padding:14px 20px;background:#f7f9fc;border-bottom:1px solid #edf0f2;display:flex;align-items:center;justify-content:space-between;">
-        <span style="font-size:0.85rem;font-weight:800;color:#1a365d;">📋 Lista de Obras com Localização</span>
+    <!-- Tabela -->
+    <div id="mapa-tabela-section" style="display:none;background:#fff;border-radius:14px;box-shadow:0 2px 14px rgba(0,0,0,0.08);overflow:hidden;">
+      <div style="padding:12px 20px;background:#f7f9fc;border-bottom:1px solid #edf0f2;display:flex;align-items:center;justify-content:space-between;">
+        <span style="font-size:0.85rem;font-weight:800;color:#1a365d;">📋 Lista de Obras</span>
         <span style="font-size:0.75rem;font-weight:700;color:#38a169;" id="mapa-tabela-count"></span>
       </div>
       <div style="overflow-x:auto;">
         <table style="width:100%;border-collapse:collapse;font-family:'Barlow',sans-serif;font-size:0.78rem;">
           <thead>
             <tr style="background:#f0fff4;">
-              <th style="padding:10px 14px;text-align:left;font-size:0.65rem;font-weight:800;color:#38a169;letter-spacing:1.5px;text-transform:uppercase;border-bottom:2px solid #c6f6d5;white-space:nowrap;">PEP</th>
-              <th style="padding:10px 14px;text-align:left;font-size:0.65rem;font-weight:800;color:#38a169;letter-spacing:1.5px;text-transform:uppercase;border-bottom:2px solid #c6f6d5;">Título</th>
-              <th style="padding:10px 14px;text-align:left;font-size:0.65rem;font-weight:800;color:#38a169;letter-spacing:1.5px;text-transform:uppercase;border-bottom:2px solid #c6f6d5;white-space:nowrap;">Status</th>
-              <th style="padding:10px 14px;text-align:center;font-size:0.65rem;font-weight:800;color:#38a169;letter-spacing:1.5px;text-transform:uppercase;border-bottom:2px solid #c6f6d5;white-space:nowrap;">Cava Real.</th>
-              <th style="padding:10px 14px;text-align:center;font-size:0.65rem;font-weight:800;color:#38a169;letter-spacing:1.5px;text-transform:uppercase;border-bottom:2px solid #c6f6d5;white-space:nowrap;">Postes Real.</th>
-              <th style="padding:10px 14px;text-align:center;font-size:0.65rem;font-weight:800;color:#38a169;letter-spacing:1.5px;text-transform:uppercase;border-bottom:2px solid #c6f6d5;white-space:nowrap;">À Implantar</th>
-              <th style="padding:10px 14px;text-align:left;font-size:0.65rem;font-weight:800;color:#38a169;letter-spacing:1.5px;text-transform:uppercase;border-bottom:2px solid #c6f6d5;white-space:nowrap;">Município</th>
+              <th style="padding:9px 14px;text-align:left;font-size:0.65rem;font-weight:800;color:#38a169;letter-spacing:1.5px;text-transform:uppercase;border-bottom:2px solid #c6f6d5;white-space:nowrap;">PEP</th>
+              <th style="padding:9px 14px;text-align:left;font-size:0.65rem;font-weight:800;color:#38a169;letter-spacing:1.5px;text-transform:uppercase;border-bottom:2px solid #c6f6d5;">Título</th>
+              <th style="padding:9px 14px;text-align:left;font-size:0.65rem;font-weight:800;color:#38a169;letter-spacing:1.5px;text-transform:uppercase;border-bottom:2px solid #c6f6d5;white-space:nowrap;">UTD</th>
+              <th style="padding:9px 14px;text-align:left;font-size:0.65rem;font-weight:800;color:#38a169;letter-spacing:1.5px;text-transform:uppercase;border-bottom:2px solid #c6f6d5;white-space:nowrap;">Status</th>
+              <th style="padding:9px 14px;text-align:center;font-size:0.65rem;font-weight:800;color:#38a169;letter-spacing:1.5px;text-transform:uppercase;border-bottom:2px solid #c6f6d5;white-space:nowrap;">Cava</th>
+              <th style="padding:9px 14px;text-align:center;font-size:0.65rem;font-weight:800;color:#38a169;letter-spacing:1.5px;text-transform:uppercase;border-bottom:2px solid #c6f6d5;white-space:nowrap;">Postes</th>
+              <th style="padding:9px 14px;text-align:center;font-size:0.65rem;font-weight:800;color:#38a169;letter-spacing:1.5px;text-transform:uppercase;border-bottom:2px solid #c6f6d5;white-space:nowrap;">À Implantar</th>
+              <th style="padding:9px 14px;text-align:left;font-size:0.65rem;font-weight:800;color:#38a169;letter-spacing:1.5px;text-transform:uppercase;border-bottom:2px solid #c6f6d5;white-space:nowrap;">Município</th>
             </tr>
           </thead>
           <tbody id="mapa-tabela-body"></tbody>
         </table>
       </div>
     </div>
+
   </div>
 </div>
 
 <script>
-// ─── MAPA ────────────────────────────────────────────────────────────────────
-let mapaMap = null;
-let mapaMarkers = [];
-let mapaData = [];
-let mapaFiltroAtivo = 'TODOS';
+// ─── MAPA ─────────────────────────────────────────────────────────────────────
+let mapaMap        = null;
 let mapaLayerGroup = null;
+let mapaData       = [];
+let mapaFiltroAtivo = 'TODOS';
+let mapaLeafletReady = false;
 
 const MAPA_CORES = {
-  'ENERGIZADA':            '#38a169',
-  'EM EXECUÇÃO':           '#2b6cb0',
-  'EM EXECUCAO':           '#2b6cb0',
-  'PROGRAMADA':            '#d69e2e',
-  'PARALISADA':            '#e53e3e',
-  'CANCELADA':             '#718096',
-  'RETIRADA DA CARTEIRA':  '#718096',
+  'ENERGIZADA':           '#38a169',
+  'EM EXECUÇÃO':          '#2b6cb0',
+  'EM EXECUCAO':          '#2b6cb0',
+  'PROGRAMADA':           '#d69e2e',
+  'PARALISADA':           '#e53e3e',
+  'CANCELADA':            '#718096',
+  'RETIRADA DA CARTEIRA': '#718096',
 };
-function mapaGetCor(status) {
-  const s = (status||'').toUpperCase().trim();
-  return MAPA_CORES[s] || '#a0aec0';
+function mapaGetCor(s) {
+  return MAPA_CORES[(s||'').toUpperCase().trim()] || '#a0aec0';
 }
-
 function mapaParseCoord(s) {
   if (!s) return null;
-  const v = String(s).trim().split('\n')[0].trim().replace(',','.');
+  const v = String(s).trim().split('\n')[0].trim().replace(',', '.');
   const n = parseFloat(v);
   return isNaN(n) ? null : n;
 }
 
-function mapaNormalize(s) {
-  return (s||'').toUpperCase().replace(/\s+/g,'').normalize('NFD').replace(/[\u0300-\u036f]/g,'');
-}
+// ── Carrega dados do banco central e renderiza mapa ───────────────────────
+function mapaCarregarDoBanco() {
+  if (!bancoDB || !bancoDB.length) return;
 
-function mapaFindCol(headers, ...kws) {
-  for (const kw of kws) {
-    const k = mapaNormalize(kw);
-    const h = headers.find(h => mapaNormalize(h).includes(k));
-    if (h !== undefined) return h;
+  mapaData = bancoDB.map(obj => {
+    const lat = mapaParseCoord(obj['LATITUDE']);
+    const lon = mapaParseCoord(obj['LONGITUDE']);
+    return {
+      pep:   obj['PEP OBRA'] || '',
+      titulo: obj['TÍTULO'] || obj['TITULO'] || '',
+      status: obj['STATUS DA OBRA'] || '',
+      mun:    obj['MUNICIPIO'] || obj['MUNICÍPIO'] || '',
+      utd:    obj['_UTD'] || '',
+      lat, lon,
+      cava:  obj['CAVA REALIZADA'] || '',
+      postR: obj['POSTES  REALIZADO'] || obj['POSTES REALIZADO'] || '',
+      postI: obj['POSTES  À IMPLANTA'] || obj['POSTES À IMPLANTA'] || '',
+      enc:   obj['ENCARREGADO'] || '',
+      temCoord: lat !== null && lon !== null,
+    };
+  });
+
+  const comCoord = mapaData.filter(d => d.temCoord).length;
+  const info = bancoDBInfo || {};
+  document.getElementById('mapa-titulo').textContent =
+    '🗄️ Banco: ' + mapaData.length + ' obras (' + comCoord + ' com coordenadas)'
+    + (info.updatedAt ? ' · atualizado ' + info.updatedAt : '');
+  document.getElementById('mapa-stats-bar').style.display = '';
+  document.getElementById('mapa-tabela-section').style.display = '';
+  document.getElementById('mapa-legenda').style.display = 'flex';
+
+  // Se aba visível, renderiza agora; senão, renderiza ao entrar na aba
+  if (document.getElementById('page-mapa').style.display !== 'none') {
+    mapaEnsureLeaflet(() => { mapaRenderFiltros(); mapaFiltrar(); });
   }
-  return null;
 }
 
-function mapaHandleCSV(input) {
-  const file = input.files[0];
-  if (!file) return;
-  document.getElementById('mapa-titulo').textContent = '⏳ Carregando ' + file.name + '...';
+// ── Garante Leaflet carregado e o mapa inicializado ───────────────────────
+function mapaEnsureLeaflet(cb) {
+  const doInit = () => {
+    document.getElementById('mapa-placeholder').style.display = 'none';
+    document.getElementById('mapa-container').style.display = '';
 
-  const load = () => {
-    Papa.parse(file, {
-      skipEmptyLines: true,
-      complete: function(results) {
-        const rows = results.data;
-        let headerIdx = -1;
-        for (let i = 0; i < rows.length; i++) {
-          const r = rows[i].map(c => String(c).trim().toUpperCase());
-          if (r.includes('NOTA') && r.some(c => c.includes('PEP'))) { headerIdx = i; break; }
-        }
-        if (headerIdx === -1) { alert('Cabeçalho não encontrado no CSV.'); return; }
-        const rawHeaders = rows[headerIdx].map(c => String(c).trim().replace(/\n/g,' ').toUpperCase());
-
-        const hPep    = mapaFindCol(rawHeaders, 'PEP OBRA');
-        const hTitulo = mapaFindCol(rawHeaders, 'TITULO', 'TÍTULO');
-        const hStatus = mapaFindCol(rawHeaders, 'STATUS DA OBRA', 'STATUS');
-        const hMun    = mapaFindCol(rawHeaders, 'MUNICIPIO', 'MUNICÍPIO');
-        const hLat    = mapaFindCol(rawHeaders, 'LATITUDE', 'LAT');
-        const hLon    = mapaFindCol(rawHeaders, 'LONGITUDE', 'LON');
-        const hCava   = mapaFindCol(rawHeaders, 'CAVA REALIZADA', 'CAVAREALIZADA');
-        const hPostR  = mapaFindCol(rawHeaders, 'POSTES REALIZADO', 'POSTESREALIZADO');
-        const hPostI  = mapaFindCol(rawHeaders, 'POSTES A IMPLANTA', 'POSTES IMPLANTA');
-        const hEnc    = mapaFindCol(rawHeaders, 'ENCARREGADO');
-
-        mapaData = [];
-        for (let i = headerIdx + 1; i < rows.length; i++) {
-          const row = rows[i];
-          if (!row.some(c => String(c).trim())) continue;
-          const obj = {};
-          rawHeaders.forEach((h, idx) => { obj[h] = String(row[idx] || '').trim(); });
-          const pep = hPep ? obj[hPep] : '';
-          if (!pep) continue;
-          const lat = mapaParseCoord(hLat ? obj[hLat] : '');
-          const lon = mapaParseCoord(hLon ? obj[hLon] : '');
-          mapaData.push({
-            pep,
-            titulo:  hTitulo ? obj[hTitulo] : '',
-            status:  hStatus ? obj[hStatus] : '',
-            mun:     hMun    ? obj[hMun]    : '',
-            lat, lon,
-            cava:    hCava  ? obj[hCava]  : '',
-            postR:   hPostR ? obj[hPostR] : '',
-            postI:   hPostI ? obj[hPostI] : '',
-            enc:     hEnc   ? obj[hEnc]   : '',
-            temCoord: lat !== null && lon !== null,
-          });
-        }
-
-        const comCoord = mapaData.filter(d => d.temCoord).length;
-        document.getElementById('mapa-titulo').textContent =
-          file.name + ' — ' + mapaData.length + ' obras (' + comCoord + ' com coordenadas)';
-
-        mapaInicializar();
-        mapaRenderFiltros();
-        mapaFiltrar();
-        document.getElementById('mapa-stats-bar').style.display = '';
-        document.getElementById('mapa-tabela-section').style.display = '';
-        document.getElementById('mapa-legenda').style.display = 'flex';
-      }
-    });
+    if (!mapaMap) {
+      mapaMap = L.map('mapa-container', { zoomControl: true });
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap',
+        maxZoom: 18,
+      }).addTo(mapaMap);
+      mapaLayerGroup = L.layerGroup().addTo(mapaMap);
+    }
+    if (cb) cb();
   };
 
-  if (!window.Papa) {
-    const s = document.createElement('script');
-    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js';
-    s.onload = load; document.head.appendChild(s);
-  } else { load(); }
-  input.value = '';
-}
+  if (window.L) { doInit(); return; }
 
-function mapaInicializar() {
-  // Carrega Leaflet se necessário
-  if (!window.L) {
-    // CSS
-    if (!document.getElementById('leaflet-css')) {
-      const link = document.createElement('link');
-      link.id = 'leaflet-css';
-      link.rel = 'stylesheet';
-      link.href = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css';
-      document.head.appendChild(link);
-    }
-    const s = document.createElement('script');
-    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js';
-    s.onload = () => mapaIniciarLeaflet();
-    document.head.appendChild(s);
-  } else {
-    mapaIniciarLeaflet();
+  if (!document.getElementById('leaflet-css')) {
+    const link = document.createElement('link');
+    link.id = 'leaflet-css';
+    link.rel = 'stylesheet';
+    link.href = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css';
+    document.head.appendChild(link);
   }
+  const s = document.createElement('script');
+  s.src = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js';
+  s.onload = doInit;
+  document.head.appendChild(s);
 }
 
-function mapaIniciarLeaflet() {
-  document.getElementById('mapa-placeholder').style.display = 'none';
-  document.getElementById('mapa-container').style.display = '';
-
-  if (!mapaMap) {
-    mapaMap = L.map('mapa-container', { zoomControl: true });
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '© OpenStreetMap contributors',
-      maxZoom: 18
-    }).addTo(mapaMap);
-    mapaLayerGroup = L.layerGroup().addTo(mapaMap);
-  } else {
-    mapaLayerGroup.clearLayers();
-  }
-}
-
+// ── Filtros ───────────────────────────────────────────────────────────────
 function mapaRenderFiltros() {
-  const statusCount = {};
-  mapaData.filter(d => d.temCoord).forEach(d => {
+  const withCoord = mapaData.filter(d => d.temCoord);
+  const statusCount = {}, utdCount = {};
+  withCoord.forEach(d => {
     const s = d.status.trim() || 'SEM STATUS';
-    statusCount[s] = (statusCount[s]||0) + 1;
+    statusCount[s] = (statusCount[s] || 0) + 1;
+    if (d.utd) utdCount[d.utd] = (utdCount[d.utd] || 0) + 1;
   });
+
   const bar = document.getElementById('mapa-filter-btns');
-  const total = mapaData.filter(d => d.temCoord).length;
   bar.innerHTML = '';
 
-  const mkBtn = (label, key, count) => {
+  const mkBtn = (label, key, count, bg) => {
     const btn = document.createElement('button');
-    btn.style.cssText = 'padding:5px 14px;border-radius:20px;border:2px solid #e2e8f0;background:#fff;font-family:\'Barlow\',sans-serif;font-size:0.72rem;font-weight:800;cursor:pointer;color:#555;transition:all 0.15s;white-space:nowrap;';
+    btn.style.cssText = `padding:4px 12px;border-radius:20px;border:2px solid ${bg||'#e2e8f0'};background:#fff;
+      font-family:'Barlow',sans-serif;font-size:0.7rem;font-weight:800;cursor:pointer;color:#555;
+      transition:all 0.15s;white-space:nowrap;`;
     btn.textContent = label + ' (' + count + ')';
+    btn.id = 'mfbtn-' + key.replace(/[^a-z0-9]/gi,'_');
     btn.onclick = () => { mapaFiltroAtivo = key; mapaFiltrar(); };
-    btn.id = 'mapa-fbtn-' + key.replace(/\s/g,'_');
     bar.appendChild(btn);
   };
 
-  mkBtn('Todas', 'TODOS', total);
-  Object.entries(statusCount).sort((a,b)=>b[1]-a[1]).forEach(([s,c]) => mkBtn(s, s, c));
+  mkBtn('Todas', 'TODOS', withCoord.length);
+  if (Object.keys(utdCount).length > 1) {
+    const sep = document.createElement('span');
+    sep.style.cssText = 'border-left:1.5px solid #e2e8f0;height:18px;align-self:center;margin:0 2px;';
+    bar.appendChild(sep);
+    Object.entries(utdCount).sort().forEach(([u,c]) => mkBtn(u, 'UTD:'+u, c, '#bee3f8'));
+  }
+  const sep2 = document.createElement('span');
+  sep2.style.cssText = 'border-left:1.5px solid #e2e8f0;height:18px;align-self:center;margin:0 2px;';
+  bar.appendChild(sep2);
+  Object.entries(statusCount).sort((a,b) => b[1]-a[1]).forEach(([s,c]) => mkBtn(s, s, c, mapaGetCor(s)+'44'));
 }
 
+// ── Renderiza marcadores e tabela ─────────────────────────────────────────
 function mapaFiltrar() {
   if (!mapaMap || !mapaLayerGroup) return;
   mapaLayerGroup.clearLayers();
 
-  const search = (document.getElementById('mapa-search').value||'').toLowerCase();
+  const search = (document.getElementById('mapa-search').value || '').toLowerCase();
   const filtered = mapaData.filter(d => {
     if (!d.temCoord) return false;
-    if (mapaFiltroAtivo !== 'TODOS' && d.status.trim() !== mapaFiltroAtivo) return false;
-    if (search && !d.pep.toLowerCase().includes(search) && !d.titulo.toLowerCase().includes(search) && !d.mun.toLowerCase().includes(search)) return false;
+    if (mapaFiltroAtivo !== 'TODOS') {
+      if (mapaFiltroAtivo.startsWith('UTD:')) {
+        if (d.utd !== mapaFiltroAtivo.slice(4)) return false;
+      } else {
+        if (d.status.trim() !== mapaFiltroAtivo) return false;
+      }
+    }
+    if (search && !d.pep.toLowerCase().includes(search)
+               && !d.titulo.toLowerCase().includes(search)
+               && !d.mun.toLowerCase().includes(search)) return false;
     return true;
   });
 
-  // Atualiza botões ativos
-  document.querySelectorAll('[id^="mapa-fbtn-"]').forEach(b => {
-    const key = b.id.replace('mapa-fbtn-','').replace(/_/g,' ');
-    const isActive = (mapaFiltroAtivo === key) || (b.id === 'mapa-fbtn-TODOS' && mapaFiltroAtivo === 'TODOS');
-    b.style.background = isActive ? '#38a169' : '#fff';
-    b.style.color = isActive ? '#fff' : '#555';
-    b.style.borderColor = isActive ? '#38a169' : '#e2e8f0';
+  // Atualiza botões
+  document.querySelectorAll('[id^="mfbtn-"]').forEach(b => {
+    const key = b.id.replace('mfbtn-','').replace(/_/g,' ');
+    const active = mapaFiltroAtivo === key
+      || (b.id === 'mfbtn-TODOS' && mapaFiltroAtivo === 'TODOS');
+    b.style.background   = active ? '#38a169' : '#fff';
+    b.style.color        = active ? '#fff' : '#555';
+    b.style.borderColor  = active ? '#38a169' : '#e2e8f0';
   });
 
-  document.getElementById('mapa-count-label').textContent = filtered.length + ' obra' + (filtered.length!==1?'s':'');
+  document.getElementById('mapa-count-label').textContent = filtered.length + ' obra' + (filtered.length !== 1 ? 's' : '');
 
   const bounds = [];
   filtered.forEach(d => {
     const cor = mapaGetCor(d.status);
-    const icon = L.divIcon({
-      className: '',
-      html: `<div style="
-        width:14px;height:14px;border-radius:50%;
-        background:${cor};border:2.5px solid #fff;
-        box-shadow:0 1px 5px rgba(0,0,0,0.4);
-        cursor:pointer;
-      "></div>`,
-      iconSize: [14,14],
-      iconAnchor: [7,7],
-    });
-
-    const cavaV = d.cava || '—';
-    const postRV = d.postR || '—';
-    const postIV = d.postI || '—';
+    const utdTag = d.utd
+      ? `<span style="background:#ebf4ff;color:#2b6cb0;padding:1px 7px;border-radius:4px;font-size:0.65rem;font-weight:800;margin-left:4px;">${d.utd}</span>`
+      : '';
     const popup = `
-      <div style="font-family:'Barlow',sans-serif;min-width:220px;max-width:280px;">
-        <div style="font-size:0.72rem;font-weight:800;color:${cor};letter-spacing:1px;text-transform:uppercase;margin-bottom:4px;">${d.status||'–'}</div>
-        <div style="font-size:0.88rem;font-weight:800;color:#1a365d;margin-bottom:8px;line-height:1.3;">${d.titulo||d.pep}</div>
-        <div style="font-size:0.72rem;color:#718096;font-weight:700;margin-bottom:8px;">
-          <span style="background:#f7fafc;padding:2px 8px;border-radius:4px;font-family:monospace;">${d.pep}</span>
-          ${d.mun ? ' · ' + d.mun : ''}
+      <div style="font-family:'Barlow',sans-serif;min-width:230px;max-width:290px;">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:5px;">
+          <span style="background:${cor}22;color:${cor};padding:2px 10px;border-radius:4px;font-size:0.68rem;font-weight:800;">${d.status||'–'}</span>
+          ${utdTag}
         </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:8px;">
-          <div style="background:#f0fff4;border-radius:6px;padding:6px 4px;text-align:center;">
-            <div style="font-size:1rem;font-weight:800;color:#38a169;">${cavaV}</div>
-            <div style="font-size:0.6rem;font-weight:700;color:#888;text-transform:uppercase;">Cava</div>
+        <div style="font-size:0.9rem;font-weight:800;color:#1a365d;margin-bottom:6px;line-height:1.3;">${d.titulo||d.pep}</div>
+        <div style="font-size:0.7rem;color:#718096;font-weight:700;margin-bottom:10px;">
+          <code style="background:#f7fafc;padding:1px 7px;border-radius:3px;">${d.pep}</code>${d.mun ? ' · ' + d.mun : ''}
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px;">
+          <div style="background:#f0fff4;border-radius:6px;padding:7px 4px;text-align:center;">
+            <div style="font-size:1.1rem;font-weight:800;color:#38a169;">${d.cava||'—'}</div>
+            <div style="font-size:0.6rem;font-weight:700;color:#888;text-transform:uppercase;margin-top:2px;">Cava</div>
           </div>
-          <div style="background:#ebf4ff;border-radius:6px;padding:6px 4px;text-align:center;">
-            <div style="font-size:1rem;font-weight:800;color:#2b6cb0;">${postRV}</div>
-            <div style="font-size:0.6rem;font-weight:700;color:#888;text-transform:uppercase;">Postes Real.</div>
+          <div style="background:#ebf4ff;border-radius:6px;padding:7px 4px;text-align:center;">
+            <div style="font-size:1.1rem;font-weight:800;color:#2b6cb0;">${d.postR||'—'}</div>
+            <div style="font-size:0.6rem;font-weight:700;color:#888;text-transform:uppercase;margin-top:2px;">Postes Real.</div>
           </div>
-          <div style="background:#fffbf0;border-radius:6px;padding:6px 4px;text-align:center;">
-            <div style="font-size:1rem;font-weight:800;color:#d69e2e;">${postIV}</div>
-            <div style="font-size:0.6rem;font-weight:700;color:#888;text-transform:uppercase;">À Implantar</div>
+          <div style="background:#fffbf0;border-radius:6px;padding:7px 4px;text-align:center;">
+            <div style="font-size:1.1rem;font-weight:800;color:#d69e2e;">${d.postI||'—'}</div>
+            <div style="font-size:0.6rem;font-weight:700;color:#888;text-transform:uppercase;margin-top:2px;">À Implantar</div>
           </div>
         </div>
-        ${d.enc ? `<div style="font-size:0.72rem;color:#555;font-weight:700;">👷 ${d.enc}</div>` : ''}
+        ${d.enc ? `<div style="font-size:0.7rem;color:#555;font-weight:700;margin-top:8px;">👷 ${d.enc}</div>` : ''}
       </div>`;
 
-    const marker = L.marker([d.lat, d.lon], {icon}).addTo(mapaLayerGroup);
-    marker.bindPopup(popup, {maxWidth:300});
+    const icon = L.divIcon({
+      className: '',
+      html: `<div style="width:13px;height:13px;border-radius:50%;background:${cor};border:2.5px solid #fff;box-shadow:0 1px 5px rgba(0,0,0,0.45);cursor:pointer;"></div>`,
+      iconSize: [13, 13], iconAnchor: [6, 6],
+    });
+    L.marker([d.lat, d.lon], { icon }).addTo(mapaLayerGroup).bindPopup(popup, { maxWidth: 310 });
     bounds.push([d.lat, d.lon]);
   });
 
-  if (bounds.length > 0) {
-    mapaMap.fitBounds(bounds, {padding:[30,30]});
-  }
+  if (bounds.length) mapaMap.fitBounds(bounds, { padding: [28, 28] });
 
   // Tabela
   const tbody = document.getElementById('mapa-tabela-body');
-  document.getElementById('mapa-tabela-count').textContent = filtered.length + ' obras exibidas';
+  document.getElementById('mapa-tabela-count').textContent = filtered.length + ' obras';
   if (!filtered.length) {
-    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:20px;color:#aaa;font-family:\'Barlow\',sans-serif;font-size:0.82rem;font-weight:600;">Nenhuma obra encontrada</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:20px;color:#aaa;font-family:'Barlow',sans-serif;font-size:0.82rem;font-weight:600;">Nenhuma obra encontrada</td></tr>';
     return;
   }
-  const cor2badge = cor => `background:${cor}22;color:${cor};padding:2px 10px;border-radius:4px;font-size:0.68rem;font-weight:800;`;
   tbody.innerHTML = filtered.map(d => {
     const cor = mapaGetCor(d.status);
     return `<tr style="border-bottom:1px solid #f0f4f5;cursor:pointer;" onclick="mapaFocarObra(${d.lat},${d.lon})">
-      <td style="padding:9px 14px;font-family:monospace;font-size:0.75rem;font-weight:800;color:#0d7377;white-space:nowrap;">${d.pep}</td>
-      <td style="padding:9px 14px;font-size:0.78rem;font-weight:700;color:#1a365d;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${d.titulo}</td>
-      <td style="padding:9px 14px;white-space:nowrap;"><span style="${cor2badge(cor)}">${d.status||'–'}</span></td>
-      <td style="padding:9px 14px;text-align:center;font-weight:800;color:#38a169;">${d.cava||'—'}</td>
-      <td style="padding:9px 14px;text-align:center;font-weight:800;color:#2b6cb0;">${d.postR||'—'}</td>
-      <td style="padding:9px 14px;text-align:center;font-weight:800;color:#d69e2e;">${d.postI||'—'}</td>
-      <td style="padding:9px 14px;font-size:0.75rem;color:#555;font-weight:600;">${d.mun}</td>
+      <td style="padding:8px 14px;font-family:monospace;font-size:0.74rem;font-weight:800;color:#0d7377;white-space:nowrap;">${d.pep}</td>
+      <td style="padding:8px 14px;font-size:0.78rem;font-weight:700;color:#1a365d;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${d.titulo}</td>
+      <td style="padding:8px 14px;white-space:nowrap;"><span style="background:#ebf4ff;color:#2b6cb0;padding:1px 7px;border-radius:4px;font-size:0.65rem;font-weight:800;">${d.utd||'–'}</span></td>
+      <td style="padding:8px 14px;white-space:nowrap;"><span style="background:${cor}22;color:${cor};padding:2px 8px;border-radius:4px;font-size:0.65rem;font-weight:800;">${d.status||'–'}</span></td>
+      <td style="padding:8px 14px;text-align:center;font-weight:800;color:#38a169;">${d.cava||'—'}</td>
+      <td style="padding:8px 14px;text-align:center;font-weight:800;color:#2b6cb0;">${d.postR||'—'}</td>
+      <td style="padding:8px 14px;text-align:center;font-weight:800;color:#d69e2e;">${d.postI||'—'}</td>
+      <td style="padding:8px 14px;font-size:0.74rem;color:#555;font-weight:600;">${d.mun}</td>
     </tr>`;
   }).join('');
 }
 
 function mapaFocarObra(lat, lon) {
   if (!mapaMap) return;
-  mapaMap.setView([lat, lon], 15, {animate:true});
-  // Scroll suave até o mapa
-  document.getElementById('mapa-container').scrollIntoView({behavior:'smooth', block:'center'});
+  switchPage('mapa');
+  mapaMap.setView([lat, lon], 15, { animate: true });
+  document.getElementById('mapa-container').scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 </script>
 </body>
