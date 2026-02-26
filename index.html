@@ -808,6 +808,11 @@ async function dbLoad() {
           compBaseInfo     = row.value.info || null;
           compUpdateBaseUI();
         }
+        if (row.key === 'apr_data') {
+          if (Array.isArray(row.value) && row.value.length > 0) {
+            aprData = row.value;
+          }
+        }
       });
     }
     setDbStatus('online', 'Banco online');
@@ -851,6 +856,25 @@ async function dbSaveProducao() {
     setDbStatus('online', 'Banco online');
   } catch(e) {
     setDbStatus('offline', 'Erro ao salvar');
+  }
+}
+
+async function dbSaveApr() {
+  try {
+    setDbStatus('syncing', 'Salvando APR...');
+    const res = await fetch(SUPA_URL + '/rest/v1/turno_data', {
+      method: 'POST',
+      headers: {
+        'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY,
+        'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates'
+      },
+      body: JSON.stringify({ key: 'apr_data', value: aprData, updated_at: new Date().toISOString() })
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    setDbStatus('online', 'APR salvo!');
+    setTimeout(() => setDbStatus('online', 'Banco online'), 1500);
+  } catch(e) {
+    setDbStatus('offline', 'Erro ao salvar APR');
   }
 }
 
@@ -1614,7 +1638,7 @@ function showAprMsg(text, type) {
   clearTimeout(el._t); el._t = setTimeout(() => el.className = 'msg', 5000);
 }
 
-function handleAprCSV(file) {
+async function handleAprCSV(file) {
   if (!file) return;
   const r = new FileReader();
   r.onload = function(e) {
@@ -1645,7 +1669,10 @@ function handleAprCSV(file) {
       }
       renderApr();
       document.getElementById('lbl-apr').textContent = '✅ ' + aprData.length + ' registros carregados';
+      renderApr();
+      document.getElementById('lbl-apr').textContent = '✅ ' + aprData.length + ' registros carregados';
       showAprMsg('✅ ' + aprData.length + ' registros importados!', 'success');
+      await dbSaveApr();
     } catch(err) { showAprMsg('Erro: ' + err.message, 'error'); }
   };
   r.readAsText(file, 'utf-8');
@@ -1774,6 +1801,11 @@ async function checkForUpdates() {
       lastUpdatedAt = latestTs;
       await dbLoad();
       render();
+      if (aprData && aprData.length > 0) {
+        renderApr();
+        const lbl = document.getElementById('lbl-apr');
+        if (lbl) lbl.textContent = '✅ ' + aprData.length + ' registros carregados';
+      }
       // Pisca o badge para indicar atualização
       const badge = document.getElementById('db-badge');
       badge.style.transition = 'opacity 0.3s';
