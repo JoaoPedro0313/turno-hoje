@@ -565,6 +565,8 @@ body { font-family:'Barlow',sans-serif; background:#f0f4f5; min-height:100vh; pa
       </div>
     </div>
     <button class="btn-compare" id="comp-btn-compare" disabled onclick="compCompare()">🔍 COMPARAR E SALVAR NOVA BASE</button>
+    <button id="comp-btn-diag" onclick="compDiagnostico()" style="display:none; background:#2b6cb0; color:#fff; border:none; padding:8px 20px; border-radius:8px; font-family:'Barlow',sans-serif; font-size:0.8rem; font-weight:800; cursor:pointer; margin:8px auto 0; display:block;">🔬 VER COLUNAS DO CSV</button>
+    <div id="comp-diag-box" style="display:none; margin:12px 0; padding:12px 16px; background:#f0f4ff; border:1px solid #bee3f8; border-radius:8px; font-family:monospace; font-size:0.75rem; color:#1a365d; white-space:pre-wrap; word-break:break-all;"></div>
 
     <!-- Resultados -->
     <div id="comp-results" style="display:none; margin-top:24px;">
@@ -1549,6 +1551,8 @@ function compParseFile(file, side) {
       const hasAnt   = compDataAnterior !== null;
       const hasAtual = compDataAtual !== null;
       document.getElementById('comp-btn-compare').disabled = !(hasAnt && hasAtual);
+      const diagBtn = document.getElementById('comp-btn-diag');
+      if (diagBtn) diagBtn.style.display = (hasAnt || hasAtual) ? 'block' : 'none';
     }
   });
 }
@@ -1561,21 +1565,38 @@ function compCompare() {
   const mapAnt = {};
   compDataAnterior.forEach(r => { mapAnt[r['PEP OBRA']] = r; });
   compAllChanges = [];
-  const findVal = (row, keyword) => {
+  // Busca flexível: testa múltiplas variantes de keyword
+  const findVal = (row, ...keywords) => {
     if (!row) return null;
-    const k = Object.keys(row).find(k => k.toUpperCase().replace(/\s+/g,'').includes(keyword.replace(/\s+/g,'')));
-    return k ? compParseNum(row[k]) : null;
+    for (const keyword of keywords) {
+      const kw = keyword.toUpperCase().replace(/\s+/g,'');
+      const k = Object.keys(row).find(k => {
+        const col = k.toUpperCase().replace(/\s+/g,'');
+        return col.includes(kw) || kw.includes(col.slice(0, Math.min(col.length, kw.length)));
+      });
+      if (k) return compParseNum(row[k]);
+    }
+    return null;
   };
+  // Log de diagnóstico das colunas disponíveis (apenas 1x)
+  if (compDataAtual.length > 0) {
+    const cols = Object.keys(compDataAtual[0]);
+    console.log('[COMPARADOR] Colunas encontradas no CSV atual:', cols);
+    console.log('[COMPARADOR] Colunas sem espaço (uppercase):', cols.map(c => c.toUpperCase().replace(/\s+/g,'')));
+  }
   compDataAtual.forEach(rowAtual => {
     const pep = rowAtual['PEP OBRA'];
     const rowAnt = mapAnt[pep];
-    const cavaAnt = rowAnt ? findVal(rowAnt,'CAVAREALIZADA') : null;
-    const cavaAtual = findVal(rowAtual,'CAVAREALIZADA');
-    const postesRealAnt = rowAnt ? findVal(rowAnt,'POSTESREALIZADO') : null;
-    const postesRealAtual = findVal(rowAtual,'POSTESREALIZADO');
-    const postesImpAnt = rowAnt ? findVal(rowAnt,'POSTESIMPLAN') : null;
-    const postesImpAtual = findVal(rowAtual,'POSTESIMPLAN');
-    const postesPrevAtual = findVal(rowAtual,'POSTESPREVISTOS');
+    // Busca colunas de CAVA com múltiplas variações possíveis
+    const cavaAnt = rowAnt ? findVal(rowAnt,'CAVAREALIZADA','CAVA REALIZADA','QTDCAVA','CAVA') : null;
+    const cavaAtual = findVal(rowAtual,'CAVAREALIZADA','CAVA REALIZADA','QTDCAVA','CAVA');
+    // Busca colunas de POSTES REALIZADOS com múltiplas variações
+    const postesRealAnt = rowAnt ? findVal(rowAnt,'POSTESREALIZADO','POSTESREALIZADOS','POSTES REALIZADO','POSTES REALIZADOS','QTDPOSTES') : null;
+    const postesRealAtual = findVal(rowAtual,'POSTESREALIZADO','POSTESREALIZADOS','POSTES REALIZADO','POSTES REALIZADOS','QTDPOSTES');
+    // Busca colunas de POSTES IMPLANTADOS
+    const postesImpAnt = rowAnt ? findVal(rowAnt,'POSTESIMPLAN','POSTESIMPLANTADO','POSTES IMPL','IMPLANTADOS') : null;
+    const postesImpAtual = findVal(rowAtual,'POSTESIMPLAN','POSTESIMPLANTADO','POSTES IMPL','IMPLANTADOS');
+    const postesPrevAtual = findVal(rowAtual,'POSTESPREVISTOS','POSTES PREVISTOS','PREVISTO','POSTESPREV');
     const cavaDiff = (cavaAnt!==null||cavaAtual!==null)?(cavaAtual||0)-(cavaAnt||0):0;
     const postesRealDiff = (postesRealAnt!==null||postesRealAtual!==null)?(postesRealAtual||0)-(postesRealAnt||0):0;
     const postesImpDiff = (postesImpAnt!==null||postesImpAtual!==null)?(postesImpAtual||0)-(postesImpAnt||0):0;
@@ -1605,6 +1626,22 @@ function compParseNum(v) {
   if (v===''||v===null||v===undefined||v==='nan'||v==='NaN') return null;
   const n = parseFloat(String(v).replace(',','.'));
   return isNaN(n)?null:n;
+}
+
+function compDiagnostico() {
+  const box = document.getElementById('comp-diag-box');
+  const datasets = [];
+  if (compDataAtual && compDataAtual.length > 0) {
+    const cols = Object.keys(compDataAtual[0]);
+    datasets.push('📄 ARQUIVO NOVO — Colunas encontradas:\n' + cols.map((c,i) => `  [${i}] "${c}" → sem espaços: "${c.toUpperCase().replace(/\s+/g,'')}"`).join('\n'));
+  }
+  if (compDataAnterior && compDataAnterior.length > 0) {
+    const cols = Object.keys(compDataAnterior[0]);
+    datasets.push('🗄️ BASE ANTERIOR — Colunas encontradas:\n' + cols.map((c,i) => `  [${i}] "${c}" → sem espaços: "${c.toUpperCase().replace(/\s+/g,'')}"`).join('\n'));
+  }
+  if (!datasets.length) { box.textContent = '⚠️ Nenhum arquivo carregado ainda.'; box.style.display=''; return; }
+  box.textContent = datasets.join('\n\n');
+  box.style.display = '';
 }
 
 function compSetFilter(f, btn) {
