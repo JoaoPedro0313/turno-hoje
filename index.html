@@ -213,6 +213,7 @@ body { font-family:'Barlow',sans-serif; background:#f0f4f5; min-height:100vh; pa
 .page-nav-btn.active-apr   { color:#b97400; border-bottom-color:#f0a500; background:#fffbf0; }
 .page-nav-btn.active-mapa  { color:#38a169; border-bottom-color:#38a169; background:#f0fff4; }
 .page-nav-btn.active-comp  { color:#0d7377; border-bottom-color:#0d7377; background:#f0fafa; }
+.page-nav-btn.active-prog  { color:#7b2d8b; border-bottom-color:#9c27b0; background:#f9f0ff; }
 
 /* ── COMPARADOR CAVA & POSTES ── */
 #page-comp { background:#f0f4f5; min-height:100vh; padding-bottom:80px; }
@@ -352,6 +353,7 @@ body { font-family:'Barlow',sans-serif; background:#f0f4f5; min-height:100vh; pa
   <button class="page-nav-btn" id="nav-apr" onclick="switchPage('apr')">&#9888; APR</button>
   <button class="page-nav-btn" id="nav-comp" onclick="switchPage('comp')">&#9889; COMPARADOR</button>
   <button class="page-nav-btn" id="nav-mapa" onclick="switchPage('mapa')">&#128205; MAPA</button>
+  <button class="page-nav-btn" id="nav-prog" onclick="switchPage('prog')">&#128197; PROG. DIÁRIA</button>
 </div>
 
 <!-- PÁGINA 1: TURNO -->
@@ -1361,10 +1363,14 @@ function switchPage(page) {
   document.getElementById('page-comp').style.display  = page === 'comp'  ? '' : 'none';
   const pgMapa = document.getElementById('page-mapa');
   if (pgMapa) pgMapa.style.display = page === 'mapa' ? '' : 'none';
+  const pgProg = document.getElementById('page-prog');
+  if (pgProg) pgProg.style.display = page === 'prog' ? '' : 'none';
   document.getElementById('nav-turno').className = 'page-nav-btn' + (page === 'turno' ? ' active-turno' : '');
   document.getElementById('nav-prod').className  = 'page-nav-btn' + (page === 'prod'  ? ' active-prod'  : '');
   document.getElementById('nav-apr').className   = 'page-nav-btn' + (page === 'apr'   ? ' active-apr'   : '');
   document.getElementById('nav-comp').className  = 'page-nav-btn' + (page === 'comp'  ? ' active-comp'  : '');
+  const navProg = document.getElementById('nav-prog');
+  if (navProg) navProg.className = 'page-nav-btn' + (page === 'prog' ? ' active-prog' : '');
   // hide bottom bar on comparador
   // bottom bar always visible on all pages
   if (page === 'mapa') {
@@ -3024,6 +3030,279 @@ function progLimpar() {
   document.getElementById('prog-sup-filtros').innerHTML = '';
 }
 
+// ─── PROGRAMAÇÃO DIÁRIA (XLSM/XLSX IMPORT) ──────────────────────────────────
+let xlsmData = [];
+let xlsmSupFiltro = 'TODOS';
+
+function xlsmShowMsg(text, type) {
+  const el = document.getElementById('xlsm-msg');
+  el.textContent = text;
+  el.style.display = 'block';
+  el.style.background = type === 'success' ? '#d0f0ee' : type === 'warning' ? '#fffbf0' : '#fde8e8';
+  el.style.color = type === 'success' ? '#0d7377' : type === 'warning' ? '#b97400' : '#c53030';
+  el.style.borderLeftColor = type === 'success' ? '#0d7377' : type === 'warning' ? '#f0a500' : '#c53030';
+  clearTimeout(el._t); el._t = setTimeout(() => el.style.display = 'none', 8000);
+}
+
+function xlsmHandleFile(file) {
+  if (!file) return;
+  document.getElementById('xlsm-file-name').textContent = '⏳ Lendo ' + file.name + '…';
+
+  const ensureSheetJS = (cb) => {
+    if (window.XLSX) { cb(); return; }
+    const s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+    s.onload = cb;
+    s.onerror = () => xlsmShowMsg('Erro ao carregar biblioteca XLSX. Verifique a conexão.', 'error');
+    document.head.appendChild(s);
+  };
+
+  const reader = new FileReader();
+  reader.onload = e => {
+    ensureSheetJS(() => {
+      try {
+        const wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array', cellDates: true });
+
+        // Busca aba "Programação Diária" ou similar
+        const sheetName = wb.SheetNames.find(n =>
+          n.toLowerCase().includes('programaç') || n.toLowerCase().includes('programac') || n.toLowerCase().includes('diár')
+        ) || wb.SheetNames[0];
+
+        const ws = wb.Sheets[sheetName];
+        const raw = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+
+        // Encontra linha de cabeçalho (procura "ENCARREGADO" ou "SUPERVISOR")
+        let headerRow = -1;
+        for (let i = 0; i < Math.min(raw.length, 20); i++) {
+          const r = raw[i].map(c => String(c||'').trim().toUpperCase());
+          if (r.some(c => c.includes('ENCARREGADO')) && r.some(c => c.includes('SUPERVISOR'))) {
+            headerRow = i; break;
+          }
+        }
+
+        if (headerRow === -1) {
+          xlsmShowMsg('Cabeçalho não encontrado. Verifique se a aba "Programação Diária" existe e tem colunas SUPERVISOR e ENCARREGADO.', 'error');
+          document.getElementById('xlsm-file-name').textContent = 'Erro — verifique o arquivo';
+          return;
+        }
+
+        const headers = raw[headerRow].map(c => String(c||'').trim().toUpperCase().replace(/\n/g,' ').replace(/\s+/g,' '));
+        const col = (...kws) => {
+          for (const kw of kws) {
+            const idx = headers.findIndex(h => h.includes(kw.toUpperCase()));
+            if (idx >= 0) return idx;
+          }
+          return -1;
+        };
+
+        const iData=col('DATA'), iSup=col('SUPERVISOR'), iProg=col('PROGRAMADOR'), iEnc=col('ENCARREGADO');
+        const iColab=col('QTD COLAB'), iAloj=col('ALOJADOS'), iObra=col('NOME DA OBRA');
+        const iMun=col('MUNICIPIO','MUNICÍPIO'), iPEP=col('PEP OBRA'), iAR=col('AR COELBA','AR');
+        const iAtiv=col('ATIVIDADES'), iPrev=col('QTD PREVISTO'), iReal=col('QTD REALIZADO');
+        const iStat=col('STATUS %','STATUS'), iVUnit=col('VALOR UNITÁRIO','VALOR UNIT');
+        const iVPrev=col('VALOR PREVISTO'), iVReal=col('VALOR REALIZADO'), iTipo=col('TIPO DO SERVIÇO','TIPO SERVIÇO');
+        const iDataDia=col('DATA DIA');
+
+        // Captura header info (rows above headers)
+        let headerData = '', headerBase = '';
+        for (let i = 0; i < headerRow; i++) {
+          const r = raw[i];
+          for (const v of r) {
+            const s = String(v||'').trim();
+            if (s && s !== 'x' && s.length > 2) {
+              if (s.includes('BASE') || s.includes('GERENTE')) headerBase += (headerBase ? ' · ' : '') + s;
+              else if (!headerData && (v instanceof Date || /\d{2,4}[-\/]/.test(s))) headerData = s;
+            }
+          }
+        }
+
+        xlsmData = [];
+        for (let i = headerRow + 1; i < raw.length; i++) {
+          const r = raw[i];
+          if (!r.some(v => String(v||'').trim())) continue; // skip empty
+          const enc = iEnc >= 0 ? String(r[iEnc]||'').trim() : '';
+          const obra = iObra >= 0 ? String(r[iObra]||'').trim() : '';
+          if (!enc && !obra) continue;
+
+          const fmtDate = v => {
+            if (!v) return '';
+            if (v instanceof Date) {
+              const d = v;
+              return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear();
+            }
+            return String(v).trim();
+          };
+
+          const fmtNum = v => {
+            if (v === '' || v === null || v === undefined) return null;
+            const n = parseFloat(String(v).replace(',','.'));
+            return isNaN(n) ? null : n;
+          };
+
+          const fmtMoney = v => {
+            const n = fmtNum(v);
+            if (n === null) return null;
+            return n;
+          };
+
+          xlsmData.push({
+            data:  fmtDate(iData >= 0 ? r[iData] : ''),
+            sup:   iSup >= 0  ? String(r[iSup]||'').trim().toUpperCase() : '',
+            prog:  iProg >= 0 ? String(r[iProg]||'').trim() : '',
+            enc,
+            colab: iColab >= 0 ? String(r[iColab]||'').trim() : '',
+            aloj:  iAloj >= 0 ? String(r[iAloj]||'').trim() : '',
+            obra,
+            mun:   iMun >= 0  ? String(r[iMun]||'').trim() : '',
+            pep:   iPEP >= 0  ? String(r[iPEP]||'').trim() : '',
+            ar:    iAR >= 0   ? String(r[iAR]||'').trim() : '',
+            ativ:  iAtiv >= 0 ? String(r[iAtiv]||'').trim() : '',
+            prev:  fmtNum(iPrev >= 0 ? r[iPrev] : null),
+            real:  fmtNum(iReal >= 0 ? r[iReal] : null),
+            stat:  iStat >= 0 ? String(r[iStat]||'').trim() : '',
+            vUnit: fmtMoney(iVUnit >= 0 ? r[iVUnit] : null),
+            vPrev: fmtMoney(iVPrev >= 0 ? r[iVPrev] : null),
+            vReal: fmtMoney(iVReal >= 0 ? r[iVReal] : null),
+            tipo:  iTipo >= 0 ? String(r[iTipo]||'').trim() : '',
+            dataDia: fmtDate(iDataDia >= 0 ? r[iDataDia] : ''),
+          });
+        }
+
+        if (!xlsmData.length) {
+          xlsmShowMsg('Nenhuma linha de dados encontrada. Verifique o arquivo.', 'warning');
+          return;
+        }
+
+        // Stats
+        const equipes = new Set(xlsmData.map(r=>r.enc).filter(Boolean)).size;
+        const obras   = new Set(xlsmData.map(r=>r.pep||r.obra).filter(Boolean)).size;
+        const totalColab = xlsmData.reduce((s,r) => s + (parseInt(r.colab)||0), 0);
+        const totalVPrev = xlsmData.reduce((s,r) => s + (r.vPrev||0), 0);
+        const totalVReal = xlsmData.reduce((s,r) => s + (r.vReal||0), 0);
+        const fmtR = v => 'R$ ' + v.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+
+        document.getElementById('xlsm-stat-equipes').textContent = equipes;
+        document.getElementById('xlsm-stat-obras').textContent   = obras;
+        document.getElementById('xlsm-stat-colab').textContent   = totalColab || xlsmData.length;
+        document.getElementById('xlsm-stat-val-prev').textContent = fmtR(totalVPrev);
+        document.getElementById('xlsm-stat-val-real').textContent = fmtR(totalVReal);
+
+        // Header info from file
+        const datas = xlsmData.map(r=>r.data||r.dataDia).filter(Boolean);
+        if (datas.length) document.getElementById('xlsm-header-data').textContent = '📅 Data: ' + [...new Set(datas)].join(', ');
+        if (headerBase) document.getElementById('xlsm-header-base').textContent = headerBase;
+
+        document.getElementById('xlsm-count-label').textContent = xlsmData.length + ' registros';
+        document.getElementById('xlsm-stats').style.display = '';
+        document.getElementById('xlsm-stats').style.display = 'flex';
+        document.getElementById('xlsm-filtros-area').style.display = '';
+        document.getElementById('xlsm-resultado').style.display = '';
+        document.getElementById('xlsm-empty').style.display = 'none';
+        document.getElementById('xlsm-btn-limpar').style.display = '';
+        document.getElementById('xlsm-file-name').textContent = '✅ ' + file.name + ' — ' + xlsmData.length + ' linhas da aba "' + sheetName + '"';
+        xlsmShowMsg('✅ ' + xlsmData.length + ' registros importados com sucesso!', 'success');
+
+        xlsmSupFiltro = 'TODOS';
+        xlsmRenderSupBar();
+        xlsmRender();
+      } catch(err) {
+        xlsmShowMsg('Erro ao processar arquivo: ' + err.message, 'error');
+        document.getElementById('xlsm-file-name').textContent = 'Erro ao ler o arquivo';
+        console.error(err);
+      }
+    });
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function xlsmRenderSupBar() {
+  const sups = ['TODOS', ...new Set(xlsmData.map(r=>r.sup).filter(Boolean))].sort((a,b) => a==='TODOS'?-1:b==='TODOS'?1:a.localeCompare(b));
+  const bar = document.getElementById('xlsm-sup-bar');
+  bar.innerHTML = sups.map(s => {
+    const active = s === xlsmSupFiltro;
+    return `<button onclick="xlsmSetSup('${s.replace(/'/g,"\\'")}')"
+      style="padding:4px 12px;border-radius:20px;border:1.5px solid ${active?'#9c27b0':'#e9d5ff'};background:${active?'#9c27b0':'#fff'};font-family:'Barlow',sans-serif;font-size:0.68rem;font-weight:800;cursor:pointer;color:${active?'#fff':'#7b2d8b'};white-space:nowrap;transition:all 0.15s;">
+      ${s==='TODOS'?'Todos os Supervisores':s}</button>`;
+  }).join('');
+}
+
+function xlsmSetSup(sup) { xlsmSupFiltro = sup; xlsmRenderSupBar(); xlsmRender(); }
+
+function xlsmRender() {
+  const q = (document.getElementById('xlsm-search')?document.getElementById('xlsm-search').value||'':'').toLowerCase();
+  const filtered = xlsmData.filter(r => {
+    if (xlsmSupFiltro !== 'TODOS' && r.sup !== xlsmSupFiltro) return false;
+    if (q && !r.obra.toLowerCase().includes(q) && !r.enc.toLowerCase().includes(q) &&
+        !r.mun.toLowerCase().includes(q) && !r.pep.toLowerCase().includes(q) &&
+        !r.ativ.toLowerCase().includes(q)) return false;
+    return true;
+  });
+
+  document.getElementById('xlsm-result-count').textContent = filtered.length + ' registros';
+
+  const tbody = document.getElementById('xlsm-tbody');
+  if (!filtered.length) {
+    tbody.innerHTML = '<tr><td colspan="14" style="padding:28px;text-align:center;color:#aaa;font-size:0.82rem;font-weight:600;">Nenhum registro encontrado</td></tr>';
+    return;
+  }
+
+  const fmtR = v => v !== null ? 'R$ ' + v.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}) : '—';
+  const pct = s => {
+    if (!s) return '<span style="color:#aaa">—</span>';
+    const n = parseFloat(String(s).replace('%','').replace(',','.'));
+    const col = n >= 100 ? '#276749' : n >= 50 ? '#b97400' : '#c53030';
+    const bg = n >= 100 ? '#f0fff4' : n >= 50 ? '#fffbf0' : '#fff5f5';
+    return `<span style="background:${bg};color:${col};padding:2px 8px;border-radius:5px;font-size:0.72rem;font-weight:800;">${isNaN(n)?s:n.toFixed(0)+'%'}</span>`;
+  };
+
+  tbody.innerHTML = filtered.map((r, i) => {
+    const rowBg = i%2===0 ? '#fff' : '#fdf8ff';
+    const initials = r.enc ? r.enc.charAt(0).toUpperCase() : '?';
+    const encBlock = r.enc ?
+      `<div style="display:flex;align-items:center;gap:7px;">
+        <div style="width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,#7b2d8b,#9c27b0);color:#fff;font-size:0.72rem;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${initials}</div>
+        <div><div style="font-size:0.8rem;font-weight:800;color:#1a365d;">${r.enc}</div>
+        ${r.colab?`<div style="font-size:0.62rem;color:#888;font-weight:700;">${r.colab} colab</div>`:''}</div></div>` : '—';
+
+    return `<tr style="border-bottom:1px solid #f0e6ff;background:${rowBg};"
+      onmouseover="this.style.background='#fdf4ff'" onmouseout="this.style.background='${rowBg}'">
+      <td style="padding:9px 12px;font-size:0.72rem;font-weight:700;color:#718096;white-space:nowrap;">${r.data||r.dataDia||'—'}</td>
+      <td style="padding:9px 12px;font-size:0.72rem;font-weight:800;color:#7b2d8b;white-space:nowrap;">${r.sup||'—'}</td>
+      <td style="padding:9px 12px;">${encBlock}</td>
+      <td style="padding:9px 12px;text-align:center;white-space:nowrap;">
+        <span style="font-size:0.78rem;font-weight:800;color:#0d7377;">${r.colab||'—'}</span>
+        ${r.aloj&&r.aloj.toLowerCase()==='sim'?'<span style="background:#ebf4ff;color:#2b6cb0;font-size:0.6rem;font-weight:800;padding:1px 6px;border-radius:4px;margin-left:3px;">ALOJ.</span>':''}
+      </td>
+      <td style="padding:9px 12px;font-size:0.78rem;font-weight:700;color:#2d3748;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${r.obra}">${r.obra||'—'}</td>
+      <td style="padding:9px 12px;font-size:0.72rem;font-weight:700;color:#555;white-space:nowrap;">${r.mun||'—'}</td>
+      <td style="padding:9px 12px;white-space:nowrap;"><code style="background:#f0f7ff;color:#2b6cb0;padding:2px 8px;border-radius:4px;font-size:0.7rem;font-weight:800;">${r.pep||'—'}</code></td>
+      <td style="padding:9px 12px;font-size:0.72rem;font-weight:600;color:#555;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${r.ativ}">${r.ativ||'—'}</td>
+      <td style="padding:9px 12px;text-align:center;font-weight:800;color:#7b2d8b;">${r.prev!==null?r.prev:'—'}</td>
+      <td style="padding:9px 12px;text-align:center;font-weight:800;color:#0d7377;">${r.real!==null?r.real:'—'}</td>
+      <td style="padding:9px 12px;text-align:right;font-size:0.72rem;font-weight:700;color:#276749;white-space:nowrap;">${fmtR(r.vPrev)}</td>
+      <td style="padding:9px 12px;text-align:right;font-size:0.72rem;font-weight:700;color:#2b6cb0;white-space:nowrap;">${fmtR(r.vReal)}</td>
+      <td style="padding:9px 12px;font-size:0.68rem;font-weight:700;color:#555;white-space:nowrap;">${r.tipo||'—'}</td>
+      <td style="padding:9px 12px;text-align:center;">${pct(r.stat)}</td>
+    </tr>`;
+  }).join('');
+}
+
+function xlsmLimpar() {
+  xlsmData = []; xlsmSupFiltro = 'TODOS';
+  document.getElementById('xlsm-tbody').innerHTML = '';
+  document.getElementById('xlsm-resultado').style.display = 'none';
+  document.getElementById('xlsm-stats').style.display = 'none';
+  document.getElementById('xlsm-filtros-area').style.display = 'none';
+  document.getElementById('xlsm-empty').style.display = '';
+  document.getElementById('xlsm-btn-limpar').style.display = 'none';
+  document.getElementById('xlsm-count-label').textContent = '';
+  document.getElementById('xlsm-sup-bar').innerHTML = '';
+  document.getElementById('xlsm-header-data').textContent = '';
+  document.getElementById('xlsm-header-base').textContent = '';
+  document.getElementById('xlsm-file-name').textContent = 'Formatos aceitos: .xlsm · .xlsx · .xls  ·  Aba: Programação Diária';
+}
+
+
 </script>
 
 <!-- MODAL SENHA ADM -->
@@ -3200,6 +3479,129 @@ function progLimpar() {
         <div style="font-size:0.75rem;margin-top:3px;color:#2b6cb0;font-weight:600;">JPG/JPEG: exiba a imagem da programação diretamente aqui</div>
       </div>
     </div>
+  </div>
+</div>
+
+
+<!-- PÁGINA PROG. DIÁRIA -->
+<div id="page-prog" style="display:none;">
+  <div style="max-width:1220px;margin:0 auto;padding:20px 16px 80px;">
+
+    <!-- Header card com upload -->
+    <div style="background:#fff;border-radius:14px;box-shadow:0 2px 14px rgba(0,0,0,0.08);overflow:hidden;margin-bottom:16px;">
+      <div style="background:linear-gradient(135deg,#6b21a8,#9c27b0);padding:16px 22px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+        <div style="display:flex;align-items:center;gap:12px;">
+          <div style="width:38px;height:38px;background:rgba(255,255,255,0.15);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.2rem;">&#128197;</div>
+          <div>
+            <div style="color:#fff;font-size:1rem;font-weight:800;letter-spacing:0.5px;">PROGRAMAÇÃO DIÁRIA DAS EQUIPES</div>
+            <div style="color:rgba(255,255,255,0.65);font-size:0.72rem;font-weight:600;margin-top:1px;">Importe o arquivo Excel (.xlsm / .xlsx) para visualizar a programação</div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:0.72rem;font-weight:800;color:rgba(255,255,255,0.75);" id="xlsm-count-label"></span>
+          <button onclick="xlsmLimpar()" id="xlsm-btn-limpar" style="display:none;padding:6px 14px;background:rgba(229,62,62,0.3);border:1px solid rgba(229,62,62,0.5);color:#ffc0c0;border-radius:8px;font-family:'Barlow',sans-serif;font-size:0.72rem;font-weight:800;cursor:pointer;">&#128465; Limpar</button>
+        </div>
+      </div>
+
+      <!-- Upload area -->
+      <div style="padding:18px 22px;border-bottom:1px solid #f0e6ff;">
+        <label style="cursor:pointer;display:block;">
+          <div id="xlsm-drop-zone" style="border:2px dashed #d8b4fe;border-radius:12px;padding:20px 24px;display:flex;align-items:center;gap:14px;background:linear-gradient(135deg,#faf5ff,#f3e8ff);transition:all 0.2s;"
+            ondragover="event.preventDefault();this.style.background='#ede9fe';this.style.borderColor='#9c27b0';"
+            ondragleave="this.style.background='linear-gradient(135deg,#faf5ff,#f3e8ff)';this.style.borderColor='#d8b4fe';"
+            ondrop="event.preventDefault();this.style.background='linear-gradient(135deg,#faf5ff,#f3e8ff)';this.style.borderColor='#d8b4fe';xlsmHandleFile(event.dataTransfer.files[0]);">
+            <span style="font-size:2rem;flex-shrink:0;">&#128196;</span>
+            <div>
+              <div style="font-size:0.85rem;font-weight:800;color:#7b2d8b;">Clique ou arraste o arquivo Excel aqui</div>
+              <div style="font-size:0.7rem;font-weight:600;color:#888;margin-top:3px;" id="xlsm-file-name">Formatos aceitos: .xlsm · .xlsx · .xls &nbsp;·&nbsp; Aba: <strong style="color:#7b2d8b;">Programação Diária</strong></div>
+            </div>
+          </div>
+          <input type="file" accept=".xlsm,.xlsx,.xls" style="display:none;" id="xlsm-input" onchange="xlsmHandleFile(this.files[0]);this.value=''">
+        </label>
+        <div id="xlsm-msg" style="margin-top:10px;font-size:0.78rem;font-weight:700;display:none;padding:8px 12px;border-radius:7px;border-left:3px solid;"></div>
+      </div>
+
+      <!-- Stats bar (shown after load) -->
+      <div id="xlsm-stats" style="display:none;padding:14px 22px;background:#faf5ff;border-bottom:1px solid #f0e6ff;display:flex;flex-wrap:wrap;gap:16px;align-items:center;">
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <div style="text-align:center;padding:8px 16px;background:#fff;border-radius:8px;border:1px solid #e9d5ff;">
+            <div style="font-size:1.4rem;font-weight:900;color:#7b2d8b;" id="xlsm-stat-equipes">0</div>
+            <div style="font-size:0.6rem;font-weight:800;color:#aaa;text-transform:uppercase;letter-spacing:1px;">Equipes</div>
+          </div>
+          <div style="text-align:center;padding:8px 16px;background:#fff;border-radius:8px;border:1px solid #e9d5ff;">
+            <div style="font-size:1.4rem;font-weight:900;color:#2b6cb0;" id="xlsm-stat-obras">0</div>
+            <div style="font-size:0.6rem;font-weight:800;color:#aaa;text-transform:uppercase;letter-spacing:1px;">Obras</div>
+          </div>
+          <div style="text-align:center;padding:8px 16px;background:#fff;border-radius:8px;border:1px solid #e9d5ff;">
+            <div style="font-size:1.4rem;font-weight:900;color:#0d7377;" id="xlsm-stat-colab">0</div>
+            <div style="font-size:0.6rem;font-weight:800;color:#aaa;text-transform:uppercase;letter-spacing:1px;">Colaboradores</div>
+          </div>
+          <div style="text-align:center;padding:8px 16px;background:#fff;border-radius:8px;border:1px solid #c6f6d5;">
+            <div style="font-size:1.4rem;font-weight:900;color:#276749;" id="xlsm-stat-val-prev">R$0</div>
+            <div style="font-size:0.6rem;font-weight:800;color:#aaa;text-transform:uppercase;letter-spacing:1px;">Valor Previsto</div>
+          </div>
+          <div style="text-align:center;padding:8px 16px;background:#fff;border-radius:8px;border:1px solid #bee3f8;">
+            <div style="font-size:1.4rem;font-weight:900;color:#2b6cb0;" id="xlsm-stat-val-real">R$0</div>
+            <div style="font-size:0.6rem;font-weight:800;color:#aaa;text-transform:uppercase;letter-spacing:1px;">Valor Realizado</div>
+          </div>
+        </div>
+        <!-- Data e base -->
+        <div style="margin-left:auto;text-align:right;">
+          <div style="font-size:0.82rem;font-weight:800;color:#7b2d8b;" id="xlsm-header-data"></div>
+          <div style="font-size:0.7rem;font-weight:700;color:#888;" id="xlsm-header-base"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Filtros -->
+    <div id="xlsm-filtros-area" style="display:none;background:#fff;border-radius:12px;padding:14px 20px;margin-bottom:14px;box-shadow:0 2px 12px rgba(0,0,0,0.07);">
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+        <span style="font-size:0.68rem;font-weight:800;color:#aaa;letter-spacing:1.5px;text-transform:uppercase;white-space:nowrap;">&#128269; SUPERVISOR:</span>
+        <div id="xlsm-sup-bar" style="display:flex;gap:6px;flex-wrap:wrap;flex:1;"></div>
+        <input type="text" id="xlsm-search" placeholder="&#128269; Buscar obra, encarregado, município, PEP..." oninput="xlsmRender()"
+          style="padding:7px 14px;border:1.5px solid #e9d5ff;border-radius:8px;font-family:'Barlow',sans-serif;font-size:0.8rem;font-weight:600;color:#333;outline:none;min-width:260px;transition:border-color 0.15s;"
+          onfocus="this.style.borderColor='#9c27b0'" onblur="this.style.borderColor='#e9d5ff'">
+      </div>
+    </div>
+
+    <!-- Tabela principal -->
+    <div id="xlsm-resultado" style="display:none;background:#fff;border-radius:14px;box-shadow:0 2px 14px rgba(0,0,0,0.08);overflow:hidden;">
+      <div style="padding:12px 20px;background:linear-gradient(135deg,#faf5ff,#f3e8ff);border-bottom:1px solid #e9d5ff;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+        <span style="font-size:0.85rem;font-weight:800;color:#7b2d8b;">&#128203; EQUIPES PROGRAMADAS</span>
+        <span style="font-size:0.75rem;font-weight:700;color:#9c27b0;" id="xlsm-result-count">0 registros</span>
+      </div>
+      <div style="overflow-x:auto;">
+        <table style="width:100%;border-collapse:collapse;font-family:'Barlow',sans-serif;font-size:0.8rem;">
+          <thead>
+            <tr style="background:linear-gradient(135deg,#f3e8ff,#ede9fe);border-bottom:2px solid #d8b4fe;position:sticky;top:0;z-index:5;">
+              <th style="padding:10px 14px;text-align:left;font-size:0.62rem;font-weight:800;color:#7b2d8b;letter-spacing:1.5px;text-transform:uppercase;white-space:nowrap;">Data</th>
+              <th style="padding:10px 14px;text-align:left;font-size:0.62rem;font-weight:800;color:#7b2d8b;letter-spacing:1.5px;text-transform:uppercase;white-space:nowrap;">Supervisor</th>
+              <th style="padding:10px 14px;text-align:left;font-size:0.62rem;font-weight:800;color:#7b2d8b;letter-spacing:1.5px;text-transform:uppercase;white-space:nowrap;">Encarregado</th>
+              <th style="padding:10px 14px;text-align:left;font-size:0.62rem;font-weight:800;color:#7b2d8b;letter-spacing:1.5px;text-transform:uppercase;white-space:nowrap;">Colab / Aloj.</th>
+              <th style="padding:10px 14px;text-align:left;font-size:0.62rem;font-weight:800;color:#7b2d8b;letter-spacing:1.5px;text-transform:uppercase;">Nome da Obra</th>
+              <th style="padding:10px 14px;text-align:left;font-size:0.62rem;font-weight:800;color:#7b2d8b;letter-spacing:1.5px;text-transform:uppercase;white-space:nowrap;">Município</th>
+              <th style="padding:10px 14px;text-align:left;font-size:0.62rem;font-weight:800;color:#7b2d8b;letter-spacing:1.5px;text-transform:uppercase;white-space:nowrap;">PEP Obra</th>
+              <th style="padding:10px 14px;text-align:left;font-size:0.62rem;font-weight:800;color:#7b2d8b;letter-spacing:1.5px;text-transform:uppercase;">Atividades</th>
+              <th style="padding:10px 14px;text-align:center;font-size:0.62rem;font-weight:800;color:#7b2d8b;letter-spacing:1.5px;text-transform:uppercase;white-space:nowrap;">Qtd Prev.</th>
+              <th style="padding:10px 14px;text-align:center;font-size:0.62rem;font-weight:800;color:#7b2d8b;letter-spacing:1.5px;text-transform:uppercase;white-space:nowrap;">Qtd Real.</th>
+              <th style="padding:10px 14px;text-align:right;font-size:0.62rem;font-weight:800;color:#7b2d8b;letter-spacing:1.5px;text-transform:uppercase;white-space:nowrap;">Valor Prev.</th>
+              <th style="padding:10px 14px;text-align:right;font-size:0.62rem;font-weight:800;color:#7b2d8b;letter-spacing:1.5px;text-transform:uppercase;white-space:nowrap;">Valor Real.</th>
+              <th style="padding:10px 14px;text-align:left;font-size:0.62rem;font-weight:800;color:#7b2d8b;letter-spacing:1.5px;text-transform:uppercase;white-space:nowrap;">Tipo Serviço</th>
+              <th style="padding:10px 14px;text-align:center;font-size:0.62rem;font-weight:800;color:#7b2d8b;letter-spacing:1.5px;text-transform:uppercase;white-space:nowrap;">Status%</th>
+            </tr>
+          </thead>
+          <tbody id="xlsm-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Empty state -->
+    <div id="xlsm-empty" style="background:#fff;border-radius:14px;padding:60px 40px;text-align:center;color:#aaa;box-shadow:0 2px 14px rgba(0,0,0,0.08);">
+      <div style="font-size:3.5rem;margin-bottom:16px;">&#128196;</div>
+      <div style="font-size:1rem;font-weight:700;color:#7b2d8b;">Importe o arquivo Excel da Programação Diária</div>
+      <div style="font-size:0.78rem;margin-top:6px;">Arraste ou clique na área acima para carregar o arquivo .xlsm / .xlsx</div>
+    </div>
+
   </div>
 </div>
 
