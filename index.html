@@ -2482,7 +2482,7 @@ async function compSalvarBancoDirectly(merged, jacCount, ircCount) {
   if (!res.ok) throw new Error('Supabase HTTP ' + res.status);
 }
 
-
+function progLimpar() {
   progData = []; progSupFiltro = 'TODOS';
   document.getElementById('prog-tbody').innerHTML = '';
   document.getElementById('prog-resultado').style.display = 'none';
