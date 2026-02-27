@@ -336,7 +336,7 @@ body { font-family:'Barlow',sans-serif; background:#f0f4f5; min-height:100vh; pa
   <div class="header-title" id="page-title">TURNO HOJE</div>
   <div class="header-sub" id="page-sub">Relatório</div>
   <div class="header-time" id="page-time"></div>
-  <div class="db-badge offline" id="db-badge" onclick="dbBadgeClick()" title="Clique para reconectar | Duplo clique para diagnóstico" style="cursor:pointer;"><span class="db-dot"></span><span id="db-text">Carregando dados...</span></div>
+  <div class="db-badge local" id="db-badge" onclick="dbBadgeClick()" title="Clique para reconectar" style="cursor:pointer;"><span class="db-dot"></span><span id="db-text">Dados locais</span></div>
   <div id="diag-panel" style="display:none;position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:#1a202c;color:#e2e8f0;padding:14px 20px;border-radius:12px;font-family:monospace;font-size:0.75rem;z-index:9999;max-width:480px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,0.5);">
     <div style="font-weight:800;margin-bottom:8px;color:#68d391;">🔍 DIAGNÓSTICO SUPABASE</div>
     <div id="diag-text">Testando...</div>
@@ -1021,8 +1021,8 @@ async function dbSaveTurno() {
     setDbStatus('online', 'Salvo!');
     setTimeout(() => setDbStatus('online', 'Banco online'), 1500);
   } catch(e) {
-    setDbStatus('offline', 'Salvo local (sem rede)');
-    setTimeout(() => setDbStatus('offline', 'Offline — dados locais'), 2000);
+    setDbStatus('local', 'Salvo local');
+    setTimeout(() => setDbStatus('local', 'Dados locais'), 2000);
   }
 }
 
@@ -1038,8 +1038,8 @@ async function dbSaveProducao() {
     if (!res.ok) throw new Error('HTTP ' + res.status);
     setDbStatus('online', 'Banco online');
   } catch(e) {
-    setDbStatus('offline', 'Salvo local (sem rede)');
-    setTimeout(() => setDbStatus('offline', 'Offline — dados locais'), 2000);
+    setDbStatus('local', 'Salvo local');
+    setTimeout(() => setDbStatus('local', 'Dados locais'), 2000);
   }
 }
 
@@ -1056,8 +1056,8 @@ async function dbSaveApr() {
     setDbStatus('online', 'APR salvo!');
     setTimeout(() => setDbStatus('online', 'Banco online'), 1500);
   } catch(e) {
-    setDbStatus('offline', 'Salvo local (sem rede)');
-    setTimeout(() => setDbStatus('offline', 'Offline — dados locais'), 2000);
+    setDbStatus('local', 'Salvo local');
+    setTimeout(() => setDbStatus('local', 'Dados locais'), 2000);
   }
 }
 
@@ -1895,7 +1895,7 @@ async function checkForUpdates() {
     try {
       const badge = document.getElementById('db-badge');
       if (badge && badge.classList.contains('syncing')) {
-        setDbStatus('offline', 'Sem conexão — dados locais');
+        setDbStatus('local', 'Dados locais');
       }
     } catch(e2) {}
   }
@@ -1950,7 +1950,7 @@ setInterval(async () => {
   if (aprData && aprData.length > 0) { try { renderApr(); } catch(e) {} }
   // Badge verde se tem dados locais, cinza se não tem nada ainda
   const temDados = teams.ok.length > 0 || teams.falta.length > 0;
-  setDbStatus(temDados ? 'online' : 'offline', temDados ? 'Dados locais' : 'Sem dados');
+  setDbStatus(temDados ? 'local' : 'offline', temDados ? 'Dados locais' : 'Sem dados');
   clearTimeout(_loadTimeout);
   // Garante que o overlay sempre seja ocultado, independente de erros
   try { hideLoading(); } catch(e) {}
@@ -2958,11 +2958,11 @@ async function sincronizarSheets() {
         setDbStatus('online', '✅ Planilhas sincronizadas!');
       } catch(supaErr) {
         // Supabase offline, mas dados foram salvos no localStorage e aplicados
-        setDbStatus('offline', 'Sheets OK — salvo local');
+        setDbStatus('local', 'Sheets OK — salvo local');
       }
       setBtn('&#9989; Sincronizado!', false);
       setTimeout(() => setBtn('&#8635; Sincronizar do Sheets', false), 3000);
-      setTimeout(() => setDbStatus(bancoDB ? 'online' : 'offline', bancoDB ? 'Banco online' : 'Offline — dados locais'), 3000);
+      setTimeout(() => setDbStatus(bancoDB ? 'online' : 'local', bancoDB ? 'Banco online' : 'Dados locais'), 3000);
     } catch(e) {
       setBtn('&#8635; Sincronizar do Sheets', false);
       setDbStatus('offline', 'Erro ao sincronizar');
