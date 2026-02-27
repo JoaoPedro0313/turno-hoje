@@ -584,16 +584,40 @@ body { font-family:'Barlow',sans-serif; background:#f0f4f5; min-height:100vh; pa
       </button>
     </div>
     <div style="background:#fff;border-radius:12px;padding:20px;margin-bottom:20px;box-shadow:0 2px 12px rgba(0,0,0,0.07);">
-      <div style="font-size:0.72rem;font-weight:800;color:#2b6cb0;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:14px;">🔍 COMPARAR PROGRESSO COM O BANCO</div>
-      <div class="upload-card" id="comp-card-atual" style="padding:20px;text-align:center;margin-bottom:16px;position:relative;">
-        <input type="file" id="comp-file-atual" accept=".csv" style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;">
-        <div class="tag atual">📂 Arquivo Novo</div>
-        <div class="icon">⬆️</div>
-        <div class="label">Suba o CSV mais recente aqui</div>
-        <div class="sub">Será comparado com o banco salvo</div>
-        <div class="filename" id="comp-name-atual"></div>
+      <div style="font-size:0.72rem;font-weight:800;color:#2b6cb0;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:16px;">🔍 COMPARAR BANCO vs PLANILHA ATUAL</div>
+
+      <!-- Fontes lado a lado -->
+      <div style="display:grid;grid-template-columns:1fr auto 1fr;gap:0;align-items:center;margin-bottom:18px;">
+
+        <!-- Fonte A: Banco salvo -->
+        <div style="border:1.5px solid #c6f6d5;border-radius:12px;padding:14px 16px;background:#f0fff4;">
+          <div style="display:flex;align-items:center;gap:7px;margin-bottom:6px;">
+            <span style="font-size:1.1rem;">📦</span>
+            <span style="font-size:0.6rem;font-weight:800;color:#276749;letter-spacing:1.5px;text-transform:uppercase;">BANCO SALVO</span>
+          </div>
+          <div id="comp-fonte-banco" style="font-size:0.78rem;font-weight:700;color:#aaa;">Carregando…</div>
+        </div>
+
+        <!-- Seta central -->
+        <div style="text-align:center;padding:0 12px;font-size:1.5rem;color:#cbd5e0;user-select:none;">→</div>
+
+        <!-- Fonte B: Planilha ao vivo -->
+        <div style="border:1.5px solid #bee3f8;border-radius:12px;padding:14px 16px;background:#ebf8ff;">
+          <div style="display:flex;align-items:center;gap:7px;margin-bottom:6px;">
+            <span style="font-size:1.1rem;">🔄</span>
+            <span style="font-size:0.6rem;font-weight:800;color:#2b6cb0;letter-spacing:1.5px;text-transform:uppercase;">PLANILHA ATUAL (SHEETS)</span>
+          </div>
+          <div id="comp-fonte-sheets" style="font-size:0.78rem;font-weight:700;color:#aaa;">Jacobina + Irecê</div>
+        </div>
       </div>
-      <button class="btn-compare" id="comp-btn-compare" disabled onclick="compCompare()">🔍 COMPARAR COM BANCO</button>
+
+      <!-- Mensagem de erro/status -->
+      <div id="comp-compare-status" style="display:none;padding:10px 14px;border-radius:8px;font-size:0.78rem;font-weight:700;margin-bottom:14px;"></div>
+
+      <!-- Botão principal -->
+      <button class="btn-compare" id="comp-btn-compare" onclick="compCompareComSheets()" style="background:linear-gradient(135deg,#2b6cb0,#4299e1);opacity:1;">
+        🔄 BUSCAR PLANILHA E COMPARAR COM BANCO
+      </button>
     </div>
     <!-- HISTÓRICO POR DIA -->
     <div id="comp-historico-wrap" style="margin-bottom:20px;display:none;">
@@ -1912,19 +1936,27 @@ let compDataAtual = null, compAllChanges = [], compActiveFilter = 'todos';
 let compBancoTemp = { 'IRECÊ': null, 'JACOBINA': null };
 
 function compUpdateBaseUI() {
+  // topo — card "Banco de Obras"
   const el = document.getElementById('comp-base-info');
-  if (!el) return;
-  if (!bancoDB || !bancoDBInfo) {
-    el.innerHTML = '<span style="color:#aaa;font-size:0.72rem;font-weight:600;">Nenhum banco salvo — carregue os 2 CSVs abaixo e clique em Salvar</span>';
-    const btn = document.getElementById('comp-btn-compare');
-    if (btn) btn.disabled = true;
-    return;
+  if (el) {
+    if (!bancoDB || !bancoDBInfo) {
+      el.innerHTML = '<span style="color:#aaa;font-size:0.72rem;font-weight:600;">Nenhum banco salvo</span>';
+    } else {
+      const { count, updatedAt, utds } = bancoDBInfo;
+      const tags = (utds||[]).map(u=>`<span style="background:#ebf4ff;color:#2b6cb0;padding:1px 8px;border-radius:4px;font-size:0.68rem;font-weight:800;margin-left:4px;">${u}</span>`).join('');
+      el.innerHTML = `<span style="font-weight:800;color:#0d7377;font-size:0.82rem;">✅ ${count} obras</span><span style="font-size:0.72rem;color:#888;margin-left:8px;">· ${updatedAt}</span>${tags}`;
+    }
   }
-  const { count, updatedAt, utds } = bancoDBInfo;
-  const tags = (utds||[]).map(u=>`<span style="background:#ebf4ff;color:#2b6cb0;padding:1px 8px;border-radius:4px;font-size:0.68rem;font-weight:800;margin-left:4px;">${u}</span>`).join('');
-  el.innerHTML = `<span style="font-weight:800;color:#0d7377;font-size:0.82rem;">✅ ${count} obras</span><span style="font-size:0.72rem;color:#888;margin-left:8px;">· atualizado em ${updatedAt}</span>${tags}`;
-  const btn = document.getElementById('comp-btn-compare');
-  if (btn) btn.disabled = !compDataAtual;
+  // card "Banco Salvo" na seção de comparação
+  const fb = document.getElementById('comp-fonte-banco');
+  if (fb) {
+    if (!bancoDB || !bancoDBInfo) {
+      fb.innerHTML = '<span style="color:#e53e3e;font-size:0.78rem;font-weight:700;">⚠️ Nenhum banco carregado — sincronize do Sheets primeiro</span>';
+    } else {
+      const { count, updatedAt } = bancoDBInfo;
+      fb.innerHTML = `<span style="color:#276749;font-weight:800;">${count} obras</span><br><span style="color:#68d391;font-size:0.7rem;">${updatedAt}</span>`;
+    }
+  }
 }
 
 function compHandleBancoCSV(input, utd) {
@@ -1981,84 +2013,150 @@ async function compSalvarBanco() {
   } catch(e) { setDbStatus('offline', 'Erro ao salvar banco'); console.error(e); }
 }
 
-function compHandleFileAtual() {
-  const inp = document.getElementById('comp-file-atual');
-  if (!inp) return;
-  inp.addEventListener('change', function() {
-    const file = this.files[0]; if (!file) return;
-    document.getElementById('comp-name-atual').textContent = '⏳ Lendo…';
-    const reader = new FileReader();
-    reader.onload = e => {
-      compWithPapa(() => {
-        const utd = /JACOBINA/i.test(file.name) ? 'JACOBINA' : /IREC/i.test(file.name) ? 'IRECÊ' : '';
-        compDataAtual = compParseCSVText(e.target.result, utd);
-        if (!compDataAtual) { document.getElementById('comp-name-atual').textContent = '❌ CSV inválido'; return; }
-        document.getElementById('comp-name-atual').textContent = file.name + ' (' + compDataAtual.length + ' obras)';
-        document.getElementById('comp-card-atual').classList.add('loaded');
-        const btn = document.getElementById('comp-btn-compare');
-        if (btn) btn.disabled = !bancoDB;
-      });
-    };
-    reader.readAsText(file, 'utf-8');
-    this.value = '';
-  });
+// ─── COMPARAR BANCO vs SHEETS ─────────────────────────────────────────────────
+
+function compSetStatus(msg, tipo) {
+  const el = document.getElementById('comp-compare-status');
+  if (!el) return;
+  if (!msg) { el.style.display = 'none'; return; }
+  const cores = {
+    info: { bg:'#ebf8ff', border:'#bee3f8', color:'#2b6cb0' },
+    erro: { bg:'#fff5f5', border:'#fed7d7', color:'#c53030' },
+    ok:   { bg:'#f0fff4', border:'#c6f6d5', color:'#276749' }
+  };
+  const c = cores[tipo] || cores.info;
+  el.style.cssText = 'display:block;padding:10px 14px;border-radius:8px;font-size:0.78rem;font-weight:700;margin-bottom:14px;background:'+c.bg+';border:1.5px solid '+c.border+';color:'+c.color+';';
+  el.textContent = msg;
 }
 
-function compCompare() {
-  if (!bancoDB || !compDataAtual) return;
-  const mapAnt = {}; bancoDB.forEach(r => { mapAnt[r['PEP OBRA']] = r; });
+async function compCompareComSheets() {
+  if (!bancoDB || !bancoDB.length) {
+    compSetStatus('⚠️ Nenhum banco carregado. Sincronize do Sheets ou carregue os CSVs primeiro.', 'erro');
+    return;
+  }
+
+  const btn = document.getElementById('comp-btn-compare');
+  const origText = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = '⏳ Buscando planilha…';
+  compSetStatus('Buscando dados do Google Sheets…', 'info');
+  const fsEl = document.getElementById('comp-fonte-sheets');
+  if (fsEl) fsEl.innerHTML = '<span style="color:#2b6cb0;">⏳ Buscando…</span>';
+
+  try {
+    if (!window.Papa) {
+      await new Promise((res, rej) => {
+        const s = document.createElement('script');
+        s.src = 'https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js';
+        s.onload = res; s.onerror = rej; document.head.appendChild(s);
+      });
+    }
+
+    const [resJac, resIrc] = await Promise.all([
+      fetch(GSHEETS.JACOBINA),
+      fetch(GSHEETS.IRECE)
+    ]);
+    if (!resJac.ok || !resIrc.ok) throw new Error('Falha ao buscar planilha (HTTP ' + (!resJac.ok ? resJac.status : resIrc.status) + ')');
+
+    const [textJac, textIrc] = await Promise.all([resJac.text(), resIrc.text()]);
+    const dataJac = compParseCSVText(textJac, 'JACOBINA');
+    const dataIrc = compParseCSVText(textIrc, 'IRECÊ');
+
+    if (!dataJac || !dataJac.length) throw new Error('Planilha JACOBINA não retornou dados válidos');
+    if (!dataIrc || !dataIrc.length) throw new Error('Planilha IRECÊ não retornou dados válidos');
+
+    const dataAtual = [...dataJac, ...dataIrc];
+    const now = new Date(), pad = n => String(n).padStart(2,'0');
+    const horaAtual = pad(now.getDate())+'/'+pad(now.getMonth()+1)+'/'+now.getFullYear()+' '+pad(now.getHours())+':'+pad(now.getMinutes());
+
+    if (fsEl) fsEl.innerHTML = '<span style="color:#2b6cb0;font-weight:800;">'+dataAtual.length+' obras</span><br><span style="color:#63b3ed;font-size:0.7rem;">buscado às '+horaAtual+'</span>';
+
+    compExecutarComparacao(bancoDB, dataAtual);
+
+    compSetStatus('✅ Comparação concluída — planilha buscada às ' + horaAtual, 'ok');
+    setTimeout(() => compSetStatus('', ''), 6000);
+
+  } catch(e) {
+    compSetStatus('❌ ' + (e.message || 'Erro ao buscar planilha'), 'erro');
+    if (fsEl) fsEl.innerHTML = '<span style="color:#e53e3e;">Erro ao buscar</span>';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = origText;
+  }
+}
+
+function compExecutarComparacao(dadosBase, dadosNovos) {
+  const mapAnt = {};
+  dadosBase.forEach(r => { mapAnt[r['PEP OBRA']] = r; });
   compAllChanges = [];
+
   function findVal(row, ...kws) {
     if (!row) return null;
-    for (const kw of kws) { const k=compNorm(kw); const col=Object.keys(row).find(c=>compNorm(c).includes(k)); if (col!==undefined) return compParseNum(row[col]); }
+    for (const kw of kws) {
+      const k = compNorm(kw);
+      const col = Object.keys(row).find(c => compNorm(c).includes(k));
+      if (col !== undefined) return compParseNum(row[col]);
+    }
     return null;
   }
-  compDataAtual.forEach(rowAtual => {
-    const pep=rowAtual['PEP OBRA'], rowAnt=mapAnt[pep];
-    const cavaAnt=findVal(rowAnt,'CAVA REALIZADA'), cavaAt=findVal(rowAtual,'CAVA REALIZADA');
-    const pRealAnt=findVal(rowAnt,'POSTES REALIZADO'), pRealAt=findVal(rowAtual,'POSTES REALIZADO');
-    const pImpAnt=findVal(rowAnt,'POSTES A IMPLANTA'), pImpAt=findVal(rowAtual,'POSTES A IMPLANTA');
-    const pPrevAt=findVal(rowAtual,'POSTES PREVISTOS');
-    const cavaDiff=(cavaAnt!==null||cavaAt!==null)?(cavaAt||0)-(cavaAnt||0):0;
-    const pRealDiff=(pRealAnt!==null||pRealAt!==null)?(pRealAt||0)-(pRealAnt||0):0;
-    const pImpDiff=(pImpAnt!==null||pImpAt!==null)?(pImpAt||0)-(pImpAnt||0):0;
+
+  dadosNovos.forEach(rowAtual => {
+    const pep = rowAtual['PEP OBRA'];
+    const rowAnt = mapAnt[pep];
+    const cavaAnt  = findVal(rowAnt,  'CAVA REALIZADA'),   cavaAt  = findVal(rowAtual, 'CAVA REALIZADA');
+    const pRealAnt = findVal(rowAnt,  'POSTES REALIZADO'), pRealAt = findVal(rowAtual, 'POSTES REALIZADO');
+    const pImpAnt  = findVal(rowAnt,  'POSTES A IMPLANTA'),pImpAt  = findVal(rowAtual, 'POSTES A IMPLANTA');
+    const pPrevAt  = findVal(rowAtual,'POSTES PREVISTOS');
+    const cavaDiff  = (cavaAnt  !== null || cavaAt  !== null) ? (cavaAt  || 0) - (cavaAnt  || 0) : 0;
+    const pRealDiff = (pRealAnt !== null || pRealAt !== null) ? (pRealAt || 0) - (pRealAnt || 0) : 0;
+    const pImpDiff  = (pImpAnt  !== null || pImpAt  !== null) ? (pImpAt  || 0) - (pImpAnt  || 0) : 0;
     if (!cavaDiff && !pRealDiff && !pImpDiff && rowAnt) return;
-    compAllChanges.push({ pep, titulo:rowAtual['TÍTULO']||rowAtual['TITULO']||'', utd:rowAtual['_UTD']||(rowAnt&&rowAnt['_UTD'])||'', status:(rowAtual['STATUS DA OBRA']||'').trim(), isNew:!rowAnt, mes:mesFromObra(rowAtual)||mesFromObra(rowAnt)||'', cavaAnt,cavaAt,cavaDiff, pRealAnt,pRealAt,pRealDiff, pImpAnt,pImpAt,pImpDiff, pPrevAt });
+    compAllChanges.push({
+      pep, titulo: rowAtual['TÍTULO']||rowAtual['TITULO']||'',
+      utd: rowAtual['_UTD']||(rowAnt&&rowAnt['_UTD'])||'',
+      status: (rowAtual['STATUS DA OBRA']||'').trim(),
+      isNew: !rowAnt,
+      mes: mesFromObra(rowAtual)||mesFromObra(rowAnt)||'',
+      cavaAnt,cavaAt,cavaDiff, pRealAnt,pRealAt,pRealDiff, pImpAnt,pImpAt,pImpDiff, pPrevAt
+    });
   });
+
   const cr = document.getElementById('comp-results');
-  if (cr) {
-    document.getElementById('comp-stat-total').textContent = compAllChanges.length;
-    document.getElementById('comp-stat-cava-inc').textContent = compAllChanges.filter(r=>r.cavaDiff>0).length;
-    document.getElementById('comp-stat-cava-dec').textContent = compAllChanges.filter(r=>r.cavaDiff<0).length;
-    document.getElementById('comp-stat-postes-inc').textContent = compAllChanges.filter(r=>r.pRealDiff>0).length;
-    document.getElementById('comp-stat-postes-dec').textContent = compAllChanges.filter(r=>r.pRealDiff<0).length;
-    cr.style.display = 'block';
-    // Popula filtro de meses
-    compMesFiltro = 'TODOS';
-    const mesesComp = sortMeses(['TODOS', ...new Set(compAllChanges.map(r=>r.mes).filter(Boolean))]);
-    const mesBar2 = document.getElementById('comp-mes-bar');
-    const mesToolbar2 = document.getElementById('comp-mes-toolbar');
-    if (mesBar2 && mesToolbar2) {
-      mesToolbar2.style.display = mesesComp.length > 1 ? '' : 'none';
-      const mesCount2 = m => m === 'TODOS' ? compAllChanges.length : compAllChanges.filter(r=>r.mes===m).length;
-      mesBar2.innerHTML = mesesComp.map(m => {
-        const on = m === 'TODOS';
-        return `<button class="comp-mes-btn" data-mes="${m}" onclick="compSetMes('${m}')"
-          style="padding:4px 12px;border-radius:20px;border:2px solid ${on?'#6b46c1':'#e2e8f0'};background:${on?'#6b46c1':'#fff'};font-family:'Barlow',sans-serif;font-size:0.7rem;font-weight:800;cursor:pointer;color:${on?'#fff':'#555'};transition:all 0.15s;white-space:nowrap;">
-          ${m === 'TODOS' ? 'Todos' : m} <span style="opacity:0.75;font-size:0.65rem;">(${mesCount2(m)})</span></button>`;
-      }).join('');
-    }
-    compSetFilter('todos', document.querySelector('#page-comp .filter-btn'));
-    cr.scrollIntoView({ behavior: 'smooth' });
+  if (!cr) return;
+  document.getElementById('comp-stat-total').textContent      = compAllChanges.length;
+  document.getElementById('comp-stat-cava-inc').textContent   = compAllChanges.filter(r=>r.cavaDiff>0).length;
+  document.getElementById('comp-stat-cava-dec').textContent   = compAllChanges.filter(r=>r.cavaDiff<0).length;
+  document.getElementById('comp-stat-postes-inc').textContent = compAllChanges.filter(r=>r.pRealDiff>0).length;
+  document.getElementById('comp-stat-postes-dec').textContent = compAllChanges.filter(r=>r.pRealDiff<0).length;
+  cr.style.display = 'block';
+
+  compMesFiltro = 'TODOS';
+  const mesesComp = sortMeses(['TODOS', ...new Set(compAllChanges.map(r=>r.mes).filter(Boolean))]);
+  const mesBar2     = document.getElementById('comp-mes-bar');
+  const mesToolbar2 = document.getElementById('comp-mes-toolbar');
+  if (mesBar2 && mesToolbar2) {
+    mesToolbar2.style.display = mesesComp.length > 1 ? '' : 'none';
+    const mesCount2 = m => m === 'TODOS' ? compAllChanges.length : compAllChanges.filter(r=>r.mes===m).length;
+    mesBar2.innerHTML = mesesComp.map(m => {
+      const on = m === 'TODOS';
+      return '<button class="comp-mes-btn" data-mes="'+m+'" onclick="compSetMes(''+m+'')" '+
+        'style="padding:4px 12px;border-radius:20px;border:2px solid '+(on?'#6b46c1':'#e2e8f0')+';background:'+(on?'#6b46c1':'#fff')+';font-family:'Barlow',sans-serif;font-size:0.7rem;font-weight:800;cursor:pointer;color:'+(on?'#fff':'#555')+';transition:all 0.15s;white-space:nowrap;">'+
+        (m==='TODOS'?'Todos':m)+' <span style="opacity:0.75;font-size:0.65rem;">('+mesCount2(m)+')</span></button>';
+    }).join('');
   }
-  compDataAtual = null;
-  const ca = document.getElementById('comp-card-atual');
-  if (ca) ca.classList.remove('loaded');
-  const na = document.getElementById('comp-name-atual');
-  if (na) na.textContent = '';
-  const cbc = document.getElementById('comp-btn-compare');
-  if (cbc) cbc.disabled = true;
+  compSetFilter('todos', document.querySelector('#page-comp .filter-btn'));
+  cr.scrollIntoView({ behavior: 'smooth' });
 }
+
+// Retrocompatibilidade para o auto-sync
+function compCompare() {
+  if (!bancoDB || !compDataAtual) return;
+  compExecutarComparacao(bancoDB, compDataAtual);
+  compDataAtual = null;
+}
+
+function compHandleFileAtual() { /* não usado — comparação direto do Sheets */ }
+
 
 function compSetFilter(f, btn) {
   compActiveFilter = f;
