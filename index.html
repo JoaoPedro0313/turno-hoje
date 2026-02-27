@@ -595,6 +595,26 @@ body { font-family:'Barlow',sans-serif; background:#f0f4f5; min-height:100vh; pa
       </div>
       <button class="btn-compare" id="comp-btn-compare" disabled onclick="compCompare()">🔍 COMPARAR COM BANCO</button>
     </div>
+    <!-- HISTÓRICO POR DIA -->
+    <div id="comp-historico-wrap" style="margin-bottom:20px;display:none;">
+      <div style="background:#fff;border-radius:14px;box-shadow:0 2px 12px rgba(0,0,0,0.07);overflow:hidden;">
+        <div style="background:linear-gradient(135deg,#2d3748,#4a5568);padding:14px 20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <div style="width:34px;height:34px;background:rgba(255,255,255,0.15);border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:1rem;">📅</div>
+            <div>
+              <div style="color:#fff;font-size:0.92rem;font-weight:800;letter-spacing:0.5px;">HISTÓRICO DE ALTERAÇÕES POR DIA</div>
+              <div style="color:rgba(255,255,255,0.6);font-size:0.68rem;font-weight:600;margin-top:1px;">Obras modificadas a cada sincronização</div>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span id="hist-total-label" style="font-size:0.72rem;font-weight:800;color:rgba(255,255,255,0.75);"></span>
+            <button onclick="compLimparHistorico()" style="padding:5px 12px;background:rgba(229,62,62,0.25);border:1px solid rgba(229,62,62,0.4);color:#ffc0c0;border-radius:7px;font-family:'Barlow',sans-serif;font-size:0.68rem;font-weight:800;cursor:pointer;">🗑️ Limpar histórico</button>
+          </div>
+        </div>
+        <div id="comp-historico-body" style="padding:16px 20px;max-height:600px;overflow-y:auto;"></div>
+      </div>
+    </div>
+
     <div id="comp-results" style="display:none;margin-top:24px;">
       <div class="stats-bar">
         <div class="stat-card blue"><div class="val" id="comp-stat-total">0</div><div class="lbl">Obras com alteração</div></div>
@@ -1928,6 +1948,7 @@ async function compSalvarBanco() {
     if (!res.ok) throw new Error('HTTP ' + res.status);
     bancoDB = merged; bancoDBInfo = info;
     compUpdateBaseUI();
+    compHistoricoAddSnapshot(merged);
     compBancoTemp = { 'IRECÊ': null, 'JACOBINA': null };
     mapaCarregarDoBanco();
     ['irece','jacobina'].forEach(id => {
@@ -2078,6 +2099,179 @@ async function compResetBase() {
 
 compHandleFileAtual();
 
+// ─── HISTÓRICO DE ALTERAÇÕES POR DIA ─────────────────────────────────────────
+let compHistorico = [];
+
+function compHistoricoLoad() {
+  try {
+    const v = localStorage.getItem('mariua_comp_historico');
+    if (v) compHistorico = JSON.parse(v);
+    if (!Array.isArray(compHistorico)) compHistorico = [];
+  } catch(e) { compHistorico = []; }
+  compHistoricoRender();
+}
+
+function compHistoricoSave() {
+  if (compHistorico.length > 30) compHistorico = compHistorico.slice(-30);
+  try { localStorage.setItem('mariua_comp_historico', JSON.stringify(compHistorico)); } catch(e) {}
+}
+
+function compHistoricoAddSnapshot(data) {
+  if (!data || !data.length) return;
+  const now = new Date(), pad = n => String(n).padStart(2,'0');
+  const ts = pad(now.getDate())+'/'+pad(now.getMonth()+1)+'/'+now.getFullYear()+' '+pad(now.getHours())+':'+pad(now.getMinutes());
+  const dia = pad(now.getDate())+'/'+pad(now.getMonth()+1)+'/'+now.getFullYear();
+  if (compHistorico.length > 0 && compHistorico[compHistorico.length-1].ts === ts) return;
+  compHistorico.push({ ts, dia, data: data.map(r => ({
+    pep: r['PEP OBRA']||'',
+    titulo: r['TÍTULO']||r['TITULO']||'',
+    utd: r['_UTD']||'',
+    status: (r['STATUS DA OBRA']||'').trim(),
+    cava: r['CAVA REALIZADA']||r['CAVA  REALIZADA']||'',
+    postR: r['POSTES REALIZADO']||r['POSTES  REALIZADO']||'',
+    postI: r['POSTES A IMPLANTA']||r['POSTES  À IMPLANTA']||r['POSTES À IMPLANTA']||'',
+  }))});
+  compHistoricoSave();
+  compHistoricoRender();
+}
+
+function compHistoricoParseNum(v) {
+  if (v===''||v===null||v===undefined) return null;
+  const n = parseFloat(String(v).replace(',','.'));
+  return isNaN(n) ? null : n;
+}
+
+function compHistoricoDiffCell(ant, at, diff) {
+  if (diff === 0) return '<span style="color:#aaa;">'+(at!==null?at:'—')+'</span>';
+  const sign = diff > 0 ? '+' : '';
+  const col = diff > 0 ? '#14a085' : '#e53e3e';
+  const bg = diff > 0 ? '#f0fff4' : '#fff5f5';
+  return '<span style="color:#999;font-size:0.72rem;">'+(ant!==null?ant:'—')+'</span>'+
+    '<span style="color:#aaa;margin:0 3px;">→</span>'+
+    '<span style="font-weight:800;color:'+col+';">'+(at!==null?at:'—')+'</span>'+
+    '<span style="background:'+bg+';color:'+col+';font-size:0.65rem;font-weight:800;padding:1px 5px;border-radius:4px;margin-left:3px;">'+sign+diff+'</span>';
+}
+
+let histExpandedDias = new Set();
+
+function compHistoricoRender() {
+  const wrap = document.getElementById('comp-historico-wrap');
+  const body = document.getElementById('comp-historico-body');
+  const totalLabel = document.getElementById('hist-total-label');
+  if (!wrap || !body) return;
+  if (compHistorico.length < 2) { wrap.style.display = 'none'; return; }
+  wrap.style.display = '';
+
+  // Agrupa por dia
+  const dias = {};
+  compHistorico.forEach(snap => { if (!dias[snap.dia]) dias[snap.dia] = []; dias[snap.dia].push(snap); });
+  const diasKeys = Object.keys(dias).sort((a,b) => {
+    const pa=a.split('/'),pb=b.split('/');
+    return new Date(+pb[2],+pb[1]-1,+pb[0]) - new Date(+pa[2],+pa[1]-1,+pa[0]);
+  });
+
+  let totalObras = 0;
+  const html = diasKeys.map(dia => {
+    const allSnaps = compHistorico.filter(s => s.dia === dia);
+    const idxPrimeiro = compHistorico.indexOf(allSnaps[0]);
+    const snapBase = idxPrimeiro > 0 ? compHistorico[idxPrimeiro-1] : null;
+    const snapAtual = allSnaps[allSnaps.length-1];
+    let changes = [];
+    const baseData = snapBase ? snapBase.data : (allSnaps.length > 1 ? allSnaps[0].data : null);
+    if (baseData) {
+      const mapAnt = {};
+      baseData.forEach(r => { mapAnt[r.pep] = r; });
+      snapAtual.data.forEach(rowAt => {
+        const rowAnt = mapAnt[rowAt.pep];
+        const cavaAnt = compHistoricoParseNum(rowAnt&&rowAnt.cava), cavaAt = compHistoricoParseNum(rowAt.cava);
+        const pRealAnt = compHistoricoParseNum(rowAnt&&rowAnt.postR), pRealAt = compHistoricoParseNum(rowAt.postR);
+        const pImpAnt = compHistoricoParseNum(rowAnt&&rowAnt.postI), pImpAt = compHistoricoParseNum(rowAt.postI);
+        const cavaDiff = (cavaAnt!==null||cavaAt!==null)?(cavaAt||0)-(cavaAnt||0):0;
+        const pRealDiff = (pRealAnt!==null||pRealAt!==null)?(pRealAt||0)-(pRealAnt||0):0;
+        const pImpDiff = (pImpAnt!==null||pImpAt!==null)?(pImpAt||0)-(pImpAnt||0):0;
+        if (!cavaDiff && !pRealDiff && !pImpDiff && rowAnt) return;
+        changes.push({pep:rowAt.pep,titulo:rowAt.titulo,utd:rowAt.utd,status:rowAt.status,isNew:!rowAnt,cavaAnt,cavaAt,cavaDiff,pRealAnt,pRealAt,pRealDiff,pImpAnt,pImpAt,pImpDiff});
+      });
+    }
+    totalObras += changes.length;
+    const expanded = histExpandedDias.has(dia);
+    const horarios = allSnaps.map(s=>s.ts.split(' ')[1]).filter(Boolean);
+    const horMin = horarios[0]||'', horMax = horarios[horarios.length-1]||'';
+    const intervalo = horMin===horMax ? horMin : horMin+' – '+horMax;
+    const sincLabel = allSnaps.length===1?'1 sync':allSnaps.length+' syncs';
+    const isHoje = (() => { const now=new Date(),pad=n=>String(n).padStart(2,'0'); return dia===pad(now.getDate())+'/'+pad(now.getMonth()+1)+'/'+now.getFullYear(); })();
+    const diasSem = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+    const parts = dia.split('/');
+    const diaSem = diasSem[new Date(+parts[2],+parts[1]-1,+parts[0]).getDay()];
+    const cavaInc=changes.filter(r=>r.cavaDiff>0).length, cavaDec=changes.filter(r=>r.cavaDiff<0).length;
+    const postInc=changes.filter(r=>r.pRealDiff>0).length, postDec=changes.filter(r=>r.pRealDiff<0).length;
+    const novas=changes.filter(r=>r.isNew).length;
+    const pills = [
+      changes.length ? '<span style="background:#ebf4ff;color:#2b6cb0;padding:2px 9px;border-radius:12px;font-size:0.68rem;font-weight:800;">'+changes.length+' obra'+(changes.length!==1?'s':'')+' alterada'+(changes.length!==1?'s':'')+'</span>' : '<span style="background:#f0f2f5;color:#aaa;padding:2px 9px;border-radius:12px;font-size:0.68rem;font-weight:800;">Sem alterações</span>',
+      novas ? '<span style="background:#d0f0ee;color:#0d7377;padding:2px 9px;border-radius:12px;font-size:0.68rem;font-weight:800;">+'+novas+' nova'+(novas!==1?'s':'')+'</span>' : '',
+      cavaInc ? '<span style="background:#f0fff4;color:#276749;padding:2px 9px;border-radius:12px;font-size:0.68rem;font-weight:800;">⛏ +'+cavaInc+' cava</span>' : '',
+      cavaDec ? '<span style="background:#fff5f5;color:#c53030;padding:2px 9px;border-radius:12px;font-size:0.68rem;font-weight:800;">⛏ -'+cavaDec+' cava</span>' : '',
+      postInc ? '<span style="background:#f0fff4;color:#276749;padding:2px 9px;border-radius:12px;font-size:0.68rem;font-weight:800;">🪝 +'+postInc+' postes</span>' : '',
+      postDec ? '<span style="background:#fff5f5;color:#c53030;padding:2px 9px;border-radius:12px;font-size:0.68rem;font-weight:800;">🪝 -'+postDec+' postes</span>' : '',
+    ].filter(Boolean).join('');
+    const tableHtml = !changes.length ?
+      '<div style="padding:20px;text-align:center;color:#bbb;font-size:0.82rem;font-weight:600;">Nenhuma alteração detectada</div>' :
+      '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-family:Barlow,sans-serif;font-size:0.78rem;">'+
+      '<thead><tr style="background:#f8fafc;border-bottom:2px solid #edf0f2;">'+
+      '<th style="padding:8px 12px;text-align:left;font-size:0.62rem;font-weight:800;color:#666;letter-spacing:1px;text-transform:uppercase;white-space:nowrap;">PEP</th>'+
+      '<th style="padding:8px 12px;text-align:left;font-size:0.62rem;font-weight:800;color:#666;letter-spacing:1px;text-transform:uppercase;">Título</th>'+
+      '<th style="padding:8px 12px;text-align:left;font-size:0.62rem;font-weight:800;color:#666;letter-spacing:1px;text-transform:uppercase;white-space:nowrap;">UTD</th>'+
+      '<th style="padding:8px 12px;text-align:center;font-size:0.62rem;font-weight:800;color:#38a169;letter-spacing:1px;text-transform:uppercase;white-space:nowrap;">⛏ Cava</th>'+
+      '<th style="padding:8px 12px;text-align:center;font-size:0.62rem;font-weight:800;color:#2b6cb0;letter-spacing:1px;text-transform:uppercase;white-space:nowrap;">🪝 Postes</th>'+
+      '<th style="padding:8px 12px;text-align:center;font-size:0.62rem;font-weight:800;color:#d69e2e;letter-spacing:1px;text-transform:uppercase;white-space:nowrap;">📦 À Implantar</th>'+
+      '</tr></thead><tbody>'+
+      changes.map((r,i) => {
+        const newTag = r.isNew ? '<span style="background:#d0f0ee;color:#0d7377;font-size:0.6rem;font-weight:800;padding:1px 5px;border-radius:3px;margin-left:5px;">NOVA</span>' : '';
+        const utdCol = r.utd==='IRECÊ'?'#2b6cb0':r.utd==='JACOBINA'?'#c05621':'#666';
+        return '<tr style="border-bottom:1px solid #f0f2f5;background:'+(i%2===0?'#fff':'#f9fbff')+';">'+
+          '<td style="padding:8px 12px;font-family:monospace;font-size:0.74rem;font-weight:800;color:#0d7377;white-space:nowrap;">'+r.pep+'</td>'+
+          '<td style="padding:8px 12px;font-size:0.78rem;font-weight:700;color:#2d3748;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+r.titulo+newTag+'</td>'+
+          '<td style="padding:8px 12px;white-space:nowrap;"><span style="background:'+utdCol+'18;color:'+utdCol+';padding:1px 7px;border-radius:4px;font-size:0.65rem;font-weight:800;">'+(r.utd||'—')+'</span></td>'+
+          '<td style="padding:8px 12px;text-align:center;white-space:nowrap;">'+compHistoricoDiffCell(r.cavaAnt,r.cavaAt,r.cavaDiff)+'</td>'+
+          '<td style="padding:8px 12px;text-align:center;white-space:nowrap;">'+compHistoricoDiffCell(r.pRealAnt,r.pRealAt,r.pRealDiff)+'</td>'+
+          '<td style="padding:8px 12px;text-align:center;white-space:nowrap;">'+compHistoricoDiffCell(r.pImpAnt,r.pImpAt,r.pImpDiff)+'</td>'+
+          '</tr>';
+      }).join('')+
+      '</tbody></table></div>';
+    const safeDia = dia.replace(/\//g,'-');
+    return '<div style="border:1.5px solid '+(isHoje?'#bee3f8':'#edf0f2')+';border-radius:12px;overflow:hidden;margin-bottom:10px;">'+
+      '<div onclick="histToggleDia(\''+dia+'\')" style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;cursor:pointer;background:'+(isHoje?'#ebf4ff':'#f8fafc')+';gap:10px;flex-wrap:wrap;user-select:none;">'+
+        '<div style="display:flex;align-items:center;gap:12px;flex:1;min-width:0;">'+
+          '<div style="text-align:center;min-width:52px;flex-shrink:0;">'+
+            '<div style="font-size:1.4rem;font-weight:900;color:'+(isHoje?'#2b6cb0':'#2d3748')+';line-height:1;">'+parts[0]+'</div>'+
+            '<div style="font-size:0.6rem;font-weight:800;color:'+(isHoje?'#2b6cb0':'#888')+';letter-spacing:1px;text-transform:uppercase;">'+diaSem+' '+parts[1]+'/'+parts[2].slice(-2)+'</div>'+
+          '</div>'+
+          '<div style="border-left:2px solid '+(isHoje?'#bee3f8':'#e2e8f0')+';padding-left:12px;min-width:0;">'+
+            '<div style="display:flex;flex-wrap:wrap;gap:5px;align-items:center;">'+pills+'</div>'+
+            '<div style="font-size:0.62rem;color:#aaa;font-weight:600;margin-top:4px;">⏱ '+intervalo+' · '+sincLabel+'</div>'+
+          '</div>'+
+        '</div>'+
+        '<div style="font-size:1rem;color:#aaa;flex-shrink:0;transform:rotate('+(expanded?'180':'0')+'deg);transition:transform 0.2s;" id="hist-arrow-'+safeDia+'">▾</div>'+
+      '</div>'+
+      '<div id="hist-detail-'+safeDia+'" style="display:'+(expanded?'':'none')+';">'+tableHtml+'</div>'+
+    '</div>';
+  }).join('');
+  body.innerHTML = html || '<div style="padding:20px;text-align:center;color:#bbb;font-size:0.82rem;">Nenhum histórico</div>';
+  if (totalLabel) totalLabel.textContent = diasKeys.length+' dia'+(diasKeys.length!==1?'s':'')+' · '+totalObras+' alteraç'+(totalObras!==1?'ões':'ão')+' total';
+}
+
+function histToggleDia(dia) {
+  if (histExpandedDias.has(dia)) histExpandedDias.delete(dia); else histExpandedDias.add(dia);
+  compHistoricoRender();
+}
+
+function compLimparHistorico() {
+  if (!confirm('Apagar todo o histórico de alterações?')) return;
+  compHistorico = []; compHistoricoSave(); compHistoricoRender();
+}
+
+compHistoricoLoad();
+
 // ─── AUTO-ATUALIZAÇÃO DO COMPARADOR ──────────────────────────────────────────
 const COMP_AUTO_REFRESH_MS = 5 * 60 * 1000; // 5 minutos
 let compAutoRefreshTimer = null;
@@ -2134,6 +2328,8 @@ async function compAutoSincronizar() {
     lsSet('obras_base', { data: merged, info });
     compUpdateBaseUI();
     mapaCarregarDoBanco();
+    // Salva snapshot no histórico
+    compHistoricoAddSnapshot(merged);
     // Pisca badge para indicar atualização
     const badge = document.getElementById('db-badge');
     if (badge) { badge.style.transition='opacity 0.3s'; badge.style.opacity='0.3'; setTimeout(()=>{ badge.style.opacity='1'; },300); }
@@ -2577,6 +2773,7 @@ async function compSalvarBancoDirectly(merged, jacCount, ircCount) {
   bancoDB = merged; bancoDBInfo = info;
   compUpdateBaseUI();
   mapaCarregarDoBanco();
+  compHistoricoAddSnapshot(merged);
 
   setDbStatus('syncing', 'Salvando banco…');
   const res = await fetch(SUPA_URL + '/rest/v1/turno_data', {
