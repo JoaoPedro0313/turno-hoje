@@ -334,7 +334,7 @@ body { font-family:'Barlow',sans-serif; background:#f0f4f5; min-height:100vh; pa
   <div class="header-title" id="page-title">TURNO HOJE</div>
   <div class="header-sub" id="page-sub">Relatório</div>
   <div class="header-time" id="page-time"></div>
-  <div class="db-badge offline" id="db-badge" onclick="dbReconectar()" title="Clique para reconectar" style="cursor:pointer;"><span class="db-dot"></span><span id="db-text">Conectando...</span></div>
+  <div class="db-badge syncing" id="db-badge" onclick="dbReconectar()" title="Clique para reconectar" style="cursor:pointer;"><span class="db-dot"></span><span id="db-text">Conectando...</span></div>
 </div>
 <div class="header-bar"></div>
 
@@ -897,12 +897,18 @@ function loadFromLocalStorage() {
 
 async function dbLoad() {
   setDbStatus('syncing', 'Conectando...');
+  // Anti-trava: se ficar mais de 7s em syncing, muda para offline automaticamente
+  const _syncGuard = setTimeout(() => {
+    if (document.getElementById('db-badge').classList.contains('syncing')) {
+      setDbStatus('offline', 'Sem conexão — dados locais');
+    }
+  }, 5500);
   // Carrega do localStorage imediatamente enquanto tenta o servidor
   loadFromLocalStorage();
   try { render(); } catch(e) {}
 
   const controller = new AbortController();
-  const tid = setTimeout(() => controller.abort(), 5000);
+  const tid = setTimeout(() => controller.abort(), 4000);
   try {
     const res = await fetch(SUPA_URL + '/rest/v1/turno_data?select=key,value', {
       signal: controller.signal,
@@ -917,16 +923,19 @@ async function dbLoad() {
         lsSet(row.key, row.value); // sincroniza local
       });
     }
+    clearTimeout(_syncGuard);
     setDbStatus('online', 'Banco online');
   } catch(e) {
     clearTimeout(tid);
+    clearTimeout(_syncGuard);
     const msg = e.name === 'AbortError' ? 'Timeout — dados locais' : 'Offline — dados locais';
     setDbStatus('offline', msg);
   }
 }
 
 async function dbReconectar() {
-  if (document.getElementById('db-badge').classList.contains('syncing')) return;
+  // Permite forçar reconexão mesmo em syncing (clique manual no badge)
+  // O guard interno do dbLoad vai resetar se travar
   await dbLoad();
   try { render(); } catch(e) {}
   if (aprData && aprData.length > 0) { try { renderApr(); } catch(e) {} }
@@ -1807,6 +1816,15 @@ function startAutoRefresh() {
   if (autoRefreshTimer) clearInterval(autoRefreshTimer);
   autoRefreshTimer = setInterval(checkForUpdates, AUTO_REFRESH_MS);
 }
+
+// ── AUTO-RECONEXÃO: se offline, tenta reconectar a cada 30s ──
+setInterval(async () => {
+  const badge = document.getElementById('db-badge');
+  if (badge && badge.classList.contains('offline')) {
+    await dbLoad();
+    try { render(); } catch(e) {}
+  }
+}, 30000);
 
 (async function() {
   // ── FAILSAFE: force hide loading overlay after 6s no matter what ──
