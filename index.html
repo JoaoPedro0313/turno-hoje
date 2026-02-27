@@ -2386,7 +2386,7 @@ function compHistoricoRender() {
       const diaSem = diasSem[new Date(+parts[2],+parts[1]-1,+parts[0]).getDay()];
       const ativo = histFiltroDia === dia;
       const label = isHoje ? 'Hoje' : diaSem+' '+parts[0]+'/'+parts[1];
-      return '<button onclick="histSetFiltroDia(''+dia+'')" style="padding:4px 12px;border-radius:20px;border:2px solid '+(ativo?'#4a5568':'#e2e8f0')+';background:'+(ativo?'#4a5568':'#fff')+';color:'+(ativo?'#fff':isHoje?'#2b6cb0':'#555')+';font-family:Barlow,sans-serif;font-size:0.7rem;font-weight:800;cursor:pointer;white-space:nowrap;transition:all 0.15s;">'+(isHoje?'🟢 ':'')+label+'</button>';
+      return '<button onclick="histSetFiltroDia(\''+dia+'\')" style="padding:4px 12px;border-radius:20px;border:2px solid '+(ativo?'#4a5568':'#e2e8f0')+';background:'+(ativo?'#4a5568':'#fff')+';color:'+(ativo?'#fff':isHoje?'#2b6cb0':'#555')+';font-family:Barlow,sans-serif;font-size:0.7rem;font-weight:800;cursor:pointer;white-space:nowrap;transition:all 0.15s;">'+(isHoje?'🟢 ':'')+label+'</button>';
     }).join('');
   }
   if (btnLimpar) btnLimpar.style.display = (histFiltroDia || searchTerm) ? '' : 'none';
