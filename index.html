@@ -20,11 +20,13 @@ body { font-family:'Barlow',sans-serif; background:#f0f4f5; min-height:100vh; pa
 .db-badge { display:inline-flex; align-items:center; gap:5px; font-size:0.7rem; font-weight:800; padding:4px 12px; border-radius:20px; letter-spacing:0.5px; margin-top:10px; position:relative; }
 .db-badge.offline { background:rgba(229,62,62,0.3); color:#ffc0c0; }
 .db-badge.online  { background:rgba(45,184,100,0.3); color:#b0ffd0; }
+.db-badge.local   { background:rgba(45,184,100,0.15); color:#9ae6b4; }
 .db-badge.syncing { background:rgba(240,165,0,0.3);  color:#ffe9a0; }
 .db-dot { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
 .db-badge.offline .db-dot { background:#e53e3e; }
 .db-badge.online  .db-dot { background:#14a085; box-shadow:0 0 6px #14a085; }
 .db-badge.syncing .db-dot { background:#f0a500; animation:blink 1s infinite; }
+.db-badge.local   .db-dot { background:#38a169; }
 @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
 
 .container { max-width:1120px; margin:30px auto; padding:0 16px; }
@@ -334,7 +336,7 @@ body { font-family:'Barlow',sans-serif; background:#f0f4f5; min-height:100vh; pa
   <div class="header-title" id="page-title">TURNO HOJE</div>
   <div class="header-sub" id="page-sub">Relatório</div>
   <div class="header-time" id="page-time"></div>
-  <div class="db-badge offline" id="db-badge" onclick="dbBadgeClick()" title="Clique para reconectar | Duplo clique para diagnóstico" style="cursor:pointer;"><span class="db-dot"></span><span id="db-text">Offline — dados locais</span></div>
+  <div class="db-badge offline" id="db-badge" onclick="dbBadgeClick()" title="Clique para reconectar | Duplo clique para diagnóstico" style="cursor:pointer;"><span class="db-dot"></span><span id="db-text">Carregando dados...</span></div>
   <div id="diag-panel" style="display:none;position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:#1a202c;color:#e2e8f0;padding:14px 20px;border-radius:12px;font-family:monospace;font-size:0.75rem;z-index:9999;max-width:480px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,0.5);">
     <div style="font-weight:800;margin-bottom:8px;color:#68d391;">🔍 DIAGNÓSTICO SUPABASE</div>
     <div id="diag-text">Testando...</div>
@@ -973,15 +975,13 @@ async function dbLoad(skipLocalLoad) {
         lsSet(row.key, row.value);
       });
     }
-    setDbStatus('online', 'Banco online');
+    setDbStatus('online', 'Banco online ✓');
   } catch(e) {
-    console.warn('[dbLoad] erro:', e.name, e.message);
-    // Mostra erro real no badge por 4s, depois volta para offline padrão
-    const errMsg = e.name === 'TypeError' ? 'Sem rede / CORS' :
-                   e.name === 'AbortError' ? 'Timeout' :
-                   (e.message || 'Erro');
-    setDbStatus('offline', 'Offline — dados locais');
-    console.warn('[Supabase] Não conectou:', errMsg);
+    console.warn('[Supabase] Não conectou:', e.name, e.message);
+    // Se tem dados locais, fica verde mesmo sem banco
+    const temDados = teams.ok.length > 0 || teams.falta.length > 0;
+    setDbStatus(temDados ? 'local' : 'offline',
+                temDados ? 'Dados locais' : 'Sem conexão');
   }
 }
 
@@ -1924,11 +1924,11 @@ setInterval(async () => {
         if (Array.isArray(data) && data.length > 0) {
           data.forEach(row => { applyRowData(row); lsSet(row.key, row.value); });
         }
-        setDbStatus('online', 'Banco online');
+        setDbStatus('online', 'Banco online ✓');
         try { render(); } catch(e) {}
       }
     } catch(e) {
-      // continua offline — não altera badge
+      // continua com dados locais — mantém badge verde se tiver dados
     }
   }
 }, 60000);
@@ -1948,8 +1948,9 @@ setInterval(async () => {
   loadFromLocalStorage();
   try { render(); } catch(e) {}
   if (aprData && aprData.length > 0) { try { renderApr(); } catch(e) {} }
-  // Badge já mostra offline/local ANTES de tentar rede — sem "Carregando..." preso
-  setDbStatus('offline', 'Offline — dados locais');
+  // Badge verde se tem dados locais, cinza se não tem nada ainda
+  const temDados = teams.ok.length > 0 || teams.falta.length > 0;
+  setDbStatus(temDados ? 'online' : 'offline', temDados ? 'Dados locais' : 'Sem dados');
   clearTimeout(_loadTimeout);
   // Garante que o overlay sempre seja ocultado, independente de erros
   try { hideLoading(); } catch(e) {}
