@@ -2230,8 +2230,8 @@ function compExecutarComparacao(dadosBase, dadosNovos) {
     const mesCount2 = m => m === 'TODOS' ? compAllChanges.length : compAllChanges.filter(r=>r.mes===m).length;
     mesBar2.innerHTML = mesesComp.map(m => {
       const on = m === 'TODOS';
-      return '<button class="comp-mes-btn" data-mes="'+m+'" onclick="compSetMes(''+m+'')" '+
-        'style="padding:4px 12px;border-radius:20px;border:2px solid '+(on?'#6b46c1':'#e2e8f0')+';background:'+(on?'#6b46c1':'#fff')+';font-family:'Barlow',sans-serif;font-size:0.7rem;font-weight:800;cursor:pointer;color:'+(on?'#fff':'#555')+';transition:all 0.15s;white-space:nowrap;">'+
+      return '<button class="comp-mes-btn" data-mes="'+m+'" onclick="compSetMes(\''+m+'\')" '+
+        'style="padding:4px 12px;border-radius:20px;border:2px solid '+(on?'#6b46c1':'#e2e8f0')+';background:'+(on?'#6b46c1':'#fff')+';font-family:Barlow,sans-serif;font-size:0.7rem;font-weight:800;cursor:pointer;color:'+(on?'#fff':'#555')+';transition:all 0.15s;white-space:nowrap;">'+
         (m==='TODOS'?'Todos':m)+' <span style="opacity:0.75;font-size:0.65rem;">('+mesCount2(m)+')</span></button>';
     }).join('');
   }
