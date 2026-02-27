@@ -334,7 +334,7 @@ body { font-family:'Barlow',sans-serif; background:#f0f4f5; min-height:100vh; pa
   <div class="header-title" id="page-title">TURNO HOJE</div>
   <div class="header-sub" id="page-sub">Relatório</div>
   <div class="header-time" id="page-time"></div>
-  <div class="db-badge offline" id="db-badge" onclick="dbReconectar()" title="Clique para reconectar" style="cursor:pointer;"><span class="db-dot"></span><span id="db-text">Carregando...</span></div>
+  <div class="db-badge offline" id="db-badge" onclick="dbReconectar()" title="Clique para reconectar" style="cursor:pointer;"><span class="db-dot"></span><span id="db-text">Offline — dados locais</span></div>
 </div>
 <div class="header-bar"></div>
 
@@ -919,10 +919,12 @@ function loadFromLocalStorage() {
   });
 }
 
-async function dbLoad() {
+async function dbLoad(skipLocalLoad) {
   // Carrega do localStorage imediatamente — UI já fica disponível
-  loadFromLocalStorage();
-  try { render(); } catch(e) {}
+  if (!skipLocalLoad) {
+    loadFromLocalStorage();
+    try { render(); } catch(e) {}
+  }
 
   // Tenta conectar silenciosamente (sem mostrar "syncing" no badge)
 
@@ -1905,7 +1907,7 @@ setInterval(async () => {
   try { const lo=document.getElementById('loading-overlay'); if(lo){ lo.classList.remove('show'); lo.style.display='none'; lo.style.pointerEvents='none'; } } catch(e) {}
 
   // Em background, tenta sincronizar com Supabase (atualiza badge para online se conseguir)
-  try { await dbLoad(); render(); } catch(e) {}
+  try { await dbLoad(true); render(); } catch(e) {}
   if (aprData && aprData.length > 0) { try { renderApr(); } catch(e) {} }
 
   // Busca o timestamp inicial antes de iniciar o loop
