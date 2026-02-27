@@ -920,19 +920,23 @@ function loadFromLocalStorage() {
 }
 
 async function dbLoad() {
-  setDbStatus('syncing', 'Conectando...');
-  // Anti-trava: se ficar mais de 7s em syncing, muda para offline automaticamente
+  // Carrega do localStorage imediatamente e mostra status local já
+  loadFromLocalStorage();
+  try { render(); } catch(e) {}
+
+  // Verifica se há dados locais para mostrar status adequado antes de tentar rede
+  const temDadosLocais = ['turno','producao'].some(k => { try { return !!localStorage.getItem('mariua_' + k); } catch(e) { return false; } });
+  setDbStatus('syncing', temDadosLocais ? 'Atualizando...' : 'Conectando...');
+
+  // Anti-trava: se ficar mais de 3s em syncing, muda para offline automaticamente
   const _syncGuard = setTimeout(() => {
     if (document.getElementById('db-badge').classList.contains('syncing')) {
       setDbStatus('offline', 'Sem conexão — dados locais');
     }
-  }, 5500);
-  // Carrega do localStorage imediatamente enquanto tenta o servidor
-  loadFromLocalStorage();
-  try { render(); } catch(e) {}
+  }, 3000);
 
   const controller = new AbortController();
-  const tid = setTimeout(() => controller.abort(), 4000);
+  const tid = setTimeout(() => controller.abort(), 2500);
   try {
     const res = await fetch(SUPA_URL + '/rest/v1/turno_data?select=key,value', {
       signal: controller.signal,
@@ -1797,12 +1801,22 @@ let lastUpdatedAt = null; // guarda o timestamp da última versão conhecida
 async function checkForUpdates() {
   // Verifica silenciosamente se houve alteração no banco
   try {
+    const controller = new AbortController();
+    const tid = setTimeout(() => controller.abort(), 2500);
     const res = await fetch(SUPA_URL + '/rest/v1/turno_data?select=key,updated_at', {
+      signal: controller.signal,
       headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY }
     });
+    clearTimeout(tid);
     if (!res.ok) return;
     const data = await res.json();
     if (!Array.isArray(data)) return;
+
+    // Se estava offline e agora conectou, atualiza badge
+    const badge = document.getElementById('db-badge');
+    if (badge && badge.classList.contains('offline')) {
+      setDbStatus('online', 'Banco online');
+    }
 
     // Pega o updated_at mais recente de todos os registros
     const latestTs = data.reduce((max, row) => {
@@ -1824,10 +1838,12 @@ async function checkForUpdates() {
         if (lbl) lbl.textContent = '✅ ' + aprData.length + ' registros carregados';
       }
       // Pisca o badge para indicar atualização
-      const badge = document.getElementById('db-badge');
-      badge.style.transition = 'opacity 0.3s';
-      badge.style.opacity = '0.3';
-      setTimeout(() => { badge.style.opacity = '1'; }, 300);
+      const badgeEl = document.getElementById('db-badge');
+      if (badgeEl) {
+        badgeEl.style.transition = 'opacity 0.3s';
+        badgeEl.style.opacity = '0.3';
+        setTimeout(() => { badgeEl.style.opacity = '1'; }, 300);
+      }
       // Atualiza o horário exibido
       const now = new Date();
       const pad = n => String(n).padStart(2,'0');
@@ -1837,6 +1853,13 @@ async function checkForUpdates() {
     }
   } catch(e) {
     // Silencioso — não interrompe a experiência do usuário
+    // Se estava em syncing, marca como offline
+    try {
+      const badge = document.getElementById('db-badge');
+      if (badge && badge.classList.contains('syncing')) {
+        setDbStatus('offline', 'Sem conexão — dados locais');
+      }
+    } catch(e2) {}
   }
 }
 
@@ -1845,14 +1868,32 @@ function startAutoRefresh() {
   autoRefreshTimer = setInterval(checkForUpdates, AUTO_REFRESH_MS);
 }
 
-// ── AUTO-RECONEXÃO: se offline, tenta reconectar a cada 30s ──
+// ── AUTO-RECONEXÃO: se offline, tenta reconectar a cada 60s (silencioso via checkForUpdates) ──
 setInterval(async () => {
   const badge = document.getElementById('db-badge');
   if (badge && badge.classList.contains('offline')) {
-    await dbLoad();
-    try { render(); } catch(e) {}
+    // Tenta silenciosamente sem alterar o badge para 'syncing'
+    try {
+      const controller = new AbortController();
+      const tid = setTimeout(() => controller.abort(), 2500);
+      const res = await fetch(SUPA_URL + '/rest/v1/turno_data?select=key,value', {
+        signal: controller.signal,
+        headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY }
+      });
+      clearTimeout(tid);
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data) && data.length > 0) {
+          data.forEach(row => { applyRowData(row); lsSet(row.key, row.value); });
+        }
+        setDbStatus('online', 'Banco online');
+        try { render(); } catch(e) {}
+      }
+    } catch(e) {
+      // continua offline — não altera badge
+    }
   }
-}, 30000);
+}, 60000);
 
 (async function() {
   // ── FAILSAFE: força ocultar overlay após 2s independente do que aconteça ──
@@ -1880,10 +1921,13 @@ setInterval(async () => {
 
   // Busca o timestamp inicial antes de iniciar o loop
   try {
+    const controller2 = new AbortController();
+    const tid2 = setTimeout(() => controller2.abort(), 2500);
     const res = await fetch(SUPA_URL + '/rest/v1/turno_data?select=key,updated_at', {
       headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY },
-      signal: AbortSignal.timeout ? AbortSignal.timeout(4000) : new AbortController().signal
+      signal: controller2.signal
     });
+    clearTimeout(tid2);
     if (res.ok) {
       const data = await res.json();
       if (Array.isArray(data)) {
