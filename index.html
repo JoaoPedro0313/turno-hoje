@@ -2243,18 +2243,55 @@ compHandleFileAtual();
 // ─── HISTÓRICO DE ALTERAÇÕES POR DIA ─────────────────────────────────────────
 let compHistorico = [];
 
-function compHistoricoLoad() {
+async function compHistoricoLoad() {
+  // 1. Tenta carregar do Supabase
+  try {
+    const res = await fetch(SUPA_URL + '/rest/v1/turno_data?key=eq.comp_historico&select=value', {
+      headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY }
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data) && data.length && Array.isArray(data[0].value)) {
+        compHistorico = data[0].value;
+        compHistoricoRender();
+        compDailyAutoSync();
+        return;
+      }
+    }
+  } catch(e) {}
+  // 2. Fallback: localStorage
   try {
     const v = localStorage.getItem('mariua_comp_historico');
     if (v) compHistorico = JSON.parse(v);
     if (!Array.isArray(compHistorico)) compHistorico = [];
   } catch(e) { compHistorico = []; }
   compHistoricoRender();
+  compDailyAutoSync();
 }
 
-function compHistoricoSave() {
-  if (compHistorico.length > 30) compHistorico = compHistorico.slice(-30);
+async function compHistoricoSave() {
+  if (compHistorico.length > 60) compHistorico = compHistorico.slice(-60);
+  // Salva local imediatamente
   try { localStorage.setItem('mariua_comp_historico', JSON.stringify(compHistorico)); } catch(e) {}
+  // Salva no Supabase
+  try {
+    await fetch(SUPA_URL + '/rest/v1/turno_data', {
+      method: 'POST',
+      headers: { ...SUPA_HEADERS, 'Prefer': 'resolution=merge-duplicates' },
+      body: JSON.stringify({ key: 'comp_historico', value: compHistorico, updated_at: new Date().toISOString() })
+    });
+  } catch(e) {}
+}
+
+// Sincronização diária automática — roda 1x por dia independente da aba aberta
+async function compDailyAutoSync() {
+  const now = new Date(), pad = n => String(n).padStart(2,'0');
+  const hoje = pad(now.getDate())+'/'+pad(now.getMonth()+1)+'/'+now.getFullYear();
+  const jaTemHoje = compHistorico.some(s => s.dia === hoje);
+  if (jaTemHoje) return; // já sincronizou hoje
+  await new Promise(r => setTimeout(r, 3000)); // aguarda sistema carregar
+  console.log('[Mariuá] Sincronização diária automática — ' + hoje);
+  await compAutoSincronizar();
 }
 
 function compHistoricoAddSnapshot(data) {
@@ -2420,8 +2457,6 @@ let compLastBancoTs = null; // timestamp do último banco conhecido
 
 async function compCheckForUpdates() {
   // Só sincroniza se a página do comparador estiver visível
-  if (document.getElementById('page-comp').style.display === 'none') return;
-
   try {
     // 1. Verifica se o banco no Supabase mudou
     const res = await fetch(SUPA_URL + '/rest/v1/turno_data?key=eq.obras_base&select=updated_at', {
