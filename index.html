@@ -28,6 +28,20 @@ body { font-family:'Barlow',sans-serif; background:#f0f4f5; min-height:100vh; pa
 .db-badge.syncing .db-dot { background:#f0a500; animation:blink 1s infinite; }
 .db-badge.local   .db-dot { background:#38a169; }
 @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+/* ── PRESENÇA ONLINE ── */
+.presence-btn { display:inline-flex; align-items:center; gap:6px; font-size:0.7rem; font-weight:800; padding:4px 12px; border-radius:20px; letter-spacing:0.5px; margin-top:10px; margin-left:8px; position:relative; background:rgba(45,184,100,0.2); color:#b0ffd0; border:none; cursor:pointer; transition:all 0.2s; }
+.presence-btn:hover { background:rgba(45,184,100,0.35); }
+.presence-dot { width:7px; height:7px; border-radius:50%; background:#38d996; box-shadow:0 0 6px #38d996; flex-shrink:0; animation:blink 2s infinite; }
+/* Modal presença */
+.presence-modal { display:none; position:fixed; inset:0; background:rgba(10,20,30,0.65); z-index:300; align-items:center; justify-content:center; padding:16px; backdrop-filter:blur(4px); }
+.presence-modal.open { display:flex; }
+.presence-box { background:#fff; border-radius:20px; width:100%; max-width:520px; box-shadow:0 32px 80px rgba(0,0,0,0.25); overflow:hidden; max-height:90vh; display:flex; flex-direction:column; }
+.presence-header { background:linear-gradient(135deg,#0b5e62,#14a085); padding:18px 24px; display:flex; align-items:center; justify-content:space-between; }
+.presence-body { overflow-y:auto; padding:20px 24px; }
+.presence-user-row { display:flex; align-items:center; gap:12px; padding:10px 14px; border-radius:10px; margin-bottom:6px; background:#f0fafa; border:1px solid #c0e8e5; transition:all 0.15s; }
+.presence-user-row.me { background:#f0fff4; border-color:#c6f6d5; }
+.presence-avatar { width:36px; height:36px; border-radius:50%; background:linear-gradient(135deg,#0d7377,#14a085); color:#fff; font-size:0.9rem; font-weight:800; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.presence-name-input { background:transparent; border:none; font-family:'Barlow',sans-serif; font-size:0.85rem; font-weight:700; color:#1a365d; outline:none; width:100%; }
 
 .container { max-width:1120px; margin:30px auto; padding:0 16px; }
 .section { background:#fff; border-radius:12px; margin-bottom:24px; overflow:hidden; box-shadow:0 2px 12px rgba(0,0,0,0.07); }
@@ -338,6 +352,9 @@ body { font-family:'Barlow',sans-serif; background:#f0f4f5; min-height:100vh; pa
   <div class="header-sub" id="page-sub">Relatório</div>
   <div class="header-time" id="page-time"></div>
   <div class="db-badge local" id="db-badge" onclick="dbBadgeClick()" title="Clique para reconectar" style="cursor:pointer;"><span class="db-dot"></span><span id="db-text">Dados locais</span></div>
+  <button class="presence-btn" id="presence-btn" onclick="presenceOpenModal()" title="Ver quem está online">
+    <span class="presence-dot"></span><span id="presence-count-label">1 online</span>
+  </button>
   <div id="diag-panel" style="display:none;position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:#1a202c;color:#e2e8f0;padding:14px 20px;border-radius:12px;font-family:monospace;font-size:0.75rem;z-index:9999;max-width:480px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,0.5);">
     <div style="font-weight:800;margin-bottom:8px;color:#68d391;">🔍 DIAGNÓSTICO SUPABASE</div>
     <div id="diag-text">Testando...</div>
@@ -3044,263 +3061,713 @@ function xlsmShowMsg(text, type) {
   clearTimeout(el._t); el._t = setTimeout(() => el.style.display = 'none', 8000);
 }
 
-function xlsmHandleFile(file) {
-  if (!file) return;
-  document.getElementById('xlsm-file-name').textContent = '⏳ Lendo ' + file.name + '…';
+// ─── PROGRAMAÇÃO DIÁRIA ────────────────────────────────────────────────────
+// Storage key
+const PROG_SK = 'progDiaria_v2';
 
-  const ensureSheetJS = (cb) => {
-    if (window.XLSX) { cb(); return; }
-    const s = document.createElement('script');
-    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
-    s.onload = cb;
-    s.onerror = () => xlsmShowMsg('Erro ao carregar biblioteca XLSX. Verifique a conexão.', 'error');
-    document.head.appendChild(s);
-  };
+// Estado
+let progRegistros = [];
+let progEditIdx = null;
 
-  const reader = new FileReader();
-  reader.onload = e => {
-    ensureSheetJS(() => {
-      try {
-        const wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array', cellDates: true });
+// ── INIT ──
+function progInit() {
+  progLoadFromStorage();
+  progFillSelects();
+  // Set today as default date
+  const today = new Date().toISOString().split('T')[0];
+  const df = document.getElementById('pf-data');
+  if (df) df.value = today;
+  progRenderStats();
+  progRenderList();
+  progRenderDash();
+}
 
-        // Busca aba "Programação Diária" ou similar
-        const sheetName = wb.SheetNames.find(n =>
-          n.toLowerCase().includes('programaç') || n.toLowerCase().includes('programac') || n.toLowerCase().includes('diár')
-        ) || wb.SheetNames[0];
+// ── STORAGE ──
+async function progLoadFromStorage() {
+  try {
+    const r = await window.storage.get(PROG_SK);
+    if (r && r.value) progRegistros = JSON.parse(r.value);
+  } catch(e) {
+    progRegistros = [];
+  }
+  progRenderStats();
+  progRenderList();
+  progRenderDash();
+}
 
-        const ws = wb.Sheets[sheetName];
-        const raw = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+async function progSaveToStorage() {
+  try {
+    await window.storage.set(PROG_SK, JSON.stringify(progRegistros));
+  } catch(e) {
+    console.error('Erro ao salvar:', e);
+  }
+}
 
-        // Encontra linha de cabeçalho (procura "ENCARREGADO" ou "SUPERVISOR")
-        let headerRow = -1;
-        for (let i = 0; i < Math.min(raw.length, 20); i++) {
-          const r = raw[i].map(c => String(c||'').trim().toUpperCase());
-          if (r.some(c => c.includes('ENCARREGADO')) && r.some(c => c.includes('SUPERVISOR'))) {
-            headerRow = i; break;
-          }
-        }
-
-        if (headerRow === -1) {
-          xlsmShowMsg('Cabeçalho não encontrado. Verifique se a aba "Programação Diária" existe e tem colunas SUPERVISOR e ENCARREGADO.', 'error');
-          document.getElementById('xlsm-file-name').textContent = 'Erro — verifique o arquivo';
-          return;
-        }
-
-        const headers = raw[headerRow].map(c => String(c||'').trim().toUpperCase().replace(/\n/g,' ').replace(/\s+/g,' '));
-        const col = (...kws) => {
-          for (const kw of kws) {
-            const idx = headers.findIndex(h => h.includes(kw.toUpperCase()));
-            if (idx >= 0) return idx;
-          }
-          return -1;
-        };
-
-        const iData=col('DATA'), iSup=col('SUPERVISOR'), iProg=col('PROGRAMADOR'), iEnc=col('ENCARREGADO');
-        const iColab=col('QTD COLAB'), iAloj=col('ALOJADOS'), iObra=col('NOME DA OBRA');
-        const iMun=col('MUNICIPIO','MUNICÍPIO'), iPEP=col('PEP OBRA'), iAR=col('AR COELBA','AR');
-        const iAtiv=col('ATIVIDADES'), iPrev=col('QTD PREVISTO'), iReal=col('QTD REALIZADO');
-        const iStat=col('STATUS %','STATUS'), iVUnit=col('VALOR UNITÁRIO','VALOR UNIT');
-        const iVPrev=col('VALOR PREVISTO'), iVReal=col('VALOR REALIZADO'), iTipo=col('TIPO DO SERVIÇO','TIPO SERVIÇO');
-        const iDataDia=col('DATA DIA');
-
-        // Captura header info (rows above headers)
-        let headerData = '', headerBase = '';
-        for (let i = 0; i < headerRow; i++) {
-          const r = raw[i];
-          for (const v of r) {
-            const s = String(v||'').trim();
-            if (s && s !== 'x' && s.length > 2) {
-              if (s.includes('BASE') || s.includes('GERENTE')) headerBase += (headerBase ? ' · ' : '') + s;
-              else if (!headerData && (v instanceof Date || /\d{2,4}[-\/]/.test(s))) headerData = s;
-            }
-          }
-        }
-
-        xlsmData = [];
-        for (let i = headerRow + 1; i < raw.length; i++) {
-          const r = raw[i];
-          if (!r.some(v => String(v||'').trim())) continue; // skip empty
-          const enc = iEnc >= 0 ? String(r[iEnc]||'').trim() : '';
-          const obra = iObra >= 0 ? String(r[iObra]||'').trim() : '';
-          if (!enc && !obra) continue;
-
-          const fmtDate = v => {
-            if (!v) return '';
-            if (v instanceof Date) {
-              const d = v;
-              return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear();
-            }
-            return String(v).trim();
-          };
-
-          const fmtNum = v => {
-            if (v === '' || v === null || v === undefined) return null;
-            const n = parseFloat(String(v).replace(',','.'));
-            return isNaN(n) ? null : n;
-          };
-
-          const fmtMoney = v => {
-            const n = fmtNum(v);
-            if (n === null) return null;
-            return n;
-          };
-
-          xlsmData.push({
-            data:  fmtDate(iData >= 0 ? r[iData] : ''),
-            sup:   iSup >= 0  ? String(r[iSup]||'').trim().toUpperCase() : '',
-            prog:  iProg >= 0 ? String(r[iProg]||'').trim() : '',
-            enc,
-            colab: iColab >= 0 ? String(r[iColab]||'').trim() : '',
-            aloj:  iAloj >= 0 ? String(r[iAloj]||'').trim() : '',
-            obra,
-            mun:   iMun >= 0  ? String(r[iMun]||'').trim() : '',
-            pep:   iPEP >= 0  ? String(r[iPEP]||'').trim() : '',
-            ar:    iAR >= 0   ? String(r[iAR]||'').trim() : '',
-            ativ:  iAtiv >= 0 ? String(r[iAtiv]||'').trim() : '',
-            prev:  fmtNum(iPrev >= 0 ? r[iPrev] : null),
-            real:  fmtNum(iReal >= 0 ? r[iReal] : null),
-            stat:  iStat >= 0 ? String(r[iStat]||'').trim() : '',
-            vUnit: fmtMoney(iVUnit >= 0 ? r[iVUnit] : null),
-            vPrev: fmtMoney(iVPrev >= 0 ? r[iVPrev] : null),
-            vReal: fmtMoney(iVReal >= 0 ? r[iVReal] : null),
-            tipo:  iTipo >= 0 ? String(r[iTipo]||'').trim() : '',
-            dataDia: fmtDate(iDataDia >= 0 ? r[iDataDia] : ''),
-          });
-        }
-
-        if (!xlsmData.length) {
-          xlsmShowMsg('Nenhuma linha de dados encontrada. Verifique o arquivo.', 'warning');
-          return;
-        }
-
-        // Stats
-        const equipes = new Set(xlsmData.map(r=>r.enc).filter(Boolean)).size;
-        const obras   = new Set(xlsmData.map(r=>r.pep||r.obra).filter(Boolean)).size;
-        const totalColab = xlsmData.reduce((s,r) => s + (parseInt(r.colab)||0), 0);
-        const totalVPrev = xlsmData.reduce((s,r) => s + (r.vPrev||0), 0);
-        const totalVReal = xlsmData.reduce((s,r) => s + (r.vReal||0), 0);
-        const fmtR = v => 'R$ ' + v.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
-
-        document.getElementById('xlsm-stat-equipes').textContent = equipes;
-        document.getElementById('xlsm-stat-obras').textContent   = obras;
-        document.getElementById('xlsm-stat-colab').textContent   = totalColab || xlsmData.length;
-        document.getElementById('xlsm-stat-val-prev').textContent = fmtR(totalVPrev);
-        document.getElementById('xlsm-stat-val-real').textContent = fmtR(totalVReal);
-
-        // Header info from file
-        const datas = xlsmData.map(r=>r.data||r.dataDia).filter(Boolean);
-        if (datas.length) document.getElementById('xlsm-header-data').textContent = '📅 Data: ' + [...new Set(datas)].join(', ');
-        if (headerBase) document.getElementById('xlsm-header-base').textContent = headerBase;
-
-        document.getElementById('xlsm-count-label').textContent = xlsmData.length + ' registros';
-        document.getElementById('xlsm-stats').style.display = '';
-        document.getElementById('xlsm-stats').style.display = 'flex';
-        document.getElementById('xlsm-filtros-area').style.display = '';
-        document.getElementById('xlsm-resultado').style.display = '';
-        document.getElementById('xlsm-empty').style.display = 'none';
-        document.getElementById('xlsm-btn-limpar').style.display = '';
-        document.getElementById('xlsm-file-name').textContent = '✅ ' + file.name + ' — ' + xlsmData.length + ' linhas da aba "' + sheetName + '"';
-        xlsmShowMsg('✅ ' + xlsmData.length + ' registros importados com sucesso!', 'success');
-
-        xlsmSupFiltro = 'TODOS';
-        xlsmRenderSupBar();
-        xlsmRender();
-      } catch(err) {
-        xlsmShowMsg('Erro ao processar arquivo: ' + err.message, 'error');
-        document.getElementById('xlsm-file-name').textContent = 'Erro ao ler o arquivo';
-        console.error(err);
-      }
+// ── FILL SELECTS ──
+function progFillSelects() {
+  // Supervisores
+  const selSup = document.getElementById('pf-supervisor');
+  const filterSup = document.getElementById('prog-filter-sup');
+  if (selSup) {
+    PROG_SUPERVISORES.forEach(s => {
+      selSup.innerHTML += `<option value="${s}">${s}</option>`;
+      if (filterSup) filterSup.innerHTML += `<option value="${s}">${s}</option>`;
     });
-  };
-  reader.readAsArrayBuffer(file);
+  }
+  // Programadores
+  const selProg = document.getElementById('pf-programador');
+  if (selProg) {
+    PROG_PROGRAMADORES.forEach(p => {
+      selProg.innerHTML += `<option value="${p.nome}">${p.nome}</option>`;
+    });
+  }
+  // Encarregados (todos)
+  progFillEncarregados('');
 }
 
-function xlsmRenderSupBar() {
-  const sups = ['TODOS', ...new Set(xlsmData.map(r=>r.sup).filter(Boolean))].sort((a,b) => a==='TODOS'?-1:b==='TODOS'?1:a.localeCompare(b));
-  const bar = document.getElementById('xlsm-sup-bar');
-  bar.innerHTML = sups.map(s => {
-    const active = s === xlsmSupFiltro;
-    return `<button onclick="xlsmSetSup('${s.replace(/'/g,"\\'")}')"
-      style="padding:4px 12px;border-radius:20px;border:1.5px solid ${active?'#9c27b0':'#e9d5ff'};background:${active?'#9c27b0':'#fff'};font-family:'Barlow',sans-serif;font-size:0.68rem;font-weight:800;cursor:pointer;color:${active?'#fff':'#7b2d8b'};white-space:nowrap;transition:all 0.15s;">
-      ${s==='TODOS'?'Todos os Supervisores':s}</button>`;
-  }).join('');
-}
-
-function xlsmSetSup(sup) { xlsmSupFiltro = sup; xlsmRenderSupBar(); xlsmRender(); }
-
-function xlsmRender() {
-  const q = (document.getElementById('xlsm-search')?document.getElementById('xlsm-search').value||'':'').toLowerCase();
-  const filtered = xlsmData.filter(r => {
-    if (xlsmSupFiltro !== 'TODOS' && r.sup !== xlsmSupFiltro) return false;
-    if (q && !r.obra.toLowerCase().includes(q) && !r.enc.toLowerCase().includes(q) &&
-        !r.mun.toLowerCase().includes(q) && !r.pep.toLowerCase().includes(q) &&
-        !r.ativ.toLowerCase().includes(q)) return false;
-    return true;
+function progFillEncarregados(supervisor) {
+  const sel = document.getElementById('pf-encarregado');
+  if (!sel) return;
+  sel.innerHTML = '<option value="">Selecione...</option>';
+  Object.keys(PROG_ENCARREGADOS).forEach(enc => {
+    if (!supervisor || PROG_ENCARREGADOS[enc].supervisor === supervisor) {
+      sel.innerHTML += `<option value="${enc}">${enc}</option>`;
+    }
   });
+}
 
-  document.getElementById('xlsm-result-count').textContent = filtered.length + ' registros';
+function progOnSupChange() {
+  const sup = document.getElementById('pf-supervisor').value;
+  progFillEncarregados(sup);
+}
 
-  const tbody = document.getElementById('xlsm-tbody');
-  if (!filtered.length) {
-    tbody.innerHTML = '<tr><td colspan="14" style="padding:28px;text-align:center;color:#aaa;font-size:0.82rem;font-weight:600;">Nenhum registro encontrado</td></tr>';
+function progOnEncChange() {
+  const enc = document.getElementById('pf-encarregado').value;
+  if (!enc) return;
+  const eq = PROG_EQUIPES[enc];
+  if (eq) {
+    const qtd = document.getElementById('pf-qtd-colab');
+    const aloj = document.getElementById('pf-alojados');
+    if (qtd && eq.qtd_colab) qtd.value = eq.qtd_colab;
+    if (aloj && eq.alojados) aloj.value = eq.alojados;
+  }
+}
+
+// ── PEP SEARCH ──
+function progPepSearch(val) {
+  const dd = document.getElementById('pf-pep-dd');
+  if (!dd) return;
+  const q = val.trim().toUpperCase();
+  if (!q || q.length < 2) { dd.style.display = 'none'; return; }
+  const results = PROG_OBRAS.filter(o =>
+    o.pep.toUpperCase().includes(q) ||
+    o.titulo.toUpperCase().includes(q) ||
+    o.municipio.toUpperCase().includes(q)
+  ).slice(0, 12);
+  if (!results.length) { dd.style.display = 'none'; return; }
+  dd.innerHTML = results.map(o => `
+    <div onclick="progSelectPep('${o.pep.replace(/'/g,"\\'")}','${o.titulo.replace(/'/g,"\\'").replace(/"/g,'&quot;')}','${o.municipio.replace(/'/g,"\\'")}','${o.ar.replace(/'/g,"\\'").replace(/"/g,'&quot;')}')"
+      style="padding:8px 12px;cursor:pointer;border-bottom:1px solid #f0f4f8;transition:background 0.1s;"
+      onmouseover="this.style.background='#f0f4f8'" onmouseout="this.style.background='#fff'">
+      <div style="font-size:0.78rem;font-weight:800;color:#7e3af2;">${o.pep}</div>
+      <div style="font-size:0.72rem;font-weight:600;color:#475569;margin-top:1px;">${o.titulo} · ${o.municipio}</div>
+      <div style="font-size:0.65rem;color:#aaa;margin-top:1px;">${o.status}</div>
+    </div>`).join('');
+  dd.style.display = 'block';
+}
+
+function progSelectPep(pep, titulo, municipio, ar) {
+  document.getElementById('pf-pep-input').value = pep;
+  document.getElementById('pf-pep-val').value = pep;
+  document.getElementById('pf-nome-obra').value = titulo;
+  document.getElementById('pf-municipio').value = municipio;
+  document.getElementById('pf-ar').value = ar;
+  document.getElementById('pf-pep-dd').style.display = 'none';
+}
+
+// ── TIPO / ATIVIDADE ──
+function progOnTipoChange() {
+  const tipo = document.getElementById('pf-tipo').value;
+  const selAtiv = document.getElementById('pf-atividade');
+  selAtiv.innerHTML = '<option value="">Selecione a atividade...</option>';
+  if (!tipo) return;
+  const ativs = PROG_ATIVIDADES.filter(a => a.tipo === tipo);
+  ativs.forEach(a => {
+    selAtiv.innerHTML += `<option value="${a.cod}|${a.descricao}|${a.fatorK}">${a.descricao}</option>`;
+  });
+  document.getElementById('pf-vunit').value = '';
+  progCalcValores();
+}
+
+function progOnAtivChange() {
+  const sel = document.getElementById('pf-atividade').value;
+  if (!sel) { document.getElementById('pf-vunit').value = ''; return; }
+  const fk = parseFloat(sel.split('|')[2]) || 0;
+  document.getElementById('pf-vunit').value = fk > 0 ? 'R$ ' + fk.toLocaleString('pt-BR',{minimumFractionDigits:2}) : '-';
+  progCalcValores();
+}
+
+function progCalcValores() {
+  const sel = document.getElementById('pf-atividade').value;
+  const fk = sel ? parseFloat(sel.split('|')[2]) || 0 : 0;
+  const prev = parseFloat(document.getElementById('pf-qtd-prev').value) || 0;
+  const real = parseFloat(document.getElementById('pf-qtd-real').value) || 0;
+  const vprev = fk * prev;
+  const vreal = fk * real;
+  const status = prev > 0 ? ((real / prev) * 100).toFixed(1) + '%' : '-';
+  document.getElementById('pf-vprev').value = vprev > 0 ? 'R$ ' + vprev.toLocaleString('pt-BR',{minimumFractionDigits:2}) : '-';
+  document.getElementById('pf-vreal').value = vreal > 0 ? 'R$ ' + vreal.toLocaleString('pt-BR',{minimumFractionDigits:2}) : '-';
+  document.getElementById('pf-status').value = status;
+}
+
+// ── SALVAR ──
+function progFormSave() {
+  const data    = document.getElementById('pf-data').value;
+  const sup     = document.getElementById('pf-supervisor').value;
+  const prog    = document.getElementById('pf-programador').value;
+  const enc     = document.getElementById('pf-encarregado').value;
+  const pep     = document.getElementById('pf-pep-val').value || document.getElementById('pf-pep-input').value;
+  const atSel   = document.getElementById('pf-atividade').value;
+  const tipo    = document.getElementById('pf-tipo').value;
+
+  if (!data || !sup || !enc || !pep || !atSel || !tipo) {
+    progToast('❌ Preencha os campos obrigatórios: DATA, SUPERVISOR, ENCARREGADO, PEP OBRA, TIPO e ATIVIDADE.', 'error');
     return;
   }
 
-  const fmtR = v => v !== null ? 'R$ ' + v.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}) : '—';
-  const pct = s => {
-    if (!s) return '<span style="color:#aaa">—</span>';
-    const n = parseFloat(String(s).replace('%','').replace(',','.'));
-    const col = n >= 100 ? '#276749' : n >= 50 ? '#b97400' : '#c53030';
-    const bg = n >= 100 ? '#f0fff4' : n >= 50 ? '#fffbf0' : '#fff5f5';
-    return `<span style="background:${bg};color:${col};padding:2px 8px;border-radius:5px;font-size:0.72rem;font-weight:800;">${isNaN(n)?s:n.toFixed(0)+'%'}</span>`;
+  const atParts = atSel.split('|');
+  const fk = parseFloat(atParts[2]) || 0;
+  const prev = parseFloat(document.getElementById('pf-qtd-prev').value) || 0;
+  const real = parseFloat(document.getElementById('pf-qtd-real').value) || 0;
+  const qtd_colab = parseInt(document.getElementById('pf-qtd-colab').value) || 0;
+  const alojados = document.getElementById('pf-alojados').value;
+  const nomeObra = document.getElementById('pf-nome-obra').value;
+  const municipio = document.getElementById('pf-municipio').value;
+  const ar = document.getElementById('pf-ar').value;
+  const vprev = fk * prev;
+  const vreal = fk * real;
+  const status = prev > 0 ? ((real / prev) * 100) : 0;
+
+  const reg = {
+    id: progEditIdx !== null ? progRegistros[progEditIdx].id : Date.now().toString(36),
+    data, supervisor: sup, programador: prog, encarregado: enc,
+    qtd_colab, alojados, pep, nome_obra: nomeObra, municipio, ar_coelba: ar,
+    atividade_cod: atParts[0], atividade: atParts[1], tipo, fator_k: fk,
+    qtd_previsto: prev, qtd_realizado: real, status_pct: status,
+    valor_unitario: fk, valor_previsto: vprev, valor_realizado: vreal,
+    criado_em: progEditIdx !== null ? progRegistros[progEditIdx].criado_em : new Date().toISOString()
   };
 
-  tbody.innerHTML = filtered.map((r, i) => {
-    const rowBg = i%2===0 ? '#fff' : '#fdf8ff';
-    const initials = r.enc ? r.enc.charAt(0).toUpperCase() : '?';
-    const encBlock = r.enc ?
-      `<div style="display:flex;align-items:center;gap:7px;">
-        <div style="width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,#7b2d8b,#9c27b0);color:#fff;font-size:0.72rem;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${initials}</div>
-        <div><div style="font-size:0.8rem;font-weight:800;color:#1a365d;">${r.enc}</div>
-        ${r.colab?`<div style="font-size:0.62rem;color:#888;font-weight:700;">${r.colab} colab</div>`:''}</div></div>` : '—';
+  if (progEditIdx !== null) {
+    progRegistros[progEditIdx] = reg;
+    progEditIdx = null;
+    progToast('✅ Registro atualizado com sucesso!', 'success');
+  } else {
+    progRegistros.push(reg);
+    progToast('✅ Registro salvo com sucesso!', 'success');
+  }
 
-    return `<tr style="border-bottom:1px solid #f0e6ff;background:${rowBg};"
-      onmouseover="this.style.background='#fdf4ff'" onmouseout="this.style.background='${rowBg}'">
-      <td style="padding:9px 12px;font-size:0.72rem;font-weight:700;color:#718096;white-space:nowrap;">${r.data||r.dataDia||'—'}</td>
-      <td style="padding:9px 12px;font-size:0.72rem;font-weight:800;color:#7b2d8b;white-space:nowrap;">${r.sup||'—'}</td>
-      <td style="padding:9px 12px;">${encBlock}</td>
-      <td style="padding:9px 12px;text-align:center;white-space:nowrap;">
-        <span style="font-size:0.78rem;font-weight:800;color:#0d7377;">${r.colab||'—'}</span>
-        ${r.aloj&&r.aloj.toLowerCase()==='sim'?'<span style="background:#ebf4ff;color:#2b6cb0;font-size:0.6rem;font-weight:800;padding:1px 6px;border-radius:4px;margin-left:3px;">ALOJ.</span>':''}
+  progSaveToStorage();
+  progFormClear();
+  progRenderStats();
+  progRenderList();
+  progRenderDash();
+}
+
+function progToast(msg, type) {
+  const t = document.getElementById('prog-toast');
+  if (!t) return;
+  t.style.display = 'block';
+  t.style.background = type === 'success' ? '#f0fff4' : '#fff5f5';
+  t.style.color = type === 'success' ? '#276749' : '#c53030';
+  t.style.border = `1px solid ${type === 'success' ? '#c6f6d5' : '#fed7d7'}`;
+  t.textContent = msg;
+  setTimeout(() => t.style.display = 'none', 3500);
+}
+
+function progFormClear() {
+  progEditIdx = null;
+  ['pf-supervisor','pf-programador','pf-encarregado','pf-tipo','pf-atividade','pf-alojados'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  ['pf-qtd-colab','pf-qtd-prev','pf-qtd-real','pf-pep-input','pf-nome-obra','pf-municipio','pf-ar','pf-vunit','pf-vprev','pf-vreal','pf-status'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  document.getElementById('pf-pep-val').value = '';
+  const df = document.getElementById('pf-data');
+  if (df) df.value = new Date().toISOString().split('T')[0];
+  // Reset atividade dropdown
+  const selAtiv = document.getElementById('pf-atividade');
+  if (selAtiv) selAtiv.innerHTML = '<option value="">Selecione o tipo primeiro...</option>';
+}
+
+// ── TABS ──
+function progSwitchTab(tab) {
+  ['form','list','dash'].forEach(t => {
+    const btn = document.getElementById('prog-tab-'+t);
+    const view = document.getElementById('prog-view-'+t);
+    const active = t === tab;
+    if (btn) {
+      btn.style.background = active ? 'linear-gradient(135deg,#7e3af2,#9f7aea)' : 'transparent';
+      btn.style.color = active ? '#fff' : 'rgba(255,255,255,0.5)';
+    }
+    if (view) view.style.display = active ? 'block' : 'none';
+  });
+  if (tab === 'list') progRenderList();
+  if (tab === 'dash') progRenderDash();
+}
+
+// ── STATS CARDS ──
+function progRenderStats() {
+  const el = document.getElementById('prog-stat-cards');
+  if (!el) return;
+  const total = progRegistros.length;
+  const totalVP = progRegistros.reduce((s,r) => s + (r.valor_previsto||0), 0);
+  const totalVR = progRegistros.reduce((s,r) => s + (r.valor_realizado||0), 0);
+  const equipes = new Set(progRegistros.map(r => r.encarregado)).size;
+  const obras = new Set(progRegistros.map(r => r.pep)).size;
+  const fmtR = v => 'R$ ' + v.toLocaleString('pt-BR',{minimumFractionDigits:0,maximumFractionDigits:0});
+  const cards = [
+    {icon:'📝',label:'Registros',val:total, color:'#7e3af2'},
+    {icon:'👷',label:'Equipes',val:equipes, color:'#0b5e62'},
+    {icon:'🏗️',label:'Obras',val:obras, color:'#d97706'},
+    {icon:'💰',label:'Previsto',val:fmtR(totalVP), color:'#276749'},
+    {icon:'✅',label:'Realizado',val:fmtR(totalVR), color:'#1e40af'},
+  ];
+  el.innerHTML = cards.map(c => `
+    <div style="background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.15);border-radius:10px;padding:8px 14px;text-align:center;">
+      <div style="font-size:1rem;">${c.icon}</div>
+      <div style="font-size:1rem;font-weight:900;color:#fff;margin-top:1px;">${c.val}</div>
+      <div style="font-size:0.6rem;color:rgba(255,255,255,0.6);font-weight:700;letter-spacing:0.5px;">${c.label}</div>
+    </div>`).join('');
+}
+
+// ── LISTA ──
+function progRenderList() {
+  const tbody = document.getElementById('prog-tbody');
+  const empty = document.getElementById('prog-empty');
+  const count = document.getElementById('prog-list-count');
+  if (!tbody) return;
+
+  const search = (document.getElementById('prog-search')?.value || '').toLowerCase();
+  const filterSup = document.getElementById('prog-filter-sup')?.value || '';
+  const filterTipo = document.getElementById('prog-filter-tipo')?.value || '';
+
+  let filtered = progRegistros.filter(r => {
+    if (filterSup && r.supervisor !== filterSup) return false;
+    if (filterTipo && r.tipo !== filterTipo) return false;
+    if (search) {
+      const hay = [r.encarregado,r.pep,r.nome_obra,r.municipio,r.atividade,r.supervisor].join(' ').toLowerCase();
+      if (!hay.includes(search)) return false;
+    }
+    return true;
+  }).sort((a,b) => b.data.localeCompare(a.data));
+
+  if (count) count.textContent = filtered.length + ' registro(s)';
+  if (!filtered.length) {
+    tbody.innerHTML = '';
+    if (empty) empty.style.display = 'block';
+    return;
+  }
+  if (empty) empty.style.display = 'none';
+
+  const fmtR = v => v > 0 ? 'R$ ' + v.toLocaleString('pt-BR',{minimumFractionDigits:2}) : '-';
+  const statusColor = pct => pct >= 100 ? '#276749' : pct >= 50 ? '#d97706' : '#c53030';
+  const statusBg = pct => pct >= 100 ? '#f0fff4' : pct >= 50 ? '#fffbeb' : '#fff5f5';
+  const tipoColor = {
+    'LINHA VIVA':'#e53e3e','LINHA MORTA':'#3182ce','RETROESCAVADEIRA':'#d97706',
+    'LIGAÇÃO DE CLIENTE':'#38a169','PODA':'#6b21a8'
+  };
+
+  tbody.innerHTML = filtered.map((r,i) => `
+    <tr style="border-bottom:1px solid #f0f4f8;${i%2===0?'background:#fff;':'background:#fafbfc;'}" onmouseover="this.style.background='#f0f4ff'" onmouseout="this.style.background='${i%2===0?'#fff':'#fafbfc'}'">
+      <td style="padding:9px 12px;white-space:nowrap;font-weight:700;color:#475569;">${r.data ? r.data.split('-').reverse().join('/') : '-'}</td>
+      <td style="padding:9px 12px;white-space:nowrap;font-weight:700;font-size:0.72rem;color:#1a365d;">${r.supervisor||'-'}</td>
+      <td style="padding:9px 12px;white-space:nowrap;font-weight:800;color:#7e3af2;">${r.encarregado||'-'}</td>
+      <td style="padding:9px 8px;text-align:center;font-weight:700;">${r.qtd_colab||'-'}</td>
+      <td style="padding:9px 8px;text-align:center;font-size:0.7rem;font-weight:700;color:${r.alojados==='SIM'?'#276749':'#888'};">${r.alojados||'-'}</td>
+      <td style="padding:9px 12px;white-space:nowrap;font-weight:700;color:#7e3af2;font-size:0.72rem;">${r.pep||'-'}</td>
+      <td style="padding:9px 12px;font-size:0.72rem;font-weight:600;color:#475569;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${r.nome_obra||''}">${r.nome_obra||'-'}</td>
+      <td style="padding:9px 12px;white-space:nowrap;font-size:0.72rem;font-weight:600;">${r.municipio||'-'}</td>
+      <td style="padding:9px 12px;font-size:0.71rem;font-weight:600;color:#1a365d;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${r.atividade||''}">${r.atividade||'-'}</td>
+      <td style="padding:9px 8px;"><span style="background:${tipoColor[r.tipo]||'#888'}20;color:${tipoColor[r.tipo]||'#888'};font-size:0.62rem;font-weight:800;padding:2px 8px;border-radius:10px;white-space:nowrap;">${r.tipo||'-'}</span></td>
+      <td style="padding:9px 8px;text-align:center;font-weight:700;">${r.qtd_previsto||0}</td>
+      <td style="padding:9px 8px;text-align:center;font-weight:700;">${r.qtd_realizado||0}</td>
+      <td style="padding:9px 8px;text-align:center;"><span style="background:${statusBg(r.status_pct)};color:${statusColor(r.status_pct)};font-size:0.7rem;font-weight:800;padding:2px 9px;border-radius:10px;white-space:nowrap;">${r.status_pct?.toFixed(1)||0}%</span></td>
+      <td style="padding:9px 10px;text-align:right;font-weight:700;color:#276749;white-space:nowrap;">${fmtR(r.valor_previsto)}</td>
+      <td style="padding:9px 10px;text-align:right;font-weight:700;color:#276749;white-space:nowrap;">${fmtR(r.valor_realizado)}</td>
+      <td style="padding:9px 8px;text-align:center;white-space:nowrap;">
+        <button onclick="progEditReg(${progRegistros.indexOf(r)})" style="background:none;border:none;cursor:pointer;font-size:0.9rem;padding:2px 5px;" title="Editar">✏️</button>
+        <button onclick="progDeleteReg(${progRegistros.indexOf(r)})" style="background:none;border:none;cursor:pointer;font-size:0.9rem;padding:2px 5px;" title="Excluir">🗑️</button>
       </td>
-      <td style="padding:9px 12px;font-size:0.78rem;font-weight:700;color:#2d3748;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${r.obra}">${r.obra||'—'}</td>
-      <td style="padding:9px 12px;font-size:0.72rem;font-weight:700;color:#555;white-space:nowrap;">${r.mun||'—'}</td>
-      <td style="padding:9px 12px;white-space:nowrap;"><code style="background:#f0f7ff;color:#2b6cb0;padding:2px 8px;border-radius:4px;font-size:0.7rem;font-weight:800;">${r.pep||'—'}</code></td>
-      <td style="padding:9px 12px;font-size:0.72rem;font-weight:600;color:#555;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${r.ativ}">${r.ativ||'—'}</td>
-      <td style="padding:9px 12px;text-align:center;font-weight:800;color:#7b2d8b;">${r.prev!==null?r.prev:'—'}</td>
-      <td style="padding:9px 12px;text-align:center;font-weight:800;color:#0d7377;">${r.real!==null?r.real:'—'}</td>
-      <td style="padding:9px 12px;text-align:right;font-size:0.72rem;font-weight:700;color:#276749;white-space:nowrap;">${fmtR(r.vPrev)}</td>
-      <td style="padding:9px 12px;text-align:right;font-size:0.72rem;font-weight:700;color:#2b6cb0;white-space:nowrap;">${fmtR(r.vReal)}</td>
-      <td style="padding:9px 12px;font-size:0.68rem;font-weight:700;color:#555;white-space:nowrap;">${r.tipo||'—'}</td>
-      <td style="padding:9px 12px;text-align:center;">${pct(r.stat)}</td>
+    </tr>`).join('');
+}
+
+// ── EDITAR / DELETAR ──
+function progEditReg(idx) {
+  const r = progRegistros[idx];
+  if (!r) return;
+  progEditIdx = idx;
+  progSwitchTab('form');
+  setTimeout(() => {
+    const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val || ''; };
+    set('pf-data', r.data);
+    set('pf-supervisor', r.supervisor);
+    progFillEncarregados(r.supervisor);
+    set('pf-encarregado', r.encarregado);
+    set('pf-programador', r.programador);
+    set('pf-qtd-colab', r.qtd_colab);
+    set('pf-alojados', r.alojados);
+    set('pf-pep-input', r.pep);
+    set('pf-pep-val', r.pep);
+    set('pf-nome-obra', r.nome_obra);
+    set('pf-municipio', r.municipio);
+    set('pf-ar', r.ar_coelba);
+    set('pf-tipo', r.tipo);
+    progOnTipoChange();
+    setTimeout(() => {
+      const selAtiv = document.getElementById('pf-atividade');
+      if (selAtiv) {
+        for (let opt of selAtiv.options) {
+          if (opt.value.startsWith(r.atividade_cod + '|')) { selAtiv.value = opt.value; break; }
+        }
+        progOnAtivChange();
+      }
+      set('pf-qtd-prev', r.qtd_previsto);
+      set('pf-qtd-real', r.qtd_realizado);
+      progCalcValores();
+    }, 50);
+  }, 50);
+}
+
+function progDeleteReg(idx) {
+  if (!confirm('Excluir este registro?')) return;
+  progRegistros.splice(idx, 1);
+  progSaveToStorage();
+  progRenderStats();
+  progRenderList();
+  progRenderDash();
+}
+
+// ── DASHBOARD ──
+function progRenderDash() {
+  progRenderDashCards();
+  progRenderDashEnc();
+  progRenderDashAtiv();
+}
+
+function progRenderDashCards() {
+  const el = document.getElementById('prog-dash-cards');
+  if (!el) return;
+  const totalVP = progRegistros.reduce((s,r) => s + (r.valor_previsto||0), 0);
+  const totalVR = progRegistros.reduce((s,r) => s + (r.valor_realizado||0), 0);
+  const efs = totalVP > 0 ? (totalVR/totalVP*100).toFixed(1) : 0;
+  const equipes = new Set(progRegistros.map(r => r.encarregado)).size;
+  const obras = new Set(progRegistros.map(r => r.pep)).size;
+  const municipios = new Set(progRegistros.map(r => r.municipio)).size;
+  const fmtR = v => 'R$ ' + v.toLocaleString('pt-BR',{minimumFractionDigits:2});
+  const cards = [
+    {icon:'📝',label:'TOTAL REGISTROS',val:progRegistros.length,color:'#7e3af2',bg:'rgba(126,58,242,0.08)'},
+    {icon:'👷',label:'EQUIPES ATIVAS',val:equipes,color:'#0b5e62',bg:'rgba(11,94,98,0.08)'},
+    {icon:'🏗️',label:'OBRAS',val:obras,color:'#d97706',bg:'rgba(217,119,6,0.08)'},
+    {icon:'📍',label:'MUNICÍPIOS',val:municipios,color:'#1e40af',bg:'rgba(30,64,175,0.08)'},
+    {icon:'💰',label:'TOTAL PREVISTO',val:fmtR(totalVP),color:'#276749',bg:'rgba(39,103,73,0.08)'},
+    {icon:'✅',label:'TOTAL REALIZADO',val:fmtR(totalVR),color:'#276749',bg:'rgba(39,103,73,0.08)'},
+    {icon:'📊',label:'EFICIÊNCIA GERAL',val:efs+'%',color:parseFloat(efs)>=100?'#276749':parseFloat(efs)>=50?'#d97706':'#c53030',bg:'#f8fafc'},
+  ];
+  el.innerHTML = cards.map(c => `
+    <div style="background:${c.bg};border:1px solid ${c.color}22;border-radius:14px;padding:16px;text-align:center;">
+      <div style="font-size:1.4rem;">${c.icon}</div>
+      <div style="font-size:1.1rem;font-weight:900;color:${c.color};margin-top:4px;">${c.val}</div>
+      <div style="font-size:0.6rem;color:#888;font-weight:800;letter-spacing:1px;margin-top:2px;">${c.label}</div>
+    </div>`).join('');
+}
+
+function progRenderDashEnc() {
+  const tbody = document.getElementById('prog-dash-enc-tbody');
+  if (!tbody) return;
+
+  // Aggregate from registros first
+  const enc_data = {};
+  progRegistros.forEach(r => {
+    if (!enc_data[r.encarregado]) enc_data[r.encarregado] = {vp:0, vr:0, sup:r.supervisor};
+    enc_data[r.encarregado].vp += r.valor_previsto || 0;
+    enc_data[r.encarregado].vr += r.valor_realizado || 0;
+  });
+  // Merge with PROG_TOTAIS_ENC (baseline from planilha)
+  const allEncs = new Set([...Object.keys(enc_data), ...Object.keys(PROG_TOTAIS_ENC)]);
+  const rows = [];
+  allEncs.forEach(enc => {
+    const fromReg = enc_data[enc] || {vp:0, vr:0};
+    const fromBase = PROG_TOTAIS_ENC[enc] || {valor_previsto:0, valor_realizado:0};
+    const sup = fromReg.sup || (PROG_ENCARREGADOS[enc]?.supervisor) || '-';
+    const eq = PROG_EQUIPES[enc];
+    const vp = fromReg.vp + fromBase.valor_previsto;
+    const vr = fromReg.vr + fromBase.valor_realizado;
+    const efs = vp > 0 ? (vr/vp*100) : 0;
+    rows.push({enc, sup, eq, vp, vr, efs});
+  });
+  rows.sort((a,b) => b.vp - a.vp);
+
+  const fmtR = v => 'R$ ' + v.toLocaleString('pt-BR',{minimumFractionDigits:2});
+  const totalVP = rows.reduce((s,r) => s+r.vp, 0);
+  const totalVR = rows.reduce((s,r) => s+r.vr, 0);
+  const totalEfs = totalVP > 0 ? (totalVR/totalVP*100) : 0;
+
+  tbody.innerHTML = rows.map((r,i) => `
+    <tr style="border-bottom:1px solid #f0f4f8;${i%2===0?'':'background:#fafbfc;'}">
+      <td style="padding:10px 16px;font-weight:800;color:#1a365d;">${r.enc}</td>
+      <td style="padding:10px 16px;font-size:0.76rem;font-weight:600;color:#475569;">${r.sup}</td>
+      <td style="padding:10px 16px;font-size:0.72rem;color:#888;">
+        ${r.eq ? `Eq. ${r.eq.cod_equipe} · ${r.eq.qtd_colab} colab. · ${r.eq.alojados}` : '-'}
+      </td>
+      <td style="padding:10px 16px;text-align:right;font-weight:800;color:#276749;">${fmtR(r.vp)}</td>
+      <td style="padding:10px 16px;text-align:right;font-weight:800;color:#276749;">${fmtR(r.vr)}</td>
+      <td style="padding:10px 16px;text-align:center;">
+        <span style="background:${r.efs>=100?'#f0fff4':r.efs>=50?'#fffbeb':'#fff5f5'};color:${r.efs>=100?'#276749':r.efs>=50?'#d97706':'#c53030'};font-size:0.75rem;font-weight:800;padding:3px 12px;border-radius:10px;">
+          ${r.efs.toFixed(1)}%
+        </span>
+      </td>
+    </tr>`).join('') + `
+    <tr style="background:#f0f4f8;border-top:2px solid #e2e8f0;font-weight:900;">
+      <td colspan="3" style="padding:10px 16px;font-weight:900;color:#1a365d;">TOTAL GERAL</td>
+      <td style="padding:10px 16px;text-align:right;font-weight:900;color:#276749;">${fmtR(totalVP)}</td>
+      <td style="padding:10px 16px;text-align:right;font-weight:900;color:#276749;">${fmtR(totalVR)}</td>
+      <td style="padding:10px 16px;text-align:center;">
+        <span style="background:${totalEfs>=100?'#f0fff4':totalEfs>=50?'#fffbeb':'#fff5f5'};color:${totalEfs>=100?'#276749':totalEfs>=50?'#d97706':'#c53030'};font-size:0.78rem;font-weight:900;padding:4px 14px;border-radius:10px;">
+          ${totalEfs.toFixed(1)}%
+        </span>
+      </td>
     </tr>`;
+}
+
+function progRenderDashAtiv() {
+  const el = document.getElementById('prog-dash-ativ');
+  if (!el) return;
+  const counts = {};
+  progRegistros.forEach(r => {
+    if (!r.atividade) return;
+    if (!counts[r.atividade]) counts[r.atividade] = {count:0, tipo:r.tipo, vr:0};
+    counts[r.atividade].count++;
+    counts[r.atividade].vr += r.valor_realizado || 0;
+  });
+  const sorted = Object.entries(counts).sort((a,b) => b[1].count - a[1].count).slice(0,12);
+  if (!sorted.length) {
+    el.innerHTML = '<div style="color:#aaa;font-size:0.8rem;padding:12px;">Sem dados ainda. Lance registros para ver estatísticas.</div>';
+    return;
+  }
+  const maxCount = sorted[0][1].count;
+  const tipoColor = {'LINHA VIVA':'#e53e3e','LINHA MORTA':'#3182ce','RETROESCAVADEIRA':'#d97706','LIGAÇÃO DE CLIENTE':'#38a169','PODA':'#6b21a8'};
+  el.innerHTML = sorted.map(([atv, info]) => `
+    <div style="background:#f8fafc;border-radius:10px;padding:10px 14px;border:1px solid #e8ecef;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;">
+        <div style="font-size:0.72rem;font-weight:700;color:#1a365d;flex:1;margin-right:8px;">${atv}</div>
+        <span style="font-size:0.65rem;font-weight:800;color:${tipoColor[info.tipo]||'#888'};white-space:nowrap;">${info.count}x</span>
+      </div>
+      <div style="background:#e8ecef;border-radius:4px;height:4px;">
+        <div style="background:${tipoColor[info.tipo]||'#888'};border-radius:4px;height:4px;width:${(info.count/maxCount*100).toFixed(0)}%;"></div>
+      </div>
+    </div>`).join('');
+}
+
+// ── EXPORT CSV ──
+function progExportCSV() {
+  const headers = ['DATA','SUPERVISOR','PROGRAMADOR','ENCARREGADO','QTD_COLAB','ALOJADOS','PEP_OBRA','NOME_OBRA','MUNICIPIO','AR_COELBA','ATIVIDADE','TIPO','QTD_PREVISTO','QTD_REALIZADO','STATUS_%','VALOR_UNITARIO','VALOR_PREVISTO','VALOR_REALIZADO'];
+  const rows = progRegistros.map(r => [
+    r.data, r.supervisor, r.programador, r.encarregado, r.qtd_colab, r.alojados,
+    r.pep, r.nome_obra, r.municipio, r.ar_coelba, r.atividade, r.tipo,
+    r.qtd_previsto, r.qtd_realizado, r.status_pct?.toFixed(2), r.valor_unitario, r.valor_previsto, r.valor_realizado
+  ].map(v => '"' + String(v||'').replace(/"/g,'""') + '"').join(','));
+  const csv = [headers.join(','), ...rows].join('\n');
+  const blob = new Blob(['\uFEFF' + csv], {type:'text/csv;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'programacao_diaria_' + new Date().toISOString().slice(0,10) + '.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// Init on page load
+window.addEventListener('load', () => setTimeout(progInit, 500));
+
+
+// ─── PRESENÇA ONLINE ─────────────────────────────────────────────────────────
+const PRESENCE_TABLE = 'user_presence';
+const PRESENCE_TTL_MS = 2 * 60 * 1000; // 2 minutos sem heartbeat = offline
+const PRESENCE_INTERVAL_MS = 20000;     // heartbeat a cada 20s
+const PRESENCE_POLL_MS = 15000;         // poll de outros usuários a cada 15s
+
+let presenceUID = null;
+let presenceMyName = '';
+let presenceTimer = null;
+let presencePollTimer = null;
+let presenceActive = [];
+
+function presenceGetUID() {
+  let uid = localStorage.getItem('mariua_uid');
+  if (!uid) {
+    uid = 'u_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2,7);
+    localStorage.setItem('mariua_uid', uid);
+  }
+  return uid;
+}
+
+function presenceGetMyName() {
+  return localStorage.getItem('mariua_presence_name') || '';
+}
+
+function presenceSaveName(val) {
+  const trimmed = val.trim();
+  localStorage.setItem('mariua_presence_name', trimmed);
+  presenceMyName = trimmed;
+  clearTimeout(presenceSaveName._t);
+  presenceSaveName._t = setTimeout(async () => {
+    const saved = document.getElementById('presence-name-saved');
+    await presenceHeartbeat();
+    if (saved) { saved.style.display='inline'; setTimeout(()=>saved.style.display='none', 2000); }
+  }, 600);
+}
+
+async function presenceHeartbeat() {
+  if (!presenceUID) return;
+  const now = new Date().toISOString();
+  const page = (() => {
+    const pages = ['turno','prod','apr','comp','mapa','prog'];
+    for (const p of pages) {
+      const el = document.getElementById('page-'+p);
+      if (el && el.style.display !== 'none') return p.toUpperCase();
+    }
+    return 'TURNO';
+  })();
+  try {
+    await fetch(SUPA_URL + '/rest/v1/' + PRESENCE_TABLE, {
+      method: 'POST',
+      headers: { ...SUPA_HEADERS, 'Prefer': 'resolution=merge-duplicates' },
+      body: JSON.stringify({
+        uid: presenceUID,
+        name: presenceMyName || 'Anônimo',
+        page,
+        last_seen: now,
+        user_agent: navigator.userAgent.substring(0,80)
+      })
+    });
+  } catch(e) { /* silencioso */ }
+}
+
+async function presencePoll() {
+  try {
+    const cutoff = new Date(Date.now() - PRESENCE_TTL_MS).toISOString();
+    const res = await fetch(
+      SUPA_URL + '/rest/v1/' + PRESENCE_TABLE + '?last_seen=gte.' + cutoff + '&order=last_seen.desc',
+      { headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY } }
+    );
+    if (!res.ok) return;
+    const data = await res.json();
+    if (Array.isArray(data)) {
+      presenceActive = data;
+      presenceUpdateUI();
+    }
+  } catch(e) { /* silencioso */ }
+}
+
+function presenceUpdateUI() {
+  const count = presenceActive.length;
+  const label = document.getElementById('presence-count-label');
+  if (label) label.textContent = count + ' online';
+
+  // Update modal if open
+  if (document.getElementById('presence-modal').classList.contains('open')) {
+    presenceRenderList();
+  }
+}
+
+function presenceRenderList() {
+  const sub = document.getElementById('presence-modal-sub');
+  const list = document.getElementById('presence-list');
+  if (!list) return;
+
+  const count = presenceActive.length;
+  if (sub) sub.textContent = count + ' usuário' + (count !== 1 ? 's' : '') + ' conectado' + (count !== 1 ? 's' : '') + ' agora';
+
+  if (!count) {
+    list.innerHTML = '<div style="text-align:center;padding:24px;color:#aaa;font-size:0.85rem;font-weight:600;">Nenhum usuário online no momento</div>';
+    return;
+  }
+
+  const pageLabels = { TURNO:'📋 Turno', PROD:'📊 Produção', APR:'⚠️ APR', COMP:'⚡ Comparador', MAPA:'🗺️ Mapa', PROG:'📅 Programação' };
+  const now = Date.now();
+
+  list.innerHTML = presenceActive.map(u => {
+    const isMe = u.uid === presenceUID;
+    const name = u.name || 'Anônimo';
+    const initials = name.replace(/anônimo/i,'?').trim().charAt(0).toUpperCase();
+    const lastSeenMs = now - new Date(u.last_seen).getTime();
+    const lastSeenStr = lastSeenMs < 30000 ? 'agora mesmo' :
+                        lastSeenMs < 60000 ? Math.floor(lastSeenMs/1000) + 's atrás' :
+                        Math.floor(lastSeenMs/60000) + 'min atrás';
+    const pageLabel = pageLabels[u.page] || u.page || '—';
+
+    // Device guess from user_agent
+    const ua = u.user_agent || '';
+    const device = /mobile|android|iphone/i.test(ua) ? '📱' : /tablet|ipad/i.test(ua) ? '📱' : '💻';
+
+    return `<div class="presence-user-row ${isMe?'me':''}">
+      <div class="presence-avatar" style="${isMe?'background:linear-gradient(135deg,#276749,#38a169);':''}">${initials}</div>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:0.85rem;font-weight:800;color:#1a365d;">${name}${isMe?' <span style="background:#c6f6d5;color:#276749;font-size:0.6rem;padding:1px 7px;border-radius:10px;font-weight:800;">VOCÊ</span>':''}</div>
+        <div style="font-size:0.68rem;font-weight:600;color:#888;margin-top:2px;">${device} ${pageLabel} · ${lastSeenStr}</div>
+      </div>
+      <div style="width:9px;height:9px;border-radius:50%;background:#38d996;box-shadow:0 0 6px #38d996;flex-shrink:0;"></div>
+    </div>`;
   }).join('');
 }
 
-function xlsmLimpar() {
-  xlsmData = []; xlsmSupFiltro = 'TODOS';
-  document.getElementById('xlsm-tbody').innerHTML = '';
-  document.getElementById('xlsm-resultado').style.display = 'none';
-  document.getElementById('xlsm-stats').style.display = 'none';
-  document.getElementById('xlsm-filtros-area').style.display = 'none';
-  document.getElementById('xlsm-empty').style.display = '';
-  document.getElementById('xlsm-btn-limpar').style.display = 'none';
-  document.getElementById('xlsm-count-label').textContent = '';
-  document.getElementById('xlsm-sup-bar').innerHTML = '';
-  document.getElementById('xlsm-header-data').textContent = '';
-  document.getElementById('xlsm-header-base').textContent = '';
-  document.getElementById('xlsm-file-name').textContent = 'Formatos aceitos: .xlsm · .xlsx · .xls  ·  Aba: Programação Diária';
+function presenceOpenModal() {
+  document.getElementById('presence-modal').classList.add('open');
+  // Set my name in input
+  const input = document.getElementById('presence-my-name');
+  if (input) input.value = presenceMyName;
+  presenceRenderList();
+  // Force poll immediately
+  presencePoll();
 }
+
+function presenceCloseModal() {
+  document.getElementById('presence-modal').classList.remove('open');
+}
+
+async function presenceInit() {
+  presenceUID = presenceGetUID();
+  presenceMyName = presenceGetMyName();
+
+  // Heartbeat imediato
+  await presenceHeartbeat();
+  await presencePoll();
+
+  // Heartbeat periódico
+  presenceTimer = setInterval(presenceHeartbeat, PRESENCE_INTERVAL_MS);
+  // Poll periódico
+  presencePollTimer = setInterval(presencePoll, PRESENCE_POLL_MS);
+
+  // Heartbeat ao mudar de página
+  document.querySelectorAll('.page-nav-btn').forEach(btn => {
+    btn.addEventListener('click', () => setTimeout(presenceHeartbeat, 200));
+  });
+
+  // Heartbeat ao voltar para a aba
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) { presenceHeartbeat(); presencePoll(); }
+  });
+
+  // Tenta criar a tabela se não existir (via upsert — Supabase cria automaticamente se RLS permitir)
+}
+
+// Inicia presença após carregamento
+window.addEventListener('load', () => {
+  setTimeout(presenceInit, 1500); // aguarda Supabase conectar primeiro
+});
 
 
 </script>
@@ -3485,123 +3952,299 @@ function xlsmLimpar() {
 
 <!-- PÁGINA PROG. DIÁRIA -->
 <div id="page-prog" style="display:none;">
-  <div style="max-width:1220px;margin:0 auto;padding:20px 16px 80px;">
+<div style="max-width:1340px;margin:0 auto;padding:16px 14px 80px;">
 
-    <!-- Header card com upload -->
-    <div style="background:#fff;border-radius:14px;box-shadow:0 2px 14px rgba(0,0,0,0.08);overflow:hidden;margin-bottom:16px;">
-      <div style="background:linear-gradient(135deg,#6b21a8,#9c27b0);padding:16px 22px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
-        <div style="display:flex;align-items:center;gap:12px;">
-          <div style="width:38px;height:38px;background:rgba(255,255,255,0.15);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.2rem;">&#128197;</div>
-          <div>
-            <div style="color:#fff;font-size:1rem;font-weight:800;letter-spacing:0.5px;">PROGRAMAÇÃO DIÁRIA DAS EQUIPES</div>
-            <div style="color:rgba(255,255,255,0.65);font-size:0.72rem;font-weight:600;margin-top:1px;">Importe o arquivo Excel (.xlsm / .xlsx) para visualizar a programação</div>
-          </div>
-        </div>
-        <div style="display:flex;align-items:center;gap:8px;">
-          <span style="font-size:0.72rem;font-weight:800;color:rgba(255,255,255,0.75);" id="xlsm-count-label"></span>
-          <button onclick="xlsmLimpar()" id="xlsm-btn-limpar" style="display:none;padding:6px 14px;background:rgba(229,62,62,0.3);border:1px solid rgba(229,62,62,0.5);color:#ffc0c0;border-radius:8px;font-family:'Barlow',sans-serif;font-size:0.72rem;font-weight:800;cursor:pointer;">&#128465; Limpar</button>
+<!-- ===== EMBEDDED REFERENCE DATA ===== -->
+<script>
+const PROG_OBRAS = [{"pep": "B-1207032", "titulo": "ER-CIND-FAZ-RURAL-ITALEGRE MOD", "municipio": "BAIXA GRANDE", "status": "RETIRADA DA CARTEIRA", "ar": "NAILTON SANTANA PEREIRA FILHO - U344575", "kit": "N/A", "med": "N/A"}, {"pep": "B-1116278", "titulo": "ER-CIND-POV-QUEIMADA NOVA-RURAL", "municipio": "MIGUEL CALMON", "status": "PROGRAMADA", "ar": "RAFAEL SANTOS DA CRUZ - U469504", "kit": "N/A", "med": "N/A"}, {"pep": "B-1168396", "titulo": "LD CIND FAZ VARZEA DO CAVALO - RURAL", "municipio": "CALDEIRÃO GRANDE", "status": "PROGRAMADA", "ar": "RAFAEL SANTOS DA CRUZ - U469504", "kit": "CRIAR", "med": "CRIAR"}, {"pep": "B-1195448", "titulo": "RR-CIND-FAZ-URUCU 12 -PR-RURAL", "municipio": "GAVIÃO", "status": "PROGRAMADA", "ar": "MANOEL GUSTAVO OLIVEIRA DOS S CONCEICAO - U464710", "kit": "N/A", "med": "N/A"}, {"pep": "B-0870957", "titulo": "MP-CCOL ROD. BR 324 BOIADEIRA RURAL", "municipio": "JACOBINA", "status": "CANCELADA", "ar": "RAFAEL SANTOS DA CRUZ - U469504", "kit": "N/A", "med": "N/A"}, {"pep": "B-1197996", "titulo": "AC-CIND-FAZ-CHORORO-CHORORO", "municipio": "JACOBINA", "status": "PROGRAMADA", "ar": "ERIC TEIXEIRA OLIVEIRA BARBOSA - U361045", "kit": "N/A", "med": "N/A"}, {"pep": "B-1225896", "titulo": "ER-CIND-FAZ-PILOES-RURAL", "municipio": "JACOBINA", "status": "PROGRAMADA", "ar": "ERIC TEIXEIRA OLIVEIRA BARBOSA - U361045", "kit": "", "med": "N/A"}, {"pep": "B-1201429", "titulo": "RR-CIND-FAZ-BOA VISTA-RURAL", "municipio": "MAIRI", "status": "CANCELADA", "ar": "MANOEL GUSTAVO OLIVEIRA DOS S CONCEICAO - U464710", "kit": "N/A", "med": "N/A"}, {"pep": "B-1226860", "titulo": "ER-CIND-FAZ-PEDACINHO DO CEU-ALEGRE", "municipio": "MAIRI", "status": "PROGRAMADA", "ar": "MANOEL GUSTAVO OLIVEIRA DOS S CONCEICAO - U464710", "kit": "N/A", "med": "N/A"}, {"pep": "B-1205019", "titulo": "ER-CIND-FAZ-CRUZEIRO-SAO BENTO -MOD", "municipio": "MAIRI", "status": "CANCELADA", "ar": "MANOEL GUSTAVO OLIVEIRA DOS S CONCEICAO - U464710", "kit": "N/A", "med": "N/A"}, {"pep": "B-1197021", "titulo": "ER-CIND-FAZ-ANGIQUINHO-RURAL", "municipio": "MAIRI", "status": "EM EXECUÇÃO", "ar": "MANOEL GUSTAVO OLIVEIRA DOS S CONCEICAO - U464710", "kit": "N/A", "med": "N/A"}, {"pep": "B-1225678", "titulo": "ER-CIND-POV-QUEIMADA NOVA-RURAL", "municipio": "MIGUEL CALMON", "status": "EM EXECUÇÃO", "ar": "RAFAEL SANTOS DA CRUZ - U469504", "kit": "CRIAR", "med": "CRIAR"}, {"pep": "B-1225533", "titulo": "ER-CIND-FAZ-CAJAZEIRAS-ITAPURA", "municipio": "MIGUEL CALMON", "status": "EM EXECUÇÃO", "ar": "RAFAEL SANTOS DA CRUZ - U469504", "kit": "N/A", "med": "N/A"}, {"pep": "B-1153206", "titulo": "LD-CIND-RUA DO ALAGADIÇO-RURAL", "municipio": "MIRANGABA", "status": "EM EXECUÇÃO", "ar": "ANDERSON ROBERTO DA SILVA CASTRO - U471407", "kit": "X-1153208", "med": "X-1153209"}, {"pep": "B-1106172", "titulo": "RR-CERB-AV-CENTRAL-STA CRUZ DO COQUEIRO", "municipio": "MIRANGABA", "status": "EM EXECUÇÃO", "ar": "ERIC TEIXEIRA OLIVEIRA BARBOSA - U361045", "kit": "N/A", "med": "N/A"}, {"pep": "B-1222490", "titulo": "ER-CIND-POV-TOCA -RURAL", "municipio": "MIRANGABA", "status": "EM EXECUÇÃO", "ar": "ERIC TEIXEIRA OLIVEIRA BARBOSA - U361045", "kit": "N/A", "med": "N/A"}, {"pep": "B-1225528", "titulo": "UB-CIND-LT-ARTUR M DE C RUA 33-MIRANGABA", "municipio": "MIRANGABA", "status": "EM EXECUÇÃO", "ar": "NATALICIO MENDES DA SILVA - U107662", "kit": "N/A", "med": "N/A"}, {"pep": "B-1192605", "titulo": "RR-CIND-RUA-CALUMBI-RURAL", "municipio": "SERROLÂNDIA", "status": "PROGRAMADA", "ar": "RAFAEL SANTOS DA CRUZ - U469504", "kit": "N/A", "med": "N/A"}, {"pep": "B-1227389", "titulo": "ER-CIND-RUA-CAMPO FORMOSO 1000-RURAL", "municipio": "UMBURANAS", "status": "PROGRAMADA", "ar": "ANTONIO ALBERTO GALINDO DE MELO - U470154", "kit": "CRIAR", "med": "CRIAR"}, {"pep": "B-1228376", "titulo": "ER-CIND-POV-VARZEA DE DENTRO-RURAL MOD", "municipio": "UMBURANAS", "status": "RETIRADA DA CARTEIRA", "ar": "ANTONIO ALBERTO GALINDO DE MELO - U470154", "kit": "N/A", "med": "N/A"}, {"pep": "B-1191373", "titulo": "ER-CIND-FAZ-BAIXINHA 1095-RURAL", "municipio": "UMBURANAS", "status": "PROGRAMADA", "ar": "ANTONIO ALBERTO GALINDO DE MELO - U470154", "kit": "N/A", "med": "N/A"}, {"pep": "B-1101470", "titulo": "MP-CIND-FAZ PAULISTA-RURAL", "municipio": "GAVIÃO", "status": "PROGRAMADA", "ar": "MANOEL GUSTAVO OLIVEIRA DOS S CONCEICAO - U464710", "kit": "N/A", "med": "N/A"}, {"pep": "B-1225634", "titulo": "ER-CIND-FAZ-BEZERROS-RURAL-JENIPAPO", "municipio": "JACOBINA", "status": "PROGRAMADA", "ar": "RAFAEL SANTOS DA CRUZ - U469504", "kit": "N/A", "med": "N/A"}, {"pep": "B-1225677", "titulo": "AC-CIND-POV-PAIAIA-RURAL-ITACURUBI", "municipio": "SAÚDE", "status": "PROGRAMADA", "ar": "NATALICIO MENDES DA SILVA - U107662", "kit": "N/A", "med": "N/A"}, {"pep": "B-1225906", "titulo": "ER-CIND-POV-LAGOA BONITA-RURAL", "municipio": "OUROLÂNDIA", "status": "PROGRAMADA", "ar": "ANTONIO ALBERTO GALINDO DE MELO - U470154", "kit": "N/A", "med": "N/A"}, {"pep": "B-1229351", "titulo": "UB-CIND-POV-COM. DE ALAGOINHAS -C. ALAGO", "municipio": "JACOBINA", "status": "PROGRAMADA", "ar": "RAFAEL SANTOS DA CRUZ - U469504", "kit": "N/A", "med": "N/A"}, {"pep": "B-1229288", "titulo": "ER-CCOL-RUA-FRANCISCO FERREIRA-CURRAL VE", "municipio": "MIGUEL CALMON", "status": "PROGRAMADA", "ar": "RAFAEL SANTOS DA CRUZ - U469504", "kit": "N/A", "med": "N/A"}, {"pep": "B-1229170", "titulo": "ER-CIND-FAZ-PEDRA VERMELHA-GAMELEIRA", "municipio": "OUROLÂNDIA", "status": "PROGRAMADA", "ar": "ANTONIO ALBERTO GALINDO DE MELO - U470154", "kit": "N/A", "med": "N/A"}, {"pep": "B-1230081", "titulo": "ER-CIND-POV-CURRAL VELHO 395-RURAL", "municipio": "MIGUEL CALMON", "status": "PROGRAMADA", "ar": "RAFAEL SANTOS DA CRUZ - U469504", "kit": "N/A", "med": "N/A"}, {"pep": "B-1229882", "titulo": "UB-CIND-RUA- POPULARES-URBANA", "municipio": "MIGUEL CALMON", "status": "PROGRAMADA", "ar": "RAFAEL SANTOS DA CRUZ - U469504", "kit": "N/A", "med": "N/A"}, {"pep": "B-1231769", "titulo": "ER-CIND-FAZ-CRUZEIRO-SAO BENTO", "municipio": "MAIRI", "status": "PROGRAMADA", "ar": "MANOEL GUSTAVO OLIVEIRA DOS S CONCEICAO - U464710", "kit": "N/A", "med": "N/A"}, {"pep": "B-1146184", "titulo": "ER-CIND-POV-CAMPO LIMPO-MANDACARU-RURAL", "municipio": "BAIXA GRANDE", "status": "PROGRAMADA", "ar": "NAILTON SANTANA PEREIRA FILHO - U344575", "kit": "X-1236295", "med": "X-1236395"}, {"pep": "B-0923878", "titulo": "ME-FAZ.TERRA NOVA-ADF-RURAL", "municipio": "BAIXA GRANDE", "status": "PROGRAMADA", "ar": "RAFAEL SANTOS DA CRUZ - U469504", "kit": "", "med": ""}, {"pep": "B-1091401", "titulo": "RR-CIND-FAZ-PIANCO-RURAL ITAIPU", "municipio": "JACOBINA", "status": "EM EXECUÇÃO", "ar": "ERIC TEIXEIRA OLIVEIRA BARBOSA - U361045", "kit": "", "med": ""}, {"pep": "B-0572354", "titulo": "MP - FAZ. MINISTRO", "municipio": "JACOBINA", "status": "EM EXECUÇÃO", "ar": "ANTONIO ALBERTO GALINDO DE MELO - U470154", "kit": "X-0572356", "med": "X-0944184"}, {"pep": "B-1157036", "titulo": "IT - GRUA - POV- BR 324 - RR", "municipio": "JACOBINA", "status": "PROGRAMADA", "ar": "ERIC TEIXEIRA OLIVEIRA BARBOSA - U361045", "kit": "", "med": ""}, {"pep": "B-0556961", "titulo": "MP-CIND-FAZ.L.BONITA-CASA 1-RURAL", "municipio": "JACOBINA", "status": "RETIRADA DA CARTEIRA", "ar": "NAILTON SANTANA PEREIRA FILHO - U344575", "kit": "B-0556963", "med": "B-0944561"}, {"pep": "B-1055680", "titulo": "MP-CIND-FAZ-BAIXA DO COURO-RURAL", "municipio": "JACOBINA", "status": "PROGRAMADA", "ar": "NAILTON SANTANA PEREIRA FILHO - U344575", "kit": "X-1055681", "med": "X-1055682"}, {"pep": "B-0963085", "titulo": "ADF-POV CURRAL VELHO-RURAL-X-0953650-MCM", "municipio": "JACOBINA", "status": "PROGRAMADA", "ar": "NAILTON SANTANA PEREIRA FILHO - U344575", "kit": "", "med": ""}, {"pep": "B-0987467", "titulo": "ER-CIND-POV-CONTORNO JENIPAPO-RURAL", "municipio": "JACOBINA", "status": "CANCELADA", "ar": "RAFAEL SANTOS DA CRUZ - U469504", "kit": "", "med": ""}, {"pep": "B-1051757", "titulo": "MP-CIND FAZ. BARRAGEM DO CANTINHO RURAL", "municipio": "JACOBINA", "status": "PROGRAMADA", "ar": "ANDERSON ROBERTO DA SILVA CASTRO - U471407", "kit": "X-1051761", "med": "X-1051762"}, {"pep": "B-1065896", "titulo": "LD-CIND-FAZ PIANCO-RURAL-JCB", "municipio": "JACOBINA", "status": "PROGRAMADA", "ar": "ANDERSON ROBERTO DA SILVA CASTRO - U471407", "kit": "", "med": ""}, {"pep": "B-1112497", "titulo": "RR-CIND-FAZ-PRAIA VERMELHA-RURAL", "municipio": "JACOBINA", "status": "EM EXECUÇÃO", "ar": "ANDERSON ROBERTO DA SILVA CASTRO - U471407", "kit": "", "med": ""}, {"pep": "B-1213899", "titulo": "AC-COEL-FAZ-VELAME DE BAIXO-VELAME", "municipio": "JACOBINA", "status": "PROGRAMADA", "ar": "ANDERSON ROBERTO DA SILVA CASTRO - U471407", "kit": "", "med": ""}, {"pep": "B-1228701", "titulo": "ER-CIND-FAZ-AGUA NOVA-RURAL", "municipio": "JACOBINA", "status": "PROGRAMADA", "ar": "LUDIMILA BARBOSA DE OLIVEIRA - U464746", "kit": "", "med": ""}, {"pep": "B-1228948", "titulo": "ER-CIND-RUA-VERMELHA 53-TAMARINDO", "municipio": "JACOBINA", "status": "PROGRAMADA", "ar": "ANDERSON ROBERTO DA SILVA CASTRO - U471407", "kit": "", "med": ""}, {"pep": "B-1231135", "titulo": "RR-CIND-POV-PAU FERRO-PARAISO", "municipio": "JACOBINA", "status": "PROGRAMADA", "ar": "LUDIMILA BARBOSA DE OLIVEIRA - U464746", "kit": "", "med": ""}, {"pep": "B-0860248", "titulo": "ME-CCOL-FAZ VARZEA DO BOI-RURAL", "municipio": "JACOBINA", "status": "CANCELADA", "ar": "ANDERSON ROBERTO DA SILVA CASTRO - U471407", "kit": "", "med": ""}, {"pep": "B-1231929", "titulo": "UB-CIND-RUA-IBINEZ SATURNO-CENTRO", "municipio": "JACOBINA", "status": "PROGRAMADA", "ar": "ANDERSON ROBERTO DA SILVA CASTRO - U471407", "kit": "", "med": ""}, {"pep": "B-0794743", "titulo": "AC-CCOL-FAZ. PINTADO (REGUL. FV)-RURAL", "municipio": "MIGUEL CALMON", "status": "CANCELADA", "ar": "LUDIMILA BARBOSA DE OLIVEIRA - U464746", "kit": "X-0795741", "med": "X-0795739"}, {"pep": "B-1087901", "titulo": "LD-CIND-FAZ CASA NOVA-RURAL-MGC", "municipio": "MIGUEL CALMON", "status": "PROGRAMADA", "ar": "ANDERSON ROBERTO DA SILVA CASTRO - U471407", "kit": "X-1087902", "med": "X-1087906"}, {"pep": "B-1088889", "titulo": "MP-CIND-POV-FORMOSA-RURAL", "municipio": "MIGUEL CALMON", "status": "PROGRAMADA", "ar": "ANDERSON ROBERTO DA SILVA CASTRO - U471407", "kit": "X-1088893", "med": "X-1088896"}, {"pep": "B-1090007", "titulo": "MP CIND FAZ NOSSA SENHORA DO A ITAPURA", "municipio": "MIGUEL CALMON", "status": "PROGRAMADA", "ar": "ANDERSON ROBERTO DA SILVA CASTRO - U471407", "kit": "X-1090008", "med": "X-1090009"}, {"pep": "B-1054244", "titulo": "MP CIND POV. QUEIMADA NOVA RURAL", "municipio": "MIGUEL CALMON", "status": "EM EXECUÇÃO", "ar": "HIAGO TORRES DE SANTANA - U470061", "kit": "X-1054245", "med": "X-1055193"}, {"pep": "B-1225884", "titulo": "AC-CIND-FAZ-CAJAZEIRAS-RURAL", "municipio": "MIGUEL CALMON", "status": "PROGRAMADA", "ar": "HIAGO TORRES DE SANTANA - U470061", "kit": "", "med": ""}, {"pep": "B-1088474", "titulo": "ER-CIND-POV-ALMAS-ITAPURA", "municipio": "MIGUEL CALMON", "status": "PROGRAMADA", "ar": "HIAGO TORRES DE SANTANA - U470061", "kit": "", "med": ""}, {"pep": "B-1227394", "titulo": "AC-CIND-FAZ-SOSSEGO 83-RURAL", "municipio": "MIGUEL CALMON", "status": "PROGRAMADA", "ar": "HIAGO TORRES DE SANTANA - U470061", "kit": "", "med": ""}, {"pep": "B-1228875", "titulo": "ER-SEIN-FAZ-LIBERDADE-AGUA BRANCA", "municipio": "MIGUEL CALMON", "status": "PROGRAMADA", "ar": "HIAGO TORRES DE SANTANA - U470061", "kit": "", "med": ""}, {"pep": "B-1229062", "titulo": "ER-CIND-POV-URUBU-RURAL-URUBU", "municipio": "MIGUEL CALMON", "status": "PROGRAMADA", "ar": "HIAGO TORRES DE SANTANA - U470061", "kit": "", "med": ""}, {"pep": "B-1230765", "titulo": "ER-CIND-POV-SALGADINHO-RURAL", "municipio": "MIGUEL CALMON", "status": "PROGRAMADA", "ar": "HIAGO TORRES DE SANTANA - U470061", "kit": "", "med": ""}, {"pep": "B-1028226", "titulo": "MP-CIND-FAZ-SANTA RITA-RURAL", "municipio": "MUNDO NOVO", "status": "PROGRAMADA", "ar": "HIAGO TORRES DE SANTANA - U470061", "kit": "B-1029066", "med": "X-1029067"}, {"pep": "B-1228403", "titulo": "ER-CIND-POV-AGRICOLA 12-RURAL", "municipio": "MUNDO NOVO", "status": "PROGRAMADA", "ar": "NAILTON SANTANA PEREIRA FILHO - U344575", "kit": "", "med": ""}, {"pep": "B-1053234", "titulo": "MP-CIND-FAZ-ALTAMIRA-RURAL", "municipio": "PIRITIBA", "status": "PROGRAMADA", "ar": "NATALICIO MENDES DA SILVA - U107662", "kit": "X-1053235", "med": "X-1053238"}, {"pep": "B-1070658", "titulo": "MP CIND POV DE CHAPADA PORTO FELIZ RURAL", "municipio": "PIRITIBA", "status": "PROGRAMADA", "ar": "RAFAEL SANTOS DA CRUZ - U469504", "kit": "B-1070659", "med": "B-1070661"}, {"pep": "B-1041001", "titulo": "MP-CIND-ROD-EST FEIJ O-PORTO FELIZ RURAL", "municipio": "PIRITIBA", "status": "EM EXECUÇÃO", "ar": "NATALICIO MENDES DA SILVA - U107662", "kit": "Y-1068624", "med": "Y-1068625"}, {"pep": "B-1057882", "titulo": "MP-CIND-FAZ. LAGOA DO BOI-ANDARAÍ-RURAL", "municipio": "PIRITIBA", "status": "EM EXECUÇÃO", "ar": "NATALICIO MENDES DA SILVA - U107662", "kit": "Y-1057906", "med": "Y-1057883"}, {"pep": "B-1227458", "titulo": "ER-CIND-FAZ-BOCA DA MATA-RURAL", "municipio": "PIRITIBA", "status": "PROGRAMADA", "ar": "NATALICIO MENDES DA SILVA - U107662", "kit": "", "med": ""}, {"pep": "B-1228930", "titulo": "ER-CIND-POV-CANTINHO-RURAL", "municipio": "PIRITIBA", "status": "PROGRAMADA", "ar": "NATALICIO MENDES DA SILVA - U107662", "kit": "", "med": ""}, {"pep": "B-1232796", "titulo": "ER-CIND-FAZ-TAMANDUA-TAMANDUA", "municipio": "PIRITIBA", "status": "PROGRAMADA", "ar": "NATALICIO MENDES DA SILVA - U107662", "kit": "", "med": ""}, {"pep": "B-1101760", "titulo": "LD CIND FAZ AMPARO RURAL", "municipio": "PIRITIBA", "status": "PROGRAMADA", "ar": "NATALICIO MENDES DA SILVA - U107662", "kit": "", "med": ""}, {"pep": "B-1061109", "titulo": "MP-CIND-POV-ASSENTAMENTO LAMEIRO-RURAL", "municipio": "TAPIRAMUTÁ", "status": "EM EXECUÇÃO", "ar": "NATALICIO MENDES DA SILVA - U107662", "kit": "X-1061112", "med": "X-1061114"}, {"pep": "B-1194222", "titulo": "AC-CIND-POV-REG. FV BAIXA DA ONÇA-RURAL", "municipio": "TAPIRAMUTÁ", "status": "RETIRADA DA CARTEIRA", "ar": "NATALICIO MENDES DA SILVA - U107662", "kit": "", "med": ""}, {"pep": "B-1075918", "titulo": "MP-CIND FAZ PORTO DE AREIA RURAL", "municipio": "TAPIRAMUTÁ", "status": "PROGRAMADA", "ar": "NATALICIO MENDES DA SILVA - U107662", "kit": "X-1075920", "med": "X-1075926"}, {"pep": "B-1226823", "titulo": "ER-CIND-POV-BRONCO 24-RURAL", "municipio": "TAPIRAMUTÁ", "status": "PROGRAMADA", "ar": "RAFAEL SANTOS DA CRUZ - U469504", "kit": "", "med": ""}, {"pep": "B-1226405", "titulo": "MP-CIND-POV-BARBOSA PRUDENCIO-RURAL-BARB", "municipio": "VÁRZEA DA ROÇA", "status": "PROGRAMADA", "ar": "NATALICIO MENDES DA SILVA - U107662", "kit": "", "med": ""}, {"pep": "B-1228323", "titulo": "ER-CIND-FAZ-RURAL-ESPERANCA", "municipio": "TAPIRAMUTÁ", "status": "PROGRAMADA", "ar": "RAFAEL SANTOS DA CRUZ - U469504", "kit": "", "med": ""}, {"pep": "B-1226417", "titulo": "ER-CIND-FAZ-CAJA 93-BARBOSA", "municipio": "VÁRZEA DA ROÇA", "status": "PROGRAMADA", "ar": "DAIANE ALMEIDA DO NASCIMENTO - U345247", "kit": "", "med": ""}, {"pep": "B-1226566", "titulo": "ER-CIND-POV-SOINHO-RURAL", "municipio": "VÁRZEA DA ROÇA", "status": "PROGRAMADA", "ar": "NAILTON SANTANA PEREIRA FILHO - U344575", "kit": "", "med": ""}, {"pep": "B-1227604", "titulo": "ER-CIND-FAZ-QUEIMADA DO RANCHO-VARZEA DO", "municipio": "VÁRZEA DA ROÇA", "status": "PROGRAMADA", "ar": "ANTONIO ALBERTO GALINDO DE MELO - U470154", "kit": "", "med": ""}, {"pep": "B-0980939", "titulo": "ME-SEIN-FAZ PE DO MORRO-REF.RD - RURAL", "municipio": "MUNDO NOVO", "status": "PROGRAMADA", "ar": "DAIANE ALMEIDA DO NASCIMENTO - U345247", "kit": "N/A", "med": "N/A"}, {"pep": "B-1149424", "titulo": "ER-CIND-FAZ-CAPIM GROSSO-RURAL", "municipio": "PONTO NOVO", "status": "PROGRAMADA", "ar": "NAILTON SANTANA PEREIRA FILHO - U344575", "kit": "", "med": ""}, {"pep": "B-1180206", "titulo": "ER-CIND-RUA-DA LUTANDA-LUTANDA", "municipio": "PINDOBAÇU", "status": "PROGRAMADA", "ar": "NAILTON SANTANA PEREIRA FILHO - U344575", "kit": "", "med": ""}, {"pep": "B-1184409", "titulo": "ER-CIND-RUA APOLONIO-CENTRO-JATOBA", "municipio": "PINDOBAÇU", "status": "PROGRAMADA", "ar": "NAILTON SANTANA PEREIRA FILHO - U344575", "kit": "", "med": ""}, {"pep": "B-1186119", "titulo": "ER-CIND-FAZ-CACADOR 3336-A-RURAL", "municipio": "PONTO NOVO", "status": "PROGRAMADA", "ar": "RICARDO SANTOS DE BRITO - U465100", "kit": "", "med": ""}, {"pep": "B-1196565", "titulo": "ER-CIND-FAZ-LARANJEIRA 363-RURAL", "municipio": "PONTO NOVO", "status": "PROGRAMADA", "ar": "ANDERSON ROBERTO DA SILVA CASTRO - U471407", "kit": "X-1233972", "med": "X-1234069"}, {"pep": "B-1199288", "titulo": "ER-CIND-FAZ DEUS DARA 2-RURAL BARRACAS", "municipio": "PONTO NOVO", "status": "PROGRAMADA", "ar": "ANDERSON ROBERTO DA SILVA CASTRO - U471407", "kit": "X-1233981", "med": "X-1234117"}, {"pep": "B-1199564", "titulo": "ER-CIND-RUA-DO CAJUEIRO-CENTRO", "municipio": "PINDOBAÇU", "status": "PROGRAMADA", "ar": "ANDERSON ROBERTO DA SILVA CASTRO - U471407", "kit": "X-1234114", "med": "X-1234119"}, {"pep": "B-1211049", "titulo": "ER-CIND-POV-MARCELO 17-RURAL", "municipio": "PINDOBAÇU", "status": "PROGRAMADA", "ar": "ANDERSON ROBERTO DA SILVA CASTRO - U471407", "kit": "", "med": ""}, {"pep": "B-1168727", "titulo": "ER-CIND-FAZ-LARANJEIRA-PONTO NOVO", "municipio": "PONTO NOVO", "status": "PROGRAMADA", "ar": "ANDERSON ROBERTO DA SILVA CASTRO - U471407", "kit": "", "med": ""}, {"pep": "B-1180041", "titulo": "ER-CIND-FAZ-LARANJEIRA-166", "municipio": "PONTO NOVO", "status": "PROGRAMADA", "ar": "ANDERSON ROBERTO DA SILVA CASTRO - U471407", "kit": "", "med": ""}, {"pep": "B-1195554", "titulo": "ER-CIND-POV-CACHIMBO-CACHIMBO", "municipio": "PINDOBAÇU", "status": "PROGRAMADA", "ar": "ANDERSON ROBERTO DA SILVA CASTRO - U471407", "kit": "", "med": ""}, {"pep": "B-1201281", "titulo": "ER-CIND-FAZ-MARCELO-RURAL", "municipio": "PINDOBAÇU", "status": "PROGRAMADA", "ar": "NAILTON SANTANA PEREIRA FILHO - U344575", "kit": "", "med": ""}, {"pep": "B-1212308", "titulo": "ER-CIND-FAZ-CAGADOS 1425-RURAL", "municipio": "PINDOBAÇU", "status": "PROGRAMADA", "ar": "NAILTON SANTANA PEREIRA FILHO - U344575", "kit": "", "med": ""}, {"pep": "B-1215995", "titulo": "ER-CIND-POV-CORNICHA 3365-CORNICHA", "municipio": "PONTO NOVO", "status": "PROGRAMADA", "ar": "NAILTON SANTANA PEREIRA FILHO - U344575", "kit": "", "med": ""}, {"pep": "B-1001010", "titulo": "MANUTENÇÃO NO EQUIPAMENTO", "municipio": "BASE", "status": "EM EXECUÇÃO", "ar": "NAILTON SANTANA PEREIRA FILHO - U344575", "kit": "", "med": ""}, {"pep": "B-1226790", "titulo": "ER-CIND-RUA-SAO SALVADOR-CENTRO-ITAPURA", "municipio": "MIGUEL CALMON", "status": "ENERGIZADA", "ar": "RAFAEL SANTOS DA CRUZ - U469504", "kit": "N/A", "med": "N/A"}, {"pep": "B-1230955", "titulo": "ER-CIND-POV-DE SAO TOME-RURAL", "municipio": "MIRANGABA", "status": "ENERGIZADA", "ar": "RAFAEL SANTOS DA CRUZ - U469504", "kit": "N/A", "med": "N/A"}, {"pep": "B-1048731", "titulo": "ER-CIND-FAZ-ENGENHO VELHO-RURAL", "municipio": "OUROLÂNDIA", "status": "ENERGIZADA", "ar": "RAFAEL SANTOS DA CRUZ - U469504", "kit": "N/A", "med": "N/A"}, {"pep": "B-1159836", "titulo": "ER-CIND-FAZ-LAGINHA 2-RURAL", "municipio": "PINDOBAÇU", "status": "EM EXECUÇÃO", "ar": "RAFAEL SANTOS DA CRUZ - U469504", "kit": "N/A", "med": "N/A"}, {"pep": "B-1210625", "titulo": "ER-CIND-POV LAGEDO RASO- TIQUARA", "municipio": "CAMPO FORMOSO", "status": "EM EXECUÇÃO", "ar": "NAILTON SANTANA PEREIRA FILHO - U344575", "kit": "", "med": ""}, {"pep": "B-1210455", "titulo": "ER-CIND-FAZ-PILOES-RURAL 55", "municipio": "CAMPO FORMOSO", "status": "EM EXECUÇÃO", "ar": "MANOEL GUSTAVO OLIVEIRA DOS S CONCEICAO - U464710", "kit": "", "med": ""}, {"pep": "B-1224427", "titulo": "RR-CERB-POV-ASSENT POCO LONGE-RURAL", "municipio": "MUNDO NOVO", "status": "PROGRAMADA", "ar": "MANOEL GUSTAVO OLIVEIRA DOS S CONCEICAO - U464710", "kit": "N/A", "med": "N/A"}, {"pep": "B-1192386", "titulo": "ER-CIND-POV-GROTA FERREIRA-B DO FERREIRA", "municipio": "PINDOBAÇU", "status": "EM EXECUÇÃO", "ar": "MANOEL GUSTAVO OLIVEIRA DOS S CONCEICAO - U464710", "kit": "N/A", "med": "N/A"}, {"pep": "B-1201988", "titulo": "RR-CIND-POV-NOVA MARANHAO-RURAL", "municipio": "MIRANGABA", "status": "EM EXECUÇÃO", "ar": "MANOEL GUSTAVO OLIVEIRA DOS S CONCEICAO - U464710", "kit": "", "med": ""}, {"pep": "B-1230765", "titulo": "ER-CIND-POV-SALGADINHO-RURAL", "municipio": "MIGUEL CALMON", "status": "EM EXECUÇÃO", "ar": "NAILTON SANTANA PEREIRA FILHO - U344575", "kit": "", "med": ""}, {"pep": "B-1171125", "titulo": "ER-CIND-FAZ-OLHOS D AGUA-RURAL", "municipio": "PINDOBAÇU", "status": "EM EXECUÇÃO", "ar": "NAILTON SANTANA PEREIRA FILHO - U344575", "kit": "N/A", "med": "N/A"}, {"pep": "B-1175663", "titulo": "ER-CIND-POV-CANAVIEIRAS-RURAL", "municipio": "CAMPO FORMOSO", "status": "PROGRAMADA", "ar": "NAILTON SANTANA PEREIRA FILHO - U344575", "kit": "", "med": ""}, {"pep": "B-1175265", "titulo": "ER-CIND-POV-TEIU-RURAL", "municipio": "SENHOR DO BONFIM", "status": "PROGRAMADA", "ar": "NAILTON SANTANA PEREIRA FILHO - U344575", "kit": "", "med": ""}, {"pep": "B-1216748", "titulo": "ER-CIND-POV-MORRINHOS-RURAL", "municipio": "CAMPO FORMOSO", "status": "", "ar": "NAILTON SANTANA PEREIRA FILHO - U344575", "kit": "", "med": ""}, {"pep": "B-0744119", "titulo": "MP-CIND-POV TOCA DA NOVILHA-RURAL", "municipio": "CAMPO FORMOSO", "status": "EM EXECUÇÃO", "ar": "NATALICIO MENDES DA SILVA - U107662", "kit": "", "med": ""}, {"pep": "B-1206073", "titulo": "ER-CIND-POV-RURAL-CACIMBINHA", "municipio": "CAMPO FORMOSO", "status": "EM EXECUÇÃO", "ar": "NATALICIO MENDES DA SILVA - U107662", "kit": "", "med": ""}, {"pep": "B-1216090", "titulo": "ER-CIND-POV JIBOIA 46-RURAL-JIBOIA", "municipio": "ANTÔNIO GONÇALVES", "status": "EM EXECUÇÃO", "ar": "NATALICIO MENDES DA SILVA - U107662", "kit": "N/A", "med": "N/A"}, {"pep": "B-1149896", "titulo": "ER-CIND-FAZ-LAGOA DOS BOIS-RURAL", "municipio": "NORDESTINA", "status": "EM EXECUÇÃO", "ar": "NATALICIO MENDES DA SILVA - U107662", "kit": "", "med": ""}, {"pep": "B-1165734", "titulo": "ER-CIND-AV-PEDRO-ROMULO CAMPOS", "municipio": "ITIUBA", "status": "PROGRAMADA", "ar": "NATALICIO MENDES DA SILVA - U107662", "kit": "", "med": ""}, {"pep": "B-1170852", "titulo": "ER-CIND-AV-S O PEDRO-RURAL", "municipio": "ITIUBA", "status": "PROGRAMADA", "ar": "NATALICIO MENDES DA SILVA - U107662", "kit": "", "med": ""}, {"pep": "B-1170849", "titulo": "UB-CIND-RUA-ANA ANDRADE-CENTRO", "municipio": "NORDESTINA", "status": "EM EXECUÇÃO", "ar": "NATALICIO MENDES DA SILVA - U107662", "kit": "", "med": ""}, {"pep": "B-1175089", "titulo": "ER-CIND-FAZ-CAJARANA-RURAL", "municipio": "ITIUBA", "status": "PROGRAMADA", "ar": "NATALICIO MENDES DA SILVA - U107662", "kit": "", "med": ""}, {"pep": "B-1172209", "titulo": "ER-CIND-POV-LAGOA DA ROCA- RURAL", "municipio": "CAMPO FORMOSO", "status": "PROGRAMADA", "ar": "NATALICIO MENDES DA SILVA - U107662", "kit": "", "med": ""}, {"pep": "B-0000001", "titulo": "DEVOLUÇÃO DE MATERIAIS NA BASE", "municipio": "BASE", "status": "EM ANDAMENTO", "ar": "NATALICIO MENDES DA SILVA - U107662", "kit": "", "med": ""}, {"pep": "B-1186980", "titulo": "UB-CIND-RUA-CIRIACO ROCHA-CENTRO", "municipio": "PINDOBAÇU", "status": "ENERGIZADA", "ar": "NATALICIO MENDES DA SILVA - U107662", "kit": "N/A", "med": "N/A"}, {"pep": "B-1161926", "titulo": "ER-CIND-FAZ-BOLIVIA-RURAL", "municipio": "BAIXA GRANDE", "status": "", "ar": "NATALICIO MENDES DA SILVA - U107662", "kit": "B-1189407", "med": "B-1189428"}, {"pep": "B-1168461", "titulo": "ER-CIND-FAZ-BOLIVIA-RURAL", "municipio": "BAIXA GRANDE", "status": "", "ar": "NATALICIO MENDES DA SILVA - U107662", "kit": "", "med": ""}, {"pep": "B-1234315", "titulo": "ER-CIND-POV-NOVO SITIO 58-NOVO SITIO", "municipio": "BAIXA GRANDE", "status": "", "ar": "NATALICIO MENDES DA SILVA - U107662", "kit": "", "med": ""}, {"pep": "B-1234868", "titulo": "ER-CIND-POV PAGAO 701-PAGAO", "municipio": "BAIXA GRANDE", "status": "", "ar": "NATALICIO MENDES DA SILVA - U107662", "kit": "", "med": ""}, {"pep": "B-0450746", "titulo": "LD - FAZ. QUEIMADAS", "municipio": "BAIXA GRANDE", "status": "RETIRADA DA CARTEIRA", "ar": "NATALICIO MENDES DA SILVA - U107662", "kit": "", "med": ""}, {"pep": "B-1157036", "titulo": "IT - GRUA - POV- BR 324 - RR", "municipio": "JACOBINA", "status": "RETIRADA DA CARTEIRA", "ar": "NATALICIO MENDES DA SILVA - U107662", "kit": "", "med": ""}, {"pep": "B-1058844", "titulo": "AC-CIND-POV-MULUNGU D CHIOLA-RURAL", "municipio": "MIGUEL CALMON", "status": "", "ar": "RAFAEL SANTOS DA CRUZ - U469504", "kit": "X-1058846", "med": "X-1058847"}, {"pep": "B-1073507", "titulo": "ER-CIND-POV ASSA PEIXE-RURAL ITAPURA", "municipio": "MIGUEL CALMON", "status": "", "ar": "RAFAEL SANTOS DA CRUZ - U469504", "kit": "", "med": ""}, {"pep": "B-1116278", "titulo": "ER-CIND-POV-QUEIMADA NOVA-RURAL", "municipio": "MIGUEL CALMON", "status": "", "ar": "NAILTON SANTANA PEREIRA FILHO - U344575", "kit": "", "med": ""}, {"pep": "B-1055194", "titulo": "MP-CIND-RUA-DO TAMANCO-RURAL", "municipio": "MIGUEL CALMON", "status": "", "ar": "DAIANE ALMEIDA DO NASCIMENTO - U345247", "kit": "X-1055195", "med": "X-1055968"}, {"pep": "B-1128488", "titulo": "ER-CIND-POV-FAISCA 45-FAISCA", "municipio": "MIGUEL CALMON", "status": "", "ar": "DAIANE ALMEIDA DO NASCIMENTO - U345247", "kit": "", "med": ""}, {"pep": "B-1135561", "titulo": "ER-CIND-POV-TAMANCO-RURAL", "municipio": "MIGUEL CALMON", "status": "", "ar": "NAILTON SANTANA PEREIRA FILHO - U344575", "kit": "", "med": ""}, {"pep": "B-1170966", "titulo": "ER-CIND-POV-ASSA PEIXE-RURAL", "municipio": "MIGUEL CALMON", "status": "", "ar": "NAILTON SANTANA PEREIRA FILHO - U344575", "kit": "", "med": ""}, {"pep": "B-1172567", "titulo": "ER-CIND-POV-MOCO-FAISCA", "municipio": "MIGUEL CALMON", "status": "", "ar": "NAILTON SANTANA PEREIRA FILHO - U344575", "kit": "", "med": ""}, {"pep": "B-1173379", "titulo": "ER-CIND-RUA-VARZEA DOS BOIS-CENTRO", "municipio": "MIGUEL CALMON", "status": "", "ar": "NAILTON SANTANA PEREIRA FILHO - U344575", "kit": "", "med": ""}, {"pep": "B-1226602", "titulo": "ER-CIND-FAZ-BAIXAO-URUBU", "municipio": "MIGUEL CALMON", "status": "", "ar": "NAILTON SANTANA PEREIRA FILHO - U344575", "kit": "", "med": ""}, {"pep": "B-1230056", "titulo": "ER-CIND-FAZ-BAIXA DO TANQUE-RURAL", "municipio": "MIGUEL CALMON", "status": "", "ar": "NAILTON SANTANA PEREIRA FILHO - U344575", "kit": "", "med": ""}, {"pep": "B-1230363", "titulo": "AC-CIND-POV-OLHOS D AGUA DE CIMA-RURAL", "municipio": "MIGUEL CALMON", "status": "", "ar": "NAILTON SANTANA PEREIRA FILHO - U344575", "kit": "", "med": ""}, {"pep": "B-1231021", "titulo": "ER-CIND-POV-AGUA BRANCA-RURAL MIGUEL CAL", "municipio": "MIGUEL CALMON", "status": "", "ar": "NAILTON SANTANA PEREIRA FILHO - U344575", "kit": "", "med": ""}, {"pep": "B-1234977", "titulo": "ER-CIND-POV-MAXIXE 550-RURAL", "municipio": "MIGUEL CALMON", "status": "", "ar": "NAILTON SANTANA PEREIRA FILHO - U344575", "kit": "", "med": ""}, {"pep": "B-1235320", "titulo": "ER-CIND-POV-TAPIRANGA 500-RR-TAPIRANGA", "municipio": "MIGUEL CALMON", "status": "", "ar": "NAILTON SANTANA PEREIRA FILHO - U344575", "kit": "", "med": ""}, {"pep": "B-1062246", "titulo": "MP CIND FAZ NOSSA SENHORA DO AMPARO", "municipio": "MIGUEL CALMON", "status": "", "ar": "NATALICIO MENDES DA SILVA - U107662", "kit": "", "med": ""}, {"pep": "B-0823651", "titulo": "LD CIND POV FORMOSA RURAL", "municipio": "MIGUEL CALMON", "status": "", "ar": "NAILTON SANTANA PEREIRA FILHO - U344575", "kit": "", "med": ""}, {"pep": "B-0879015", "titulo": "MP-CIND-POV LAGOA GRANDE-RURAL-MGC", "municipio": "MIGUEL CALMON", "status": "", "ar": "ANDERSON ROBERTO DA SILVA CASTRO - U471407", "kit": "", "med": ""}, {"pep": "B-1180371", "titulo": "ER-CIND-FAZ LAGOA DO MILHO-L DO MILHO", "municipio": "MUNDO NOVO", "status": "", "ar": "ANDERSON ROBERTO DA SILVA CASTRO - U471407", "kit": "B-1195482", "med": "B-1195523"}, {"pep": "B-1182806", "titulo": "ER-CIND-RUA-DA UMBURANAS-RURAL", "municipio": "MUNDO NOVO", "status": "", "ar": "ANDERSON ROBERTO DA SILVA CASTRO - U471407", "kit": "B-1195483", "med": "B-1195524"}, {"pep": "B-1235863", "titulo": "ER-CIND-FAZ-TRES RIACHOS-RURAL", "municipio": "MUNDO NOVO", "status": "", "ar": "RICARDO SANTOS DE BRITO - U465100", "kit": "", "med": ""}, {"pep": "B-1226969", "titulo": "ER-CIND-SI-VOVO ZEZE-MUNDO NOVO", "municipio": "MUNDO NOVO", "status": "", "ar": "RICARDO SANTOS DE BRITO - U465100", "kit": "", "med": ""}, {"pep": "B-1229255", "titulo": "ER-CIND-FAZ-VEREDA BONITA 159-RURAL", "municipio": "MUNDO NOVO", "status": "", "ar": "RICARDO SANTOS DE BRITO - U465100", "kit": "", "med": ""}, {"pep": "B-1229753", "titulo": "ER-CIND-RUA-OLIMPIA-UMBUZEIRO", "municipio": "MUNDO NOVO", "status": "", "ar": "RICARDO SANTOS DE BRITO - U465100", "kit": "", "med": ""}, {"pep": "B-1234158", "titulo": "ER-CIND-FAZ-LAGOA DO MILHO-RURAL", "municipio": "MUNDO NOVO", "status": "", "ar": "RICARDO SANTOS DE BRITO - U465100", "kit": "", "med": ""}, {"pep": "B-1234204", "titulo": "ER-CIND-FAZ-ROCHEDINHO-RURAL-IBIAPORA", "municipio": "MUNDO NOVO", "status": "", "ar": "RICARDO SANTOS DE BRITO - U465100", "kit": "", "med": ""}, {"pep": "B-1072445", "titulo": "ER-CIND-FAZ-UMBUZEIRO-RURAL", "municipio": "MUNDO NOVO", "status": "", "ar": "RICARDO SANTOS DE BRITO - U465100", "kit": "", "med": ""}, {"pep": "B-1167385", "titulo": "ER CIND RUA DO CALDEIRAO RURAL", "municipio": "PIRITIBA", "status": "", "ar": "RICARDO SANTOS DE BRITO - U465100", "kit": "B-1195480", "med": "B-1195521"}, {"pep": "B-1095277", "titulo": "LD CIND PO CIGANA RURAL PRB", "municipio": "PIRITIBA", "status": "", "ar": "NAILTON SANTANA PEREIRA FILHO - U344575", "kit": "B-1095287", "med": "B-1095288"}, {"pep": "B-1229276", "titulo": "ER-CIND-POV-PORTO FELIZ-RURAL", "municipio": "PIRITIBA", "status": "", "ar": "NAILTON SANTANA PEREIRA FILHO - U344575", "kit": "", "med": ""}, {"pep": "B-1231421", "titulo": "ER-CIND-POV-ASSENT PANORAMA-PANORAMA", "municipio": "PIRITIBA", "status": "", "ar": "NAILTON SANTANA PEREIRA FILHO - U344575", "kit": "", "med": ""}, {"pep": "B-1231441", "titulo": "ER-CIND-FAZ-VARZEA DA PEDRA-RURAL", "municipio": "PIRITIBA", "status": "", "ar": "NAILTON SANTANA PEREIRA FILHO - U344575", "kit": "", "med": ""}, {"pep": "B-1234733", "titulo": "ER-CIND-FAZ-SITIO 641-RURAL", "municipio": "PIRITIBA", "status": "", "ar": "RAFAEL SANTOS DA CRUZ - U469504", "kit": "", "med": ""}, {"pep": "B-1235651", "titulo": "ER-CIND-FAZ-SITIO 268-AREIA BRANCA", "municipio": "PIRITIBA", "status": "", "ar": "RAFAEL SANTOS DA CRUZ - U469504", "kit": "", "med": ""}, {"pep": "B-1064255", "titulo": "MP CIND FAZ ÁGUA BRANCA RURAL", "municipio": "PIRITIBA", "status": "", "ar": "RAFAEL SANTOS DA CRUZ - U469504", "kit": "", "med": ""}, {"pep": "B-1231602", "titulo": "ER-CIND-FAZ-LAGOA DA CARAIBA-SERROLANDIA", "municipio": "SERROLÂNDIA", "status": "EM EXECUÇÃO", "ar": "RAFAEL SANTOS DA CRUZ - U469504", "kit": "", "med": ""}, {"pep": "B-1219262", "titulo": "RR-CIND-FAZ-BRASILEIRO 9999 X-CAICARA", "municipio": "SERROLÂNDIA", "status": "EM EXECUÇÃO", "ar": "RAFAEL SANTOS DA CRUZ - U469504", "kit": "", "med": ""}, {"pep": "B-1068194", "titulo": "ER-CIND-FAZ-STA BARBARA-RURAL", "municipio": "TAPIRAMUTA", "status": "", "ar": "RAFAEL SANTOS DA CRUZ - U469504", "kit": "", "med": ""}, {"pep": "B-1117461", "titulo": "ER-CIND-FAZ-MONTE ALTO-RURAL-TAPIRAMUTA", "municipio": "TAPIRAMUTA", "status": "", "ar": "RICARDO SANTOS DE BRITO - U465100", "kit": "", "med": ""}, {"pep": "B-1039076", "titulo": "RR-CIND-RUA-PAU DE PILAO-CENTRO", "municipio": "TAPIRAMUTA", "status": "", "ar": "RICARDO SANTOS DE BRITO - U465100", "kit": "", "med": ""}, {"pep": "B-1146347", "titulo": "IS-COEL-RUA-SOBRINHO-CENTRO", "municipio": "TAPIRAMUTA", "status": "", "ar": "RICARDO SANTOS DE BRITO - U465100", "kit": "", "med": ""}, {"pep": "B-1109011", "titulo": "ER-CIND-FAZ-PALMEIRAL-RURAL-VOLTA GRANDE", "municipio": "TAPIRAMUTÁ", "status": "", "ar": "RICARDO SANTOS DE BRITO - U465100", "kit": "", "med": ""}, {"pep": "B-1134807", "titulo": "ER-CIND-FAZ-CAFUNDO-RURAL", "municipio": "TAPIRAMUTA", "status": "", "ar": "RICARDO SANTOS DE BRITO - U465100", "kit": "", "med": ""}, {"pep": "B-1175877", "titulo": "ER-CIND-POV-PINDOBEIRA-RURAL", "municipio": "TAPIRAMUTÁ", "status": "", "ar": "RICARDO SANTOS DE BRITO - U465100", "kit": "", "med": ""}, {"pep": "B-1225109", "titulo": "ER-CIND-FAZ-SANTA CRUZ 13-RURAL", "municipio": "TAPIRAMUTÁ", "status": "", "ar": "RICARDO SANTOS DE BRITO - U465100", "kit": "", "med": ""}, {"pep": "B-1230323", "titulo": "ER-CIND-ROD-VOLTA GRANDE-CENTRO", "municipio": "TAPIRAMUTÁ", "status": "", "ar": "RICARDO SANTOS DE BRITO - U465100", "kit": "", "med": ""}, {"pep": "B-1234152", "titulo": "ER-CIND-FAZ- CAFUNDO-RURAL-TAPIRAMUTA", "municipio": "TAPIRAMUTÁ", "status": "", "ar": "RICARDO SANTOS DE BRITO - U465100", "kit": "", "med": ""}, {"pep": "B-1055977", "titulo": "MP-CIND-POV-SÃO BENTO RURAL", "municipio": "VÁRZEA DA ROÇA", "status": "", "ar": "RICARDO SANTOS DE BRITO - U465100", "kit": "X-1055979", "med": "X-1055980"}, {"pep": "B-1133568", "titulo": "ER CIND POV VARZEA GRANDE RURAL", "municipio": "VÁRZEA DA ROÇA", "status": "", "ar": "NAILTON SANTANA PEREIRA FILHO - U344575", "kit": "X-1133570", "med": "X-1133569"}, {"pep": "B-1231838", "titulo": "AC-CIND-POV-BARBOSA PRUDENCIO 388-RURAL", "municipio": "VÁRZEA DA ROÇA", "status": "", "ar": "NAILTON SANTANA PEREIRA FILHO - U344575", "kit": "", "med": ""}, {"pep": "B-1124357", "titulo": "ER-CIND-FAZ-CALDEIRAO 59-RURAL", "municipio": "VÁRZEA DA ROÇA", "status": "", "ar": "NAILTON SANTANA PEREIRA FILHO - U344575", "kit": "", "med": ""}, {"pep": "B-1171405", "titulo": "ER-CIND-RUA-AYRTON SENNA 72-RURAL", "municipio": "VÁRZEA DA ROÇA", "status": "", "ar": "MANOEL GUSTAVO OLIVEIRA DOS S CONCEICAO - U464710", "kit": "", "med": ""}, {"pep": "B-1230695", "titulo": "ER-CIND-FAZ-CHAPEU QUEIMADO-RURAL", "municipio": "VÁRZEA DA ROÇA", "status": "", "ar": "MANOEL GUSTAVO OLIVEIRA DOS S CONCEICAO - U464710", "kit": "", "med": ""}, {"pep": "B-1231725", "titulo": "ER-CIND-FAZ-S O ROQUE 13-RURAL VARZEA DA", "municipio": "VÁRZEA DA ROÇA", "status": "", "ar": "MANOEL GUSTAVO OLIVEIRA DOS S CONCEICAO - U464710", "kit": "", "med": ""}, {"pep": "B-1231778", "titulo": "ER-CIND-FAZ-GRAVATA-BARRACAS", "municipio": "VÁRZEA DA ROÇA", "status": "", "ar": "MANOEL GUSTAVO OLIVEIRA DOS S CONCEICAO - U464710", "kit": "", "med": ""}, {"pep": "B-1233456", "titulo": "ER-CIND-FAZ-BARBOSA-RURAL", "municipio": "VÁRZEA DA ROÇA", "status": "", "ar": "MANOEL GUSTAVO OLIVEIRA DOS S CONCEICAO - U464710", "kit": "", "med": ""}, {"pep": "B-1233695", "titulo": "ER-CIND-FAZ-VARZEA DO POCO-BARBOSA RURAL", "municipio": "VÁRZEA DA ROÇA", "status": "", "ar": "MANOEL GUSTAVO OLIVEIRA DOS S CONCEICAO - U464710", "kit": "", "med": ""}, {"pep": "B-1235784", "titulo": "ER-CIND-POV-VARZEA GRANDE 146-RURAL", "municipio": "VÁRZEA DA ROÇA", "status": "", "ar": "MANOEL GUSTAVO OLIVEIRA DOS S CONCEICAO - U464710", "kit": "", "med": ""}, {"pep": "B-1229626", "titulo": "ER-CIND-FAZ-VARZEA DA PEDRA 107-RURAL", "municipio": "VÁRZEA DO POÇO", "status": "", "ar": "MANOEL GUSTAVO OLIVEIRA DOS S CONCEICAO - U464710", "kit": "", "med": ""}, {"pep": "B-1129578", "titulo": "ER-CIND-POV-PE DO MORRO-RURAL", "municipio": "VÁRZEA DO POÇO", "status": "EM EXECUÇÃO", "ar": "MANOEL GUSTAVO OLIVEIRA DOS S CONCEICAO - U464710", "kit": "", "med": ""}, {"pep": "B-1230619", "titulo": "ER-CCOL-FAZ-BONS OLHOS-ALTO ALEGRE", "municipio": "VÁRZEA DO POÇO", "status": "", "ar": "MANOEL GUSTAVO OLIVEIRA DOS S CONCEICAO - U464710", "kit": "", "med": ""}, {"pep": "B-1116278", "titulo": "ER-CIND-POV-QUEIMADA NOVA-RURAL", "municipio": "MIGUEL CALMON", "status": "PROGRAMADA", "ar": "MANOEL GUSTAVO OLIVEIRA DOS S CONCEICAO - U464710", "kit": "", "med": ""}, {"pep": "B-1232842", "titulo": "ER-CIND-POV-VARIANTE-RURAL", "municipio": "SÃO GABRIEL", "status": "PROGRAMADA", "ar": "RAFAEL SANTOS DA CRUZ - U469504", "kit": "", "med": ""}, {"pep": "B-0000002", "titulo": "EQUIPE SEM FRENRE DE SERVIÇO LINHA VIVA", "municipio": "JACOBINA", "status": "", "ar": "RAFAEL SANTOS DA CRUZ - U469504", "kit": "", "med": ""}, {"pep": "B-1051717", "titulo": "IS-CIND-POV-AGUADA NOVA-RURAL", "municipio": "LAPÃO", "status": "EM EXECUÇÃO", "ar": "RAFAEL SANTOS DA CRUZ - U469504", "kit": "", "med": ""}, {"pep": "B-1178262", "titulo": "UB-CIND-RUA-SAO DOMINGOS 9999-CENTRO", "municipio": "PINDOBAÇU", "status": "EM EXECUÇÃO", "ar": "MANOEL GUSTAVO OLIVEIRA DOS S CONCEICAO - U464710", "kit": "N/A", "med": "N/A"}, {"pep": "B-1184546", "titulo": "RR-CIND-POV-CAPAO DO PRIMO-CAPAO DO PRIM", "municipio": "MORRO DO CHAPÉU", "status": "EM EXECUÇÃO", "ar": "NAILTON SANTANA PEREIRA FILHO - U344575", "kit": "", "med": ""}, {"pep": "B-1191504", "titulo": "IE-REGULADOR-VLN-01N5-A246999", "municipio": "GAVIÃO", "status": "PROGRAMADA", "ar": "NAILTON SANTANA PEREIRA FILHO - U344575", "kit": "", "med": ""}, {"pep": "B-1161926", "titulo": "ER-CIND-FAZ-BOLIVIA-RURAL", "municipio": "BAIXA GRANDE", "status": "PROGRAMADA", "ar": "NAILTON SANTANA PEREIRA FILHO - U344575", "kit": "B-1189407", "med": "B-1189428"}, {"pep": "B-1168461", "titulo": "ER-CIND-FAZ-BOLIVIA-RURAL", "municipio": "BAIXA GRANDE", "status": "PROGRAMADA", "ar": "NAILTON SANTANA PEREIRA FILHO - U344575", "kit": "B-1239994", "med": "B-1240259"}, {"pep": "B-1234315", "titulo": "ER-CIND-POV-NOVO SITIO 58-NOVO SITIO", "municipio": "BAIXA GRANDE", "status": "PROGRAMADA", "ar": "NAILTON SANTANA PEREIRA FILHO - U344575", "kit": "", "med": ""}, {"pep": "B-1234868", "titulo": "ER-CIND-POV PAGAO 701-PAGAO", "municipio": "BAIXA GRANDE", "status": "PROGRAMADA", "ar": "NAILTON SANTANA PEREIRA FILHO - U344575", "kit": "", "med": ""}, {"pep": "B-0450746", "titulo": "LD - FAZ. QUEIMADAS", "municipio": "BAIXA GRANDE", "status": "RETIRADA DA CARTEIRA", "ar": "NATALICIO MENDES DA SILVA - U107662", "kit": "", "med": ""}, {"pep": "B-1146184", "titulo": "ER-CIND-POV-CAMPO LIMPO-MANDACARU-RURAL", "municipio": "BAIXA GRANDE", "status": "EM EXECUÇÃO", "ar": "NATALICIO MENDES DA SILVA - U107662", "kit": "", "med": ""}, {"pep": "B-1091401", "titulo": "RR-CIND-FAZ-PIANCO-RURAL ITAIPU", "municipio": "JACOBINA", "status": "ENERGIZADA", "ar": "NATALICIO MENDES DA SILVA - U107662", "kit": "N/A", "med": "N/A"}, {"pep": "B-1065896", "titulo": "LD-CIND-FAZ PIANCO-RURAL-JCB", "municipio": "JACOBINA", "status": "EM EXECUÇÃO", "ar": "NATALICIO MENDES DA SILVA - U107662", "kit": "", "med": ""}, {"pep": "B-1231135", "titulo": "RR-CIND-POV-PAU FERRO-PARAISO", "municipio": "JACOBINA", "status": "ENERGIZADA", "ar": "NATALICIO MENDES DA SILVA - U107662", "kit": "N/A", "med": "N/A"}, {"pep": "B-1058844", "titulo": "AC-CIND-POV-MULUNGU D CHIOLA-RURAL", "municipio": "MIGUEL CALMON", "status": "EM EXECUÇÃO", "ar": "NATALICIO MENDES DA SILVA - U107662", "kit": "X-1058846", "med": "X-1058847"}, {"pep": "B-1073507", "titulo": "ER-CIND-POV ASSA PEIXE-RURAL ITAPURA", "municipio": "MIGUEL CALMON", "status": "EM EXECUÇÃO", "ar": "NATALICIO MENDES DA SILVA - U107662", "kit": "B-1239831", "med": "B-1240091"}, {"pep": "B-1116278", "titulo": "ER-CIND-POV-QUEIMADA NOVA-RURAL", "municipio": "MIGUEL CALMON", "status": "EM EXECUÇÃO", "ar": "NATALICIO MENDES DA SILVA - U107662", "kit": "B-1239839", "med": "B-1240098"}, {"pep": "B-1055194", "titulo": "MP-CIND-RUA-DO TAMANCO-RURAL", "municipio": "MIGUEL CALMON", "status": "EM EXECUÇÃO", "ar": "NATALICIO MENDES DA SILVA - U107662", "kit": "", "med": ""}, {"pep": "B-1128488", "titulo": "ER-CIND-POV-FAISCA 45-FAISCA", "municipio": "MIGUEL CALMON", "status": "EM EXECUÇÃO", "ar": "NATALICIO MENDES DA SILVA - U107662", "kit": "B-1239943", "med": "B-1240190"}, {"pep": "B-1135561", "titulo": "ER-CIND-POV-TAMANCO-RURAL", "municipio": "MIGUEL CALMON", "status": "CANCELADA", "ar": "NATALICIO MENDES DA SILVA - U107662", "kit": "", "med": ""}, {"pep": "B-1170966", "titulo": "ER-CIND-POV-ASSA PEIXE-RURAL", "municipio": "MIGUEL CALMON", "status": "EM EXECUÇÃO", "ar": "NATALICIO MENDES DA SILVA - U107662", "kit": "", "med": ""}, {"pep": "B-1172567", "titulo": "ER-CIND-POV-MOCO-FAISCA", "municipio": "MIGUEL CALMON", "status": "EM EXECUÇÃO", "ar": "NATALICIO MENDES DA SILVA - U107662", "kit": "B-1239999", "med": "B-1240266"}, {"pep": "B-1173379", "titulo": "ER-CIND-RUA-VARZEA DOS BOIS-CENTRO", "municipio": "MIGUEL CALMON", "status": "PROGRAMADA", "ar": "NATALICIO MENDES DA SILVA - U107662", "kit": "", "med": ""}, {"pep": "B-1226602", "titulo": "ER-CIND-FAZ-BAIXAO-URUBU", "municipio": "MIGUEL CALMON", "status": "EM EXECUÇÃO", "ar": "NATALICIO MENDES DA SILVA - U107662", "kit": "", "med": ""}, {"pep": "B-1230056", "titulo": "ER-CIND-FAZ-BAIXA DO TANQUE-RURAL", "municipio": "MIGUEL CALMON", "status": "ENERGIZADA", "ar": "NATALICIO MENDES DA SILVA - U107662", "kit": "N/A", "med": "N/A"}, {"pep": "B-1230363", "titulo": "AC-CIND-POV-OLHOS D AGUA DE CIMA-RURAL", "municipio": "MIGUEL CALMON", "status": "PROGRAMADA", "ar": "NATALICIO MENDES DA SILVA - U107662", "kit": "", "med": ""}, {"pep": "B-1231021", "titulo": "ER-CIND-POV-AGUA BRANCA-RURAL MIGUEL CAL", "municipio": "MIGUEL CALMON", "status": "ENERGIZADA", "ar": "NATALICIO MENDES DA SILVA - U107662", "kit": "N/A", "med": "N/A"}, {"pep": "B-1234977", "titulo": "ER-CIND-POV-MAXIXE 550-RURAL", "municipio": "MIGUEL CALMON", "status": "EM EXECUÇÃO", "ar": "NATALICIO MENDES DA SILVA - U107662", "kit": "", "med": ""}, {"pep": "B-1235320", "titulo": "ER-CIND-POV-TAPIRANGA 500-RR-TAPIRANGA", "municipio": "MIGUEL CALMON", "status": "RETIRADA DA CARTEIRA", "ar": "RAFAEL SANTOS DA CRUZ - U469504", "kit": "", "med": ""}, {"pep": "B-1062246", "titulo": "MP CIND FAZ NOSSA SENHORA DO AMPARO", "municipio": "MIGUEL CALMON", "status": "EM EXECUÇÃO", "ar": "RAFAEL SANTOS DA CRUZ - U469504", "kit": "", "med": ""}, {"pep": "B-0823651", "titulo": "LD CIND POV FORMOSA RURAL", "municipio": "MIGUEL CALMON", "status": "CANCELADA", "ar": "NAILTON SANTANA PEREIRA FILHO - U344575", "kit": "", "med": ""}, {"pep": "B-0879015", "titulo": "MP-CIND-POV LAGOA GRANDE-RURAL-MGC", "municipio": "MIGUEL CALMON", "status": "CANCELADA", "ar": "DAIANE ALMEIDA DO NASCIMENTO - U345247", "kit": "", "med": ""}, {"pep": "B-1087901", "titulo": "LD-CIND-FAZ CASA NOVA-RURAL-MGC", "municipio": "MIGUEL CALMON", "status": "ENERGIZADA", "ar": "DAIANE ALMEIDA DO NASCIMENTO - U345247", "kit": "N/A", "med": "N/A"}, {"pep": "B-1090007", "titulo": "MP CIND FAZ NOSSA SENHORA DO A ITAPURA", "municipio": "MIGUEL CALMON", "status": "ENERGIZADA", "ar": "NAILTON SANTANA PEREIRA FILHO - U344575", "kit": "N/A", "med": "N/A"}, {"pep": "B-1088474", "titulo": "ER-CIND-POV-ALMAS-ITAPURA", "municipio": "MIGUEL CALMON", "status": "ENERGIZADA", "ar": "NAILTON SANTANA PEREIRA FILHO - U344575", "kit": "N/A", "med": "N/A"}, {"pep": "B-1228875", "titulo": "ER-SEIN-FAZ-LIBERDADE-AGUA BRANCA", "municipio": "MIGUEL CALMON", "status": "ENERGIZADA", "ar": "NAILTON SANTANA PEREIRA FILHO - U344575", "kit": "N/A", "med": "N/A"}, {"pep": "B-1229062", "titulo": "ER-CIND-POV-URUBU-RURAL-URUBU", "municipio": "MIGUEL CALMON", "status": "ENERGIZADA", "ar": "NAILTON SANTANA PEREIRA FILHO - U344575", "kit": "N/A", "med": "N/A"}, {"pep": "B-1230765", "titulo": "ER-CIND-POV-SALGADINHO-RURAL", "municipio": "MIGUEL CALMON", "status": "ENERGIZADA", "ar": "NAILTON SANTANA PEREIRA FILHO - U344575", "kit": "N/A", "med": "N/A"}, {"pep": "B-1180371", "titulo": "ER-CIND-FAZ LAGOA DO MILHO-L DO MILHO", "municipio": "MUNDO NOVO", "status": "PROGRAMADA", "ar": "NAILTON SANTANA PEREIRA FILHO - U344575", "kit": "B-1195482", "med": "B-1195523"}, {"pep": "B-1182806", "titulo": "ER-CIND-RUA-DA UMBURANAS-RURAL", "municipio": "MUNDO NOVO", "status": "PROGRAMADA", "ar": "NAILTON SANTANA PEREIRA FILHO - U344575", "kit": "B-1195483", "med": "B-1195524"}, {"pep": "B-1235863", "titulo": "ER-CIND-FAZ-TRES RIACHOS-RURAL", "municipio": "MUNDO NOVO", "status": "RETIRADA DA CARTEIRA", "ar": "NAILTON SANTANA PEREIRA FILHO - U344575", "kit": "", "med": ""}, {"pep": "B-1226969", "titulo": "ER-CIND-SI-VOVO ZEZE-MUNDO NOVO", "municipio": "MUNDO NOVO", "status": "RETIRADA DA CARTEIRA", "ar": "NAILTON SANTANA PEREIRA FILHO - U344575", "kit": "", "med": ""}, {"pep": "B-1229255", "titulo": "ER-CIND-FAZ-VEREDA BONITA 159-RURAL", "municipio": "MUNDO NOVO", "status": "PROGRAMADA", "ar": "NAILTON SANTANA PEREIRA FILHO - U344575", "kit": "", "med": ""}, {"pep": "B-1229753", "titulo": "ER-CIND-RUA-OLIMPIA-UMBUZEIRO", "municipio": "MUNDO NOVO", "status": "PROGRAMADA", "ar": "NATALICIO MENDES DA SILVA - U107662", "kit": "", "med": ""}, {"pep": "B-1234158", "titulo": "ER-CIND-FAZ-LAGOA DO MILHO-RURAL", "municipio": "MUNDO NOVO", "status": "PROGRAMADA", "ar": "NAILTON SANTANA PEREIRA FILHO - U344575", "kit": "", "med": ""}, {"pep": "B-1234204", "titulo": "ER-CIND-FAZ-ROCHEDINHO-RURAL-IBIAPORA", "municipio": "MUNDO NOVO", "status": "PROGRAMADA", "ar": "ANDERSON ROBERTO DA SILVA CASTRO - U471407", "kit": "", "med": ""}, {"pep": "B-1072445", "titulo": "ER-CIND-FAZ-UMBUZEIRO-RURAL", "municipio": "MUNDO NOVO", "status": "RETIRADA DA CARTEIRA", "ar": "ANDERSON ROBERTO DA SILVA CASTRO - U471407", "kit": "B-1141998", "med": "B-1141997"}, {"pep": "B-1180206", "titulo": "ER-CIND-RUA-DA LUTANDA-LUTANDA", "municipio": "PINDOBAÇU", "status": "ENERGIZADA", "ar": "ANDERSON ROBERTO DA SILVA CASTRO - U471407", "kit": "B-1237721", "med": "B-1237939"}, {"pep": "B-1184409", "titulo": "ER-CIND-RUA APOLONIO-CENTRO-JATOBA", "municipio": "PINDOBAÇU", "status": "ENERGIZADA", "ar": "RICARDO SANTOS DE BRITO - U465100", "kit": "B-1237727", "med": "B-1237951"}, {"pep": "B-1199564", "titulo": "ER-CIND-RUA-DO CAJUEIRO-CENTRO", "municipio": "PINDOBAÇU", "status": "ENERGIZADA", "ar": "RICARDO SANTOS DE BRITO - U465100", "kit": "B-1234114", "med": "B-1234119"}, {"pep": "B-1167385", "titulo": "ER CIND RUA DO CALDEIRAO RURAL", "municipio": "PIRITIBA", "status": "EM EXECUÇÃO", "ar": "RICARDO SANTOS DE BRITO - U465100", "kit": "B-1195480", "med": "B-1195521"}, {"pep": "B-1095277", "titulo": "LD CIND PO CIGANA RURAL PRB", "municipio": "PIRITIBA", "status": "EM EXECUÇÃO", "ar": "RICARDO SANTOS DE BRITO - U465100", "kit": "B-1095287", "med": "B-1095288"}, {"pep": "B-1229276", "titulo": "ER-CIND-POV-PORTO FELIZ-RURAL", "municipio": "PIRITIBA", "status": "ENERGIZADA", "ar": "RICARDO SANTOS DE BRITO - U465100", "kit": "N/A", "med": "N/A"}, {"pep": "B-1231421", "titulo": "ER-CIND-POV-ASSENT PANORAMA-PANORAMA", "municipio": "PIRITIBA", "status": "EM EXECUÇÃO", "ar": "RICARDO SANTOS DE BRITO - U465100", "kit": "", "med": ""}, {"pep": "B-1231441", "titulo": "ER-CIND-FAZ-VARZEA DA PEDRA-RURAL", "municipio": "PIRITIBA", "status": "EM EXECUÇÃO", "ar": "RICARDO SANTOS DE BRITO - U465100", "kit": "", "med": ""}, {"pep": "B-1234733", "titulo": "ECIND-FAZ-SITIO 641-RURALR-", "municipio": "PIRITIBA", "status": "EM EXECUÇÃO", "ar": "RICARDO SANTOS DE BRITO - U465100", "kit": "", "med": ""}, {"pep": "B-1235651", "titulo": "ER-CIND-FAZ-SITIO 268-AREIA BRANCA", "municipio": "PIRITIBA", "status": "EM EXECUÇÃO", "ar": "NAILTON SANTANA PEREIRA FILHO - U344575", "kit": "", "med": ""}, {"pep": "B-1064255", "titulo": "MP CIND FAZ ÁGUA BRANCA RURAL", "municipio": "PIRITIBA", "status": "EM EXECUÇÃO", "ar": "NAILTON SANTANA PEREIRA FILHO - U344575", "kit": "B-1064254", "med": "B-1064258"}, {"pep": "B-1053234", "titulo": "MP-CIND-FAZ-ALTAMIRA-RURAL", "municipio": "PIRITIBA", "status": "EM EXECUÇÃO", "ar": "NAILTON SANTANA PEREIRA FILHO - U344575", "kit": "", "med": ""}, {"pep": "B-1070658", "titulo": "MP CIND POV DE CHAPADA PORTO FELIZ RURAL", "municipio": "PIRITIBA", "status": "ENERGIZADA", "ar": "NAILTON SANTANA PEREIRA FILHO - U344575", "kit": "B-1070659", "med": "B-1070661"}, {"pep": "B-1041001", "titulo": "MP-CIND-ROD-EST FEIJ O-PORTO FELIZ RURAL", "municipio": "PIRITIBA", "status": "ENERGIZADA", "ar": "RAFAEL SANTOS DA CRUZ - U469504", "kit": "N/A", "med": "N/A"}, {"pep": "B-1057882", "titulo": "MP-CIND-FAZ. LAGOA DO BOI-ANDARAÍ-RURAL", "municipio": "PIRITIBA", "status": "ENERGIZADA", "ar": "RAFAEL SANTOS DA CRUZ - U469504", "kit": "N/A", "med": "N/A"}, {"pep": "B-1186119", "titulo": "ER-CIND-FAZ-CACADOR 3336-A-RURAL", "municipio": "PONTO NOVO", "status": "EM EXECUÇÃO", "ar": "RAFAEL SANTOS DA CRUZ - U469504", "kit": "B-1237728", "med": "B-1237952"}, {"pep": "B-1196565", "titulo": "ER-CIND-FAZ-LARANJEIRA 363-RURAL", "municipio": "PONTO NOVO", "status": "ENERGIZADA", "ar": "RAFAEL SANTOS DA CRUZ - U469504", "kit": "N/A", "med": "N/A"}, {"pep": "B-1199288", "titulo": "ER-CIND-FAZ DEUS DARA 2-RURAL BARRACAS", "municipio": "PONTO NOVO", "status": "EM EXECUÇÃO", "ar": "RAFAEL SANTOS DA CRUZ - U469504", "kit": "X-1233981", "med": "X-1234117"}, {"pep": "B-1215995", "titulo": "ER-CIND-POV-CORNICHA 3365-CORNICHA", "municipio": "PONTO NOVO", "status": "EM EXECUÇÃO", "ar": "RAFAEL SANTOS DA CRUZ - U469504", "kit": "X-1238412", "med": "X-1238425"}, {"pep": "B-1231602", "titulo": "ER-CIND-FAZ-LAGOA DA CARAIBA-SERROLANDIA", "municipio": "SERROLÂNDIA", "status": "EM EXECUÇÃO", "ar": "RICARDO SANTOS DE BRITO - U465100", "kit": "", "med": ""}, {"pep": "B-1219262", "titulo": "RR-CIND-FAZ-BRASILEIRO 9999 X-CAICARA", "municipio": "SERROLÂNDIA", "status": "EM EXECUÇÃO", "ar": "RICARDO SANTOS DE BRITO - U465100", "kit": "", "med": ""}, {"pep": "B-1068194", "titulo": "ER-CIND-FAZ-STA BARBARA-RURAL", "municipio": "TAPIRAMUTÁ", "status": "PROGRAMADA", "ar": "RICARDO SANTOS DE BRITO - U465100", "kit": "B-1129291", "med": "B-1129292"}, {"pep": "B-1117461", "titulo": "ER-CIND-FAZ-MONTE ALTO-RURAL-TAPIRAMUTA", "municipio": "TAPIRAMUTÁ", "status": "EM EXECUÇÃO", "ar": "RICARDO SANTOS DE BRITO - U465100", "kit": "B-1239923", "med": "B-1240175"}, {"pep": "B-1039076", "titulo": "RR-CIND-RUA-PAU DE PILAO-CENTRO", "municipio": "TAPIRAMUTÁ", "status": "EM EXECUÇÃO", "ar": "RICARDO SANTOS DE BRITO - U465100", "kit": "X-1090945", "med": "X-1090946"}, {"pep": "B-1146347", "titulo": "IS-COEL-RUA-SOBRINHO-CENTRO", "municipio": "TAPIRAMUTÁ", "status": "EM EXECUÇÃO", "ar": "RICARDO SANTOS DE BRITO - U465100", "kit": "", "med": ""}, {"pep": "B-1109011", "titulo": "ER-CIND-FAZ-PALMEIRAL-RURAL-VOLTA GRANDE", "municipio": "TAPIRAMUTÁ", "status": "PROGRAMADA", "ar": "RICARDO SANTOS DE BRITO - U465100", "kit": "B-1239832", "med": "B-1240092"}, {"pep": "B-1134807", "titulo": "ER-CIND-FAZ-CAFUNDO-RURAL", "municipio": "TAPIRAMUTÁ", "status": "EM EXECUÇÃO", "ar": "RICARDO SANTOS DE BRITO - U465100", "kit": "B-1239951", "med": "B-1240196"}, {"pep": "B-1175877", "titulo": "ER-CIND-POV-PINDOBEIRA-RURAL", "municipio": "TAPIRAMUTÁ", "status": "ENERGIZADA", "ar": "RICARDO SANTOS DE BRITO - U465100", "kit": "B-1240001", "med": "B-1240269"}, {"pep": "B-1225109", "titulo": "ER-CIND-FAZ-SANTA CRUZ 13-RURAL", "municipio": "TAPIRAMUTÁ", "status": "EM EXECUÇÃO", "ar": "RICARDO SANTOS DE BRITO - U465100", "kit": "", "med": ""}, {"pep": "B-1230323", "titulo": "ER-CIND-ROD-VOLTA GRANDE-CENTRO", "municipio": "TAPIRAMUTÁ", "status": "PROGRAMADA", "ar": "NAILTON SANTANA PEREIRA FILHO - U344575", "kit": "", "med": ""}, {"pep": "B-1234152", "titulo": "ER-CIND-FAZ- CAFUNDO-RURAL-TAPIRAMUTA", "municipio": "TAPIRAMUTÁ", "status": "PROGRAMADA", "ar": "NAILTON SANTANA PEREIRA FILHO - U344575", "kit": "", "med": ""}, {"pep": "B-1061109", "titulo": "MP-CIND-POV-ASSENTAMENTO LAMEIRO-RURAL", "municipio": "TAPIRAMUTÁ", "status": "EM EXECUÇÃO", "ar": "NAILTON SANTANA PEREIRA FILHO - U344575", "kit": "X-1061112", "med": "X-1061114"}, {"pep": "B-1075918", "titulo": "MP-CIND FAZ PORTO DE AREIA RURAL", "municipio": "TAPIRAMUTÁ", "status": "EM EXECUÇÃO", "ar": "MANOEL GUSTAVO OLIVEIRA DOS S CONCEICAO - U464710", "kit": "X-1075920", "med": "X-1075926"}, {"pep": "B-1226823", "titulo": "ER-CIND-POV-BRONCO 24-RURAL", "municipio": "TAPIRAMUTÁ", "status": "EM EXECUÇÃO", "ar": "MANOEL GUSTAVO OLIVEIRA DOS S CONCEICAO - U464710", "kit": "", "med": ""}, {"pep": "B-1055977", "titulo": "MP-CIND-POV-SÃO BENTO RURAL", "municipio": "VÁRZEA DA ROÇA", "status": "PROGRAMADA", "ar": "MANOEL GUSTAVO OLIVEIRA DOS S CONCEICAO - U464710", "kit": "B-1055979", "med": "B-1055980"}, {"pep": "B-1133568", "titulo": "ER CIND POV VARZEA GRANDE RURAL", "municipio": "VÁRZEA DA ROÇA", "status": "PROGRAMADA", "ar": "MANOEL GUSTAVO OLIVEIRA DOS S CONCEICAO - U464710", "kit": "B-1133570", "med": "B-1133569"}, {"pep": "B-1231838", "titulo": "AC-CIND-POV-BARBOSA PRUDENCIO 388-RURAL", "municipio": "VÁRZEA DA ROÇA", "status": "EM EXECUÇÃO", "ar": "MANOEL GUSTAVO OLIVEIRA DOS S CONCEICAO - U464710", "kit": "", "med": ""}, {"pep": "B-1124357", "titulo": "ER-CIND-FAZ-CALDEIRAO 59-RURAL", "municipio": "VÁRZEA DA ROÇA", "status": "RETIRADA DA CARTEIRA", "ar": "MANOEL GUSTAVO OLIVEIRA DOS S CONCEICAO - U464710", "kit": "B-1239939", "med": "B-1240186"}, {"pep": "B-1171405", "titulo": "ER-CIND-RUA-AYRTON SENNA 72-RURAL", "municipio": "VÁRZEA DA ROÇA", "status": "EM EXECUÇÃO", "ar": "MANOEL GUSTAVO OLIVEIRA DOS S CONCEICAO - U464710", "kit": "B-1239998", "med": "B-1240265"}, {"pep": "B-1230695", "titulo": "ER-CIND-FAZ-CHAPEU QUEIMADO-RURAL", "municipio": "VÁRZEA DA ROÇA", "status": "PROGRAMADA", "ar": "MANOEL GUSTAVO OLIVEIRA DOS S CONCEICAO - U464710", "kit": "", "med": ""}, {"pep": "B-1231725", "titulo": "ER-CIND-FAZ-S O ROQUE 13-RURAL VARZEA DA", "municipio": "VÁRZEA DA ROÇA", "status": "PROGRAMADA", "ar": "MANOEL GUSTAVO OLIVEIRA DOS S CONCEICAO - U464710", "kit": "", "med": ""}, {"pep": "B-1231778", "titulo": "ER-CIND-FAZ-GRAVATA-BARRACAS", "municipio": "VÁRZEA DA ROÇA", "status": "CANCELADA", "ar": "MANOEL GUSTAVO OLIVEIRA DOS S CONCEICAO - U464710", "kit": "", "med": ""}, {"pep": "B-1233456", "titulo": "ER-CIND-FAZ-BARBOSA-RURAL", "municipio": "VÁRZEA DA ROÇA", "status": "PROGRAMADA", "ar": "MANOEL GUSTAVO OLIVEIRA DOS S CONCEICAO - U464710", "kit": "", "med": ""}, {"pep": "B-1233695", "titulo": "ER-CIND-FAZ-VARZEA DO POCO-BARBOSA RURAL", "municipio": "VÁRZEA DA ROÇA", "status": "PROGRAMADA", "ar": "RAFAEL SANTOS DA CRUZ - U469504", "kit": "", "med": ""}, {"pep": "B-1235784", "titulo": "ER-CIND-POV-VARZEA GRANDE 146-RURAL", "municipio": "VÁRZEA DA ROÇA", "status": "EM EXECUÇÃO", "ar": "RAFAEL SANTOS DA CRUZ - U469504", "kit": "", "med": ""}, {"pep": "B-1229626", "titulo": "ER-CIND-FAZ-VARZEA DA PEDRA 107-RURAL", "municipio": "VÁRZEA DO POÇO", "status": "PROGRAMADA", "ar": "RAFAEL SANTOS DA CRUZ - U469504", "kit": "", "med": ""}, {"pep": "B-1129578", "titulo": "ER-CIND-POV-PE DO MORRO-RURAL", "municipio": "VÁRZEA DO POÇO", "status": "EM EXECUÇÃO", "ar": "MANOEL GUSTAVO OLIVEIRA DOS S CONCEICAO - U464710", "kit": "B-1239944", "med": "B-1240191"}, {"pep": "B-1230619", "titulo": "ER-CCOL-FAZ-BONS OLHOS-ALTO ALEGRE", "municipio": "VÁRZEA DO POÇO", "status": "PROGRAMADA", "ar": "RAFAEL SANTOS DA CRUZ - U469504", "kit": "CRIAR", "med": "CRIAR"}, {"pep": "B-1191504", "titulo": "IE-REGULADOR-VLN-01N5-A246999", "municipio": "GAVIÃO", "status": "PROGRAMADA", "ar": "RAFAEL SANTOS DA CRUZ - U469504", "kit": "", "med": ""}, {"pep": "B-1237611", "titulo": "ER-CIND-FAZ-JENIPAPEIRO-RURAL-ITAITU", "municipio": "JACOBINA", "status": "PROGRAMADA", "ar": "MANOEL GUSTAVO OLIVEIRA DOS S CONCEICAO - U464710", "kit": "", "med": ""}, {"pep": "B-1064255", "titulo": "MP CIND FAZ ÁGUA BRANCA RURAL", "municipio": "PIRITIBA", "status": "EM EXECUÇÃO", "ar": "", "kit": "B-1064254", "med": "B-1064258"}, {"pep": "B-1237623", "titulo": "ER-CIND-POV-FZ CARRAPATO-VARZEA DA ROCA", "municipio": "VÁRZEA DA ROÇA", "status": "PROGRAMADA", "ar": "", "kit": "", "med": ""}, {"pep": "B-1237707", "titulo": "ER-CIND-FAZ-ALDEIA 12-LAGEDO DO BRAGA", "municipio": "MIGUEL CALMON", "status": "", "ar": "", "kit": "", "med": ""}, {"pep": "B-1068194", "titulo": "ER-CIND-FAZ-STA BARBARA-RURAL", "municipio": "TAPIRAMUTÁ", "status": "EM EXECUÇÃO", "ar": "", "kit": "B-1129291", "med": "B-1129292"}, {"pep": "B-1027853", "titulo": "AC-CIND-POV-PATOS-RURAL", "municipio": "CALDEIRÃO GRANDE", "status": "", "ar": "", "kit": "", "med": ""}, {"pep": "B-1236759", "titulo": "ER-CIND-POV-BURRO-BOM", "municipio": "MUNDO NOVO", "status": "PROGRAMADA", "ar": "", "kit": "", "med": ""}, {"pep": "B-1239445", "titulo": "ER-CIND-POV-DE IVO LUCIANO 2054-IVO LUCI", "municipio": "CAPIM GROSSO", "status": "PROGRAMADA", "ar": "", "kit": "", "med": ""}, {"pep": "B-1239641", "titulo": "ER-CIND-FAZ-TIYUYU 89-KM 2", "municipio": "CAPIM GROSSO", "status": "PROGRAMADA", "ar": "", "kit": "", "med": ""}, {"pep": "B-1239016", "titulo": "ER-CIND-POV-NOVO DELFINO 26-UMBURANAS", "municipio": "UMBURANAS", "status": "", "ar": "", "kit": "N/A", "med": "N/A"}, {"pep": "B-1238968", "titulo": "ER-CIND-POV-MULUNGU-RURAL-MULUNGU", "municipio": "VÁRZEA NOVA", "status": "EM EXECUÇÃO", "ar": "", "kit": "N/A", "med": "N/A"}, {"pep": "B-1240875", "titulo": "ER-CIND-POV-GASPAR-GASPAR", "municipio": "VÁRZEA NOVA", "status": "EM EXECUÇÃO", "ar": "", "kit": "N/A", "med": "N/A"}, {"pep": "B-1201353", "titulo": "ER-COEL-AV-AG ALTO BONITO 99999-RURAL", "municipio": "CALDEIRÃO GRANDE", "status": "EM EXECUÇÃO", "ar": "", "kit": "N/A", "med": "N/A"}, {"pep": "B-1165848", "titulo": "ER-CIND-FAZ-BOA VISTA-RURAL", "municipio": "MUNDO NOVO", "status": "", "ar": "", "kit": "", "med": ""}, {"pep": "B-0433453", "titulo": "LD - FAZ. QUEIMADAS", "municipio": "BAIXA GRANDE", "status": "CANCELADA", "ar": "", "kit": "N/A", "med": "N/A"}, {"pep": "B-1111424", "titulo": "RR-SEIN-FAZ-BARRO VERMELHO-RURAL", "municipio": "BAIXA GRANDE", "status": "PROGRAMADA", "ar": "", "kit": "N/A", "med": "N/A"}, {"pep": "B-1161434", "titulo": "ER-CIND-FAZ-GENIPAPO-RURAL-BAIXA GRANDE", "municipio": "BAIXA GRANDE", "status": "PROGRAMADA", "ar": "", "kit": "", "med": ""}, {"pep": "B-1234711", "titulo": "ER-CIND-POV-CONCEICAO-RURAL", "municipio": "BAIXA GRANDE", "status": "PROGRAMADA", "ar": "", "kit": "X-1243717", "med": "X-1243858"}, {"pep": "B-1235031", "titulo": "ER-SEIN-POV-LASCA GATO-RURAL", "municipio": "BAIXA GRANDE", "status": "PROGRAMADA", "ar": "", "kit": "N/A", "med": "N/A"}, {"pep": "B-1238776", "titulo": "ER-CIND-POV-ITALEGRE 45-RURAL", "municipio": "BAIXA GRANDE", "status": "PROGRAMADA", "ar": "", "kit": "N/A", "med": "N/A"}, {"pep": "B-1240667", "titulo": "ER-CIND-FAZ-SITIO LARANJEIRA-RURAL", "municipio": "BAIXA GRANDE", "status": "PROGRAMADA", "ar": "", "kit": "N/A", "med": "N/A"}, {"pep": "B-1236128", "titulo": "ER-CIND-FAZ-ALGODOES-RURAL-CAEM", "municipio": "CAEM", "status": "PROGRAMADA", "ar": "", "kit": "X-1243671", "med": "X-1243676"}, {"pep": "B-1236503", "titulo": "ER-CIND-FAZ-RECANTO-RURAL", "municipio": "CAEM", "status": "PROGRAMADA", "ar": "", "kit": "N/A", "med": "N/A"}, {"pep": "B-1238298", "titulo": "ER-CIND-FAZ-LARANJO-RURAL", "municipio": "CAEM", "status": "PROGRAMADA", "ar": "", "kit": "X-1243672", "med": "X-1243677"}, {"pep": "B-1027853", "titulo": "AC-CIND-POV-PATOS-RURAL", "municipio": "CALDEIRÃO GRANDE", "status": "EM EXECUÇÃO", "ar": "", "kit": "N/A", "med": "N/A"}, {"pep": "B-1171344", "titulo": "ER-CIND-POV-PATOS-RURAL", "municipio": "CALDEIRÃO GRANDE", "status": "EM EXECUÇÃO", "ar": "", "kit": "", "med": ""}, {"pep": "B-1201353", "titulo": "ER-COEL-AV-AG ALTO BONITO 99999-RURAL", "municipio": "CALDEIRÃO GRANDE", "status": "EM EXECUÇÃO", "ar": "", "kit": "N/A", "med": "N/A"}, {"pep": "B-1240780", "titulo": "ER-CIND-FAZ-AGUA BOA-RURAL", "municipio": "CAPIM GROSSO", "status": "PROGRAMADA", "ar": "", "kit": "N/A", "med": "N/A"}, {"pep": "B-1240846", "titulo": "ER-CIND-FAZ-VARZEA DA CABRA-RURAL", "municipio": "CAPIM GROSSO", "status": "PROGRAMADA", "ar": "", "kit": "N/A", "med": "N/A"}, {"pep": "B-1237699", "titulo": "ER-CIND-RUA-DAS FLORES-VARZEA DA LAGE", "municipio": "JACOBINA", "status": "PROGRAMADA", "ar": "", "kit": "X-1243088", "med": "X-1243090"}, {"pep": "B-1240598", "titulo": "ER-CIND-FAZ-FONTE DO BENEDITO 12-CACHOEI", "municipio": "JACOBINA", "status": "PROGRAMADA", "ar": "", "kit": "N/A", "med": "N/A"}, {"pep": "B-1240857", "titulo": "ER-CIND-POV-ANGICO 888-RURAL", "municipio": "MAIRI", "status": "PROGRAMADA", "ar": "", "kit": "N/A", "med": "N/A"}, {"pep": "B-1241023", "titulo": "IP-PREF-RUA-ALTO DA BOA VISTA -RURAL", "municipio": "MAIRI", "status": "PROGRAMADA", "ar": "", "kit": "N/A", "med": "N/A"}, {"pep": "B-1239926", "titulo": "ER-CIND-POV CURRAL VELHO-RURAL", "municipio": "MIGUEL CALMON", "status": "PROGRAMADA", "ar": "", "kit": "N/A", "med": "N/A"}, {"pep": "B-0823651", "titulo": "LD CIND POV FORMOSA RURAL", "municipio": "MIGUEL CALMON", "status": "CANCELADA", "ar": "", "kit": "", "med": ""}, {"pep": "B-1235320", "titulo": "ER-CIND-POV-TAPIRANGA 500-RR-TAPIRANGA", "municipio": "MIGUEL CALMON", "status": "EM EXECUÇÃO", "ar": "", "kit": "N/A", "med": "N/A"}, {"pep": "B-1236062", "titulo": "ER-CIND-FAZ-IPUEIRA DO SABIA-III 112", "municipio": "MUNDO NOVO", "status": "PROGRAMADA", "ar": "", "kit": "N/A", "med": "N/A"}, {"pep": "B-1235863", "titulo": "ER-CIND-FAZ-TRES RIACHOS-RURAL", "municipio": "MUNDO NOVO", "status": "RETIRADA DA CARTEIRA", "ar": "", "kit": "N/A", "med": "N/A"}, {"pep": "B-1226969", "titulo": "ER-CIND-SI-VOVO ZEZE-MUNDO NOVO", "municipio": "MUNDO NOVO", "status": "PROGRAMADA", "ar": "", "kit": "N/A", "med": "N/A"}, {"pep": "B-1238642", "titulo": "ER-CIND-POV VARZEA DE FORA-RURAL", "municipio": "OUROLÂNDIA", "status": "EM EXECUÇÃO", "ar": "", "kit": "N/A", "med": "N/A"}, {"pep": "B-1234938", "titulo": "ER-CIND-FAZ-VARZEA DO PEDRO-RURAL", "municipio": "SAÚDE", "status": "PROGRAMADA", "ar": "", "kit": "N/A", "med": "N/A"}, {"pep": "B-1240504", "titulo": "AC-CIND-RUA-LAURO TEIXEIRA-PECUARIA", "municipio": "SAÚDE", "status": "PROGRAMADA", "ar": "", "kit": "N/A", "med": "N/A"}, {"pep": "B-1234334", "titulo": "ER-CIND-TRV-MANOEL MACIEL-ROCADINHO", "municipio": "SERROLÂNDIA", "status": "PROGRAMADA", "ar": "", "kit": "X-1242660", "med": "X-1242662"}, {"pep": "B-1236459", "titulo": "ER-CIND-RUA-DEOCLECIANO MELLO -SALAMIM", "municipio": "SERROLÂNDIA", "status": "PROGRAMADA", "ar": "", "kit": "N/A", "med": "N/A"}, {"pep": "B-1115455", "titulo": "ER-CIND-FAZ-GRUNA-RURAL", "municipio": "UMBURANAS", "status": "PROGRAMADA", "ar": "", "kit": "", "med": ""}, {"pep": "B-1237883", "titulo": "ER-CIND-RUA-CAMPO FORMOSO 1010-RURAL", "municipio": "UMBURANAS", "status": "PROGRAMADA", "ar": "", "kit": "N/A", "med": "N/A"}, {"pep": "B-1238383", "titulo": "UB-CIND-RUA-BARRIGUDA DELFINO-RURAL", "municipio": "UMBURANAS", "status": "PROGRAMADA", "ar": "", "kit": "N/A", "med": "N/A"}, {"pep": "B-1238773", "titulo": "ER-CIND-RUA-BARRIGA DELFINO-RURAL", "municipio": "UMBURANAS", "status": "PROGRAMADA", "ar": "", "kit": "N/A", "med": "N/A"}, {"pep": "B-1239016", "titulo": "ER-CIND-POV-NOVO DELFINO 26-UMBURANAS", "municipio": "UMBURANAS", "status": "EM EXECUÇÃO", "ar": "", "kit": "N/A", "med": "N/A"}, {"pep": "B-1233878", "titulo": "ER-CIND-FAZ-VARZEA DA ROCA-BARRACAS", "municipio": "VÁRZEA DA ROÇA", "status": "PROGRAMADA", "ar": "", "kit": "N/A", "med": "N/A"}, {"pep": "B-1238037", "titulo": "ER-CIND-FAZ-VARZEA COMPRIDA-RURAL", "municipio": "VÁRZEA DA ROÇA", "status": "PROGRAMADA", "ar": "", "kit": "X-1242374", "med": "X-1242378"}, {"pep": "B-0998620", "titulo": "ER-CIND-POV-VARZEA GRANDE-RURAL", "municipio": "VÁRZEA DA ROÇA", "status": "PROGRAMADA", "ar": "", "kit": "", "med": ""}, {"pep": "B-1176075", "titulo": "ER-CIND-FAZ-BAIXA DO MEREIRA-RURAL", "municipio": "VÁRZEA DO POÇO", "status": "PROGRAMADA", "ar": "", "kit": "", "med": ""}, {"pep": "B-1238716", "titulo": "ER-CIND-FAZ-TAPIOCA 655-VARZEA DO POCO", "municipio": "VÁRZEA DO POÇO", "status": "PROGRAMADA", "ar": "", "kit": "N/A", "med": "N/A"}, {"pep": "B-1238968", "titulo": "ER-CIND-POV-MULUNGU-RURAL-MULUNGU", "municipio": "VÁRZEA NOVA", "status": "EM EXECUÇÃO", "ar": "", "kit": "N/A", "med": "N/A"}, {"pep": "B-1240875", "titulo": "ER-CIND-POV-GASPAR-GASPAR", "municipio": "VÁRZEA NOVA", "status": "EM EXECUÇÃO", "ar": "", "kit": "N/A", "med": "N/A"}, {"pep": "B-1237765", "titulo": "ER-CIND-POV-S O ROQUE-RURAL", "municipio": "MUNDO NOVO", "status": "PROGRAMADA", "ar": "", "kit": "", "med": ""}, {"pep": "B-1238296", "titulo": "ER-CIND-POV-CAMPO SAO JOAO-RURAL VZ MEIO", "municipio": "VÁRZEA DA ROÇA", "status": "", "ar": "", "kit": "", "med": ""}, {"pep": "B-1238845", "titulo": "ER-CIND-FAZ-VARZEA DANTAS-RURAL", "municipio": "CAEM", "status": "PROGRAMADA", "ar": "", "kit": "", "med": ""}, {"pep": "B-1238120", "titulo": "ER-CIND-FAZ-BOQUEIRAO 35-SAO MIGUEL", "municipio": "CALDEIRÃO GRANDE", "status": "EM EXECUÇÃO", "ar": "", "kit": "", "med": ""}, {"pep": "B-1238780", "titulo": "ER-SEIN-RUA-TAMANCO 1800-CURRAL VELHO", "municipio": "MIGUEL CALMON", "status": "PROGRAMADA", "ar": "", "kit": "", "med": ""}, {"pep": "B-1244326", "titulo": "ER-CIND-SI-CAJUEIRO-RURAL", "municipio": "PIRITIBA", "status": "PROGRAMADA", "ar": "", "kit": "", "med": ""}, {"pep": "B-1239406", "titulo": "ER-CIND-FAZ-MORRO DE ESTEV O 10-M DE EST", "municipio": "MAIRI", "status": "EM EXECUÇÃO", "ar": "MANOEL GUSTAVO OLIVEIRA DOS S CONCEICAO - U464710", "kit": "", "med": ""}, {"pep": "B-1233157", "titulo": "ER-CIND-FAZ-PEDRA BRANCA-MAIRI", "municipio": "MAIRI", "status": "EM EXECUÇÃO", "ar": "MANOEL GUSTAVO OLIVEIRA DOS S CONCEICAO - U464710", "kit": "", "med": ""}, {"pep": "B-1077490", "titulo": "LD-CIND-POV.AURORA RURAL", "municipio": "OUROLÂNDIA", "status": "EM EXECUÇÃO", "ar": "", "kit": "B-1191387", "med": "B-1191814"}, {"pep": "B-1175524", "titulo": "ER-CIND-POV-OLHOS DAGUA DE CIMA-RURAL", "municipio": "MIGUEL CALMON", "status": "", "ar": "", "kit": "", "med": ""}, {"pep": "B-1170718", "titulo": "ER-CIND-RUA-DAS FLORES-VARZEA DA LAGE", "municipio": "JACOBINA", "status": "PROGRAMADA", "ar": "", "kit": "", "med": ""}, {"pep": "B-1170718", "titulo": "ER-CIND-RUA-DAS FLORES-VARZEA DA LAGE XX", "municipio": "JACOBINA", "status": "PROGRAMADA", "ar": "", "kit": "", "med": ""}, {"pep": "B-1080958", "titulo": "RR-CCOL-POV-PAU BRANCO 57-RURAL", "municipio": "VÁRZEA NOVA", "status": "EM EXECUÇÃO", "ar": "", "kit": "", "med": ""}, {"pep": "B-1068851", "titulo": "AC-CIND-POV-LAGEDO DO BRAGA-RURAL", "municipio": "MIGUEL CALMON", "status": "PROGRAMADA", "ar": "", "kit": "", "med": ""}, {"pep": "B-1175524", "titulo": "ER-CIND-POV-OLHOS DAGUA DE CIMA-RURAL", "municipio": "MIGUEL CALMON", "status": "EM EXECUÇÃO", "ar": "", "kit": "", "med": ""}, {"pep": "B-1099356", "titulo": "ER-CIND-FAZ-CABO FRIO-TOMBADOR", "municipio": "JACOBINA", "status": "EM EXECUÇÃO", "ar": "", "kit": "", "med": ""}, {"pep": "B-1162823", "titulo": "ER-CIND-FAZ-CHORORO 857-CHORORO", "municipio": "JACOBINA", "status": "EM EXECUÇÃO", "ar": "", "kit": "", "med": ""}, {"pep": "B-1239016", "titulo": "ER-CIND-POV-NOVO DELFINO 26-UMBURANAS", "municipio": "UMBURANAS", "status": "EM EXECUÇÃO", "ar": "", "kit": "N/A", "med": "N/A"}, {"pep": "B-1082615", "titulo": "LD CIND FAZ CALDEIRAO RURAL", "municipio": "VÁRZEA DA ROÇA", "status": "PROGRAMADA", "ar": "", "kit": "B-1160229", "med": "B-1160230"}, {"pep": "B-1135060", "titulo": "ER-CIND-FAZ-JUREMINHA -RURAL", "municipio": "JACOBINA", "status": "PROGRAMADA", "ar": "", "kit": "", "med": ""}, {"pep": "B-1124357", "titulo": "ER-CIND-FAZ-CALDEIRAO 59-RURAL", "municipio": "VÁRZEA DA ROÇA", "status": "PROGRAMADA", "ar": "", "kit": "B-1239939", "med": "B-1240186"}, {"pep": "B-1027693", "titulo": "AC-CIND-POV-QUEIMADA NOVA 50-RURAL", "municipio": "MIGUEL CALMON", "status": "PROGRAMADA", "ar": "", "kit": "", "med": ""}, {"pep": "B-1119065", "titulo": "LD - CIND - POV JENIPAPO - RURAL", "municipio": "JACOBINA", "status": "PROGRAMADA", "ar": "", "kit": "B-1119069", "med": "B-1119066"}, {"pep": "B-1056746", "titulo": "AC-CIND-POV-ANDARAIA-RURAL", "municipio": "PIRITIBA", "status": "PROGRAMADA", "ar": "", "kit": "", "med": ""}, {"pep": "B-1166341", "titulo": "ER-CIND-FAZ-JENIPAPEIRO-RURAL", "municipio": "JACOBINA", "status": "PROGRAMADA", "ar": "", "kit": "B-1182048", "med": "B-1182077"}, {"pep": "B-1081548", "titulo": "LD-CCOL-POV NOVO SITIO 47-NOVO SITIO 47", "municipio": "BAIXA GRANDE", "status": "PROGRAMADA", "ar": "", "kit": "", "med": "B-1081547"}, {"pep": "B-1134466", "titulo": "ER-CCOL-POV-LAGOA BONITA-RURAL", "municipio": "OUROLÂNDIA", "status": "EM EXECUÇÃO", "ar": "", "kit": "N/A", "med": "N/A"}, {"pep": "B-1213899", "titulo": "AC-COEL-FAZ-VELAME DE BAIXO-VELAME", "municipio": "JACOBINA", "status": "EM EXECUÇÃO", "ar": "", "kit": "N/A", "med": "N/A"}, {"pep": "B-1084631", "titulo": "ER CIND FAZENDA CURTUME RURAL", "municipio": "MIGUEL CALMON", "status": "EM EXECUÇÃO", "ar": "", "kit": "B-1084633", "med": "B-1084630"}, {"pep": "B-1162800", "titulo": "ER-CIND-ROD-JACOBINA-RURAL", "municipio": "JACOBINA", "status": "", "ar": "", "kit": "", "med": ""}, {"pep": "B-1226404", "titulo": "AC-CIND-FAZ-VARGINHA-RURAL", "municipio": "JACOBINA", "status": "PROGRAMADA", "ar": "", "kit": "", "med": ""}, {"pep": "B-1137304", "titulo": "ER-CIND-POV-IVO LUCIANO RURAL", "municipio": "CAPIM GROSSO", "status": "PROGRAMADA", "ar": "", "kit": "", "med": ""}, {"pep": "B-1039528", "titulo": "MP CIND POV MALVA RURAL", "municipio": "VÁRZEA NOVA", "status": "PROGRAMADA", "ar": "", "kit": "", "med": ""}, {"pep": "B-1079863", "titulo": "ER-CIND-FAZ-MATA DO MEL-RURAL", "municipio": "VÁRZEA NOVA", "status": "PROGRAMADA", "ar": "", "kit": "", "med": ""}, {"pep": "B-1242063", "titulo": "ER-CIND-POV-ALTAMIRA 525-MASSAMBAO", "municipio": "PIRITIBA", "status": "PROGRAMADA", "ar": "", "kit": "N/A", "med": "N/A"}, {"pep": "B-1055092", "titulo": "AC-CIND-ET-PIRITIBA A PAU FERRO-RURAL", "municipio": "PIRITIBA", "status": "PROGRAMADA", "ar": "", "kit": "", "med": ""}, {"pep": "B-1240857", "titulo": "ER-CIND-POV-ANGICO 888-RURAL", "municipio": "MAIRI", "status": "PROGRAMADA", "ar": "", "kit": "N/A", "med": "N/A"}, {"pep": "B-1161434", "titulo": "ER-CIND-FAZ-GENIPAPO-RURAL-BAIXA GRANDE", "municipio": "BAIXA GRANDE", "status": "PROGRAMADA", "ar": "", "kit": "N/A", "med": "N/A"}, {"pep": "B-1124357", "titulo": "ER-CIND-FAZ-CALDEIRAO 59-RURAL", "municipio": "VÁRZEA DA ROÇA", "status": "", "ar": "", "kit": "B-1239939", "med": "B-1240186"}, {"pep": "B-1055092", "titulo": "AC-CIND-ET-PIRITIBA A PAU FERRO-RURAL", "municipio": "PIRITIBA", "status": "EM EXECUÇÃO", "ar": "", "kit": "", "med": ""}, {"pep": "B-1119065", "titulo": "LD - CIND - POV JENIPAPO - RURAL", "municipio": "JACOBINA", "status": "EM EXECUÇÃO", "ar": "", "kit": "B-1119069", "med": "B-1119066"}, {"pep": "B-1238719", "titulo": "ER-CIND-POV-NOVO DELFINO-RURAL", "municipio": "UMBURANAS", "status": "PROGRAMADA", "ar": "", "kit": "", "med": ""}, {"pep": "B-1166229", "titulo": "ER-CIND-PO.ALCAPAO-RURAL", "municipio": "OUROLÂNDIA", "status": "", "ar": "", "kit": "B-1249871", "med": "B-1249874"}, {"pep": "B-1244389", "titulo": "ER-CCOL-FAZ-RECANTO-RURAL", "municipio": "CAEM", "status": "", "ar": "", "kit": "", "med": ""}, {"pep": "B-1171886", "titulo": "ER-CIND-FAZ-CURTUME-RURAL", "municipio": "MIGUEL CALMON", "status": "", "ar": "", "kit": "B-1225401", "med": "B-1225496"}, {"pep": "B-0996660", "titulo": "AC-CIND-FAZ-TIGRE 300-RURAL CRUZ DE ALMA", "municipio": "VÁRZEA DA ROÇA", "status": "", "ar": "", "kit": "", "med": ""}, {"pep": "B-1026905", "titulo": "AC-CIND-ET-JACOBINA ESCONCIO KM 18-RURAL", "municipio": "JACOBINA", "status": "EM EXECUÇÃO", "ar": "", "kit": "", "med": ""}, {"pep": "B-1242048", "titulo": "AC-CIND-FAZ-PAMPULHA-RURAL", "municipio": "VÁRZEA DO POÇO", "status": "PROGRAMADA", "ar": "", "kit": "N/A", "med": "N/A"}, {"pep": "B-1101061", "titulo": "ER-CIND-POV-VARZEA DE DENTRO-DELFINO", "municipio": "UMBURANAS", "status": "EM EXECUÇÃO", "ar": "", "kit": "B-1249664", "med": "B-1249743"}, {"pep": "B-1165188", "titulo": "ER-CIND-FAZ-CANAVIAL 249-ITALEGRE", "municipio": "BAIXA GRANDE", "status": "PROGRAMADA", "ar": "", "kit": "B-1195469", "med": "B-1195511"}, {"pep": "B-1163378", "titulo": "ER-CIND-FAZ CALDEIR O NOVO-RURAL", "municipio": "BAIXA GRANDE", "status": "PROGRAMADA", "ar": "", "kit": "B-1191359", "med": "B-1191759"}, {"pep": "B-1173379", "titulo": "ER-CIND-RUA-VARZEA DOS BOIS-CENTRO", "municipio": "MIGUEL CALMON", "status": "EM EXECUÇÃO", "ar": "", "kit": "B-1249061", "med": "B-1249063"}, {"pep": "B-1233068", "titulo": "AC-CIND-POV-ABENGOADA 165-RURAL", "municipio": "VÁRZEA NOVA", "status": "EM EXECUÇÃO", "ar": "", "kit": "", "med": ""}, {"pep": "B-1244062", "titulo": "ER-CIND-FAZ-PORCOS 9965-RURAL", "municipio": "VÁRZEA NOVA", "status": "EM EXECUÇÃO", "ar": "", "kit": "", "med": ""}, {"pep": "B-1136005", "titulo": "ER-CIND-FAZ-CANAVIAL-ITALEGRE", "municipio": "BAIXA GRANDE", "status": "PROGRAMADA", "ar": "", "kit": "", "med": ""}, {"pep": "B-1246148", "titulo": "RR-CIND-POV-BARRO VERMELHO-RURAL", "municipio": "BAIXA GRANDE", "status": "PROGRAMADA", "ar": "", "kit": "", "med": ""}, {"pep": "B-1243250", "titulo": "ER-CIND-POV-CONCEICAO-CONCEICAO", "municipio": "BAIXA GRANDE", "status": "PROGRAMADA", "ar": "", "kit": "", "med": ""}, {"pep": "B-0649462", "titulo": "ME - ADF. POV. MAXIXE", "municipio": "MIGUEL CALMON", "status": "PROGRAMADA", "ar": "", "kit": "", "med": ""}, {"pep": "B-1176892", "titulo": "AC-CIND-POV-CAMPO DA SILVA -RURAL", "municipio": "MIGUEL CALMON", "status": "EM EXECUÇÃO", "ar": "", "kit": "", "med": ""}, {"pep": "B-1238780", "titulo": "ER-SEIN-RUA-TAMANCO 1800-CURRAL VELHO", "municipio": "MIGUEL CALMON", "status": "EM EXECUÇÃO", "ar": "", "kit": "", "med": ""}, {"pep": "B-1119761", "titulo": "IE-GRUA FAZ.ALTO ALEGRE MOOD-RURAL", "municipio": "MUNDO NOVO", "status": "PROGRAMADA", "ar": "", "kit": "", "med": ""}, {"pep": "B-1009274", "titulo": "IE-REGULADOR-MUN-01N5-T20539", "municipio": "MUNDO NOVO", "status": "PROGRAMADA", "ar": "", "kit": "", "med": ""}, {"pep": "B-1244188", "titulo": "ER-CIND-POV-BURRO BOM-RURAL", "municipio": "MUNDO NOVO", "status": "PROGRAMADA", "ar": "", "kit": "", "med": ""}, {"pep": "B-1244550", "titulo": "ER-CIND-FAZ-LAGOA DO MILHO-LAGOA DO MILH", "municipio": "MUNDO NOVO", "status": "PROGRAMADA", "ar": "", "kit": "", "med": ""}, {"pep": "B-1242264", "titulo": "ER-CIND-POV-DE IBIAPORA 135-RURAL", "municipio": "MUNDO NOVO", "status": "PROGRAMADA", "ar": "", "kit": "", "med": ""}, {"pep": "B-1244752", "titulo": "ER-CIND-TRV-DO COLEGIO-RURAL", "municipio": "MUNDO NOVO", "status": "PROGRAMADA", "ar": "", "kit": "", "med": ""}, {"pep": "B-1244900", "titulo": "AC-CIND-RUA-FLORISVALDO L DE OLI-CENTRO", "municipio": "OUROLÂNDIA", "status": "PROGRAMADA", "ar": "", "kit": "", "med": ""}, {"pep": "B-1222009", "titulo": "MP-CIND-POV-ANGICAL-VERDADEIRA", "municipio": "UMBURANAS", "status": "PROGRAMADA", "ar": "", "kit": "", "med": ""}, {"pep": "B-1246232", "titulo": "AL-SE-UBR-AMPLIA O-R026798", "municipio": "UMBURANAS", "status": "PROGRAMADA", "ar": "", "kit": "", "med": ""}, {"pep": "B-1244756", "titulo": "ER-CIND-POV-VARZEA DE DENTRO-RURAL", "municipio": "UMBURANAS", "status": "PROGRAMADA", "ar": "", "kit": "", "med": ""}, {"pep": "B-1168420", "titulo": "ER-CIND-POV-ABENGOADA 4444-RURAL V NOVA", "municipio": "VÁRZEA NOVA", "status": "PROGRAMADA", "ar": "", "kit": "", "med": ""}, {"pep": "B-1063724", "titulo": "AC-CIND-FAZ-NOVA CONCEICAO-NOVA CONCEICA", "municipio": "VÁRZEA NOVA", "status": "PROGRAMADA", "ar": "", "kit": "", "med": ""}, {"pep": "B-1233068", "titulo": "AC-CIND-POV-ABENGOADA 165-RURAL", "municipio": "VÁRZEA NOVA", "status": "PROGRAMADA", "ar": "", "kit": "", "med": ""}, {"pep": "B-1244062", "titulo": "ER-CIND-FAZ-PORCOS 9965-RURAL", "municipio": "VÁRZEA NOVA", "status": "EM EXECUÇÃO", "ar": "", "kit": "", "med": ""}, {"pep": "B-1206214", "titulo": "RR-CIND-POV-PONTO NOVO-PONTO NOVO", "municipio": "QUEIMADAS", "status": "PROGRAMADA", "ar": "", "kit": "", "med": ""}, {"pep": "B-1153411", "titulo": "ER-CIND-POV UMBUZEIRO GRANDE", "municipio": "QUEIMADAS", "status": "PROGRAMADA", "ar": "", "kit": "", "med": ""}, {"pep": "B-1018779", "titulo": "ER-CIND-POV-LAGEDO-RURAL", "municipio": "QUEIMADAS", "status": "PROGRAMADA", "ar": "", "kit": "", "med": ""}, {"pep": "B-1240964", "titulo": "ER-PREF-PR -ALAGOINHAS-CENTRO", "municipio": "MAIRI", "status": "PROGRAMADA", "ar": "", "kit": "", "med": ""}, {"pep": "B-1241127", "titulo": "ER-CIND-FAZ-JENIPAPEIRO 777777-RURAL", "municipio": "MAIRI", "status": "PROGRAMADA", "ar": "", "kit": "", "med": ""}, {"pep": "B-1046419", "titulo": "ER-CIND-FAZ-VAZEA GRANDE-VAZEA GRANDE", "municipio": "QUEIMADAS", "status": "PROGRAMADA", "ar": "", "kit": "", "med": ""}, {"pep": "B-1052918", "titulo": "ER-CIND-FAZ-UMBURANA-RURAL QUEIMADAS", "municipio": "QUEIMADAS", "status": "PROGRAMADA", "ar": "", "kit": "", "med": ""}, {"pep": "B-1067393", "titulo": "ER-CIND-FAZ-FAZENDINHA-ALECRIM", "municipio": "QUEIMADAS", "status": "PROGRAMADA", "ar": "", "kit": "", "med": ""}, {"pep": "B-1070021", "titulo": "RR-CIND-POV-TANQUES-RURAL", "municipio": "QUEIMADAS", "status": "PROGRAMADA", "ar": "", "kit": "", "med": ""}, {"pep": "B-1117674", "titulo": "ER-CIND-POV-TIRIRICA E BANANEIRA-RURAL", "municipio": "QUEIMADAS", "status": "PROGRAMADA", "ar": "", "kit": "", "med": ""}, {"pep": "B-1120206", "titulo": "ER-CIND-POV-RURAL-LAGOINHA", "municipio": "QUEIMADAS", "status": "PROGRAMADA", "ar": "", "kit": "", "med": ""}, {"pep": "B-1123183", "titulo": "ER-CIND-POV-PEDROLANDIA-RURAL-QUEIMADAS", "municipio": "QUEIMADAS", "status": "PROGRAMADA", "ar": "", "kit": "", "med": ""}, {"pep": "B-1127661", "titulo": "ER-CIND-FAZ SANTO ANTONIO-RURAL", "municipio": "QUEIMADAS", "status": "PROGRAMADA", "ar": "", "kit": "", "med": ""}, {"pep": "B-1135323", "titulo": "ER-CIND-POV-CANCELAS-RURAL-QUEIMADAS", "municipio": "QUEIMADAS", "status": "PROGRAMADA", "ar": "", "kit": "", "med": ""}, {"pep": "B-1135416", "titulo": "ER-CIND-FAZ-LAGOA-DAS CAMARADAS", "municipio": "QUEIMADAS", "status": "PROGRAMADA", "ar": "", "kit": "", "med": ""}, {"pep": "B-1144312", "titulo": "ER-CIND-FAZ-MARRUA-PONTO NOVO", "municipio": "QUEIMADAS", "status": "PROGRAMADA", "ar": "", "kit": "", "med": ""}, {"pep": "B-1149616", "titulo": "ER-CIND-POV-SAMAMBAIA 944-RURAL", "municipio": "PONTO NOVO", "status": "PROGRAMADA", "ar": "", "kit": "", "med": ""}, {"pep": "B-1160120", "titulo": "ER-CIND-RCL-FAZ-PEDRA DA ALOGOINHA-QUEIM", "municipio": "QUEIMADAS", "status": "PROGRAMADA", "ar": "", "kit": "", "med": ""}, {"pep": "B-1160293", "titulo": "ER-CIND-POV-V DA CAPOEIRA 7-RR-QUEIMADAS", "municipio": "QUEIMADAS", "status": "PROGRAMADA", "ar": "", "kit": "", "med": ""}, {"pep": "B-1160414", "titulo": "ER-CIND-POV-TANQUES-TANQUES", "municipio": "QUEIMADAS", "status": "PROGRAMADA", "ar": "", "kit": "", "med": ""}, {"pep": "B-1162779", "titulo": "ER-CIND-POV-LAJINHA-LAJINHA", "municipio": "PONTO NOVO", "status": "PROGRAMADA", "ar": "", "kit": "", "med": ""}, {"pep": "B-1164070", "titulo": "ER-CIND-POV-PAU DE COLHER-PAU DE COLHER", "municipio": "QUEIMADAS", "status": "PROGRAMADA", "ar": "", "kit": "", "med": ""}, {"pep": "B-1172217", "titulo": "ER-CIND-RUA-PONTE NOVA-RURAL", "municipio": "QUEIMADAS", "status": "PROGRAMADA", "ar": "", "kit": "", "med": ""}, {"pep": "B-1172243", "titulo": "ER-CIND-POV-LAGOINHA-RURAL", "municipio": "QUEIMADAS", "status": "PROGRAMADA", "ar": "", "kit": "", "med": ""}, {"pep": "B-1175916", "titulo": "ER-CIND-FAZ-MANDINGA-RURAL", "municipio": "PONTO NOVO", "status": "PROGRAMADA", "ar": "", "kit": "", "med": ""}, {"pep": "B-1193381", "titulo": "ER-CIND-POV-ALTO DO CONV-ALTO DO CONV", "municipio": "QUEIMADAS", "status": "PROGRAMADA", "ar": "", "kit": "", "med": ""}, {"pep": "B-1196490", "titulo": "ER-CIND-POV-PEROLANDIA-PEROLANDIA", "municipio": "QUEIMADAS", "status": "PROGRAMADA", "ar": "", "kit": "", "med": ""}, {"pep": "B-1198001", "titulo": "IT-GRUA-RUA-PONTE NOVA-CENTRO", "municipio": "QUEIMADAS", "status": "PROGRAMADA", "ar": "", "kit": "", "med": ""}, {"pep": "B-1227513", "titulo": "ER-CIND-LOT-PROJ DE IRRIGACAO-PTO NOVO", "municipio": "PONTO NOVO", "status": "PROGRAMADA", "ar": "", "kit": "", "med": ""}, {"pep": "B-1231569", "titulo": "ER-CIND-FAZ-POCINHOS-PONTO NOVO", "municipio": "QUEIMADAS", "status": "PROGRAMADA", "ar": "", "kit": "", "med": ""}, {"pep": "B-1236488", "titulo": "ER-CIND-FAZ-VARZEA DA NOVILHA-RURAL", "municipio": "QUEIMADAS", "status": "PROGRAMADA", "ar": "", "kit": "", "med": ""}, {"pep": "B-1239465", "titulo": "ER-CIND-POV-BOQUIRAO-RURAL", "municipio": "QUEIMADAS", "status": "PROGRAMADA", "ar": "", "kit": "", "med": ""}, {"pep": "B-1239627", "titulo": "ER-CIND-FAZ-JACURICI 99-RURAL", "municipio": "QUEIMADAS", "status": "PROGRAMADA", "ar": "", "kit": "", "med": ""}, {"pep": "B-1244598", "titulo": "ER-CIND-POV-GREGORIO 11-RURAL", "municipio": "QUEIMADAS", "status": "PROGRAMADA", "ar": "", "kit": "", "med": ""}, {"pep": "B-1245910", "titulo": "ER-CIND-FAZ ITAPEMIRIM-JITIRANA II", "municipio": "VÁRZEA DO POÇO", "status": "PROGRAMADA", "ar": "", "kit": "", "med": ""}, {"pep": "B-1245935", "titulo": "ER-CIND-FAZ-VARZEA DA CABRA-KM 2", "municipio": "CAPIM GROSSO", "status": "PROGRAMADA", "ar": "", "kit": "", "med": ""}, {"pep": "B-1245938", "titulo": "ER-SEIN-RUA-ALCEBIADES RIOS-CENTRO", "municipio": "VÁRZEA DO POÇO", "status": "PROGRAMADA", "ar": "", "kit": "", "med": ""}, {"pep": "B-1246003", "titulo": "ER-CIND-RUA-DAS POPULARES-CENTRO", "municipio": "PONTO NOVO", "status": "PROGRAMADA", "ar": "", "kit": "", "med": ""}, {"pep": "B-1246057", "titulo": "ER-CIND-FAZ-IPOEIRA-RURAL", "municipio": "BAIXA GRANDE", "status": "PROGRAMADA", "ar": "", "kit": "", "med": ""}, {"pep": "B-1246118", "titulo": "ER-SEIN-FAZ-SALGADO-ITALEGRE", "municipio": "BAIXA GRANDE", "status": "PROGRAMADA", "ar": "", "kit": "", "med": ""}, {"pep": "B-1246150", "titulo": "ER-CIND-RUA-DA UMBURANAS-CENTRO", "municipio": "OUROLÂNDIA", "status": "PROGRAMADA", "ar": "", "kit": "", "med": ""}, {"pep": "B-1246226", "titulo": "ER-SEIN-FAZ-CAES-RURAL - MANDACARU", "municipio": "BAIXA GRANDE", "status": "PROGRAMADA", "ar": "", "kit": "", "med": ""}, {"pep": "B-1247044", "titulo": "ER-CIND-FAZ-RANCHO NOVA VIDA-JENIPAPO", "municipio": "JACOBINA", "status": "PROGRAMADA", "ar": "", "kit": "", "med": ""}, {"pep": "B-1245843", "titulo": "ER-CCOL-RUA-EMBAIXADORA-RURAL", "municipio": "CAPIM GROSSO", "status": "PROGRAMADA", "ar": "", "kit": "", "med": ""}];
+const PROG_SUPERVISORES = ["ETEMILSON SANTOS", "ALÉCIO OLIVEIRA", "GILVANDO CRUZ"];
+const PROG_ENCARREGADOS = {"DOUGLAS MELO": {"matricula": "27483", "supervisor": "ETEMILSON SANTOS"}, "RODRIGO SILVA": {"matricula": "27591", "supervisor": "ETEMILSON SANTOS"}, "JAILTON SILVA": {"matricula": "27489", "supervisor": "ETEMILSON SANTOS"}, "GERALDO GOMES": {"matricula": "27426", "supervisor": "ETEMILSON SANTOS"}, "CLEBSON NETO": {"matricula": "27567", "supervisor": "ETEMILSON SANTOS"}, "CARLOS CRUZ": {"matricula": "27970", "supervisor": "ETEMILSON SANTOS"}, "JENILSON OLIVEIRA": {"matricula": "27786", "supervisor": "ALÉCIO OLIVEIRA"}, "JOAO PEREIRA": {"matricula": "27492", "supervisor": "ALÉCIO OLIVEIRA"}, "EMERSON SILVA": {"matricula": "27906", "supervisor": "ETEMILSON SANTOS"}, "PATRICIO BARBOSA": {"matricula": "27946", "supervisor": "ALÉCIO OLIVEIRA"}, "JULIO SANTOS": {"matricula": "27560", "supervisor": "ETEMILSON SANTOS"}, "VALMIR SILVA": {"matricula": "2340", "supervisor": "ALÉCIO OLIVEIRA"}, "CARLOS ANDRÉ": {"matricula": "27565", "supervisor": "ALÉCIO OLIVEIRA"}, "OSIMAR SOUZA": {"matricula": "27985", "supervisor": "ALÉCIO OLIVEIRA"}, "DIOGO SANTOS": {"matricula": "27675", "supervisor": "GILVANDO CRUZ"}, "LUCIANO SILVA": {"matricula": "27943", "supervisor": "GILVANDO CRUZ"}, "FABIANO MORAES": {"matricula": "27780", "supervisor": "GILVANDO CRUZ"}, "AMILTON COSTA": {"matricula": "27873", "supervisor": "GILVANDO CRUZ"}, "JAIR DE JESUS": {"matricula": "28051", "supervisor": "ALÉCIO OLIVEIRA"}, "TIAGO SOUZA": {"matricula": "28348", "supervisor": "ALÉCIO OLIVEIRA"}, "CAIQUE": {"matricula": "28653", "supervisor": "GILVANDO CRUZ"}, "RYAN": {"matricula": "28289", "supervisor": "ALÉCIO OLIVEIRA"}};
+const PROG_EQUIPES = {"DOUGLAS MELO": {"cod_equipe": "2299", "qtd_colab": 6, "alojados": "SIM"}, "RODRIGO SILVA": {"cod_equipe": "2300", "qtd_colab": 6, "alojados": "SIM"}, "JAILTON SILVA": {"cod_equipe": "2301", "qtd_colab": 6, "alojados": "SIM"}, "GERALDO GOMES": {"cod_equipe": "2302", "qtd_colab": 6, "alojados": "SIM"}, "CLEBSON NETO": {"cod_equipe": "2303", "qtd_colab": 6, "alojados": "SIM"}, "CARLOS CRUZ": {"cod_equipe": "2349", "qtd_colab": 6, "alojados": "SIM"}, "JENILSON OLIVEIRA": {"cod_equipe": "2350", "qtd_colab": 6, "alojados": "SIM"}, "JOAO PEREIRA": {"cod_equipe": "2351", "qtd_colab": 1, "alojados": "NÃO"}, "EMERSON SILVA": {"cod_equipe": "2332", "qtd_colab": 6, "alojados": "SIM"}, "PATRICIO BARBOSA": {"cod_equipe": "2333", "qtd_colab": 5, "alojados": "SIM"}, "JULIO SANTOS": {"cod_equipe": "2339", "qtd_colab": 6, "alojados": "SIM"}, "VALMIR SILVA": {"cod_equipe": "2340", "qtd_colab": 2, "alojados": "NÃO"}, "CARLOS ANDRÉ": {"cod_equipe": "2363", "qtd_colab": 3, "alojados": "SIM"}, "OSIMAR SOUZA": {"cod_equipe": "2352", "qtd_colab": 1, "alojados": "NÃO"}, "DIOGO SANTOS": {"cod_equipe": "2304", "qtd_colab": 6, "alojados": "SIM"}, "LUCIANO SILVA": {"cod_equipe": "2305", "qtd_colab": 6, "alojados": "SIM"}, "FABIANO MORAES": {"cod_equipe": "2326", "qtd_colab": 6, "alojados": "SIM"}, "AMILTON COSTA": {"cod_equipe": "2330", "qtd_colab": 6, "alojados": "SIM"}, "JAIR DE JESUS": {"cod_equipe": "2368", "qtd_colab": 2, "alojados": "NÃO"}, "TIAGO SOUZA": {"cod_equipe": "2371", "qtd_colab": 1, "alojados": "NÃO"}, "CAIQUE": {"cod_equipe": "2541", "qtd_colab": 6, "alojados": "SIM"}, "RYAN": {"cod_equipe": "2541", "qtd_colab": 2, "alojados": "SIM"}};
+const PROG_PROGRAMADORES = [{"nome": "AQUILES SANTOS SOUZA", "matricula": "27705", "base": "BASE JACOBINA - BA", "gerencia": "GERENTE ALÉCIO OLIVEIRA"}, {"nome": "ABNER VICENTE FONSECA", "matricula": "28241", "base": "BASE JACOBINA - BA", "gerencia": "GERENTE ALÉCIO OLIVEIRA"}, {"nome": "JOÃO PEDRO SILVA DE ARAÚJO", "matricula": "27680", "base": "BASE JACOBINA - BA", "gerencia": "GERENTE ALÉCIO OLIVEIRA"}, {"nome": "JOSÉ CARLOS SILVA DOS SANTOS", "matricula": "27423", "base": "BASE JACOBINA - BA", "gerencia": "GERENTE ALÉCIO OLIVEIRA"}];
+const PROG_ATIVIDADES = [{"cod": "BA001", "servico": "SERVICOS_RUR-BA", "tipo": "RETROESCAVADEIRA", "descricao": "ABERTURA DE ACESSO", "fatorK": 0.01}, {"cod": "BA002", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "ATERRAMENTO  DE  CERCAS - SECCIONAMENTO  DE  CERCA", "fatorK": 84.272526}, {"cod": "BA003", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "ARRASTAMENTO  MANUAL( 9/400 POR KM)", "fatorK": 1369.448379819}, {"cod": "BA003", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "ACONPANHAMENTO DA RETRO - ESCAVAÇÃO", "fatorK": 0.01}, {"cod": "BA004", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA VIVA", "descricao": "ALTERAÇÃO DE ESTRUTURA", "fatorK": 1221.73}, {"cod": "BA005", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA VIVA", "descricao": "ADICIONAR +1 ESTRIBO", "fatorK": 1121.03}, {"cod": "BA006", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "CARREGAMENTO", "fatorK": 0.01}, {"cod": "BA007", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "CORREÇÃO  DE  PG", "fatorK": 0.01}, {"cod": "BA008", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "CAVA COM TRADO EM ROCHA", "fatorK": 978.88}, {"cod": "BA009", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "CAVA COM TRADO NORMAL", "fatorK": 0.01}, {"cod": "BA010", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "CAVA EM ROCHA COM EXPLOSIVO", "fatorK": 946.47}, {"cod": "BA011", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "CAVA MANUAL EM ROCHA", "fatorK": 978.88}, {"cod": "BA012", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "CAVA MANUAL NORMAL", "fatorK": 0.01}, {"cod": "BA013", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "DELIGAMENTO - ENERGIZAÇÃO", "fatorK": 0.01}, {"cod": "BA014", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "DEVOLUÇÃO E SAQUE DE MATERIAIS NA BASE", "fatorK": 0.01}, {"cod": "BA015", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "DESLIGAMENTO - ADF", "fatorK": 3.98}, {"cod": "BA016", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA VIVA", "descricao": "DESLIGAMENTO - IMPLANTAÇÃO DE POSTES", "fatorK": 1527.51}, {"cod": "BA017", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "DESCARREGAMENTO E DISTRUBUIÇÃO DE POSTES", "fatorK": 251.73}, {"cod": "BA018", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "DESLIGAMENTO - IMPLANTAÇÃO DE POSTES", "fatorK": 1527.51}, {"cod": "BA019", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "ESCAVAÇÃO PARA ESTAÍ", "fatorK": 0.01}, {"cod": "BA020", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "EQUIPE SACANDO MATERIAIS NA BASE", "fatorK": 0.01}, {"cod": "BA021", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "ESCAVAÇÃO - IMPLANTAÇÃO - LANÇAMENTO E ENERGIZAÇÃO", "fatorK": 1746.93}, {"cod": "BA022", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "FUNDAÇÃO  ESPECIAL", "fatorK": 1822.42}, {"cod": "BA023", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA VIVA", "descricao": "INTERCALAÇÃO DE POSTES - APOIO A DÍNAMO", "fatorK": 2039.12}, {"cod": "BA024", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA VIVA", "descricao": "INTERCALAÇÃO DE POSTES", "fatorK": 2039.12}, {"cod": "BA025", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA VIVA", "descricao": "INSTAÇÃO DE CHAVES", "fatorK": 44.89}, {"cod": "BA026", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA VIVA", "descricao": "INSTALAÇÃO DE RELIGADOR", "fatorK": 0.01}, {"cod": "BA027", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "IMPLANTAÇÃO DE POSTES", "fatorK": 1527.5}, {"cod": "BA028", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "INSTALAÇÃO DE ESTAÍ", "fatorK": 740.0}, {"cod": "BA029", "servico": "SERVICOS_RUR-BA", "tipo": "LIGAÇÃO DE CLIENTE", "descricao": "INSTALAÇÃO DE RAMAL DE LIGAÇÃO", "fatorK": 129.23}, {"cod": "BA030", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "IMPLANTAÇÃO DE POSTES COM LV", "fatorK": 1527.5}, {"cod": "BA031", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "INSTALAÇÃO DE TRAFOS", "fatorK": 872.31}, {"cod": "BA032", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "IMPLANTAÇÃO DE POSTES DE FIBRA", "fatorK": 1527.5}, {"cod": "BA033", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA VIVA", "descricao": "INSTALAÇÃO DE BANCADA COM N3", "fatorK": 2121.36}, {"cod": "BA034", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "INSTALAÇÃO DE TRAFOS TRIFASICO", "fatorK": 0.01}, {"cod": "BA035", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "INSTALAÇÃO MONOFASICO", "fatorK": 0.01}, {"cod": "BA036", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "INSTALAÇÃO DE TRAFOS BIFASICO", "fatorK": 0.01}, {"cod": "BA037", "servico": "SERVICOS_RUR-BA", "tipo": "LIGAÇÃO DE CLIENTE", "descricao": "INSTALAÇÃO DE KIT MEDIDOR", "fatorK": 227.76}, {"cod": "BA038", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "IMPLANTAÇÃO DE POSTES E ESCAVAÇÕES", "fatorK": 1527.5}, {"cod": "BA039", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "IMPLANTAÇÃO DE POSTES E INSTALAÇÃO DE TRAFOS", "fatorK": 2385.14}, {"cod": "BA040", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "INSTALAÇÃO DE TRAFOS E ENERGIZAÇÃO", "fatorK": 857.63}, {"cod": "BA041", "servico": "SERVICOS_RUR-BA", "tipo": "LIGAÇÃO DE CLIENTE", "descricao": "LIGAÇÃO DE CLIENTE", "fatorK": 646.5}, {"cod": "BA042", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "LOCAÇÃO E ESCAVAÇÃO", "fatorK": 0.01}, {"cod": "BA043", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "LOCAÇÃO", "fatorK": 0.01}, {"cod": "BA044", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "LANÇAMENTO DE CABO", "fatorK": 3.98}, {"cod": "BA045", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "LANÇAMENTO E TENSIONAMENTO DE CONDUTORES BT", "fatorK": 0.01}, {"cod": "BA046", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "LANÇAMENTO DE CONDUTORES XLPE(METRO - FASE)", "fatorK": 16.47}, {"cod": "BA047", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "LANÇAMENTO DE CABO E ENERGIZAÇÃO", "fatorK": 3.98}, {"cod": "BA048", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "MONTAR BANCADA DE TRAFOS", "fatorK": 2121.78}, {"cod": "BA049", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "MANUTENÇÃO DE EQUIPAMENTO", "fatorK": 0.01}, {"cod": "BA050", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "PINTURAS   DE  PG", "fatorK": 0.01}, {"cod": "BA051", "servico": "SERVICOS_RUR-BA", "tipo": "PODA", "descricao": "PODA RURAL - GALHOS FINOS", "fatorK": 45.59}, {"cod": "BA052", "servico": "SERVICOS_RUR-BA", "tipo": "PODA", "descricao": "PODA - CORTE DE ARVORE DAP+45", "fatorK": 164.8}, {"cod": "BA053", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA VIVA", "descricao": "REGULADOR - APOIO A DÍNAMO", "fatorK": 1024.36}, {"cod": "BA054", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA VIVA", "descricao": "RELOCAR ESTRUTURA", "fatorK": 0.01}, {"cod": "BA055", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA VIVA", "descricao": "RETIRAR ESTAÍ", "fatorK": 0.01}, {"cod": "BA056", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA VIVA", "descricao": "RELOCAR CRUZETAS", "fatorK": 0.01}, {"cod": "BA057", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "RETIRAR POSTES", "fatorK": 643.91}, {"cod": "BA058", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "RETIRAR CONDUTOR BT MULTIPLEXO", "fatorK": 4.92}, {"cod": "BA059", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "RETIRAR CONDUTOR BT NU", "fatorK": 0.66}, {"cod": "BA060", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "RETIRAR CABO AT NU", "fatorK": 0.66}, {"cod": "BA061", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA VIVA", "descricao": "REMOÇÃO DE CHAVES PROVISÓRIAS", "fatorK": 725.68}, {"cod": "BA062", "servico": "SERVICOS_RUR-BA", "tipo": "RETROESCAVADEIRA", "descricao": "RETRO CAVA COM ROMPEDOR", "fatorK": 1253.86}, {"cod": "BA063", "servico": "SERVICOS_RUR-BA", "tipo": "RETROESCAVADEIRA", "descricao": "RETRO CAVA EM ROCHA", "fatorK": 978.88}, {"cod": "BA064", "servico": "SERVICOS_RUR-BA", "tipo": "RETROESCAVADEIRA", "descricao": "RETRO CAVA NORMAL", "fatorK": 0.01}, {"cod": "BA065", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "SACAR MATERIAIS E IR PARA OBRA - INPLANTAÇÃO DE POSTES", "fatorK": 1779.22}, {"cod": "BA066", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA VIVA", "descricao": "TENSIONAMENTO DE CABO - LV", "fatorK": 0.01}, {"cod": "BA067", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "TRANSPORTE DE MATERIAIS", "fatorK": 0.01}, {"cod": "BA068", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "TRANSPORTE E DISTRIBUIÇÃO DE POSTES", "fatorK": 251.18}, {"cod": "BA069", "servico": "SERVICOS_RUR-BA", "tipo": "LIGAÇÃO DE CLIENTE", "descricao": "VISITA DE OBRA - ADF", "fatorK": 0.01}, {"cod": "BA066", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA VIVA", "descricao": "REMOÇÃO DE CHAVES PROVISÓRIAS", "fatorK": 351.25}, {"cod": "BA023", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA VIVA", "descricao": "INTERCALAÇÃO DE POSTES - APOIO A SIPEL BONFIM", "fatorK": 2121.54}, {"cod": "BA061", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA VIVA", "descricao": "REALIZAR MANUTENÇÃO", "fatorK": 0}, {"cod": "BA062", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA VIVA", "descricao": "SERVIÇO COM LV", "fatorK": 1527.51}, {"cod": "BA063", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA VIVA", "descricao": "REALIZAR MUDANÇA", "fatorK": 0}, {"cod": "BA064", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA VIVA", "descricao": "ENERGIZAÇÃO", "fatorK": 0}, {"cod": "BA065", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA VIVA", "descricao": "LOCAÇÃO E ESCAVAÇÃO", "fatorK": 0}, {"cod": "BA066", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA VIVA", "descricao": "SUBSTITUIR CONDUTOR", "fatorK": 0}, {"cod": "BA067", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "SACAR MATERIAIS E IR PARA OBRA / LANÇAMENTO DE CABO", "fatorK": 3.98}, {"cod": "BA068", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "DEVOLVER MATERIAIS", "fatorK": 1.0}, {"cod": "BA069", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "DESCARREGAMENTO E IMPLANTAÇÃO DE POSTES", "fatorK": 1527.51}, {"cod": "BA070", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "DESLIGAMENTO E ENERGIZAÇÃO", "fatorK": 1897.23}, {"cod": "BA071", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA VIVA", "descricao": "ADCIONAR 1° VÃO", "fatorK": 1916.55}, {"cod": "BA072", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA VIVA", "descricao": "SUBSTITUIR POSTES", "fatorK": 3681.12}, {"cod": "BA073", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "DESLIGAMENTO / ADF", "fatorK": 3.98}, {"cod": "BA074", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA VIVA", "descricao": "INSTALAÇÃO DE CHAVE PROVISÓRIA", "fatorK": 137.89}, {"cod": "BA075", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA VIVA", "descricao": "APOIO A BASE DE IRECÊ / INTERCALAÇÃO", "fatorK": 2124.23}, {"cod": "BA076", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA VIVA", "descricao": "EQUIPE OCIOSA POR FALTA DE MATERIAS", "fatorK": 0}, {"cod": "BA077", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA VIVA", "descricao": "APOIO A BASE DE IRECÊ / INTERCALAÇÃO", "fatorK": 0}, {"cod": "BA078", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "SACAR MATERIAL E IR PARA A OBRA / FUNDAÇÃO ESPECIAL", "fatorK": 1857.23}, {"cod": "BA079", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "DESLIGAMENTO / SUBSTITUIÇÃO DE CONDUTORES", "fatorK": 6.21}, {"cod": "BA080", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "DESLIGAENTO / RETIRAR POSTES", "fatorK": 223.14}, {"cod": "BA081", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "EQUIPE SEM FRENTE DE SERVIÇO POR FALTA DE VERBAS DE MATERIAIS", "fatorK": 0}, {"cod": "BA080", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "REALIZAR ENSAIO ELETRICO", "fatorK": 0}];
+const PROG_TOTAIS_ENC = {"AMILTON COSTA": {"valor_previsto": 0.01, "valor_realizado": 0.01}, "CARLOS ANDRÉ": {"valor_previsto": 1221.73, "valor_realizado": 1221.73}, "CARLOS CRUZ": {"valor_previsto": 5337.66, "valor_realizado": 5337.66}, "DIOGO SANTOS": {"valor_previsto": 3716.5, "valor_realizado": 3915.5}, "DOUGLAS MELO": {"valor_previsto": 3781.0, "valor_realizado": 4378.0}, "EMERSON SILVA": {"valor_previsto": 5084.86, "valor_realizado": 6863.54}, "FABIANO MORAES": {"valor_previsto": 7637.5, "valor_realizado": 9165.0}, "GERALDO GOMES": {"valor_previsto": 0.01, "valor_realizado": 0.01}, "JAILTON SILVA": {"valor_previsto": 6110.0, "valor_realizado": 7637.5}, "JOAO PEREIRA": {"valor_previsto": 3915.54, "valor_realizado": 5873.3}, "JULIO SANTOS": {"valor_previsto": 4582.5, "valor_realizado": 4582.5}, "LUCIANO SILVA": {"valor_previsto": 6110.0, "valor_realizado": 1527.5}, "PATRICIO BARBOSA": {"valor_previsto": 2039.12, "valor_realizado": 2039.12}, "RODRIGO SILVA": {"valor_previsto": 6110.0, "valor_realizado": 6110.0}, "TIAGO SOUZA": {"valor_previsto": 4894.42, "valor_realizado": 4894.41}, "VALMIR SILVA": {"valor_previsto": 3625.6000000000004, "valor_realizado": 5603.200000000001}};
+</script>
+
+<!-- ===== TOPO: TÍTULO + STATS ===== -->
+<div style="display:flex;align-items:center;gap:12px;margin-bottom:18px;flex-wrap:wrap;">
+  <div style="flex:1;min-width:200px;">
+    <div style="font-size:1.05rem;font-weight:900;color:#fff;letter-spacing:0.5px;">📅 PROGRAMAÇÃO DIÁRIA</div>
+    <div style="font-size:0.68rem;color:rgba(255,255,255,0.6);font-weight:600;margin-top:2px;">BASE JACOBINA · GERENTE ALÉCIO OLIVEIRA</div>
+  </div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;" id="prog-stat-cards"></div>
+</div>
+
+<!-- ===== TABS: LANÇAMENTO / REGISTROS / DASHBOARD ===== -->
+<div style="display:flex;gap:0;margin-bottom:16px;background:#1a2a3a;border-radius:12px;padding:4px;width:fit-content;">
+  <button id="prog-tab-form" onclick="progSwitchTab('form')" style="padding:8px 20px;border-radius:9px;border:none;font-family:'Barlow',sans-serif;font-size:0.78rem;font-weight:800;cursor:pointer;letter-spacing:0.5px;background:linear-gradient(135deg,#7e3af2,#9f7aea);color:#fff;">➕ LANÇAR</button>
+  <button id="prog-tab-list" onclick="progSwitchTab('list')" style="padding:8px 20px;border-radius:9px;border:none;font-family:'Barlow',sans-serif;font-size:0.78rem;font-weight:800;cursor:pointer;letter-spacing:0.5px;background:transparent;color:rgba(255,255,255,0.5);">📋 REGISTROS</button>
+  <button id="prog-tab-dash" onclick="progSwitchTab('dash')" style="padding:8px 20px;border-radius:9px;border:none;font-family:'Barlow',sans-serif;font-size:0.78rem;font-weight:800;cursor:pointer;letter-spacing:0.5px;background:transparent;color:rgba(255,255,255,0.5);">📊 DASHBOARD</button>
+</div>
+
+<!-- ===================== TAB: FORMULÁRIO ===================== -->
+<div id="prog-view-form">
+<div style="background:#fff;border-radius:16px;padding:22px 24px;box-shadow:0 4px 20px rgba(0,0,0,0.12);">
+  <div style="font-size:0.8rem;font-weight:800;color:#0b5e62;letter-spacing:1px;text-transform:uppercase;margin-bottom:16px;padding-bottom:10px;border-bottom:2px solid #e0f5f3;">🗂️ DADOS DA EQUIPE</div>
+  
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;margin-bottom:20px;">
+    <!-- DATA -->
+    <div>
+      <label style="font-size:0.65rem;font-weight:800;color:#888;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:5px;">DATA *</label>
+      <input type="date" id="pf-data" style="width:100%;padding:9px 12px;border:1.5px solid #e0e8f0;border-radius:9px;font-family:'Barlow',sans-serif;font-size:0.85rem;font-weight:700;color:#1a365d;outline:none;box-sizing:border-box;" onfocus="this.style.borderColor='#7e3af2'" onblur="this.style.borderColor='#e0e8f0'">
+    </div>
+    <!-- SUPERVISOR -->
+    <div>
+      <label style="font-size:0.65rem;font-weight:800;color:#888;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:5px;">SUPERVISOR *</label>
+      <select id="pf-supervisor" onchange="progOnSupChange()" style="width:100%;padding:9px 12px;border:1.5px solid #e0e8f0;border-radius:9px;font-family:'Barlow',sans-serif;font-size:0.82rem;font-weight:700;color:#1a365d;outline:none;background:#fff;box-sizing:border-box;" onfocus="this.style.borderColor='#7e3af2'" onblur="this.style.borderColor='#e0e8f0'">
+        <option value="">Selecione...</option>
+      </select>
+    </div>
+    <!-- PROGRAMADOR -->
+    <div>
+      <label style="font-size:0.65rem;font-weight:800;color:#888;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:5px;">PROGRAMADOR(A) *</label>
+      <select id="pf-programador" style="width:100%;padding:9px 12px;border:1.5px solid #e0e8f0;border-radius:9px;font-family:'Barlow',sans-serif;font-size:0.82rem;font-weight:700;color:#1a365d;outline:none;background:#fff;box-sizing:border-box;" onfocus="this.style.borderColor='#7e3af2'" onblur="this.style.borderColor='#e0e8f0'">
+        <option value="">Selecione...</option>
+      </select>
+    </div>
+    <!-- ENCARREGADO -->
+    <div>
+      <label style="font-size:0.65rem;font-weight:800;color:#888;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:5px;">ENCARREGADO *</label>
+      <select id="pf-encarregado" onchange="progOnEncChange()" style="width:100%;padding:9px 12px;border:1.5px solid #e0e8f0;border-radius:9px;font-family:'Barlow',sans-serif;font-size:0.82rem;font-weight:700;color:#1a365d;outline:none;background:#fff;box-sizing:border-box;" onfocus="this.style.borderColor='#7e3af2'" onblur="this.style.borderColor='#e0e8f0'">
+        <option value="">Selecione...</option>
+      </select>
+    </div>
+    <!-- QTD COLAB -->
+    <div>
+      <label style="font-size:0.65rem;font-weight:800;color:#888;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:5px;">QTD COLABORADORES</label>
+      <input type="number" id="pf-qtd-colab" min="0" max="30" style="width:100%;padding:9px 12px;border:1.5px solid #e0e8f0;border-radius:9px;font-family:'Barlow',sans-serif;font-size:0.85rem;font-weight:700;color:#1a365d;outline:none;box-sizing:border-box;" onfocus="this.style.borderColor='#7e3af2'" onblur="this.style.borderColor='#e0e8f0'">
+    </div>
+    <!-- ALOJADOS -->
+    <div>
+      <label style="font-size:0.65rem;font-weight:800;color:#888;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:5px;">ALOJADOS</label>
+      <select id="pf-alojados" style="width:100%;padding:9px 12px;border:1.5px solid #e0e8f0;border-radius:9px;font-family:'Barlow',sans-serif;font-size:0.82rem;font-weight:700;color:#1a365d;outline:none;background:#fff;box-sizing:border-box;" onfocus="this.style.borderColor='#7e3af2'" onblur="this.style.borderColor='#e0e8f0'">
+        <option value="">-</option><option value="SIM">SIM</option><option value="NÃO">NÃO</option>
+      </select>
+    </div>
+  </div>
+
+  <div style="font-size:0.8rem;font-weight:800;color:#0b5e62;letter-spacing:1px;text-transform:uppercase;margin-bottom:16px;padding-bottom:10px;border-bottom:2px solid #e0f5f3;">🏗️ DADOS DA OBRA</div>
+  
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;margin-bottom:20px;">
+    <!-- PEP OBRA com busca -->
+    <div style="grid-column:span 2;">
+      <label style="font-size:0.65rem;font-weight:800;color:#888;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:5px;">PEP OBRA *</label>
+      <div style="position:relative;">
+        <input type="text" id="pf-pep-input" placeholder="Digite PEP ou nome da obra..." autocomplete="off"
+          style="width:100%;padding:9px 12px;border:1.5px solid #e0e8f0;border-radius:9px;font-family:'Barlow',sans-serif;font-size:0.82rem;font-weight:700;color:#1a365d;outline:none;box-sizing:border-box;"
+          oninput="progPepSearch(this.value)" onfocus="this.style.borderColor='#7e3af2';progPepSearch(this.value)" onblur="setTimeout(()=>document.getElementById('pf-pep-dd').style.display='none',200)">
+        <input type="hidden" id="pf-pep-val">
+        <div id="pf-pep-dd" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:1.5px solid #7e3af2;border-radius:9px;max-height:200px;overflow-y:auto;z-index:50;box-shadow:0 8px 24px rgba(0,0,0,0.15);margin-top:3px;"></div>
+      </div>
+    </div>
+    <!-- NOME DA OBRA (auto) -->
+    <div style="grid-column:span 2;">
+      <label style="font-size:0.65rem;font-weight:800;color:#888;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:5px;">NOME DA OBRA</label>
+      <input type="text" id="pf-nome-obra" readonly style="width:100%;padding:9px 12px;border:1.5px solid #e8ecef;border-radius:9px;font-family:'Barlow',sans-serif;font-size:0.82rem;font-weight:700;color:#1a365d;background:#f8fafc;outline:none;box-sizing:border-box;">
+    </div>
+    <!-- MUNICIPIO (auto) -->
+    <div>
+      <label style="font-size:0.65rem;font-weight:800;color:#888;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:5px;">MUNICÍPIO</label>
+      <input type="text" id="pf-municipio" readonly style="width:100%;padding:9px 12px;border:1.5px solid #e8ecef;border-radius:9px;font-family:'Barlow',sans-serif;font-size:0.82rem;font-weight:700;color:#1a365d;background:#f8fafc;outline:none;box-sizing:border-box;">
+    </div>
+    <!-- AR COELBA (auto) -->
+    <div>
+      <label style="font-size:0.65rem;font-weight:800;color:#888;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:5px;">AR COELBA</label>
+      <input type="text" id="pf-ar" readonly style="width:100%;padding:9px 12px;border:1.5px solid #e8ecef;border-radius:9px;font-family:'Barlow',sans-serif;font-size:0.72rem;font-weight:700;color:#1a365d;background:#f8fafc;outline:none;box-sizing:border-box;">
+    </div>
+  </div>
+
+  <div style="font-size:0.8rem;font-weight:800;color:#0b5e62;letter-spacing:1px;text-transform:uppercase;margin-bottom:16px;padding-bottom:10px;border-bottom:2px solid #e0f5f3;">⚡ ATIVIDADE</div>
+  
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;margin-bottom:20px;">
+    <!-- TIPO DO SERVIÇO -->
+    <div>
+      <label style="font-size:0.65rem;font-weight:800;color:#888;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:5px;">TIPO DO SERVIÇO *</label>
+      <select id="pf-tipo" onchange="progOnTipoChange()" style="width:100%;padding:9px 12px;border:1.5px solid #e0e8f0;border-radius:9px;font-family:'Barlow',sans-serif;font-size:0.82rem;font-weight:700;color:#1a365d;outline:none;background:#fff;box-sizing:border-box;" onfocus="this.style.borderColor='#7e3af2'" onblur="this.style.borderColor='#e0e8f0'">
+        <option value="">Selecione...</option>
+        <option>LINHA MORTA</option><option>LINHA VIVA</option><option>RETROESCAVADEIRA</option><option>LIGAÇÃO DE CLIENTE</option><option>PODA</option>
+      </select>
+    </div>
+    <!-- ATIVIDADE -->
+    <div style="grid-column:span 2;">
+      <label style="font-size:0.65rem;font-weight:800;color:#888;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:5px;">ATIVIDADE *</label>
+      <select id="pf-atividade" onchange="progOnAtivChange()" style="width:100%;padding:9px 12px;border:1.5px solid #e0e8f0;border-radius:9px;font-family:'Barlow',sans-serif;font-size:0.82rem;font-weight:700;color:#1a365d;outline:none;background:#fff;box-sizing:border-box;" onfocus="this.style.borderColor='#7e3af2'" onblur="this.style.borderColor='#e0e8f0'">
+        <option value="">Selecione o tipo primeiro...</option>
+      </select>
+    </div>
+    <!-- VALOR UNITÁRIO (auto) -->
+    <div>
+      <label style="font-size:0.65rem;font-weight:800;color:#888;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:5px;">VALOR UNITÁRIO (Fator K)</label>
+      <input type="text" id="pf-vunit" readonly style="width:100%;padding:9px 12px;border:1.5px solid #e8ecef;border-radius:9px;font-family:'Barlow',sans-serif;font-size:0.85rem;font-weight:800;color:#276749;background:#f0fff4;outline:none;box-sizing:border-box;">
+    </div>
+    <!-- QTD PREVISTO -->
+    <div>
+      <label style="font-size:0.65rem;font-weight:800;color:#888;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:5px;">QTD PREVISTO</label>
+      <input type="number" id="pf-qtd-prev" min="0" step="0.01" oninput="progCalcValores()" style="width:100%;padding:9px 12px;border:1.5px solid #e0e8f0;border-radius:9px;font-family:'Barlow',sans-serif;font-size:0.85rem;font-weight:700;color:#1a365d;outline:none;box-sizing:border-box;" onfocus="this.style.borderColor='#7e3af2'" onblur="this.style.borderColor='#e0e8f0'">
+    </div>
+    <!-- QTD REALIZADO -->
+    <div>
+      <label style="font-size:0.65rem;font-weight:800;color:#888;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:5px;">QTD REALIZADO</label>
+      <input type="number" id="pf-qtd-real" min="0" step="0.01" oninput="progCalcValores()" style="width:100%;padding:9px 12px;border:1.5px solid #e0e8f0;border-radius:9px;font-family:'Barlow',sans-serif;font-size:0.85rem;font-weight:700;color:#1a365d;outline:none;box-sizing:border-box;" onfocus="this.style.borderColor='#7e3af2'" onblur="this.style.borderColor='#e0e8f0'">
+    </div>
+    <!-- STATUS % (auto) -->
+    <div>
+      <label style="font-size:0.65rem;font-weight:800;color:#888;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:5px;">STATUS %</label>
+      <input type="text" id="pf-status" readonly style="width:100%;padding:9px 12px;border:1.5px solid #e8ecef;border-radius:9px;font-family:'Barlow',sans-serif;font-size:0.85rem;font-weight:800;color:#1a365d;background:#f8fafc;outline:none;box-sizing:border-box;">
+    </div>
+    <!-- VALOR PREVISTO (auto) -->
+    <div>
+      <label style="font-size:0.65rem;font-weight:800;color:#888;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:5px;">VALOR PREVISTO</label>
+      <input type="text" id="pf-vprev" readonly style="width:100%;padding:9px 12px;border:1.5px solid #e8ecef;border-radius:9px;font-family:'Barlow',sans-serif;font-size:0.85rem;font-weight:800;color:#276749;background:#f0fff4;outline:none;box-sizing:border-box;">
+    </div>
+    <!-- VALOR REALIZADO (auto) -->
+    <div>
+      <label style="font-size:0.65rem;font-weight:800;color:#888;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:5px;">VALOR REALIZADO</label>
+      <input type="text" id="pf-vreal" readonly style="width:100%;padding:9px 12px;border:1.5px solid #e8ecef;border-radius:9px;font-family:'Barlow',sans-serif;font-size:0.85rem;font-weight:800;color:#276749;background:#f0fff4;outline:none;box-sizing:border-box;">
+    </div>
+  </div>
+
+  <!-- Botões -->
+  <div style="display:flex;gap:10px;justify-content:flex-end;padding-top:16px;border-top:1px solid #e8ecef;">
+    <button onclick="progFormClear()" style="padding:10px 24px;background:#f0f4f8;border:none;border-radius:10px;font-family:'Barlow',sans-serif;font-size:0.8rem;font-weight:800;color:#64748b;cursor:pointer;letter-spacing:0.5px;">🗑️ LIMPAR</button>
+    <button onclick="progFormSave()" style="padding:10px 28px;background:linear-gradient(135deg,#7e3af2,#9f7aea);border:none;border-radius:10px;font-family:'Barlow',sans-serif;font-size:0.8rem;font-weight:800;color:#fff;cursor:pointer;letter-spacing:0.5px;box-shadow:0 4px 12px rgba(126,58,242,0.35);">💾 SALVAR REGISTRO</button>
+  </div>
+  
+  <!-- Toast feedback -->
+  <div id="prog-toast" style="display:none;margin-top:12px;padding:10px 16px;border-radius:10px;font-size:0.8rem;font-weight:700;text-align:center;"></div>
+</div>
+</div>
+
+<!-- ===================== TAB: REGISTROS ===================== -->
+<div id="prog-view-list" style="display:none;">
+  <!-- Filtros -->
+  <div style="background:#fff;border-radius:14px;padding:16px 20px;margin-bottom:12px;box-shadow:0 4px 16px rgba(0,0,0,0.1);display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+    <input type="text" id="prog-search" placeholder="🔍 Buscar por encarregado, obra, PEP, município..." 
+      oninput="progRenderList()"
+      style="flex:1;min-width:220px;padding:9px 14px;border:1.5px solid #e0e8f0;border-radius:9px;font-family:'Barlow',sans-serif;font-size:0.82rem;font-weight:600;outline:none;"
+      onfocus="this.style.borderColor='#7e3af2'" onblur="this.style.borderColor='#e0e8f0'">
+    <select id="prog-filter-sup" onchange="progRenderList()" style="padding:9px 12px;border:1.5px solid #e0e8f0;border-radius:9px;font-family:'Barlow',sans-serif;font-size:0.82rem;font-weight:700;color:#1a365d;background:#fff;outline:none;" onfocus="this.style.borderColor='#7e3af2'" onblur="this.style.borderColor='#e0e8f0'">
+      <option value="">Todos Supervisores</option>
+    </select>
+    <select id="prog-filter-tipo" onchange="progRenderList()" style="padding:9px 12px;border:1.5px solid #e0e8f0;border-radius:9px;font-family:'Barlow',sans-serif;font-size:0.82rem;font-weight:700;color:#1a365d;background:#fff;outline:none;" onfocus="this.style.borderColor='#7e3af2'" onblur="this.style.borderColor='#e0e8f0'">
+      <option value="">Todos Tipos</option>
+      <option>LINHA MORTA</option><option>LINHA VIVA</option><option>RETROESCAVADEIRA</option><option>LIGAÇÃO DE CLIENTE</option><option>PODA</option>
+    </select>
+    <button onclick="progExportCSV()" style="padding:9px 16px;background:#276749;border:none;border-radius:9px;font-family:'Barlow',sans-serif;font-size:0.75rem;font-weight:800;color:#fff;cursor:pointer;letter-spacing:0.5px;">⬇️ CSV</button>
+    <span id="prog-list-count" style="font-size:0.72rem;font-weight:800;color:#888;white-space:nowrap;"></span>
+  </div>
+  <!-- Tabela -->
+  <div style="background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,0.1);">
+    <div style="overflow-x:auto;">
+      <table style="width:100%;border-collapse:collapse;font-size:0.76rem;">
+        <thead>
+          <tr style="background:linear-gradient(135deg,#7e3af2,#9f7aea);color:#fff;">
+            <th style="padding:10px 12px;text-align:left;font-weight:800;white-space:nowrap;letter-spacing:0.3px;">DATA</th>
+            <th style="padding:10px 12px;text-align:left;font-weight:800;white-space:nowrap;">SUPERVISOR</th>
+            <th style="padding:10px 12px;text-align:left;font-weight:800;white-space:nowrap;">ENCARREGADO</th>
+            <th style="padding:10px 8px;text-align:center;font-weight:800;white-space:nowrap;">COLAB.</th>
+            <th style="padding:10px 8px;text-align:center;font-weight:800;white-space:nowrap;">ALOJ.</th>
+            <th style="padding:10px 12px;text-align:left;font-weight:800;white-space:nowrap;">PEP OBRA</th>
+            <th style="padding:10px 12px;text-align:left;font-weight:800;white-space:nowrap;min-width:180px;">NOME DA OBRA</th>
+            <th style="padding:10px 12px;text-align:left;font-weight:800;white-space:nowrap;">MUNICÍPIO</th>
+            <th style="padding:10px 12px;text-align:left;font-weight:800;white-space:nowrap;min-width:200px;">ATIVIDADE</th>
+            <th style="padding:10px 12px;text-align:left;font-weight:800;white-space:nowrap;">TIPO</th>
+            <th style="padding:10px 8px;text-align:center;font-weight:800;white-space:nowrap;">PREV.</th>
+            <th style="padding:10px 8px;text-align:center;font-weight:800;white-space:nowrap;">REAL.</th>
+            <th style="padding:10px 8px;text-align:center;font-weight:800;white-space:nowrap;">STATUS</th>
+            <th style="padding:10px 10px;text-align:right;font-weight:800;white-space:nowrap;">R$ PREV.</th>
+            <th style="padding:10px 10px;text-align:right;font-weight:800;white-space:nowrap;">R$ REAL.</th>
+            <th style="padding:10px 8px;text-align:center;font-weight:800;">AÇÕES</th>
+          </tr>
+        </thead>
+        <tbody id="prog-tbody"></tbody>
+      </table>
+    </div>
+    <div id="prog-empty" style="text-align:center;padding:40px;color:#aaa;font-size:0.85rem;font-weight:600;display:none;">
+      Nenhum registro encontrado. Use a aba LANÇAR para adicionar.
+    </div>
+  </div>
+</div>
+
+<!-- ===================== TAB: DASHBOARD ===================== -->
+<div id="prog-view-dash" style="display:none;">
+  <!-- Cards de totais gerais -->
+  <div id="prog-dash-cards" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;margin-bottom:16px;"></div>
+  
+  <!-- Por Supervisor -->
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:14px;margin-bottom:16px;" id="prog-dash-sup-grid"></div>
+
+  <!-- Tabela por encarregado -->
+  <div style="background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,0.1);margin-bottom:16px;">
+    <div style="background:linear-gradient(135deg,#0b5e62,#14a085);padding:14px 20px;">
+      <div style="color:#fff;font-size:0.82rem;font-weight:800;letter-spacing:0.5px;">💰 PRODUÇÃO POR ENCARREGADO</div>
+      <div style="color:rgba(255,255,255,0.6);font-size:0.65rem;font-weight:600;margin-top:2px;">Valores acumulados do período</div>
+    </div>
+    <div style="overflow-x:auto;">
+      <table style="width:100%;border-collapse:collapse;font-size:0.78rem;">
+        <thead><tr style="background:#f8fafc;border-bottom:2px solid #e8ecef;">
+          <th style="padding:10px 16px;text-align:left;font-weight:800;color:#475569;">ENCARREGADO</th>
+          <th style="padding:10px 16px;text-align:left;font-weight:800;color:#475569;">SUPERVISOR</th>
+          <th style="padding:10px 16px;text-align:left;font-weight:800;color:#475569;">EQUIPE</th>
+          <th style="padding:10px 16px;text-align:right;font-weight:800;color:#276749;">R$ PREVISTO</th>
+          <th style="padding:10px 16px;text-align:right;font-weight:800;color:#276749;">R$ REALIZADO</th>
+          <th style="padding:10px 16px;text-align:center;font-weight:800;color:#475569;">EFICIÊNCIA</th>
+        </tr></thead>
+        <tbody id="prog-dash-enc-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Atividades mais usadas -->
+  <div style="background:#fff;border-radius:14px;padding:20px 24px;box-shadow:0 4px 16px rgba(0,0,0,0.1);">
+    <div style="font-size:0.82rem;font-weight:800;color:#0b5e62;letter-spacing:0.5px;margin-bottom:14px;">🏆 ATIVIDADES MAIS LANÇADAS</div>
+    <div id="prog-dash-ativ" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:8px;"></div>
+  </div>
+</div>
+
+</div><!-- /page-prog -->
+
+
+
+<!-- MODAL PRESENÇA ONLINE -->
+<div class="presence-modal" id="presence-modal" onclick="if(event.target.id==='presence-modal')presenceCloseModal()">
+  <div class="presence-box">
+    <div class="presence-header">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <div style="width:36px;height:36px;background:rgba(255,255,255,0.15);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1rem;">👥</div>
+        <div>
+          <div style="color:#fff;font-size:0.95rem;font-weight:800;">USUÁRIOS ONLINE AGORA</div>
+          <div style="color:rgba(255,255,255,0.65);font-size:0.68rem;font-weight:600;margin-top:1px;" id="presence-modal-sub">Carregando...</div>
         </div>
       </div>
+      <button onclick="presenceCloseModal()" style="background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.2);color:#fff;width:32px;height:32px;border-radius:9px;cursor:pointer;font-size:1rem;font-weight:800;display:flex;align-items:center;justify-content:center;">✕</button>
+    </div>
 
-      <!-- Upload area -->
-      <div style="padding:18px 22px;border-bottom:1px solid #f0e6ff;">
-        <label style="cursor:pointer;display:block;">
-          <div id="xlsm-drop-zone" style="border:2px dashed #d8b4fe;border-radius:12px;padding:20px 24px;display:flex;align-items:center;gap:14px;background:linear-gradient(135deg,#faf5ff,#f3e8ff);transition:all 0.2s;"
-            ondragover="event.preventDefault();this.style.background='#ede9fe';this.style.borderColor='#9c27b0';"
-            ondragleave="this.style.background='linear-gradient(135deg,#faf5ff,#f3e8ff)';this.style.borderColor='#d8b4fe';"
-            ondrop="event.preventDefault();this.style.background='linear-gradient(135deg,#faf5ff,#f3e8ff)';this.style.borderColor='#d8b4fe';xlsmHandleFile(event.dataTransfer.files[0]);">
-            <span style="font-size:2rem;flex-shrink:0;">&#128196;</span>
-            <div>
-              <div style="font-size:0.85rem;font-weight:800;color:#7b2d8b;">Clique ou arraste o arquivo Excel aqui</div>
-              <div style="font-size:0.7rem;font-weight:600;color:#888;margin-top:3px;" id="xlsm-file-name">Formatos aceitos: .xlsm · .xlsx · .xls &nbsp;·&nbsp; Aba: <strong style="color:#7b2d8b;">Programação Diária</strong></div>
-            </div>
-          </div>
-          <input type="file" accept=".xlsm,.xlsx,.xls" style="display:none;" id="xlsm-input" onchange="xlsmHandleFile(this.files[0]);this.value=''">
-        </label>
-        <div id="xlsm-msg" style="margin-top:10px;font-size:0.78rem;font-weight:700;display:none;padding:8px 12px;border-radius:7px;border-left:3px solid;"></div>
-      </div>
-
-      <!-- Stats bar (shown after load) -->
-      <div id="xlsm-stats" style="display:none;padding:14px 22px;background:#faf5ff;border-bottom:1px solid #f0e6ff;display:flex;flex-wrap:wrap;gap:16px;align-items:center;">
-        <div style="display:flex;gap:10px;flex-wrap:wrap;">
-          <div style="text-align:center;padding:8px 16px;background:#fff;border-radius:8px;border:1px solid #e9d5ff;">
-            <div style="font-size:1.4rem;font-weight:900;color:#7b2d8b;" id="xlsm-stat-equipes">0</div>
-            <div style="font-size:0.6rem;font-weight:800;color:#aaa;text-transform:uppercase;letter-spacing:1px;">Equipes</div>
-          </div>
-          <div style="text-align:center;padding:8px 16px;background:#fff;border-radius:8px;border:1px solid #e9d5ff;">
-            <div style="font-size:1.4rem;font-weight:900;color:#2b6cb0;" id="xlsm-stat-obras">0</div>
-            <div style="font-size:0.6rem;font-weight:800;color:#aaa;text-transform:uppercase;letter-spacing:1px;">Obras</div>
-          </div>
-          <div style="text-align:center;padding:8px 16px;background:#fff;border-radius:8px;border:1px solid #e9d5ff;">
-            <div style="font-size:1.4rem;font-weight:900;color:#0d7377;" id="xlsm-stat-colab">0</div>
-            <div style="font-size:0.6rem;font-weight:800;color:#aaa;text-transform:uppercase;letter-spacing:1px;">Colaboradores</div>
-          </div>
-          <div style="text-align:center;padding:8px 16px;background:#fff;border-radius:8px;border:1px solid #c6f6d5;">
-            <div style="font-size:1.4rem;font-weight:900;color:#276749;" id="xlsm-stat-val-prev">R$0</div>
-            <div style="font-size:0.6rem;font-weight:800;color:#aaa;text-transform:uppercase;letter-spacing:1px;">Valor Previsto</div>
-          </div>
-          <div style="text-align:center;padding:8px 16px;background:#fff;border-radius:8px;border:1px solid #bee3f8;">
-            <div style="font-size:1.4rem;font-weight:900;color:#2b6cb0;" id="xlsm-stat-val-real">R$0</div>
-            <div style="font-size:0.6rem;font-weight:800;color:#aaa;text-transform:uppercase;letter-spacing:1px;">Valor Realizado</div>
-          </div>
-        </div>
-        <!-- Data e base -->
-        <div style="margin-left:auto;text-align:right;">
-          <div style="font-size:0.82rem;font-weight:800;color:#7b2d8b;" id="xlsm-header-data"></div>
-          <div style="font-size:0.7rem;font-weight:700;color:#888;" id="xlsm-header-base"></div>
-        </div>
+    <!-- Meu nome -->
+    <div style="padding:14px 24px;background:#f0fafa;border-bottom:1px solid #e0f5f3;">
+      <div style="font-size:0.65rem;font-weight:800;color:#888;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px;">MEU NOME (como apareço para os outros)</div>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <input type="text" id="presence-my-name" placeholder="Ex: ALAN-IRC, Supervisor João..." maxlength="40"
+          style="flex:1;padding:9px 14px;border:1.5px solid #c0e8e5;border-radius:9px;font-family:'Barlow',sans-serif;font-size:0.88rem;font-weight:700;color:#1a365d;outline:none;background:#fff;transition:border-color 0.15s;"
+          onfocus="this.style.borderColor='#14a085'" onblur="this.style.borderColor='#c0e8e5'"
+          oninput="presenceSaveName(this.value)">
+        <span id="presence-name-saved" style="font-size:0.7rem;font-weight:700;color:#14a085;white-space:nowrap;display:none;">✓ Salvo</span>
       </div>
     </div>
 
-    <!-- Filtros -->
-    <div id="xlsm-filtros-area" style="display:none;background:#fff;border-radius:12px;padding:14px 20px;margin-bottom:14px;box-shadow:0 2px 12px rgba(0,0,0,0.07);">
-      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
-        <span style="font-size:0.68rem;font-weight:800;color:#aaa;letter-spacing:1.5px;text-transform:uppercase;white-space:nowrap;">&#128269; SUPERVISOR:</span>
-        <div id="xlsm-sup-bar" style="display:flex;gap:6px;flex-wrap:wrap;flex:1;"></div>
-        <input type="text" id="xlsm-search" placeholder="&#128269; Buscar obra, encarregado, município, PEP..." oninput="xlsmRender()"
-          style="padding:7px 14px;border:1.5px solid #e9d5ff;border-radius:8px;font-family:'Barlow',sans-serif;font-size:0.8rem;font-weight:600;color:#333;outline:none;min-width:260px;transition:border-color 0.15s;"
-          onfocus="this.style.borderColor='#9c27b0'" onblur="this.style.borderColor='#e9d5ff'">
+    <div class="presence-body">
+      <div id="presence-list">
+        <div style="text-align:center;padding:24px;color:#aaa;font-size:0.85rem;font-weight:600;">Carregando usuários...</div>
       </div>
     </div>
 
-    <!-- Tabela principal -->
-    <div id="xlsm-resultado" style="display:none;background:#fff;border-radius:14px;box-shadow:0 2px 14px rgba(0,0,0,0.08);overflow:hidden;">
-      <div style="padding:12px 20px;background:linear-gradient(135deg,#faf5ff,#f3e8ff);border-bottom:1px solid #e9d5ff;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
-        <span style="font-size:0.85rem;font-weight:800;color:#7b2d8b;">&#128203; EQUIPES PROGRAMADAS</span>
-        <span style="font-size:0.75rem;font-weight:700;color:#9c27b0;" id="xlsm-result-count">0 registros</span>
-      </div>
-      <div style="overflow-x:auto;">
-        <table style="width:100%;border-collapse:collapse;font-family:'Barlow',sans-serif;font-size:0.8rem;">
-          <thead>
-            <tr style="background:linear-gradient(135deg,#f3e8ff,#ede9fe);border-bottom:2px solid #d8b4fe;position:sticky;top:0;z-index:5;">
-              <th style="padding:10px 14px;text-align:left;font-size:0.62rem;font-weight:800;color:#7b2d8b;letter-spacing:1.5px;text-transform:uppercase;white-space:nowrap;">Data</th>
-              <th style="padding:10px 14px;text-align:left;font-size:0.62rem;font-weight:800;color:#7b2d8b;letter-spacing:1.5px;text-transform:uppercase;white-space:nowrap;">Supervisor</th>
-              <th style="padding:10px 14px;text-align:left;font-size:0.62rem;font-weight:800;color:#7b2d8b;letter-spacing:1.5px;text-transform:uppercase;white-space:nowrap;">Encarregado</th>
-              <th style="padding:10px 14px;text-align:left;font-size:0.62rem;font-weight:800;color:#7b2d8b;letter-spacing:1.5px;text-transform:uppercase;white-space:nowrap;">Colab / Aloj.</th>
-              <th style="padding:10px 14px;text-align:left;font-size:0.62rem;font-weight:800;color:#7b2d8b;letter-spacing:1.5px;text-transform:uppercase;">Nome da Obra</th>
-              <th style="padding:10px 14px;text-align:left;font-size:0.62rem;font-weight:800;color:#7b2d8b;letter-spacing:1.5px;text-transform:uppercase;white-space:nowrap;">Município</th>
-              <th style="padding:10px 14px;text-align:left;font-size:0.62rem;font-weight:800;color:#7b2d8b;letter-spacing:1.5px;text-transform:uppercase;white-space:nowrap;">PEP Obra</th>
-              <th style="padding:10px 14px;text-align:left;font-size:0.62rem;font-weight:800;color:#7b2d8b;letter-spacing:1.5px;text-transform:uppercase;">Atividades</th>
-              <th style="padding:10px 14px;text-align:center;font-size:0.62rem;font-weight:800;color:#7b2d8b;letter-spacing:1.5px;text-transform:uppercase;white-space:nowrap;">Qtd Prev.</th>
-              <th style="padding:10px 14px;text-align:center;font-size:0.62rem;font-weight:800;color:#7b2d8b;letter-spacing:1.5px;text-transform:uppercase;white-space:nowrap;">Qtd Real.</th>
-              <th style="padding:10px 14px;text-align:right;font-size:0.62rem;font-weight:800;color:#7b2d8b;letter-spacing:1.5px;text-transform:uppercase;white-space:nowrap;">Valor Prev.</th>
-              <th style="padding:10px 14px;text-align:right;font-size:0.62rem;font-weight:800;color:#7b2d8b;letter-spacing:1.5px;text-transform:uppercase;white-space:nowrap;">Valor Real.</th>
-              <th style="padding:10px 14px;text-align:left;font-size:0.62rem;font-weight:800;color:#7b2d8b;letter-spacing:1.5px;text-transform:uppercase;white-space:nowrap;">Tipo Serviço</th>
-              <th style="padding:10px 14px;text-align:center;font-size:0.62rem;font-weight:800;color:#7b2d8b;letter-spacing:1.5px;text-transform:uppercase;white-space:nowrap;">Status%</th>
-            </tr>
-          </thead>
-          <tbody id="xlsm-tbody"></tbody>
-        </table>
-      </div>
+    <div style="padding:12px 24px;background:#f8fafc;border-top:1px solid #e8ecef;font-size:0.65rem;font-weight:600;color:#aaa;text-align:center;">
+      🔄 Atualiza automaticamente a cada 15s · Presença expira após 2 min de inatividade
     </div>
-
-    <!-- Empty state -->
-    <div id="xlsm-empty" style="background:#fff;border-radius:14px;padding:60px 40px;text-align:center;color:#aaa;box-shadow:0 2px 14px rgba(0,0,0,0.08);">
-      <div style="font-size:3.5rem;margin-bottom:16px;">&#128196;</div>
-      <div style="font-size:1rem;font-weight:700;color:#7b2d8b;">Importe o arquivo Excel da Programação Diária</div>
-      <div style="font-size:0.78rem;margin-top:6px;">Arraste ou clique na área acima para carregar o arquivo .xlsm / .xlsx</div>
-    </div>
-
   </div>
 </div>
 
