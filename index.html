@@ -324,7 +324,7 @@ body { font-family:'Barlow',sans-serif; background:#f0f4f5; min-height:100vh; pa
 </head>
 <body>
 
-<div class="loading-overlay show" id="loading-overlay">
+<div class="loading-overlay" id="loading-overlay">
   <div class="loading-spinner"></div>
   <div class="loading-text">Conectando ao banco de dados...</div>
 </div>
@@ -1779,10 +1779,14 @@ function aprFilterTable() {
 
 // ─── INIT ─────────────────────────────────────────────────────────────────────
 function hideLoading() {
-  const el = document.getElementById('loading-overlay');
-  el.classList.remove('show');
-  el.style.display = 'none';
-  el.style.pointerEvents = 'none';
+  try {
+    const el = document.getElementById('loading-overlay');
+    if (el) {
+      el.classList.remove('show');
+      el.style.display = 'none';
+      el.style.pointerEvents = 'none';
+    }
+  } catch(e) {}
 }
 
 // ─── AUTO-REFRESH (todos os usuários veem as atualizações do adm) ──────────────
@@ -1851,11 +1855,11 @@ setInterval(async () => {
 }, 30000);
 
 (async function() {
-  // ── FAILSAFE: force hide loading overlay after 6s no matter what ──
+  // ── FAILSAFE: força ocultar overlay após 2s independente do que aconteça ──
   const _loadTimeout = setTimeout(() => {
     const lo = document.getElementById('loading-overlay');
     if (lo) { lo.classList.remove('show'); lo.style.display = 'none'; }
-  }, 6000);
+  }, 2000);
 
   const now=new Date(); const pad=n=>String(n).padStart(2,'0');
   document.getElementById('page-time').textContent =
@@ -1866,7 +1870,9 @@ setInterval(async () => {
   try { render(); } catch(e) {}
   if (aprData && aprData.length > 0) { try { renderApr(); } catch(e) {} }
   clearTimeout(_loadTimeout);
-  try { hideLoading(); } catch(e) { const lo=document.getElementById('loading-overlay'); if(lo) lo.style.display='none'; }
+  // Garante que o overlay sempre seja ocultado, independente de erros
+  try { hideLoading(); } catch(e) {}
+  try { const lo=document.getElementById('loading-overlay'); if(lo){ lo.classList.remove('show'); lo.style.display='none'; lo.style.pointerEvents='none'; } } catch(e) {}
 
   // Em background, tenta sincronizar com Supabase
   try { await dbLoad(); render(); } catch(e) {}
