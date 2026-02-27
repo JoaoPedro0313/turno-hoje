@@ -525,6 +525,11 @@ body { font-family:'Barlow',sans-serif; background:#f0f4f5; min-height:100vh; pa
             <div id="comp-base-info"><span style="color:#aaa;font-size:0.72rem;font-weight:600;">Carregando...</span></div>
           </div>
         </div>
+        <span id="comp-auto-label" style="font-size:0.65rem;font-weight:700;color:#38a169;background:#f0fff4;border:1px solid #9ae6b4;padding:3px 10px;border-radius:20px;white-space:nowrap;display:inline-flex;align-items:center;gap:5px;">
+          <span style="width:6px;height:6px;border-radius:50%;background:#38a169;display:inline-block;animation:blink 2s infinite;"></span>
+          <span id="comp-auto-countdown">Auto-sync 5:00</span>
+        </span>
+        <button onclick="compAutoSincronizar()" style="padding:6px 12px;border:1.5px solid #9ae6b4;background:#f0fff4;border-radius:8px;font-family:'Barlow',sans-serif;font-size:0.72rem;font-weight:800;cursor:pointer;color:#276749;transition:all 0.15s;white-space:nowrap;flex-shrink:0;" onmouseover="this.style.background='#c6f6d5'" onmouseout="this.style.background='#f0fff4'" title="Sincronizar agora">⟳ Sync</button>
         <button onclick="compResetBase()" style="padding:6px 14px;border:1.5px solid #fde8e8;background:#fff;border-radius:8px;font-family:'Barlow',sans-serif;font-size:0.72rem;font-weight:800;cursor:pointer;color:#c53030;transition:all 0.15s;white-space:nowrap;flex-shrink:0;" onmouseover="this.style.background='#fde8e8'" onmouseout="this.style.background='#fff'">🗑️ Resetar Base</button>
       </div>
     </div>
@@ -2072,6 +2077,106 @@ async function compResetBase() {
 }
 
 compHandleFileAtual();
+
+// ─── AUTO-ATUALIZAÇÃO DO COMPARADOR ──────────────────────────────────────────
+const COMP_AUTO_REFRESH_MS = 5 * 60 * 1000; // 5 minutos
+let compAutoRefreshTimer = null;
+let compLastBancoTs = null; // timestamp do último banco conhecido
+
+async function compCheckForUpdates() {
+  // Só sincroniza se a página do comparador estiver visível
+  if (document.getElementById('page-comp').style.display === 'none') return;
+
+  try {
+    // 1. Verifica se o banco no Supabase mudou
+    const res = await fetch(SUPA_URL + '/rest/v1/turno_data?key=eq.obras_base&select=updated_at', {
+      headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY }
+    });
+    if (!res.ok) return;
+    const data = await res.json();
+    if (!Array.isArray(data) || !data.length) return;
+    const ts = data[0].updated_at || '';
+
+    if (compLastBancoTs === null) {
+      compLastBancoTs = ts;
+    } else if (ts && ts !== compLastBancoTs) {
+      // Banco foi atualizado — re-sincroniza Sheets e recompara
+      compLastBancoTs = ts;
+      await compAutoSincronizar();
+    }
+  } catch(e) {
+    // Silencioso
+  }
+}
+
+async function compAutoSincronizar() {
+  // Sincroniza silenciosamente do Google Sheets
+  if (!window.Papa) {
+    await new Promise(resolve => {
+      const s = document.createElement('script');
+      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js';
+      s.onload = resolve; document.head.appendChild(s);
+    });
+  }
+  try {
+    const [resJac, resIrc] = await Promise.all([fetch(GSHEETS.JACOBINA), fetch(GSHEETS.IRECE)]);
+    if (!resJac.ok || !resIrc.ok) return;
+    const [textJac, textIrc] = await Promise.all([resJac.text(), resIrc.text()]);
+    const dataJac = compParseCSVText(textJac, 'JACOBINA');
+    const dataIrc = compParseCSVText(textIrc, 'IRECÊ');
+    if (!dataJac || !dataJac.length || !dataIrc || !dataIrc.length) return;
+    const merged = [...dataJac, ...dataIrc];
+    // Atualiza o banco local silenciosamente
+    const now = new Date(), pad = n => String(n).padStart(2,'0');
+    const updatedAt = pad(now.getDate())+'/'+pad(now.getMonth()+1)+'/'+now.getFullYear()+' às '+pad(now.getHours())+':'+pad(now.getMinutes());
+    const info = { count: merged.length, updatedAt, utds: ['IRECÊ ('+dataIrc.length+')', 'JACOBINA ('+dataJac.length+')'] };
+    bancoDB = merged; bancoDBInfo = info;
+    lsSet('obras_base', { data: merged, info });
+    compUpdateBaseUI();
+    mapaCarregarDoBanco();
+    // Pisca badge para indicar atualização
+    const badge = document.getElementById('db-badge');
+    if (badge) { badge.style.transition='opacity 0.3s'; badge.style.opacity='0.3'; setTimeout(()=>{ badge.style.opacity='1'; },300); }
+    // Se há dados atuais carregados, reexecuta a comparação automaticamente
+    if (compDataAtual && compDataAtual.length) {
+      compCompare();
+    }
+    // Mostra indicador de atualização na UI do comparador
+    const baseInfo = document.getElementById('comp-base-info');
+    if (baseInfo) {
+      const dot = document.createElement('span');
+      dot.style.cssText = 'display:inline-block;width:7px;height:7px;border-radius:50%;background:#14a085;box-shadow:0 0 6px #14a085;margin-left:8px;animation:blink 1s 3;';
+      baseInfo.appendChild(dot);
+      setTimeout(() => dot.remove(), 3500);
+    }
+  } catch(e) {
+    // Silencioso
+  }
+}
+
+let compCountdownSec = COMP_AUTO_REFRESH_MS / 1000;
+
+function compUpdateCountdown() {
+  compCountdownSec--;
+  if (compCountdownSec < 0) compCountdownSec = COMP_AUTO_REFRESH_MS / 1000;
+  const m = Math.floor(compCountdownSec / 60);
+  const s = compCountdownSec % 60;
+  const el = document.getElementById('comp-auto-countdown');
+  if (el) el.textContent = 'Auto-sync ' + m + ':' + String(s).padStart(2,'0');
+}
+
+function startCompAutoRefresh() {
+  if (compAutoRefreshTimer) clearInterval(compAutoRefreshTimer);
+  compCountdownSec = COMP_AUTO_REFRESH_MS / 1000;
+  compAutoRefreshTimer = setInterval(() => {
+    compCheckForUpdates();
+    compCountdownSec = COMP_AUTO_REFRESH_MS / 1000;
+  }, COMP_AUTO_REFRESH_MS);
+  setInterval(compUpdateCountdown, 1000);
+}
+
+// Inicia o auto-refresh do comparador junto com o resto
+startCompAutoRefresh();
 
 // ─── MÊS HELPERS ──────────────────────────────────────────────────────────────
 const MESES_PT = ['','JAN','FEV','MAR','ABR','MAI','JUN','JUL','AGO','SET','OUT','NOV','DEZ'];
