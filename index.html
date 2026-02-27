@@ -530,7 +530,29 @@ body { font-family:'Barlow',sans-serif; background:#f0f4f5; min-height:100vh; pa
     </div>
     <div style="background:#fff;border-radius:12px;padding:20px;margin-bottom:20px;box-shadow:0 2px 12px rgba(0,0,0,0.07);">
       <div style="font-size:0.72rem;font-weight:800;color:#0d7377;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:14px;">📥 CARREGAR BANCO DE OBRAS (CSVs)</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
+
+      <!-- ── SINCRONIZAÇÃO GOOGLE SHEETS ── -->
+      <div style="background:linear-gradient(135deg,#f0fff4,#e6fffa);border:2px solid #9ae6b4;border-radius:12px;padding:16px 20px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+        <div style="display:flex;align-items:center;gap:12px;">
+          <div style="width:40px;height:40px;background:#38a169;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0;">📊</div>
+          <div>
+            <div style="font-size:0.78rem;font-weight:800;color:#276749;letter-spacing:0.5px;">SINCRONIZAR DIRETO DO GOOGLE SHEETS</div>
+            <div style="font-size:0.7rem;font-weight:600;color:#38a169;margin-top:2px;">Jacobina + Irecê — importa automaticamente sem precisar de CSV</div>
+          </div>
+        </div>
+        <button id="btn-sincronizar-sheets" onclick="sincronizarSheets()"
+          style="padding:10px 22px;background:linear-gradient(135deg,#276749,#38a169);color:#fff;border:none;border-radius:10px;font-family:'Barlow',sans-serif;font-size:0.82rem;font-weight:800;cursor:pointer;letter-spacing:0.5px;box-shadow:0 4px 12px rgba(56,161,105,0.35);white-space:nowrap;transition:all 0.2s;display:flex;align-items:center;gap:8px;"
+          onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='none'">
+          &#8635; Sincronizar do Sheets
+        </button>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
+        <div style="flex:1;height:1px;background:#e2e8f0;"></div>
+        <span style="font-size:0.65rem;font-weight:800;color:#aaa;letter-spacing:1.5px;text-transform:uppercase;white-space:nowrap;">ou carregue CSVs manualmente</span>
+        <div style="flex:1;height:1px;background:#e2e8f0;"></div>
+      </div>
+
         <label style="display:block;cursor:pointer;">
           <div class="upload-card" id="comp-card-irece" style="padding:16px;display:flex;align-items:center;gap:12px;text-align:left;">
             <input type="file" id="comp-file-irece" accept=".csv" style="display:none;" onchange="compHandleBancoCSV(this,'IRECÊ')">
@@ -783,7 +805,14 @@ body { font-family:'Barlow',sans-serif; background:#f0f4f5; min-height:100vh; pa
 // ─── SUPABASE CONFIG ───────────────────────────────────────────────────────────
 const SUPA_URL = 'https://eqxejfoibebcbtsqymji.supabase.co';
 const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVxeGVqZm9pYmViY2J0c3F5bWppIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE4NjUzMTEsImV4cCI6MjA4NzQ0MTMxMX0.lwf7_EJ6UchEOpzhW3cVKztxDGy78gaQblRvgiEwWh8';
+const SUPA_HEADERS = { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY, 'Content-Type': 'application/json' };
 // SDK removido - usando fetch nativo para evitar bloqueio no carregamento
+
+// ─── GOOGLE SHEETS ────────────────────────────────────────────────────────────
+const GSHEETS = {
+  JACOBINA: 'https://docs.google.com/spreadsheets/d/142gvn8pNgJGTGDkidCfuOWMHJ2OCKpJd_FQU8zeo0x8/export?format=csv&gid=1111886256',
+  IRECE:    'https://docs.google.com/spreadsheets/d/14ImbZb8-OCBp78jDtd0QFkSLrMG5vXA7tzrM-x6KQVo/export?format=csv&gid=534264140'
+};
 
 // ─── STATE ─────────────────────────────────────────────────────────────────────
 function todayDate() { const d=new Date(); const p=n=>String(n).padStart(2,'0'); return p(d.getDate())+'/'+p(d.getMonth()+1)+'/'+d.getFullYear(); }
@@ -1783,7 +1812,9 @@ function compParseCSVText(text, utdLabel) {
   let headerIdx = -1;
   for (let i=0; i<Math.min(rows.length,10); i++) {
     const r = rows[i].map(c=>String(c).trim().toUpperCase());
-    if (r.some(c=>c==='NOTA') && r.some(c=>c.includes('PEP'))) { headerIdx=i; break; }
+    // Formato CSV legado (tem coluna NOTA) ou formato Google Sheets (tem PEP OBRA + STATUS DA OBRA)
+    if ((r.some(c=>c==='NOTA') && r.some(c=>c.includes('PEP'))) ||
+        (r.some(c=>c==='PEP OBRA') && r.some(c=>c==='STATUS DA OBRA'))) { headerIdx=i; break; }
   }
   if (headerIdx === -1) return null;
   const headers = rows[headerIdx].map(c=>String(c).trim().replace(/\n/g,' ').toUpperCase());
@@ -1857,6 +1888,7 @@ async function compSalvarBanco() {
     bancoDB = merged; bancoDBInfo = info;
     compUpdateBaseUI();
     compBancoTemp = { 'IRECÊ': null, 'JACOBINA': null };
+    mapaCarregarDoBanco();
     ['irece','jacobina'].forEach(id => {
       document.getElementById('comp-card-'+id)?.classList.remove('loaded');
       document.getElementById('comp-name-'+id).textContent = id==='irece'?'Selecione o CSV de Irecê':'Selecione o CSV de Jacobina';
@@ -2251,7 +2283,67 @@ function progFocarMapa(lat, lon) {
   mapaEnsureLeaflet(() => { mapaMap.setView([lat,lon],16,{animate:true}); const mc=document.getElementById('mapa-container'); if(mc)mc.scrollIntoView({behavior:'smooth',block:'center'}); });
 }
 
-function progLimpar() {
+// ─── SINCRONIZAÇÃO GOOGLE SHEETS ─────────────────────────────────────────────
+async function sincronizarSheets() {
+  const btn = document.getElementById('btn-sincronizar-sheets');
+  const btn2 = document.getElementById('btn-sincronizar-sheets-mapa');
+  const setBtn = (html, dis) => {
+    [btn, btn2].forEach(b => { if (b) { b.innerHTML = html; b.disabled = dis; } });
+  };
+  setBtn('<span class="spinning-icon">&#8635;</span> Sincronizando...', true);
+  setDbStatus('syncing', 'Buscando planilhas...');
+
+  compWithPapa(async () => {
+    try {
+      // Busca ambas as planilhas em paralelo
+      const [resJac, resIrc] = await Promise.all([
+        fetch(GSHEETS.JACOBINA),
+        fetch(GSHEETS.IRECE)
+      ]);
+      if (!resJac.ok) throw new Error('Erro HTTP ' + resJac.status + ' ao buscar Jacobina');
+      if (!resIrc.ok) throw new Error('Erro HTTP ' + resIrc.status + ' ao buscar Irecê');
+
+      const [textJac, textIrc] = await Promise.all([resJac.text(), resIrc.text()]);
+
+      const dataJac = compParseCSVText(textJac, 'JACOBINA');
+      const dataIrc = compParseCSVText(textIrc, 'IRECÊ');
+
+      if (!dataJac || !dataJac.length) throw new Error('Planilha de Jacobina não reconhecida. Verifique se o compartilhamento está como "Qualquer pessoa com o link".');
+      if (!dataIrc || !dataIrc.length) throw new Error('Planilha de Irecê não reconhecida. Verifique se o compartilhamento está como "Qualquer pessoa com o link".');
+
+      const merged = [...dataJac, ...dataIrc];
+      await compSalvarBancoDirectly(merged, dataJac.length, dataIrc.length);
+
+      setBtn('&#9989; Sincronizado!', false);
+      setTimeout(() => setBtn('&#8635; Sincronizar do Sheets', false), 3000);
+      setDbStatus('online', '✅ Planilhas sincronizadas!');
+      setTimeout(() => setDbStatus('online', 'Banco online'), 2500);
+    } catch(e) {
+      setBtn('&#8635; Sincronizar do Sheets', false);
+      setDbStatus('offline', 'Erro ao sincronizar');
+      alert('❌ Erro ao sincronizar:\n\n' + e.message + '\n\nVerifique se as planilhas estão compartilhadas como "Qualquer pessoa com o link pode visualizar".');
+    }
+  });
+}
+
+async function compSalvarBancoDirectly(merged, jacCount, ircCount) {
+  const now = new Date(), pad = n => String(n).padStart(2,'0');
+  const updatedAt = pad(now.getDate())+'/'+pad(now.getMonth()+1)+'/'+now.getFullYear()+' às '+pad(now.getHours())+':'+pad(now.getMinutes());
+  const info = { count: merged.length, updatedAt, utds: ['IRECÊ ('+ircCount+')', 'JACOBINA ('+jacCount+')'] };
+
+  setDbStatus('syncing', 'Salvando banco…');
+  const res = await fetch(SUPA_URL + '/rest/v1/turno_data', {
+    method: 'POST',
+    headers: { ...SUPA_HEADERS, 'Prefer': 'resolution=merge-duplicates' },
+    body: JSON.stringify({ key: 'obras_base', value: { data: merged, info }, updated_at: now.toISOString() })
+  });
+  if (!res.ok) throw new Error('Supabase HTTP ' + res.status);
+  bancoDB = merged; bancoDBInfo = info;
+  compUpdateBaseUI();
+  mapaCarregarDoBanco();
+}
+
+
   progData = []; progSupFiltro = 'TODOS';
   document.getElementById('prog-tbody').innerHTML = '';
   document.getElementById('prog-resultado').style.display = 'none';
@@ -2325,7 +2417,12 @@ function progLimpar() {
       <div id="mapa-placeholder" style="height:580px;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#aaa;font-family:'Barlow',sans-serif;">
         <div style="font-size:4rem;margin-bottom:16px;">&#128506;</div>
         <div style="font-size:1rem;font-weight:700;color:#555;">Aguardando banco de obras</div>
-        <div style="font-size:0.8rem;margin-top:6px;">Salve os CSVs no Comparador para carregar o mapa</div>
+        <div style="font-size:0.8rem;margin-top:6px;margin-bottom:20px;">Sincronize as planilhas ou salve os CSVs no Comparador</div>
+        <button id="btn-sincronizar-sheets-mapa" onclick="sincronizarSheets()"
+          style="padding:12px 28px;background:linear-gradient(135deg,#276749,#38a169);color:#fff;border:none;border-radius:12px;font-family:'Barlow',sans-serif;font-size:0.88rem;font-weight:800;cursor:pointer;letter-spacing:0.5px;box-shadow:0 6px 20px rgba(56,161,105,0.4);display:flex;align-items:center;gap:10px;transition:all 0.2s;"
+          onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='none'">
+          &#8635; Sincronizar do Google Sheets
+        </button>
       </div>
     </div>
     <div id="mapa-tabela-section" style="display:none;background:#fff;border-radius:14px;box-shadow:0 2px 14px rgba(0,0,0,0.08);overflow:hidden;margin-bottom:14px;">
