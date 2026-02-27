@@ -863,26 +863,64 @@ async function diagSupabase() {
   const txt = document.getElementById('diag-text');
   if (!panel || !txt) return;
   panel.style.display = 'block';
-  txt.innerHTML = '⏳ Testando conexão com Supabase...';
+  txt.innerHTML = '⏳ Testando conexão...';
   const t0 = Date.now();
+
+  // Passo 1: testa conectividade básica com o projeto Supabase
   try {
+    const r0 = await fetch(SUPA_URL + '/rest/v1/', {
+      headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY }
+    });
+    const ms0 = Date.now() - t0;
+    txt.innerHTML = '✅ Projeto acessível (HTTP ' + r0.status + ', ' + ms0 + 'ms)<br>⏳ Testando tabela <b>turno_data</b>...';
+  } catch(e0) {
+    const ms0 = Date.now() - t0;
+    txt.innerHTML = `❌ Não conseguiu alcançar o Supabase após ${ms0}ms<br>
+      <b>${e0.name}:</b> ${e0.message}<br><br>
+      <b>Causas prováveis:</b><br>
+      • Sem acesso à internet<br>
+      • URL do projeto incorreta<br>
+      • Projeto Supabase pausado (plano gratuito pausa após inatividade)<br><br>
+      <a href="https://supabase.com/dashboard" target="_blank" style="color:#7ee8fa;font-weight:700;">🔗 Abrir painel Supabase</a>`;
+    return;
+  }
+
+  // Passo 2: testa acesso à tabela turno_data
+  try {
+    const t1 = Date.now();
     const res = await fetch(SUPA_URL + '/rest/v1/turno_data?select=key&limit=1', {
       headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY }
     });
-    const ms = Date.now() - t0;
+    const ms = Date.now() - t1;
+    const body = await res.text();
+
     if (res.ok) {
-      txt.innerHTML = '✅ Conectado! HTTP ' + res.status + ' em ' + ms + 'ms';
+      txt.innerHTML = `✅ Conectado! HTTP ${res.status} · ${ms}ms<br>Dados carregados com sucesso.`;
       await dbLoad(true);
       try { render(); } catch(e2) {}
-      setDbStatus('online', 'Banco online');
-      setTimeout(() => { panel.style.display='none'; }, 2000);
+      setDbStatus('online', 'Banco online ✓');
+      setTimeout(() => { panel.style.display='none'; }, 3000);
     } else {
-      txt.innerHTML = '❌ HTTP ' + res.status + ' em ' + ms + 'ms<br>Verifique permissões da tabela no Supabase.';
+      let hint = '';
+      if (res.status === 401 || res.status === 403) {
+        hint = '<br><br>⚠️ <b>Permissão negada.</b> No Supabase:<br>• Table Editor → turno_data → RLS<br>• Adicione política: <code>USING (true)</code> para SELECT';
+      } else if (res.status === 404 || body.includes('does not exist')) {
+        hint = `<br><br>⚠️ <b>Tabela não encontrada.</b> Crie a tabela <b>turno_data</b> no Supabase:<br>
+          <code style="background:#1a2a3a;padding:4px 8px;border-radius:4px;font-size:0.75rem;display:block;margin-top:6px;">
+          CREATE TABLE turno_data (<br>
+          &nbsp;&nbsp;key TEXT PRIMARY KEY,<br>
+          &nbsp;&nbsp;value JSONB,<br>
+          &nbsp;&nbsp;updated_at TIMESTAMPTZ DEFAULT NOW()<br>
+          );</code>`;
+      } else if (res.status === 0 || res.status === 503) {
+        hint = '<br><br>⚠️ Projeto Supabase pode estar <b>pausado</b>. Acesse o painel para reativá-lo.';
+      }
+      txt.innerHTML = `❌ HTTP ${res.status} · ${ms}ms<br><small style="color:#ffd">${body.substring(0,200)}</small>${hint}<br><br>
+        <a href="https://supabase.com/dashboard/project/eqxejfoibebcbtsqymji" target="_blank" style="color:#7ee8fa;font-weight:700;">🔗 Abrir projeto no Supabase</a>`;
     }
   } catch(e) {
     const ms = Date.now() - t0;
-    txt.innerHTML = '❌ Falha após ' + ms + 'ms<br><b>' + e.name + ':</b> ' + e.message +
-      (e.name === 'TypeError' ? '<br><br>⚠️ Verifique:<br>• CORS bloqueado no Supabase?<br>• Usando file:// em vez de http://?<br>• Sem acesso à internet?' : '');
+    txt.innerHTML = `❌ Erro ao acessar tabela após ${ms}ms<br><b>${e.name}:</b> ${e.message}`;
   }
 }
 
@@ -923,13 +961,21 @@ async function dbLoad(skipLocalLoad) {
     try { render(); } catch(e) {}
   }
 
-  const badgeEl = document.getElementById('db-badge');
-
   try {
+    const controller = new AbortController();
+    const tid = setTimeout(() => controller.abort(), 10000);
     const res = await fetch(SUPA_URL + '/rest/v1/turno_data?select=key,value', {
-      headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY }
+      headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY },
+      signal: controller.signal
     });
-    if (!res.ok) throw new Error('HTTP ' + res.status);
+    clearTimeout(tid);
+
+    if (!res.ok) {
+      const body = await res.text().catch(() => '');
+      console.warn('[Supabase] HTTP', res.status, body.substring(0, 300));
+      throw new Error('HTTP ' + res.status + ' — ' + body.substring(0, 150));
+    }
+
     const data = await res.json();
     if (Array.isArray(data) && data.length > 0) {
       data.forEach(row => {
@@ -940,7 +986,6 @@ async function dbLoad(skipLocalLoad) {
     setDbStatus('online', 'Banco online ✓');
   } catch(e) {
     console.warn('[Supabase] Não conectou:', e.name, e.message);
-    // Se tem dados locais, fica verde mesmo sem banco
     const temDados = teams.ok.length > 0 || teams.falta.length > 0;
     setDbStatus(temDados ? 'local' : 'offline',
                 temDados ? 'Dados locais' : 'Sem conexão');
@@ -1923,7 +1968,12 @@ setInterval(async () => {
   try { const lo=document.getElementById('loading-overlay'); if(lo){ lo.classList.remove('show'); lo.style.display='none'; lo.style.pointerEvents='none'; } } catch(e) {}
 
   // Em background, tenta sincronizar com Supabase (atualiza badge para online se conseguir)
-  try { await dbLoad(true); render(); } catch(e) {}
+  try {
+    await dbLoad(true);
+    render();
+  } catch(e) {
+    console.error('[Supabase startup] Erro:', e);
+  }
   if (aprData && aprData.length > 0) { try { renderApr(); } catch(e) {} }
 
   // Busca o timestamp inicial antes de iniciar o loop
