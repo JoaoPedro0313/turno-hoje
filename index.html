@@ -946,10 +946,20 @@ function applyRowData(row) {
   if (row.key === 'apr_data') {
     if (Array.isArray(row.value) && row.value.length > 0) aprData = row.value;
   }
+  if (row.key === 'prog_diaria') {
+    if (Array.isArray(row.value)) {
+      progRegistros = row.value;
+      // Re-renderizar se a aba estiver visível
+      try { progRenderStats(); } catch(e) {}
+      try { progRenderList(); } catch(e) {}
+      try { progRenderDash(); } catch(e) {}
+      try { mapaProgRender(); } catch(e) {}
+    }
+  }
 }
 
 function loadFromLocalStorage() {
-  ['turno','producao','obras_base','apr_data'].forEach(key => {
+  ['turno','producao','obras_base','apr_data','prog_diaria'].forEach(key => {
     const v = lsGet(key);
     if (v !== null) applyRowData({ key, value: v });
   });
@@ -2966,23 +2976,33 @@ function mapaProgRender() {
   };
 
   tbody.innerHTML = regs.map((r,i) => {
-    const hasCoord = !!mapaProgGetCoord(r);
+    const coord = mapaProgGetCoord(r);
+    const hasCoord = !!coord;
     const encInfo = (PROG_ENCARREGADOS || {})[r.encarregado] || {};
     const sup = encInfo.supervisor || r.supervisor || '—';
+    // Link de localização: Google Maps com coord se disponível, ou busca por nome+município
+    const gMapsLink = hasCoord
+      ? `https://www.google.com/maps?q=${coord.lat},${coord.lon}`
+      : `https://www.google.com/maps/search/${encodeURIComponent((r.nome_obra||r.pep||'') + ', ' + (r.municipio||'') + ', Bahia, Brasil')}`;
+    const locBtn = `<a href="${gMapsLink}" target="_blank" rel="noopener" title="${hasCoord ? 'Ver localização no mapa (coordenadas exatas)' : 'Buscar no Google Maps (sem coord. no sistema)'}"
+        style="display:inline-flex;align-items:center;gap:4px;background:${hasCoord?'#e53e3e':'#718096'};color:#fff;padding:3px 9px;border-radius:6px;font-size:0.62rem;font-weight:800;text-decoration:none;font-family:'Barlow',sans-serif;letter-spacing:0.3px;">
+        ${hasCoord ? '📍 GPS' : '🔍 BUSCAR'}
+      </a>`;
     return `<tr style="border-bottom:1px solid #f0f0f8;cursor:pointer;transition:background 0.12s;" onmouseover="this.style.background='#faf8ff'" onmouseout="this.style.background=''">
       <td style="padding:9px 14px;font-size:0.8rem;font-weight:800;color:#2d3748;white-space:nowrap;">${r.encarregado||'—'}</td>
       <td style="padding:9px 14px;font-size:0.75rem;font-weight:600;color:#718096;white-space:nowrap;">${sup}</td>
       <td style="padding:9px 14px;font-family:monospace;font-size:0.74rem;font-weight:800;color:#6b46c1;white-space:nowrap;">${r.pep||'—'}</td>
-      <td style="padding:9px 14px;font-size:0.78rem;font-weight:700;color:#1a365d;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${r.nome_obra||''}">${r.nome_obra||'—'}</td>
+      <td style="padding:9px 14px;font-size:0.78rem;font-weight:700;color:#1a365d;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${r.nome_obra||''}">${r.nome_obra||'—'}</td>
       <td style="padding:9px 14px;font-size:0.75rem;color:#555;white-space:nowrap;">${r.municipio||'—'}</td>
-      <td style="padding:9px 14px;font-size:0.75rem;color:#444;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${r.atividade||''}">${r.atividade||'—'}</td>
+      <td style="padding:9px 14px;font-size:0.75rem;color:#444;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${r.atividade||''}">${r.atividade||'—'}</td>
       <td style="padding:9px 14px;text-align:center;font-weight:800;color:#0d7377;">${r.qtd_prevista||'—'}</td>
       <td style="padding:9px 14px;text-align:center;font-weight:800;color:#276749;">${r.qtd_realizada||'—'}</td>
       <td style="padding:9px 14px;text-align:center;">${statusBadge(r.status)}</td>
+      <td style="padding:9px 14px;text-align:center;">${locBtn}</td>
       <td style="padding:9px 14px;text-align:center;">
         ${hasCoord
           ? `<button onclick="mapaProgFocarObra('${r.pep}')" title="Ver no mapa"
-              style="background:#6b46c1;color:#fff;border:none;border-radius:6px;padding:4px 10px;font-family:'Barlow',sans-serif;font-size:0.65rem;font-weight:800;cursor:pointer;">📍 VER</button>`
+              style="background:#6b46c1;color:#fff;border:none;border-radius:6px;padding:4px 10px;font-family:'Barlow',sans-serif;font-size:0.65rem;font-weight:800;cursor:pointer;">🗺️ VER</button>`
           : `<span style="color:#ccc;font-size:0.7rem;font-weight:600;">sem coord.</span>`}
       </td>
     </tr>`;
@@ -3326,40 +3346,52 @@ let progEditIdx = null;
 // ── INIT ──
 function progInit() {
   progFillSelects();
-  // Set today as default date
   const today = new Date().toISOString().split('T')[0];
   const df = document.getElementById('pf-data');
   if (df) df.value = today;
-  // Storage is async - renders happen inside progLoadFromStorage after data is ready
-  progLoadFromStorage();
+  // Se já temos dados do banco (carregados pelo dbLoad), apenas renderizar
+  // Senão, tentar carregar do localStorage como fallback
+  if (progRegistros.length === 0) progLoadFromStorage();
+  else {
+    progRenderStats();
+    progRenderList();
+    progRenderDash();
+    if (typeof mapaProgRender === 'function') mapaProgRender();
+  }
 }
 
-// ── STORAGE ──
+// ── STORAGE (Supabase + localStorage fallback) ──
 async function progLoadFromStorage() {
-  try {
-    const r = await window.storage.get(PROG_SK);
-    if (r && r.value) progRegistros = JSON.parse(r.value);
-    else progRegistros = [];
-  } catch(e) {
-    progRegistros = [];
-  }
+  // 1. Tentar carregar do banco via dbLoad (já feito no init geral)
+  // 2. Fallback: localStorage
+  const ls = lsGet('prog_diaria');
+  if (ls && Array.isArray(ls) && progRegistros.length === 0) progRegistros = ls;
   progRenderStats();
-  // Re-render whichever tab is currently visible
-  if (document.getElementById('prog-view-list') && document.getElementById('prog-view-list').style.display !== 'none') {
-    progRenderList();
-  }
-  if (document.getElementById('prog-view-dash') && document.getElementById('prog-view-dash').style.display !== 'none') {
-    progRenderDash();
-  }
+  if (document.getElementById('prog-view-list') && document.getElementById('prog-view-list').style.display !== 'none') progRenderList();
+  if (document.getElementById('prog-view-dash') && document.getElementById('prog-view-dash').style.display !== 'none') progRenderDash();
+  if (typeof mapaProgRender === 'function') mapaProgRender();
 }
 
 async function progSaveToStorage() {
+  // Salvar local imediatamente
+  lsSet('prog_diaria', progRegistros);
+  // Salvar no Supabase
   try {
-    await window.storage.set(PROG_SK, JSON.stringify(progRegistros));
+    setDbStatus('syncing', 'Salvando prog...');
+    const res = await fetch(SUPA_URL + '/rest/v1/turno_data', {
+      method: 'POST',
+      headers: { ...SUPA_HEADERS, 'Prefer': 'resolution=merge-duplicates' },
+      body: JSON.stringify({ key: 'prog_diaria', value: progRegistros, updated_at: new Date().toISOString() })
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    setDbStatus('online', 'Prog. salva!');
+    setTimeout(() => setDbStatus('online', 'Banco online'), 1500);
   } catch(e) {
-    console.error('Erro ao salvar:', e);
+    console.warn('[progSave] Supabase falhou, dados salvos localmente:', e.message);
+    setDbStatus('local', 'Salvo local');
+    setTimeout(() => setDbStatus('local', 'Dados locais'), 2000);
   }
-  // Atualizar seção do mapa se estiver visível
+  // Atualizar seção do mapa
   if (typeof mapaProgRender === 'function') mapaProgRender();
 }
 
@@ -3481,7 +3513,7 @@ function progCalcValores() {
 }
 
 // ── SALVAR ──
-function progFormSave() {
+async function progFormSave() {
   const data    = document.getElementById('pf-data').value;
   const sup     = document.getElementById('pf-supervisor').value;
   const prog    = document.getElementById('pf-programador').value;
@@ -3704,7 +3736,7 @@ function progEditReg(idx) {
   }, 50);
 }
 
-function progDeleteReg(idx) {
+async function progDeleteReg(idx) {
   if (!confirm('Excluir este registro?')) return;
   progRegistros.splice(idx, 1);
   progSaveToStorage();
@@ -4106,29 +4138,6 @@ window.addEventListener('load', () => {
         </button>
       </div>
     </div>
-    <div id="mapa-tabela-section" style="display:none;background:#fff;border-radius:14px;box-shadow:0 2px 14px rgba(0,0,0,0.08);overflow:hidden;margin-bottom:14px;">
-      <div style="padding:12px 20px;background:#f7f9fc;border-bottom:1px solid #edf0f2;display:flex;align-items:center;justify-content:space-between;">
-        <span style="font-size:0.85rem;font-weight:800;color:#1a365d;">&#128203; Lista de Obras</span>
-        <span style="font-size:0.75rem;font-weight:700;color:#38a169;" id="mapa-tabela-count"></span>
-      </div>
-      <div style="overflow-x:auto;">
-        <table style="width:100%;border-collapse:collapse;font-family:'Barlow',sans-serif;font-size:0.78rem;">
-          <thead>
-            <tr style="background:#f0fff4;">
-              <th style="padding:9px 14px;text-align:left;font-size:0.65rem;font-weight:800;color:#38a169;letter-spacing:1.5px;text-transform:uppercase;border-bottom:2px solid #c6f6d5;white-space:nowrap;">PEP</th>
-              <th style="padding:9px 14px;text-align:left;font-size:0.65rem;font-weight:800;color:#38a169;letter-spacing:1.5px;text-transform:uppercase;border-bottom:2px solid #c6f6d5;">Título</th>
-              <th style="padding:9px 14px;text-align:left;font-size:0.65rem;font-weight:800;color:#38a169;letter-spacing:1.5px;text-transform:uppercase;border-bottom:2px solid #c6f6d5;white-space:nowrap;">UTD</th>
-              <th style="padding:9px 14px;text-align:left;font-size:0.65rem;font-weight:800;color:#38a169;letter-spacing:1.5px;text-transform:uppercase;border-bottom:2px solid #c6f6d5;white-space:nowrap;">Status</th>
-              <th style="padding:9px 14px;text-align:center;font-size:0.65rem;font-weight:800;color:#38a169;letter-spacing:1.5px;text-transform:uppercase;border-bottom:2px solid #c6f6d5;white-space:nowrap;">Cava</th>
-              <th style="padding:9px 14px;text-align:center;font-size:0.65rem;font-weight:800;color:#38a169;letter-spacing:1.5px;text-transform:uppercase;border-bottom:2px solid #c6f6d5;white-space:nowrap;">Postes</th>
-              <th style="padding:9px 14px;text-align:center;font-size:0.65rem;font-weight:800;color:#38a169;letter-spacing:1.5px;text-transform:uppercase;border-bottom:2px solid #c6f6d5;white-space:nowrap;">À Implantar</th>
-              <th style="padding:9px 14px;text-align:left;font-size:0.65rem;font-weight:800;color:#38a169;letter-spacing:1.5px;text-transform:uppercase;border-bottom:2px solid #c6f6d5;white-space:nowrap;">Município</th>
-            </tr>
-          </thead>
-          <tbody id="mapa-tabela-body"></tbody>
-        </table>
-      </div>
-    </div>
 
     <!-- OBRAS PROGRAMADAS DO DIA -->
     <div id="mapa-prog-section" style="background:#fff;border-radius:14px;box-shadow:0 2px 14px rgba(0,0,0,0.08);overflow:hidden;margin-bottom:14px;">
@@ -4176,6 +4185,7 @@ window.addEventListener('load', () => {
               <th style="padding:9px 14px;text-align:center;font-size:0.65rem;font-weight:800;color:#6b46c1;letter-spacing:1.5px;text-transform:uppercase;">PREV.</th>
               <th style="padding:9px 14px;text-align:center;font-size:0.65rem;font-weight:800;color:#6b46c1;letter-spacing:1.5px;text-transform:uppercase;">REAL.</th>
               <th style="padding:9px 14px;text-align:center;font-size:0.65rem;font-weight:800;color:#6b46c1;letter-spacing:1.5px;text-transform:uppercase;">STATUS</th>
+              <th style="padding:9px 14px;text-align:center;font-size:0.65rem;font-weight:800;color:#e53e3e;letter-spacing:1.5px;text-transform:uppercase;white-space:nowrap;">📍 LOCAL</th>
               <th style="padding:9px 14px;text-align:center;font-size:0.65rem;font-weight:800;color:#6b46c1;letter-spacing:1.5px;text-transform:uppercase;">MAPA</th>
             </tr>
           </thead>
@@ -4191,6 +4201,30 @@ window.addEventListener('load', () => {
 
   </div>
 </div>
+    <div id="mapa-tabela-section" style="display:none;background:#fff;border-radius:14px;box-shadow:0 2px 14px rgba(0,0,0,0.08);overflow:hidden;margin-bottom:14px;">
+      <div style="padding:12px 20px;background:#f7f9fc;border-bottom:1px solid #edf0f2;display:flex;align-items:center;justify-content:space-between;">
+        <span style="font-size:0.85rem;font-weight:800;color:#1a365d;">&#128203; Lista de Obras</span>
+        <span style="font-size:0.75rem;font-weight:700;color:#38a169;" id="mapa-tabela-count"></span>
+      </div>
+      <div style="overflow-x:auto;">
+        <table style="width:100%;border-collapse:collapse;font-family:'Barlow',sans-serif;font-size:0.78rem;">
+          <thead>
+            <tr style="background:#f0fff4;">
+              <th style="padding:9px 14px;text-align:left;font-size:0.65rem;font-weight:800;color:#38a169;letter-spacing:1.5px;text-transform:uppercase;border-bottom:2px solid #c6f6d5;white-space:nowrap;">PEP</th>
+              <th style="padding:9px 14px;text-align:left;font-size:0.65rem;font-weight:800;color:#38a169;letter-spacing:1.5px;text-transform:uppercase;border-bottom:2px solid #c6f6d5;">Título</th>
+              <th style="padding:9px 14px;text-align:left;font-size:0.65rem;font-weight:800;color:#38a169;letter-spacing:1.5px;text-transform:uppercase;border-bottom:2px solid #c6f6d5;white-space:nowrap;">UTD</th>
+              <th style="padding:9px 14px;text-align:left;font-size:0.65rem;font-weight:800;color:#38a169;letter-spacing:1.5px;text-transform:uppercase;border-bottom:2px solid #c6f6d5;white-space:nowrap;">Status</th>
+              <th style="padding:9px 14px;text-align:center;font-size:0.65rem;font-weight:800;color:#38a169;letter-spacing:1.5px;text-transform:uppercase;border-bottom:2px solid #c6f6d5;white-space:nowrap;">Cava</th>
+              <th style="padding:9px 14px;text-align:center;font-size:0.65rem;font-weight:800;color:#38a169;letter-spacing:1.5px;text-transform:uppercase;border-bottom:2px solid #c6f6d5;white-space:nowrap;">Postes</th>
+              <th style="padding:9px 14px;text-align:center;font-size:0.65rem;font-weight:800;color:#38a169;letter-spacing:1.5px;text-transform:uppercase;border-bottom:2px solid #c6f6d5;white-space:nowrap;">À Implantar</th>
+              <th style="padding:9px 14px;text-align:left;font-size:0.65rem;font-weight:800;color:#38a169;letter-spacing:1.5px;text-transform:uppercase;border-bottom:2px solid #c6f6d5;white-space:nowrap;">Município</th>
+            </tr>
+          </thead>
+          <tbody id="mapa-tabela-body"></tbody>
+        </table>
+      </div>
+    </div>
+
 
 <div id="page-prog" style="display:none;">
 <div style="max-width:1340px;margin:0 auto;padding:16px 14px 80px;">
