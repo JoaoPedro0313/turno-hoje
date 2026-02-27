@@ -576,7 +576,16 @@ body { font-family:'Barlow',sans-serif; background:#f0f4f5; min-height:100vh; pa
             <button onclick="compLimparHistorico()" style="padding:5px 12px;background:rgba(229,62,62,0.25);border:1px solid rgba(229,62,62,0.4);color:#ffc0c0;border-radius:7px;font-family:'Barlow',sans-serif;font-size:0.68rem;font-weight:800;cursor:pointer;">🗑️ Limpar histórico</button>
           </div>
         </div>
-        <div id="comp-historico-body" style="padding:16px 20px;max-height:600px;overflow-y:auto;"></div>
+        <!-- Filtros do histórico -->
+        <div id="comp-hist-filtros" style="padding:12px 20px;border-bottom:1px solid #edf0f2;display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:#f8fafc;">
+          <span style="font-size:0.68rem;font-weight:800;color:#888;letter-spacing:1px;text-transform:uppercase;white-space:nowrap;">📅 Filtrar:</span>
+          <div id="hist-filtro-dias" style="display:flex;gap:6px;flex-wrap:wrap;flex:1;"></div>
+          <input type="text" id="hist-search" placeholder="🔍 Buscar obra ou PEP..." oninput="compHistoricoRender()"
+            style="padding:6px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-family:'Barlow',sans-serif;font-size:0.75rem;font-weight:600;color:#333;outline:none;min-width:200px;"
+            onfocus="this.style.borderColor='#4a5568'" onblur="this.style.borderColor='#e2e8f0'">
+          <button onclick="histLimparFiltro()" id="hist-btn-limpar-filtro" style="display:none;padding:5px 12px;background:#ebf4ff;border:1px solid #bee3f8;color:#2b6cb0;border-radius:7px;font-family:'Barlow',sans-serif;font-size:0.68rem;font-weight:800;cursor:pointer;">✕ Limpar filtro</button>
+        </div>
+        <div id="comp-historico-body" style="padding:16px 20px;max-height:520px;overflow-y:auto;"></div>
       </div>
     </div>
 
@@ -2331,6 +2340,19 @@ function compHistoricoDiffCell(ant, at, diff) {
 }
 
 let histExpandedDias = new Set();
+let histFiltroDia = null; // null = todos
+
+function histSetFiltroDia(dia) {
+  histFiltroDia = histFiltroDia === dia ? null : dia;
+  compHistoricoRender();
+}
+
+function histLimparFiltro() {
+  histFiltroDia = null;
+  const el = document.getElementById('hist-search');
+  if (el) el.value = '';
+  compHistoricoRender();
+}
 
 function compHistoricoRender() {
   const wrap = document.getElementById('comp-historico-wrap');
@@ -2348,8 +2370,32 @@ function compHistoricoRender() {
     return new Date(+pb[2],+pb[1]-1,+pb[0]) - new Date(+pa[2],+pa[1]-1,+pa[0]);
   });
 
+  // Busca de texto
+  const searchTerm = (document.getElementById('hist-search') ? document.getElementById('hist-search').value || '' : '').toLowerCase().trim();
+
+  // Renderiza botões de filtro por dia
+  const filtroDiasEl = document.getElementById('hist-filtro-dias');
+  const btnLimpar = document.getElementById('hist-btn-limpar-filtro');
+  if (filtroDiasEl) {
+    const now = new Date(), pad = n => String(n).padStart(2,'0');
+    const hoje = pad(now.getDate())+'/'+pad(now.getMonth()+1)+'/'+now.getFullYear();
+    const diasSem = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+    filtroDiasEl.innerHTML = diasKeys.map(dia => {
+      const parts = dia.split('/');
+      const isHoje = dia === hoje;
+      const diaSem = diasSem[new Date(+parts[2],+parts[1]-1,+parts[0]).getDay()];
+      const ativo = histFiltroDia === dia;
+      const label = isHoje ? 'Hoje' : diaSem+' '+parts[0]+'/'+parts[1];
+      return '<button onclick="histSetFiltroDia(''+dia+'')" style="padding:4px 12px;border-radius:20px;border:2px solid '+(ativo?'#4a5568':'#e2e8f0')+';background:'+(ativo?'#4a5568':'#fff')+';color:'+(ativo?'#fff':isHoje?'#2b6cb0':'#555')+';font-family:Barlow,sans-serif;font-size:0.7rem;font-weight:800;cursor:pointer;white-space:nowrap;transition:all 0.15s;">'+(isHoje?'🟢 ':'')+label+'</button>';
+    }).join('');
+  }
+  if (btnLimpar) btnLimpar.style.display = (histFiltroDia || searchTerm) ? '' : 'none';
+
+  // Aplica filtro de dia
+  const diasFiltrados = histFiltroDia ? diasKeys.filter(d => d === histFiltroDia) : diasKeys;
+
   let totalObras = 0;
-  const html = diasKeys.map(dia => {
+  const html = diasFiltrados.map(dia => {
     const allSnaps = compHistorico.filter(s => s.dia === dia);
     const idxPrimeiro = compHistorico.indexOf(allSnaps[0]);
     const snapBase = idxPrimeiro > 0 ? compHistorico[idxPrimeiro-1] : null;
@@ -2370,6 +2416,10 @@ function compHistoricoRender() {
         if (!cavaDiff && !pRealDiff && !pImpDiff && rowAnt) return;
         changes.push({pep:rowAt.pep,titulo:rowAt.titulo,utd:rowAt.utd,status:rowAt.status,isNew:!rowAnt,cavaAnt,cavaAt,cavaDiff,pRealAnt,pRealAt,pRealDiff,pImpAnt,pImpAt,pImpDiff});
       });
+    }
+    // Aplica filtro de texto nas obras
+    if (searchTerm) {
+      changes = changes.filter(r => r.titulo.toLowerCase().includes(searchTerm) || r.pep.toLowerCase().includes(searchTerm));
     }
     totalObras += changes.length;
     const expanded = histExpandedDias.has(dia);
