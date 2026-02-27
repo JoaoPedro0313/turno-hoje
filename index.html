@@ -611,6 +611,10 @@ body { font-family:'Barlow',sans-serif; background:#f0f4f5; min-height:100vh; pa
           <button class="filter-btn" onclick="compSetFilter('implantados', this)">Postes à Implantar</button>
           <input class="comp-search" type="text" id="comp-search" placeholder="🔍 Buscar por obra, PEP..." oninput="compRenderTable()">
         </div>
+        <div class="toolbar" id="comp-mes-toolbar" style="border-top:none;padding-top:0;display:none;">
+          <label style="color:#6b46c1;">&#128197; MÊS:</label>
+          <div id="comp-mes-bar" style="display:flex;gap:6px;flex-wrap:wrap;"></div>
+        </div>
         <div class="legend">
           <span><span class="dot" style="background:#14a085"></span> Aumentou</span>
           <span><span class="dot" style="background:#e53e3e"></span> Reduziu</span>
@@ -1792,7 +1796,8 @@ function startAutoRefresh() {
 
 // ─── MAPA ─────────────────────────────────────────────────────────────────────
 let bancoDB = null, bancoDBInfo = null;
-let mapaMap=null, mapaLayerGroup=null, mapaData=[], mapaFiltroAtivo='TODOS', mapaUTDFiltro='TODAS';
+let mapaMap=null, mapaLayerGroup=null, mapaData=[], mapaFiltroAtivo='TODOS', mapaUTDFiltro='TODAS', mapaMesFiltro='TODOS';
+let compMesFiltro = 'TODOS';
 const MAPA_CORES = {'ENERGIZADA':'#38a169','EM EXECUÇÃO':'#2b6cb0','EM EXECUCAO':'#2b6cb0','PROGRAMADA':'#d69e2e','PARALISADA':'#e53e3e','CANCELADA':'#718096','RETIRADA DA CARTEIRA':'#718096'};
 function mapaGetCor(s) { return MAPA_CORES[(s||'').toUpperCase().trim()]||'#a0aec0'; }
 function mapaParseCoord(s) { if(!s)return null; const v=String(s).trim().split('\n')[0].trim().replace(',','.'); const n=parseFloat(v); return isNaN(n)?null:n; }
@@ -1943,7 +1948,7 @@ function compCompare() {
     const pRealDiff=(pRealAnt!==null||pRealAt!==null)?(pRealAt||0)-(pRealAnt||0):0;
     const pImpDiff=(pImpAnt!==null||pImpAt!==null)?(pImpAt||0)-(pImpAnt||0):0;
     if (!cavaDiff && !pRealDiff && !pImpDiff && rowAnt) return;
-    compAllChanges.push({ pep, titulo:rowAtual['TÍTULO']||rowAtual['TITULO']||'', utd:rowAtual['_UTD']||(rowAnt&&rowAnt['_UTD'])||'', status:(rowAtual['STATUS DA OBRA']||'').trim(), isNew:!rowAnt, cavaAnt,cavaAt,cavaDiff, pRealAnt,pRealAt,pRealDiff, pImpAnt,pImpAt,pImpDiff, pPrevAt });
+    compAllChanges.push({ pep, titulo:rowAtual['TÍTULO']||rowAtual['TITULO']||'', utd:rowAtual['_UTD']||(rowAnt&&rowAnt['_UTD'])||'', status:(rowAtual['STATUS DA OBRA']||'').trim(), isNew:!rowAnt, mes:mesFromObra(rowAtual)||mesFromObra(rowAnt)||'', cavaAnt,cavaAt,cavaDiff, pRealAnt,pRealAt,pRealDiff, pImpAnt,pImpAt,pImpDiff, pPrevAt });
   });
   const cr = document.getElementById('comp-results');
   if (cr) {
@@ -1953,6 +1958,21 @@ function compCompare() {
     document.getElementById('comp-stat-postes-inc').textContent = compAllChanges.filter(r=>r.pRealDiff>0).length;
     document.getElementById('comp-stat-postes-dec').textContent = compAllChanges.filter(r=>r.pRealDiff<0).length;
     cr.style.display = 'block';
+    // Popula filtro de meses
+    compMesFiltro = 'TODOS';
+    const mesesComp = sortMeses(['TODOS', ...new Set(compAllChanges.map(r=>r.mes).filter(Boolean))]);
+    const mesBar2 = document.getElementById('comp-mes-bar');
+    const mesToolbar2 = document.getElementById('comp-mes-toolbar');
+    if (mesBar2 && mesToolbar2) {
+      mesToolbar2.style.display = mesesComp.length > 1 ? '' : 'none';
+      const mesCount2 = m => m === 'TODOS' ? compAllChanges.length : compAllChanges.filter(r=>r.mes===m).length;
+      mesBar2.innerHTML = mesesComp.map(m => {
+        const on = m === 'TODOS';
+        return `<button class="comp-mes-btn" data-mes="${m}" onclick="compSetMes('${m}')"
+          style="padding:4px 12px;border-radius:20px;border:2px solid ${on?'#6b46c1':'#e2e8f0'};background:${on?'#6b46c1':'#fff'};font-family:'Barlow',sans-serif;font-size:0.7rem;font-weight:800;cursor:pointer;color:${on?'#fff':'#555'};transition:all 0.15s;white-space:nowrap;">
+          ${m === 'TODOS' ? 'Todos' : m} <span style="opacity:0.75;font-size:0.65rem;">(${mesCount2(m)})</span></button>`;
+      }).join('');
+    }
     compSetFilter('todos', document.querySelector('#page-comp .filter-btn'));
     cr.scrollIntoView({ behavior: 'smooth' });
   }
@@ -1986,6 +2006,7 @@ function compRenderTable() {
     if (compActiveFilter==='cava'&&r.cavaDiff===0) return false;
     if (compActiveFilter==='postes'&&r.pRealDiff===0) return false;
     if (compActiveFilter==='implantados'&&r.pImpDiff===0) return false;
+    if (compMesFiltro!=='TODOS' && r.mes!==compMesFiltro) return false;
     return true;
   });
   const cl = document.getElementById('comp-count-label');
@@ -2021,8 +2042,70 @@ async function compResetBase() {
 
 compHandleFileAtual();
 
+// ─── MÊS HELPERS ──────────────────────────────────────────────────────────────
+const MESES_PT = ['','JAN','FEV','MAR','ABR','MAI','JUN','JUL','AGO','SET','OUT','NOV','DEZ'];
+const MESES_ORDER = {'JAN':1,'FEV':2,'MAR':3,'ABR':4,'MAI':5,'JUN':6,'JUL':7,'AGO':8,'SET':9,'OUT':10,'NOV':11,'DEZ':12};
+
+function parseMesObra(dateStr) {
+  if (!dateStr) return null;
+  const s = String(dateStr).trim().split(/[\s\n]/)[0].trim();
+  const parts = s.split('/');
+  if (parts.length < 2) return null;
+  const m = parseInt(parts[1], 10);
+  if (m < 1 || m > 12) return null;
+  if (parts.length < 3) return null;
+  let y = parseInt(parts[2], 10);
+  if (isNaN(y)) return null;
+  if (y < 100) y += 2000;
+  return (MESES_PT[m] || '?') + '/' + String(y).slice(-2);
+}
+
+function mesFromObra(obj) {
+  if (!obj) return null;
+  // Prioridade: Reprogramação > Fim Previsto > Início Previsto
+  const candidates = [
+    obj['REPROGRAMAÇÃO FIM'] || obj['REPROGRAMACAO FIM'] || '',
+    obj['FIM PREVISTO']  || obj['FIM  PREVISTO'] || '',
+    obj['INCIO PREVISTO'] || obj['INÍCIO PREVISTO'] || obj['INICIO PREVISTO'] || '',
+  ];
+  for (const c of candidates) { const m = parseMesObra(c); if (m) return m; }
+  return null;
+}
+
+function sortMeses(meses) {
+  return meses.sort((a, b) => {
+    if (a === 'TODOS') return -1; if (b === 'TODOS') return 1;
+    const [ma, ya] = a.split('/'); const [mb, yb] = b.split('/');
+    const ya2 = parseInt(ya)||0, yb2 = parseInt(yb)||0;
+    if (ya2 !== yb2) return ya2 - yb2;
+    return (MESES_ORDER[ma]||0) - (MESES_ORDER[mb]||0);
+  });
+}
+
+function mapaSetMes(mes) {
+  mapaMesFiltro = mes;
+  document.querySelectorAll('.mapa-mes-btn').forEach(b => {
+    const on = b.dataset.mes === mes;
+    b.style.background = on ? '#6b46c1' : '#fff';
+    b.style.color = on ? '#fff' : '#555';
+    b.style.borderColor = on ? '#6b46c1' : '#e2e8f0';
+  });
+  mapaFiltrar();
+}
+
+function compSetMes(mes) {
+  compMesFiltro = mes;
+  document.querySelectorAll('.comp-mes-btn').forEach(b => {
+    const on = b.dataset.mes === mes;
+    b.style.background = on ? '#6b46c1' : '#fff';
+    b.style.color = on ? '#fff' : '#555';
+    b.style.borderColor = on ? '#6b46c1' : '#e2e8f0';
+  });
+  compRenderTable();
+}
+
 function mapaSetUTD(utd) {
-  mapaUTDFiltro = utd; mapaFiltroAtivo = 'TODOS';
+  mapaUTDFiltro = utd; mapaFiltroAtivo = 'TODOS'; mapaMesFiltro = 'TODOS';
   ['TODAS','IRECÊ','JACOBINA'].forEach(u => {
     const btn = document.getElementById('mapa-utd-btn-' + u.replace('Ê','E'));
     if (!btn) return;
@@ -2038,7 +2121,7 @@ function mapaCarregarDoBanco() {
   if (!bancoDB || !bancoDB.length) return;
   mapaData = bancoDB.map(obj => {
     const lat=mapaParseCoord(obj['LATITUDE']), lon=mapaParseCoord(obj['LONGITUDE']);
-    return { pep:obj['PEP OBRA']||'', titulo:obj['TÍTULO']||obj['TITULO']||'', status:obj['STATUS DA OBRA']||'', mun:obj['MUNICIPIO']||obj['MUNICÍPIO']||'', utd:obj['_UTD']||'', lat, lon, cava:obj['CAVA REALIZADA']||'', postR:obj['POSTES  REALIZADO']||obj['POSTES REALIZADO']||'', postI:obj['POSTES  À IMPLANTA']||obj['POSTES À IMPLANTA']||'', enc:obj['ENCARREGADO']||'', temCoord:lat!==null&&lon!==null };
+    return { pep:obj['PEP OBRA']||'', titulo:obj['TÍTULO']||obj['TITULO']||'', status:obj['STATUS DA OBRA']||'', mun:obj['MUNICIPIO']||obj['MUNICÍPIO']||'', utd:obj['_UTD']||'', lat, lon, cava:obj['CAVA REALIZADA']||'', postR:obj['POSTES  REALIZADO']||obj['POSTES REALIZADO']||'', postI:obj['POSTES  À IMPLANTA']||obj['POSTES À IMPLANTA']||'', enc:obj['ENCARREGADO']||'', mes:mesFromObra(obj)||'', temCoord:lat!==null&&lon!==null };
   });
   const comCoord = mapaData.filter(d=>d.temCoord).length;
   const info = bancoDBInfo||{};
@@ -2078,6 +2161,24 @@ function mapaRenderFiltros() {
     };
     utdBar.innerHTML = mkUTD('🗺️ Todas','TODAS',withCoord.length,'TODAS') + mkUTD('📍 Irecê','IRECÊ',withCoord.filter(d=>d.utd==='IRECÊ').length,'IRECE') + mkUTD('📍 Jacobina','JACOBINA',withCoord.filter(d=>d.utd==='JACOBINA').length,'JACOBINA');
   }
+
+  // ── FILTRO DE MÊS ──
+  const mesBar = document.getElementById('mapa-mes-bar');
+  if (mesBar) {
+    const baseUTD = mapaUTDFiltro==='TODAS' ? mapaData : mapaData.filter(d=>d.utd===mapaUTDFiltro);
+    const mesesSet = new Set(baseUTD.map(d=>d.mes).filter(Boolean));
+    const meses = sortMeses(['TODOS', ...mesesSet]);
+    const mesWrapper = document.getElementById('mapa-mes-bar-wrapper');
+    if (mesWrapper) mesWrapper.style.display = mesesSet.size ? '' : 'none';
+    const mesCount = m => m === 'TODOS' ? baseUTD.length : baseUTD.filter(d=>d.mes===m).length;
+    mesBar.innerHTML = meses.map(m => {
+      const on = mapaMesFiltro === m;
+      return `<button class="mapa-mes-btn" data-mes="${m}" onclick="mapaSetMes('${m}')"
+        style="padding:5px 14px;border-radius:20px;border:2px solid ${on?'#6b46c1':'#e2e8f0'};background:${on?'#6b46c1':'#fff'};font-family:'Barlow',sans-serif;font-size:0.7rem;font-weight:800;cursor:pointer;color:${on?'#fff':'#555'};transition:all 0.15s;white-space:nowrap;">
+        ${m === 'TODOS' ? 'Todos os meses' : m} <span style="opacity:0.75;font-size:0.65rem;">(${mesCount(m)})</span></button>`;
+    }).join('');
+  }
+
   const base = mapaUTDFiltro==='TODAS' ? withCoord : withCoord.filter(d=>d.utd===mapaUTDFiltro);
   const statusCount = {};
   base.forEach(d => { const s=d.status.trim()||'SEM STATUS'; statusCount[s]=(statusCount[s]||0)+1; });
@@ -2103,6 +2204,7 @@ function mapaFiltrar() {
   const filtered = mapaData.filter(d => {
     if (!d.temCoord) return false;
     if (mapaUTDFiltro!=='TODAS' && d.utd!==mapaUTDFiltro) return false;
+    if (mapaMesFiltro!=='TODOS' && d.mes!==mapaMesFiltro) return false;
     if (mapaFiltroAtivo!=='TODOS' && d.status.trim()!==mapaFiltroAtivo) return false;
     if (search && !d.pep.toLowerCase().includes(search) && !d.titulo.toLowerCase().includes(search) && !d.mun.toLowerCase().includes(search)) return false;
     return true;
@@ -2401,6 +2503,11 @@ async function compSalvarBancoDirectly(merged, jacCount, ircCount) {
       <div style="background:#fff;border-radius:14px;box-shadow:0 2px 14px rgba(0,0,0,0.08);padding:14px 20px;margin-bottom:10px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
         <span style="font-size:0.68rem;font-weight:800;color:#888;letter-spacing:1.5px;text-transform:uppercase;white-space:nowrap;">&#127959; UTD:</span>
         <div id="mapa-utd-bar" style="display:flex;gap:8px;flex-wrap:wrap;"></div>
+      </div>
+      <!-- FILTRO DE MÊS -->
+      <div id="mapa-mes-bar-wrapper" style="display:none;background:#fff;border-radius:14px;box-shadow:0 2px 14px rgba(0,0,0,0.08);padding:12px 20px;margin-bottom:10px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+        <span style="font-size:0.68rem;font-weight:800;color:#6b46c1;letter-spacing:1.5px;text-transform:uppercase;white-space:nowrap;">&#128197; MÊS:</span>
+        <div id="mapa-mes-bar" style="display:flex;gap:6px;flex-wrap:wrap;"></div>
       </div>
       <div style="background:#fff;border-radius:14px;box-shadow:0 2px 14px rgba(0,0,0,0.08);padding:12px 18px;margin-bottom:14px;">
         <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
