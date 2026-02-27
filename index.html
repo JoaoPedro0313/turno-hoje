@@ -523,73 +523,7 @@ body { font-family:'Barlow',sans-serif; background:#f0f4f5; min-height:100vh; pa
 <!-- PÁGINA 3: COMPARADOR CAVA & POSTES -->
 <div id="page-comp" style="display:none;">
   <div class="comp-container">
-    <div style="background:#fff;border-radius:12px;padding:14px 20px;margin-bottom:16px;box-shadow:0 2px 12px rgba(0,0,0,0.07);">
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
-        <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:0;">
-          <div class="icon-blue" style="flex-shrink:0;">🗄️</div>
-          <div style="min-width:0;">
-            <div style="font-size:0.72rem;font-weight:800;color:#666;letter-spacing:1px;text-transform:uppercase;margin-bottom:3px;">Banco de Obras</div>
-            <div id="comp-base-info"><span style="color:#aaa;font-size:0.72rem;font-weight:600;">Carregando...</span></div>
-          </div>
-        </div>
-        <span id="comp-auto-label" style="font-size:0.65rem;font-weight:700;color:#38a169;background:#f0fff4;border:1px solid #9ae6b4;padding:3px 10px;border-radius:20px;white-space:nowrap;display:inline-flex;align-items:center;gap:5px;">
-          <span style="width:6px;height:6px;border-radius:50%;background:#38a169;display:inline-block;animation:blink 2s infinite;"></span>
-          <span id="comp-auto-countdown">Auto-sync 5:00</span>
-        </span>
-        <button onclick="compAutoSincronizar()" style="padding:6px 12px;border:1.5px solid #9ae6b4;background:#f0fff4;border-radius:8px;font-family:'Barlow',sans-serif;font-size:0.72rem;font-weight:800;cursor:pointer;color:#276749;transition:all 0.15s;white-space:nowrap;flex-shrink:0;" onmouseover="this.style.background='#c6f6d5'" onmouseout="this.style.background='#f0fff4'" title="Sincronizar agora">⟳ Sync</button>
-        <button onclick="compResetBase()" style="padding:6px 14px;border:1.5px solid #fde8e8;background:#fff;border-radius:8px;font-family:'Barlow',sans-serif;font-size:0.72rem;font-weight:800;cursor:pointer;color:#c53030;transition:all 0.15s;white-space:nowrap;flex-shrink:0;" onmouseover="this.style.background='#fde8e8'" onmouseout="this.style.background='#fff'">🗑️ Resetar Base</button>
-      </div>
-    </div>
-    <div style="background:#fff;border-radius:12px;padding:20px;margin-bottom:20px;box-shadow:0 2px 12px rgba(0,0,0,0.07);">
-      <div style="font-size:0.72rem;font-weight:800;color:#0d7377;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:14px;">📥 CARREGAR BANCO DE OBRAS (CSVs)</div>
 
-      <!-- ── SINCRONIZAÇÃO GOOGLE SHEETS ── -->
-      <div style="background:linear-gradient(135deg,#f0fff4,#e6fffa);border:2px solid #9ae6b4;border-radius:12px;padding:16px 20px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
-        <div style="display:flex;align-items:center;gap:12px;">
-          <div style="width:40px;height:40px;background:#38a169;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0;">📊</div>
-          <div>
-            <div style="font-size:0.78rem;font-weight:800;color:#276749;letter-spacing:0.5px;">SINCRONIZAR DIRETO DO GOOGLE SHEETS</div>
-            <div style="font-size:0.7rem;font-weight:600;color:#38a169;margin-top:2px;">Jacobina + Irecê — importa automaticamente sem precisar de CSV</div>
-          </div>
-        </div>
-        <button id="btn-sincronizar-sheets" onclick="sincronizarSheets()"
-          style="padding:10px 22px;background:linear-gradient(135deg,#276749,#38a169);color:#fff;border:none;border-radius:10px;font-family:'Barlow',sans-serif;font-size:0.82rem;font-weight:800;cursor:pointer;letter-spacing:0.5px;box-shadow:0 4px 12px rgba(56,161,105,0.35);white-space:nowrap;transition:all 0.2s;display:flex;align-items:center;gap:8px;"
-          onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='none'">
-          &#8635; Sincronizar do Sheets
-        </button>
-      </div>
-
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
-        <div style="flex:1;height:1px;background:#e2e8f0;"></div>
-        <span style="font-size:0.65rem;font-weight:800;color:#aaa;letter-spacing:1.5px;text-transform:uppercase;white-space:nowrap;">ou carregue CSVs manualmente</span>
-        <div style="flex:1;height:1px;background:#e2e8f0;"></div>
-      </div>
-
-        <label style="display:block;cursor:pointer;">
-          <div class="upload-card" id="comp-card-irece" style="padding:16px;display:flex;align-items:center;gap:12px;text-align:left;">
-            <input type="file" id="comp-file-irece" accept=".csv" style="display:none;" onchange="compHandleBancoCSV(this,'IRECÊ')">
-            <span style="font-size:1.8rem;flex-shrink:0;">📂</span>
-            <div>
-              <div style="font-size:0.72rem;font-weight:800;color:#0d7377;letter-spacing:1px;text-transform:uppercase;margin-bottom:2px;">UTD Irecê</div>
-              <div style="font-size:0.8rem;font-weight:700;color:#2b6cb0;" id="comp-name-irece">Selecione o CSV de Irecê</div>
-            </div>
-          </div>
-        </label>
-        <label style="display:block;cursor:pointer;">
-          <div class="upload-card" id="comp-card-jacobina" style="padding:16px;display:flex;align-items:center;gap:12px;text-align:left;">
-            <input type="file" id="comp-file-jacobina" accept=".csv" style="display:none;" onchange="compHandleBancoCSV(this,'JACOBINA')">
-            <span style="font-size:1.8rem;flex-shrink:0;">📂</span>
-            <div>
-              <div style="font-size:0.72rem;font-weight:800;color:#0d7377;letter-spacing:1px;text-transform:uppercase;margin-bottom:2px;">UTD Jacobina</div>
-              <div style="font-size:0.8rem;font-weight:700;color:#2b6cb0;" id="comp-name-jacobina">Selecione o CSV de Jacobina</div>
-            </div>
-          </div>
-        </label>
-      </div>
-      <button id="comp-btn-salvar-banco" disabled onclick="compSalvarBanco()" style="display:block;width:100%;padding:13px;background:linear-gradient(135deg,#0d7377,#14a085);color:#fff;border:none;border-radius:10px;font-family:'Barlow',sans-serif;font-size:0.9rem;font-weight:800;cursor:pointer;letter-spacing:0.5px;opacity:0.4;transition:all 0.2s;box-shadow:0 4px 12px rgba(13,115,119,0.3);">
-        💾 SALVAR COMO BANCO DE OBRAS
-      </button>
-    </div>
     <div style="background:#fff;border-radius:12px;padding:20px;margin-bottom:20px;box-shadow:0 2px 12px rgba(0,0,0,0.07);">
       <div style="font-size:0.72rem;font-weight:800;color:#2b6cb0;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:16px;">🔍 COMPARAR BANCO vs PLANILHA ATUAL</div>
 
