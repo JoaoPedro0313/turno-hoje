@@ -2325,7 +2325,7 @@ async function compResetBase() {
     const mt = document.getElementById('mapa-titulo');
     if (mt) mt.textContent = 'Carregue um CSV para visualizar as obras';
     const ms = document.getElementById('mapa-stats-bar'); if (ms) ms.style.display='none';
-    const mts = document.getElementById('mapa-tabela-section'); if (mts) mts.style.display='none';
+
     setDbStatus('online', 'Banco removido');
     setTimeout(() => setDbStatus('online', 'Banco online'), 1500);
   } catch(e) { setDbStatus('offline', 'Erro ao resetar'); }
@@ -2770,7 +2770,7 @@ function mapaCarregarDoBanco() {
   const mt = document.getElementById('mapa-titulo');
   if (mt) mt.textContent = '🗄️ Banco: '+mapaData.length+' obras ('+comCoord+' com coordenadas)'+(info.updatedAt?' · atualizado '+info.updatedAt:'');
   const ms = document.getElementById('mapa-stats-bar'); if (ms) ms.style.display='';
-  const mts = document.getElementById('mapa-tabela-section'); if (mts) mts.style.display='';
+
   const ml = document.getElementById('mapa-legenda'); if (ml) ml.style.display='flex';
   if (document.getElementById('page-mapa') && document.getElementById('page-mapa').style.display !== 'none') {
     mapaEnsureLeaflet(() => { mapaRenderFiltros(); mapaFiltrar(); });
@@ -2867,15 +2867,6 @@ function mapaFiltrar() {
     bounds.push([d.lat,d.lon]);
   });
   if (bounds.length) mapaMap.fitBounds(bounds,{padding:[28,28]});
-  const tbody = document.getElementById('mapa-tabela-body');
-  const tc = document.getElementById('mapa-tabela-count');
-  if (tc) tc.textContent = filtered.length+' obras';
-  if (!tbody) return;
-  if (!filtered.length) { tbody.innerHTML='<tr><td colspan="8" style="text-align:center;padding:20px;color:#aaa;font-family:Barlow,sans-serif;font-size:0.82rem;font-weight:600;">Nenhuma obra encontrada</td></tr>'; return; }
-  tbody.innerHTML = filtered.map(d => {
-    const cor = mapaGetCor(d.status);
-    return `<tr style="border-bottom:1px solid #f0f4f5;cursor:pointer;" onclick="mapaFocarObra(${d.lat},${d.lon})"><td style="padding:8px 14px;font-family:monospace;font-size:0.74rem;font-weight:800;color:#0d7377;white-space:nowrap;">${d.pep}</td><td style="padding:8px 14px;font-size:0.78rem;font-weight:700;color:#1a365d;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${d.titulo}</td><td style="padding:8px 14px;white-space:nowrap;"><span style="background:#ebf4ff;color:#2b6cb0;padding:1px 7px;border-radius:4px;font-size:0.65rem;font-weight:800;">${d.utd||'–'}</span></td><td style="padding:8px 14px;white-space:nowrap;"><span style="background:${cor}22;color:${cor};padding:2px 8px;border-radius:4px;font-size:0.65rem;font-weight:800;">${d.status||'–'}</span></td><td style="padding:8px 14px;text-align:center;font-weight:800;color:#38a169;">${d.cava||'—'}</td><td style="padding:8px 14px;text-align:center;font-weight:800;color:#2b6cb0;">${d.postR||'—'}</td><td style="padding:8px 14px;text-align:center;font-weight:800;color:#d69e2e;">${d.postI||'—'}</td><td style="padding:8px 14px;font-size:0.74rem;color:#555;font-weight:600;">${d.mun}</td></tr>`;
-  }).join('');
 }
 
 function mapaFocarObra(lat,lon) {
@@ -4201,29 +4192,7 @@ window.addEventListener('load', () => {
 
   </div>
 </div>
-    <div id="mapa-tabela-section" style="display:none;background:#fff;border-radius:14px;box-shadow:0 2px 14px rgba(0,0,0,0.08);overflow:hidden;margin-bottom:14px;">
-      <div style="padding:12px 20px;background:#f7f9fc;border-bottom:1px solid #edf0f2;display:flex;align-items:center;justify-content:space-between;">
-        <span style="font-size:0.85rem;font-weight:800;color:#1a365d;">&#128203; Lista de Obras</span>
-        <span style="font-size:0.75rem;font-weight:700;color:#38a169;" id="mapa-tabela-count"></span>
-      </div>
-      <div style="overflow-x:auto;">
-        <table style="width:100%;border-collapse:collapse;font-family:'Barlow',sans-serif;font-size:0.78rem;">
-          <thead>
-            <tr style="background:#f0fff4;">
-              <th style="padding:9px 14px;text-align:left;font-size:0.65rem;font-weight:800;color:#38a169;letter-spacing:1.5px;text-transform:uppercase;border-bottom:2px solid #c6f6d5;white-space:nowrap;">PEP</th>
-              <th style="padding:9px 14px;text-align:left;font-size:0.65rem;font-weight:800;color:#38a169;letter-spacing:1.5px;text-transform:uppercase;border-bottom:2px solid #c6f6d5;">Título</th>
-              <th style="padding:9px 14px;text-align:left;font-size:0.65rem;font-weight:800;color:#38a169;letter-spacing:1.5px;text-transform:uppercase;border-bottom:2px solid #c6f6d5;white-space:nowrap;">UTD</th>
-              <th style="padding:9px 14px;text-align:left;font-size:0.65rem;font-weight:800;color:#38a169;letter-spacing:1.5px;text-transform:uppercase;border-bottom:2px solid #c6f6d5;white-space:nowrap;">Status</th>
-              <th style="padding:9px 14px;text-align:center;font-size:0.65rem;font-weight:800;color:#38a169;letter-spacing:1.5px;text-transform:uppercase;border-bottom:2px solid #c6f6d5;white-space:nowrap;">Cava</th>
-              <th style="padding:9px 14px;text-align:center;font-size:0.65rem;font-weight:800;color:#38a169;letter-spacing:1.5px;text-transform:uppercase;border-bottom:2px solid #c6f6d5;white-space:nowrap;">Postes</th>
-              <th style="padding:9px 14px;text-align:center;font-size:0.65rem;font-weight:800;color:#38a169;letter-spacing:1.5px;text-transform:uppercase;border-bottom:2px solid #c6f6d5;white-space:nowrap;">À Implantar</th>
-              <th style="padding:9px 14px;text-align:left;font-size:0.65rem;font-weight:800;color:#38a169;letter-spacing:1.5px;text-transform:uppercase;border-bottom:2px solid #c6f6d5;white-space:nowrap;">Município</th>
-            </tr>
-          </thead>
-          <tbody id="mapa-tabela-body"></tbody>
-        </table>
-      </div>
-    </div>
+
 
 
 <div id="page-prog" style="display:none;">
