@@ -334,7 +334,12 @@ body { font-family:'Barlow',sans-serif; background:#f0f4f5; min-height:100vh; pa
   <div class="header-title" id="page-title">TURNO HOJE</div>
   <div class="header-sub" id="page-sub">Relatório</div>
   <div class="header-time" id="page-time"></div>
-  <div class="db-badge offline" id="db-badge" onclick="dbReconectar()" title="Clique para reconectar" style="cursor:pointer;"><span class="db-dot"></span><span id="db-text">Offline — dados locais</span></div>
+  <div class="db-badge offline" id="db-badge" onclick="dbBadgeClick()" title="Clique para reconectar | Duplo clique para diagnóstico" style="cursor:pointer;"><span class="db-dot"></span><span id="db-text">Offline — dados locais</span></div>
+  <div id="diag-panel" style="display:none;position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:#1a202c;color:#e2e8f0;padding:14px 20px;border-radius:12px;font-family:monospace;font-size:0.75rem;z-index:9999;max-width:480px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,0.5);">
+    <div style="font-weight:800;margin-bottom:8px;color:#68d391;">🔍 DIAGNÓSTICO SUPABASE</div>
+    <div id="diag-text">Testando...</div>
+    <button onclick="document.getElementById('diag-panel').style.display='none'" style="margin-top:10px;background:#e53e3e;color:#fff;border:none;border-radius:6px;padding:4px 12px;cursor:pointer;font-size:0.72rem;">Fechar</button>
+  </div>
 </div>
 <div class="header-bar"></div>
 
@@ -884,8 +889,37 @@ let selectedStatus = 'ok';
 // ─── SUPABASE HELPERS ──────────────────────────────────────────────────────────
 function setDbStatus(status, msg) {
   const b = document.getElementById('db-badge');
-  b.className = 'db-badge ' + status;
-  document.getElementById('db-text').textContent = msg;
+  if (b) b.className = 'db-badge ' + status;
+  const t = document.getElementById('db-text');
+  if (t) t.textContent = msg;
+}
+
+async function diagSupabase() {
+  const panel = document.getElementById('diag-panel');
+  const txt = document.getElementById('diag-text');
+  if (!panel || !txt) return;
+  panel.style.display = 'block';
+  txt.innerHTML = '⏳ Testando conexão com Supabase...';
+  const t0 = Date.now();
+  try {
+    const res = await fetch(SUPA_URL + '/rest/v1/turno_data?select=key&limit=1', {
+      headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY }
+    });
+    const ms = Date.now() - t0;
+    if (res.ok) {
+      txt.innerHTML = '✅ Conectado! HTTP ' + res.status + ' em ' + ms + 'ms';
+      await dbLoad(true);
+      try { render(); } catch(e2) {}
+      setDbStatus('online', 'Banco online');
+      setTimeout(() => { panel.style.display='none'; }, 2000);
+    } else {
+      txt.innerHTML = '❌ HTTP ' + res.status + ' em ' + ms + 'ms<br>Verifique permissões da tabela no Supabase.';
+    }
+  } catch(e) {
+    const ms = Date.now() - t0;
+    txt.innerHTML = '❌ Falha após ' + ms + 'ms<br><b>' + e.name + ':</b> ' + e.message +
+      (e.name === 'TypeError' ? '<br><br>⚠️ Verifique:<br>• CORS bloqueado no Supabase?<br>• Usando file:// em vez de http://?<br>• Sem acesso à internet?' : '');
+  }
 }
 
 // ─── LOCALSTORAGE FALLBACK ────────────────────────────────────────────────────
@@ -926,16 +960,11 @@ async function dbLoad(skipLocalLoad) {
   }
 
   const badgeEl = document.getElementById('db-badge');
-  if (badgeEl) badgeEl.title = 'Conectando ao banco...';
 
-  const controller = new AbortController();
-  const tid = setTimeout(() => controller.abort(), 8000);
   try {
     const res = await fetch(SUPA_URL + '/rest/v1/turno_data?select=key,value', {
-      signal: controller.signal,
       headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY }
     });
-    clearTimeout(tid);
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const data = await res.json();
     if (Array.isArray(data) && data.length > 0) {
@@ -945,11 +974,14 @@ async function dbLoad(skipLocalLoad) {
       });
     }
     setDbStatus('online', 'Banco online');
-    if (badgeEl) badgeEl.title = 'Clique para reconectar';
   } catch(e) {
-    clearTimeout(tid);
+    console.warn('[dbLoad] erro:', e.name, e.message);
+    // Mostra erro real no badge por 4s, depois volta para offline padrão
+    const errMsg = e.name === 'TypeError' ? 'Sem rede / CORS' :
+                   e.name === 'AbortError' ? 'Timeout' :
+                   (e.message || 'Erro');
     setDbStatus('offline', 'Offline — dados locais');
-    if (badgeEl) badgeEl.title = 'Sem conexão. Clique para tentar reconectar';
+    console.warn('[Supabase] Não conectou:', errMsg);
   }
 }
 
@@ -958,6 +990,21 @@ async function dbReconectar() {
   await dbLoad();
   try { render(); } catch(e) {}
   if (aprData && aprData.length > 0) { try { renderApr(); } catch(e) {} }
+}
+
+let _badgeClickTimer = null;
+function dbBadgeClick() {
+  if (_badgeClickTimer) {
+    // duplo clique
+    clearTimeout(_badgeClickTimer);
+    _badgeClickTimer = null;
+    diagSupabase();
+  } else {
+    _badgeClickTimer = setTimeout(() => {
+      _badgeClickTimer = null;
+      dbReconectar();
+    }, 300);
+  }
 }
 
 async function dbSaveTurno() {
