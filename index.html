@@ -920,16 +920,16 @@ function loadFromLocalStorage() {
 }
 
 async function dbLoad(skipLocalLoad) {
-  // Carrega do localStorage imediatamente — UI já fica disponível
   if (!skipLocalLoad) {
     loadFromLocalStorage();
     try { render(); } catch(e) {}
   }
 
-  // Tenta conectar silenciosamente (sem mostrar "syncing" no badge)
+  const badgeEl = document.getElementById('db-badge');
+  if (badgeEl) badgeEl.title = 'Conectando ao banco...';
 
   const controller = new AbortController();
-  const tid = setTimeout(() => controller.abort(), 2500);
+  const tid = setTimeout(() => controller.abort(), 8000);
   try {
     const res = await fetch(SUPA_URL + '/rest/v1/turno_data?select=key,value', {
       signal: controller.signal,
@@ -945,9 +945,11 @@ async function dbLoad(skipLocalLoad) {
       });
     }
     setDbStatus('online', 'Banco online');
+    if (badgeEl) badgeEl.title = 'Clique para reconectar';
   } catch(e) {
     clearTimeout(tid);
     setDbStatus('offline', 'Offline — dados locais');
+    if (badgeEl) badgeEl.title = 'Sem conexão. Clique para tentar reconectar';
   }
 }
 
@@ -1791,7 +1793,7 @@ async function checkForUpdates() {
   // Verifica silenciosamente se houve alteração no banco
   try {
     const controller = new AbortController();
-    const tid = setTimeout(() => controller.abort(), 2500);
+    const tid = setTimeout(() => controller.abort(), 8000);
     const res = await fetch(SUPA_URL + '/rest/v1/turno_data?select=key,updated_at', {
       signal: controller.signal,
       headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY }
@@ -1864,7 +1866,7 @@ setInterval(async () => {
     // Tenta silenciosamente sem alterar o badge para 'syncing'
     try {
       const controller = new AbortController();
-      const tid = setTimeout(() => controller.abort(), 2500);
+      const tid = setTimeout(() => controller.abort(), 8000);
       const res = await fetch(SUPA_URL + '/rest/v1/turno_data?select=key,value', {
         signal: controller.signal,
         headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY }
@@ -1913,7 +1915,7 @@ setInterval(async () => {
   // Busca o timestamp inicial antes de iniciar o loop
   try {
     const controller2 = new AbortController();
-    const tid2 = setTimeout(() => controller2.abort(), 2500);
+    const tid2 = setTimeout(() => controller2.abort(), 8000);
     const res = await fetch(SUPA_URL + '/rest/v1/turno_data?select=key,updated_at', {
       headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY },
       signal: controller2.signal
