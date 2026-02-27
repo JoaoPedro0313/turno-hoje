@@ -920,20 +920,11 @@ function loadFromLocalStorage() {
 }
 
 async function dbLoad() {
-  // Carrega do localStorage imediatamente e mostra status local já
+  // Carrega do localStorage imediatamente — UI já fica disponível
   loadFromLocalStorage();
   try { render(); } catch(e) {}
 
-  // Verifica se há dados locais para mostrar status adequado antes de tentar rede
-  const temDadosLocais = ['turno','producao'].some(k => { try { return !!localStorage.getItem('mariua_' + k); } catch(e) { return false; } });
-  setDbStatus('syncing', temDadosLocais ? 'Atualizando...' : 'Conectando...');
-
-  // Anti-trava: se ficar mais de 3s em syncing, muda para offline automaticamente
-  const _syncGuard = setTimeout(() => {
-    if (document.getElementById('db-badge').classList.contains('syncing')) {
-      setDbStatus('offline', 'Sem conexão — dados locais');
-    }
-  }, 3000);
+  // Tenta conectar silenciosamente (sem mostrar "syncing" no badge)
 
   const controller = new AbortController();
   const tid = setTimeout(() => controller.abort(), 2500);
@@ -948,22 +939,18 @@ async function dbLoad() {
     if (Array.isArray(data) && data.length > 0) {
       data.forEach(row => {
         applyRowData(row);
-        lsSet(row.key, row.value); // sincroniza local
+        lsSet(row.key, row.value);
       });
     }
-    clearTimeout(_syncGuard);
     setDbStatus('online', 'Banco online');
   } catch(e) {
     clearTimeout(tid);
-    clearTimeout(_syncGuard);
-    const msg = e.name === 'AbortError' ? 'Timeout — dados locais' : 'Offline — dados locais';
-    setDbStatus('offline', msg);
+    setDbStatus('offline', 'Offline — dados locais');
   }
 }
 
 async function dbReconectar() {
-  // Permite forçar reconexão mesmo em syncing (clique manual no badge)
-  // O guard interno do dbLoad vai resetar se travar
+  setDbStatus('syncing', 'Reconectando...');
   await dbLoad();
   try { render(); } catch(e) {}
   if (aprData && aprData.length > 0) { try { renderApr(); } catch(e) {} }
@@ -1910,12 +1897,14 @@ setInterval(async () => {
   loadFromLocalStorage();
   try { render(); } catch(e) {}
   if (aprData && aprData.length > 0) { try { renderApr(); } catch(e) {} }
+  // Badge já mostra offline/local ANTES de tentar rede — sem "Carregando..." preso
+  setDbStatus('offline', 'Offline — dados locais');
   clearTimeout(_loadTimeout);
   // Garante que o overlay sempre seja ocultado, independente de erros
   try { hideLoading(); } catch(e) {}
   try { const lo=document.getElementById('loading-overlay'); if(lo){ lo.classList.remove('show'); lo.style.display='none'; lo.style.pointerEvents='none'; } } catch(e) {}
 
-  // Em background, tenta sincronizar com Supabase
+  // Em background, tenta sincronizar com Supabase (atualiza badge para online se conseguir)
   try { await dbLoad(); render(); } catch(e) {}
   if (aprData && aprData.length > 0) { try { renderApr(); } catch(e) {} }
 
