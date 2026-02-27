@@ -334,7 +334,7 @@ body { font-family:'Barlow',sans-serif; background:#f0f4f5; min-height:100vh; pa
   <div class="header-title" id="page-title">TURNO HOJE</div>
   <div class="header-sub" id="page-sub">Relatório</div>
   <div class="header-time" id="page-time"></div>
-  <div class="db-badge offline" id="db-badge"><span class="db-dot"></span><span id="db-text">Conectando...</span></div>
+  <div class="db-badge offline" id="db-badge" onclick="dbReconectar()" title="Clique para reconectar" style="cursor:pointer;"><span class="db-dot"></span><span id="db-text">Conectando...</span></div>
 </div>
 <div class="header-bar"></div>
 
@@ -839,10 +839,45 @@ function setDbStatus(status, msg) {
   document.getElementById('db-text').textContent = msg;
 }
 
+// ─── LOCALSTORAGE FALLBACK ────────────────────────────────────────────────────
+function lsGet(key) { try { const v = localStorage.getItem('mariua_' + key); return v ? JSON.parse(v) : null; } catch(e) { return null; } }
+function lsSet(key, val) { try { localStorage.setItem('mariua_' + key, JSON.stringify(val)); } catch(e) {} }
+
+function applyRowData(row) {
+  if (row.key === 'turno') {
+    const v = row.value;
+    teams.ok     = v.ok     || DEFAULTS.ok;
+    teams.justif = v.justif || [];
+    teams.falta  = v.falta  || DEFAULTS.falta;
+    currentDate  = v.date   || DEFAULTS.date;
+  }
+  if (row.key === 'producao') { producao = row.value || {}; }
+  if (row.key === 'obras_base') {
+    bancoDB     = row.value.data || null;
+    bancoDBInfo = row.value.info || null;
+    compUpdateBaseUI();
+    if (bancoDB) setTimeout(mapaCarregarDoBanco, 300);
+  }
+  if (row.key === 'apr_data') {
+    if (Array.isArray(row.value) && row.value.length > 0) aprData = row.value;
+  }
+}
+
+function loadFromLocalStorage() {
+  ['turno','producao','obras_base','apr_data'].forEach(key => {
+    const v = lsGet(key);
+    if (v !== null) applyRowData({ key, value: v });
+  });
+}
+
 async function dbLoad() {
-  setDbStatus('syncing', 'Carregando...');
+  setDbStatus('syncing', 'Conectando...');
+  // Carrega do localStorage imediatamente enquanto tenta o servidor
+  loadFromLocalStorage();
+  try { render(); } catch(e) {}
+
   const controller = new AbortController();
-  const tid = setTimeout(() => controller.abort(), 4000);
+  const tid = setTimeout(() => controller.abort(), 5000);
   try {
     const res = await fetch(SUPA_URL + '/rest/v1/turno_data?select=key,value', {
       signal: controller.signal,
@@ -853,89 +888,76 @@ async function dbLoad() {
     const data = await res.json();
     if (Array.isArray(data) && data.length > 0) {
       data.forEach(row => {
-        if (row.key === 'turno') {
-          const v = row.value;
-          teams.ok     = v.ok     || DEFAULTS.ok;
-          teams.justif = v.justif || [];
-          teams.falta  = v.falta  || DEFAULTS.falta;
-          currentDate  = v.date   || DEFAULTS.date;
-        }
-        if (row.key === 'producao') {
-          producao = row.value || {};
-        }
-        if (row.key === 'obras_base') {
-          bancoDB     = row.value.data || null;
-          bancoDBInfo = row.value.info || null;
-          compUpdateBaseUI();
-          if (bancoDB) setTimeout(mapaCarregarDoBanco, 300);
-        }
-        if (row.key === 'apr_data') {
-          if (Array.isArray(row.value) && row.value.length > 0) {
-            aprData = row.value;
-          }
-        }
+        applyRowData(row);
+        lsSet(row.key, row.value); // sincroniza local
       });
     }
     setDbStatus('online', 'Banco online');
   } catch(e) {
     clearTimeout(tid);
-    setDbStatus('offline', e.name === 'AbortError' ? 'Timeout' : 'Sem conexao');
+    const msg = e.name === 'AbortError' ? 'Timeout — dados locais' : 'Offline — dados locais';
+    setDbStatus('offline', msg);
   }
 }
 
+async function dbReconectar() {
+  if (document.getElementById('db-badge').classList.contains('syncing')) return;
+  await dbLoad();
+  try { render(); } catch(e) {}
+  if (aprData && aprData.length > 0) { try { renderApr(); } catch(e) {} }
+}
+
 async function dbSaveTurno() {
+  const payload = { date: currentDate, ok: teams.ok, justif: teams.justif, falta: teams.falta };
+  lsSet('turno', payload); // salva local imediatamente
   try {
     setDbStatus('syncing', 'Salvando...');
     const res = await fetch(SUPA_URL + '/rest/v1/turno_data', {
       method: 'POST',
-      headers: {
-        'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY,
-        'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates'
-      },
-      body: JSON.stringify({ key: 'turno', value: { date: currentDate, ok: teams.ok, justif: teams.justif, falta: teams.falta }, updated_at: new Date().toISOString() })
+      headers: { ...SUPA_HEADERS, 'Prefer': 'resolution=merge-duplicates' },
+      body: JSON.stringify({ key: 'turno', value: payload, updated_at: new Date().toISOString() })
     });
     if (!res.ok) throw new Error('HTTP ' + res.status);
     setDbStatus('online', 'Salvo!');
     setTimeout(() => setDbStatus('online', 'Banco online'), 1500);
   } catch(e) {
-    setDbStatus('offline', 'Erro ao salvar');
+    setDbStatus('offline', 'Salvo local (sem rede)');
+    setTimeout(() => setDbStatus('offline', 'Offline — dados locais'), 2000);
   }
 }
 
 async function dbSaveProducao() {
+  lsSet('producao', producao);
   try {
     setDbStatus('syncing', 'Salvando...');
     const res = await fetch(SUPA_URL + '/rest/v1/turno_data', {
       method: 'POST',
-      headers: {
-        'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY,
-        'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates'
-      },
+      headers: { ...SUPA_HEADERS, 'Prefer': 'resolution=merge-duplicates' },
       body: JSON.stringify({ key: 'producao', value: producao, updated_at: new Date().toISOString() })
     });
     if (!res.ok) throw new Error('HTTP ' + res.status);
     setDbStatus('online', 'Banco online');
   } catch(e) {
-    setDbStatus('offline', 'Erro ao salvar');
+    setDbStatus('offline', 'Salvo local (sem rede)');
+    setTimeout(() => setDbStatus('offline', 'Offline — dados locais'), 2000);
   }
 }
 
 async function dbSaveApr() {
+  lsSet('apr_data', aprData);
   try {
     setDbStatus('syncing', 'Salvando APR...');
     const res = await fetch(SUPA_URL + '/rest/v1/turno_data', {
       method: 'POST',
-      headers: {
-        'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY,
-        'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates'
-      },
+      headers: { ...SUPA_HEADERS, 'Prefer': 'resolution=merge-duplicates' },
       body: JSON.stringify({ key: 'apr_data', value: aprData, updated_at: new Date().toISOString() })
     });
     if (!res.ok) throw new Error('HTTP ' + res.status);
     setDbStatus('online', 'APR salvo!');
     setTimeout(() => setDbStatus('online', 'Banco online'), 1500);
   } catch(e) {
-    setDbStatus('offline', 'Erro ao salvar APR');
+    setDbStatus('offline', 'Salvo local (sem rede)');
+    setTimeout(() => setDbStatus('offline', 'Offline — dados locais'), 2000);
   }
 }
 
@@ -1762,23 +1784,32 @@ function startAutoRefresh() {
 }
 
 (async function() {
-  // ── FAILSAFE: force hide loading overlay after 8s no matter what ──
+  // ── FAILSAFE: force hide loading overlay after 6s no matter what ──
   const _loadTimeout = setTimeout(() => {
     const lo = document.getElementById('loading-overlay');
     if (lo) { lo.classList.remove('show'); lo.style.display = 'none'; }
-  }, 8000);
+  }, 6000);
+
   const now=new Date(); const pad=n=>String(n).padStart(2,'0');
   document.getElementById('page-time').textContent =
     'Gerado em: '+pad(now.getDate())+'/'+pad(now.getMonth()+1)+'/'+now.getFullYear()+' as '+pad(now.getHours())+':'+pad(now.getMinutes());
-  try { await dbLoad(); } catch(e) {}
+
+  // Carrega dados locais imediatamente (sem esperar rede)
+  loadFromLocalStorage();
   try { render(); } catch(e) {}
   if (aprData && aprData.length > 0) { try { renderApr(); } catch(e) {} }
   clearTimeout(_loadTimeout);
-  try { hideLoading(); } catch(e) { document.getElementById('loading-overlay').style.display='none'; }
+  try { hideLoading(); } catch(e) { const lo=document.getElementById('loading-overlay'); if(lo) lo.style.display='none'; }
+
+  // Em background, tenta sincronizar com Supabase
+  try { await dbLoad(); render(); } catch(e) {}
+  if (aprData && aprData.length > 0) { try { renderApr(); } catch(e) {} }
+
   // Busca o timestamp inicial antes de iniciar o loop
   try {
     const res = await fetch(SUPA_URL + '/rest/v1/turno_data?select=key,updated_at', {
-      headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY }
+      headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY },
+      signal: AbortSignal.timeout ? AbortSignal.timeout(4000) : new AbortController().signal
     });
     if (res.ok) {
       const data = await res.json();
@@ -2414,12 +2445,16 @@ async function sincronizarSheets() {
       if (!dataIrc || !dataIrc.length) throw new Error('Planilha de Irecê não reconhecida. Verifique se o compartilhamento está como "Qualquer pessoa com o link".');
 
       const merged = [...dataJac, ...dataIrc];
-      await compSalvarBancoDirectly(merged, dataJac.length, dataIrc.length);
-
+      try {
+        await compSalvarBancoDirectly(merged, dataJac.length, dataIrc.length);
+        setDbStatus('online', '✅ Planilhas sincronizadas!');
+      } catch(supaErr) {
+        // Supabase offline, mas dados foram salvos no localStorage e aplicados
+        setDbStatus('offline', 'Sheets OK — salvo local');
+      }
       setBtn('&#9989; Sincronizado!', false);
       setTimeout(() => setBtn('&#8635; Sincronizar do Sheets', false), 3000);
-      setDbStatus('online', '✅ Planilhas sincronizadas!');
-      setTimeout(() => setDbStatus('online', 'Banco online'), 2500);
+      setTimeout(() => setDbStatus(bancoDB ? 'online' : 'offline', bancoDB ? 'Banco online' : 'Offline — dados locais'), 3000);
     } catch(e) {
       setBtn('&#8635; Sincronizar do Sheets', false);
       setDbStatus('offline', 'Erro ao sincronizar');
@@ -2432,17 +2467,19 @@ async function compSalvarBancoDirectly(merged, jacCount, ircCount) {
   const now = new Date(), pad = n => String(n).padStart(2,'0');
   const updatedAt = pad(now.getDate())+'/'+pad(now.getMonth()+1)+'/'+now.getFullYear()+' às '+pad(now.getHours())+':'+pad(now.getMinutes());
   const info = { count: merged.length, updatedAt, utds: ['IRECÊ ('+ircCount+')', 'JACOBINA ('+jacCount+')'] };
+  const payload = { data: merged, info };
+  lsSet('obras_base', payload); // salva local imediatamente
+  bancoDB = merged; bancoDBInfo = info;
+  compUpdateBaseUI();
+  mapaCarregarDoBanco();
 
   setDbStatus('syncing', 'Salvando banco…');
   const res = await fetch(SUPA_URL + '/rest/v1/turno_data', {
     method: 'POST',
     headers: { ...SUPA_HEADERS, 'Prefer': 'resolution=merge-duplicates' },
-    body: JSON.stringify({ key: 'obras_base', value: { data: merged, info }, updated_at: now.toISOString() })
+    body: JSON.stringify({ key: 'obras_base', value: payload, updated_at: now.toISOString() })
   });
   if (!res.ok) throw new Error('Supabase HTTP ' + res.status);
-  bancoDB = merged; bancoDBInfo = info;
-  compUpdateBaseUI();
-  mapaCarregarDoBanco();
 }
 
 
