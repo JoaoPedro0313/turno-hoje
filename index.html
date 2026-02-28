@@ -926,7 +926,25 @@ async function diagSupabase() {
 
 // ─── LOCALSTORAGE FALLBACK ────────────────────────────────────────────────────
 function lsGet(key) { try { const v = localStorage.getItem('mariua_' + key); return v ? JSON.parse(v) : null; } catch(e) { return null; } }
-function lsSet(key, val) { try { localStorage.setItem('mariua_' + key, JSON.stringify(val)); } catch(e) {} }
+function lsSet(key, val) {
+  try {
+    localStorage.setItem('mariua_' + key, JSON.stringify(val));
+  } catch(e) {
+    console.warn('[localStorage] Falhou ao salvar "' + key + '":', e.name, e.message);
+    if (e.name === 'QuotaExceededError' || e.name === 'NS_ERROR_DOM_QUOTA_REACHED') {
+      // Liberar espaço: apagar histórico e dados temporários menos críticos
+      try {
+        ['comp_historico', 'obras_base'].forEach(k => {
+          if (k !== key) localStorage.removeItem('mariua_' + k);
+        });
+        localStorage.setItem('mariua_' + key, JSON.stringify(val));
+      } catch(e2) {
+        console.error('[localStorage] falhou mesmo após limpeza:', e2.message);
+        // Dados salvos no Supabase — não é crítico
+      }
+    }
+  }
+}
 
 function applyRowData(row) {
   if (row.key === 'turno') {
@@ -972,9 +990,10 @@ async function dbLoad(skipLocalLoad) {
   }
 
   try {
+    // Carrega dados leves primeiro (exclui obras_base que pode ser muito grande)
     const controller = new AbortController();
     const tid = setTimeout(() => controller.abort(), 10000);
-    const res = await fetch(SUPA_URL + '/rest/v1/turno_data?select=key,value', {
+    const res = await fetch(SUPA_URL + '/rest/v1/turno_data?select=key,value&key=neq.obras_base', {
       headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY },
       signal: controller.signal
     });
@@ -994,11 +1013,55 @@ async function dbLoad(skipLocalLoad) {
       });
     }
     setDbStatus('online', 'Banco online ✓');
+
+    // Carrega obras_base separadamente com timeout maior (dados grandes)
+    dbLoadObrasBase();
+
   } catch(e) {
     console.warn('[Supabase] Não conectou:', e.name, e.message);
     const temDados = teams.ok.length > 0 || teams.falta.length > 0;
     setDbStatus(temDados ? 'local' : 'offline',
                 temDados ? 'Dados locais' : 'Sem conexão');
+  }
+}
+
+async function dbLoadObrasBase() {
+  try {
+    const controller = new AbortController();
+    const tid = setTimeout(() => controller.abort(), 30000); // 30s para dados grandes
+    const res = await fetch(SUPA_URL + '/rest/v1/turno_data?select=key,value&key=eq.obras_base', {
+      headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY },
+      signal: controller.signal
+    });
+    clearTimeout(tid);
+    if (!res.ok) {
+      console.warn('[Supabase] obras_base HTTP', res.status);
+      return;
+    }
+    const data = await res.json();
+    if (Array.isArray(data) && data.length > 0 && data[0].value && data[0].value.data) {
+      const supaCount = (data[0].value.data || []).length;
+      const localCount = bancoDB ? bancoDB.length : 0;
+      // Só substitui se o Supabase tem dados (prefere Supabase como fonte de verdade)
+      if (supaCount > 0) {
+        applyRowData(data[0]);
+        lsSet(data[0].key, data[0].value);
+        console.log('[Supabase] obras_base carregado:', supaCount, 'obras (local tinha', localCount, ')');
+      }
+    }
+  } catch(e) {
+    console.warn('[Supabase] obras_base não carregou:', e.name, e.message);
+    // Fallback: usa o que já está no localStorage (carregado em loadFromLocalStorage)
+    if (!bancoDB && !bancoDBInfo) {
+      const local = lsGet('obras_base');
+      if (local && local.data) {
+        bancoDB = local.data;
+        bancoDBInfo = local.info || null;
+        compUpdateBaseUI();
+        if (bancoDB) setTimeout(mapaCarregarDoBanco, 300);
+        console.log('[localStorage] obras_base fallback:', bancoDB.length, 'obras');
+      }
+    }
   }
 }
 
@@ -1079,34 +1142,49 @@ async function dbSaveApr() {
 }
 
 async function dbSaveComparador(mergedData, filename) {
+  const now = new Date();
+  const pad = n => String(n).padStart(2,'0');
+  const arquivos = (compBaseInfo && compBaseInfo.arquivos) ? [...compBaseInfo.arquivos] : [];
+  arquivos.push({ filename, addedAt: pad(now.getDate())+'/'+pad(now.getMonth()+1)+'/'+now.getFullYear()+' às '+pad(now.getHours())+':'+pad(now.getMinutes()), count: mergedData.length });
+  const info = {
+    arquivos,
+    count: mergedData.length,
+    updatedAt: pad(now.getDate())+'/'+pad(now.getMonth()+1)+'/'+now.getFullYear()+' às '+pad(now.getHours())+':'+pad(now.getMinutes())
+  };
+
+  // Minimiza dados para salvar (só campos essenciais)
+  const mergedDataMin = typeof compMinimizarDados === 'function' ? compMinimizarDados(mergedData) : mergedData;
+
+  // Sempre atualiza estado local imediatamente
+  bancoDB = mergedData;
+  bancoDBInfo = info;
+  lsSet('obras_base', { data: mergedDataMin, info });
+  compDataAnterior = mergedData;
+  compBaseInfo = info;
+  compUpdateBaseUI();
+
+  // Tenta salvar no Supabase
   try {
     setDbStatus('syncing', 'Salvando base...');
-    const now = new Date();
-    const pad = n => String(n).padStart(2,'0');
-    // Atualiza histórico de arquivos
-    const arquivos = (compBaseInfo && compBaseInfo.arquivos) ? [...compBaseInfo.arquivos] : [];
-    arquivos.push({ filename, addedAt: pad(now.getDate())+'/'+pad(now.getMonth()+1)+'/'+now.getFullYear()+' às '+pad(now.getHours())+':'+pad(now.getMinutes()), count: mergedData.length });
-    const info = {
-      arquivos,
-      count: mergedData.length,
-      updatedAt: pad(now.getDate())+'/'+pad(now.getMonth()+1)+'/'+now.getFullYear()+' às '+pad(now.getHours())+':'+pad(now.getMinutes())
-    };
     const res = await fetch(SUPA_URL + '/rest/v1/turno_data', {
       method: 'POST',
       headers: {
         'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY,
         'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates'
       },
-      body: JSON.stringify({ key: 'comparador_base', value: { data: mergedData, info }, updated_at: now.toISOString() })
+      body: JSON.stringify({ key: 'obras_base', value: { data: mergedDataMin, info }, updated_at: now.toISOString() })
     });
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    compDataAnterior = mergedData;
-    compBaseInfo = info;
-    compUpdateBaseUI();
+    if (!res.ok) {
+      const errBody = await res.text().catch(() => '');
+      throw new Error('HTTP ' + res.status + ': ' + errBody.substring(0, 200));
+    }
     setDbStatus('online', 'Base salva!');
     setTimeout(() => setDbStatus('online', 'Banco online'), 1500);
   } catch(e) {
-    setDbStatus('offline', 'Erro ao salvar base');
+    console.error('[Supabase] Falha ao salvar obras_base:', e.message);
+    setDbStatus('local', '⚠️ Salvo local (Supabase offline)');
+    alert('❌ Falha ao salvar no Supabase:\n\n' + e.message + '\n\nOs dados foram preservados localmente, mas não serão visíveis em outros dispositivos.');
+    setTimeout(() => setDbStatus('local', 'Dados locais'), 3000);
   }
 }
 // ─── RENDER ────────────────────────────────────────────────────────────────────
@@ -1936,7 +2014,7 @@ setInterval(async () => {
     try {
       const controller = new AbortController();
       const tid = setTimeout(() => controller.abort(), 8000);
-      const res = await fetch(SUPA_URL + '/rest/v1/turno_data?select=key,value', {
+      const res = await fetch(SUPA_URL + '/rest/v1/turno_data?select=key,value&key=neq.obras_base', {
         signal: controller.signal,
         headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY }
       });
@@ -1946,6 +2024,7 @@ setInterval(async () => {
         if (Array.isArray(data) && data.length > 0) {
           data.forEach(row => { applyRowData(row); lsSet(row.key, row.value); });
         }
+        dbLoadObrasBase();
         setDbStatus('online', 'Banco online ✓');
         try { render(); } catch(e) {}
       }
@@ -2108,13 +2187,18 @@ async function compSalvarBanco() {
   const info = { count: merged.length, updatedAt, utds: ['IRECÊ ('+irece.length+')', 'JACOBINA ('+jacobina.length+')'] };
   try {
     setDbStatus('syncing', 'Salvando banco…');
+    const mergedMin = compMinimizarDados(merged);
     const res = await fetch(SUPA_URL + '/rest/v1/turno_data', {
       method: 'POST',
       headers: { ...SUPA_HEADERS, 'Prefer': 'resolution=merge-duplicates' },
-      body: JSON.stringify({ key: 'obras_base', value: { data: merged, info }, updated_at: now.toISOString() })
+      body: JSON.stringify({ key: 'obras_base', value: { data: mergedMin, info }, updated_at: now.toISOString() })
     });
-    if (!res.ok) throw new Error('HTTP ' + res.status);
+    if (!res.ok) {
+      const errBody = await res.text().catch(() => '');
+      throw new Error('HTTP ' + res.status + ': ' + errBody.substring(0, 150));
+    }
     bancoDB = merged; bancoDBInfo = info;
+    lsSet('obras_base', { data: mergedMin, info });
     compUpdateBaseUI();
     compHistoricoAddSnapshot(merged);
     compBancoTemp = { 'IRECÊ': null, 'JACOBINA': null };
@@ -2128,7 +2212,11 @@ async function compSalvarBanco() {
     setDbStatus('online', '✅ Banco salvo! ' + merged.length + ' obras');
     setTimeout(() => setDbStatus('online', 'Banco online'), 2500);
     mapaCarregarDoBanco();
-  } catch(e) { setDbStatus('offline', 'Erro ao salvar banco'); console.error(e); }
+  } catch(e) {
+    console.error('[compSalvarBanco]', e);
+    setDbStatus('offline', 'Erro ao salvar: ' + e.message.substring(0, 60));
+    alert('❌ Falha ao salvar banco no Supabase:\n\n' + e.message + '\n\nOs dados foram preservados localmente, mas não serão visíveis em outros dispositivos.');
+  }
 }
 
 // ─── COMPARAR BANCO vs SHEETS ─────────────────────────────────────────────────
@@ -2634,8 +2722,18 @@ async function compAutoSincronizar() {
     const now = new Date(), pad = n => String(n).padStart(2,'0');
     const updatedAt = pad(now.getDate())+'/'+pad(now.getMonth()+1)+'/'+now.getFullYear()+' às '+pad(now.getHours())+':'+pad(now.getMinutes());
     const info = { count: merged.length, updatedAt, utds: ['IRECÊ ('+dataIrc.length+')', 'JACOBINA ('+dataJac.length+')'] };
+    const mergedMin = compMinimizarDados(merged);
     bancoDB = merged; bancoDBInfo = info;
-    lsSet('obras_base', { data: merged, info });
+    lsSet('obras_base', { data: mergedMin, info });
+    // Salva no Supabase também para persistência real
+    try {
+      const saveRes = await fetch(SUPA_URL + '/rest/v1/turno_data', {
+        method: 'POST',
+        headers: { ...SUPA_HEADERS, 'Prefer': 'resolution=merge-duplicates' },
+        body: JSON.stringify({ key: 'obras_base', value: { data: mergedMin, info }, updated_at: now.toISOString() })
+      });
+      if (!saveRes.ok) console.warn('[compAutoSincronizar] Supabase HTTP', saveRes.status);
+    } catch(e2) { console.warn('[compAutoSincronizar] save err:', e2.message); }
     compUpdateBaseUI();
     mapaCarregarDoBanco();
     // Salva snapshot no histórico
@@ -3278,24 +3376,52 @@ async function sincronizarSheets() {
   });
 }
 
+// Reduz cada obra aos campos essenciais usados pelo sistema (para economizar espaço no Supabase)
+function compMinimizarDados(rows) {
+  const campos = ['PEP OBRA','TÍTULO','TITULO','STATUS DA OBRA','LATITUDE','LONGITUDE',
+    'MUNICIPIO','MUNICÍPIO','_UTD','CAVA REALIZADA','CAVA  REALIZADA',
+    'POSTES REALIZADO','POSTES  REALIZADO','POSTES A IMPLANTA','POSTES  À IMPLANTA','POSTES À IMPLANTA',
+    'POSTES PREVISTOS','ENCARREGADO','MÊS','MES','DATA DE LANÇAMENTO'];
+  return rows.map(r => {
+    const mini = { _UTD: r['_UTD']||'' };
+    campos.forEach(c => { if (r[c] !== undefined) mini[c] = r[c]; });
+    return mini;
+  });
+}
+
 async function compSalvarBancoDirectly(merged, jacCount, ircCount) {
   const now = new Date(), pad = n => String(n).padStart(2,'0');
   const updatedAt = pad(now.getDate())+'/'+pad(now.getMonth()+1)+'/'+now.getFullYear()+' às '+pad(now.getHours())+':'+pad(now.getMinutes());
   const info = { count: merged.length, updatedAt, utds: ['IRECÊ ('+ircCount+')', 'JACOBINA ('+jacCount+')'] };
-  const payload = { data: merged, info };
-  lsSet('obras_base', payload); // salva local imediatamente
+
+  // Aplica dados completos na sessão (para comparações e mapa)
   bancoDB = merged; bancoDBInfo = info;
   compUpdateBaseUI();
   mapaCarregarDoBanco();
   compHistoricoAddSnapshot(merged);
 
+  // Salva versão enxuta (apenas campos necessários) para caber no Supabase e localStorage
+  const mergedMin = compMinimizarDados(merged);
+  const payload = { data: mergedMin, info };
+
+  // Salva localmente PRIMEIRO — garante persistência mesmo se Supabase falhar
+  lsSet('obras_base', payload);
+
+  // Salva no Supabase
   setDbStatus('syncing', 'Salvando banco…');
   const res = await fetch(SUPA_URL + '/rest/v1/turno_data', {
     method: 'POST',
     headers: { ...SUPA_HEADERS, 'Prefer': 'resolution=merge-duplicates' },
     body: JSON.stringify({ key: 'obras_base', value: payload, updated_at: now.toISOString() })
   });
-  if (!res.ok) throw new Error('Supabase HTTP ' + res.status);
+  if (!res.ok) {
+    const errBody = await res.text().catch(() => '');
+    // Erro no Supabase — dados já estão salvos localmente, mas outros dispositivos não verão
+    setDbStatus('local', '⚠️ Supabase rejeitou — salvo só local');
+    throw new Error('HTTP ' + res.status + ': ' + errBody.substring(0, 200));
+  }
+  // Sucesso: confirmar status
+  setDbStatus('online', '✅ Banco sincronizado!');
 }
 
 function progLimpar() {
@@ -3588,7 +3714,7 @@ function progFormClear() {
 
 // ── TABS ──
 function progSwitchTab(tab) {
-  ['form','list','dash'].forEach(t => {
+  ['form','list','dash','mapa'].forEach(t => {
     const btn = document.getElementById('prog-tab-'+t);
     const view = document.getElementById('prog-view-'+t);
     const active = t === tab;
@@ -3601,7 +3727,215 @@ function progSwitchTab(tab) {
   setTimeout(() => {
     if (tab === 'list') progRenderList();
     if (tab === 'dash') progRenderDash();
+    if (tab === 'mapa') progMapaInit();
   }, 10);
+}
+
+// ─── MAPA DA PROGRAMAÇÃO (aba interna) ──────────────────────────────────────
+let progMapaMap = null, progMapaLayerGroup = null;
+
+function progMapaInit() {
+  // Inicializar data padrão
+  const di = document.getElementById('prog-mapa-date');
+  if (di && !di.value) di.value = new Date().toISOString().split('T')[0];
+
+  // Garantir Leaflet carregado
+  const doInit = () => {
+    if (!progMapaMap) {
+      progMapaMap = L.map('prog-mapa-container', {zoomControl:true});
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution:'© OpenStreetMap', maxZoom:18
+      }).addTo(progMapaMap);
+      progMapaLayerGroup = L.layerGroup().addTo(progMapaMap);
+      progMapaMap.setView([-11.5,-41.0], 8);
+    } else {
+      progMapaMap.invalidateSize();
+    }
+    progMapaRender();
+  };
+
+  if (window.L) { setTimeout(doInit, 50); return; }
+  if (!document.getElementById('leaflet-css')) {
+    const link = document.createElement('link');
+    link.id = 'leaflet-css'; link.rel = 'stylesheet';
+    link.href = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css';
+    document.head.appendChild(link);
+  }
+  const s = document.createElement('script');
+  s.src = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js';
+  s.onload = doInit;
+  document.head.appendChild(s);
+}
+
+function progMapaGetFiltrados() {
+  const di = document.getElementById('prog-mapa-date');
+  const encSel = document.getElementById('prog-mapa-enc');
+  const dataFiltro = di ? di.value : '';
+  const encFiltro = encSel ? encSel.value : '';
+  let regs = progRegistros || [];
+  if (dataFiltro) regs = regs.filter(r => r.data === dataFiltro);
+  if (encFiltro) regs = regs.filter(r => r.encarregado === encFiltro);
+  return regs;
+}
+
+function progMapaGetCor(status) {
+  const s = (status||'').toUpperCase();
+  if (s === 'EXECUTADO') return '#6b46c1';
+  if (s === 'NÃO EXECUTADO' || s === 'NAO EXECUTADO') return '#e53e3e';
+  if (s === 'EM EXECUÇÃO' || s === 'EM EXECUCAO') return '#2b6cb0';
+  if (s === 'SEM ACESSO' || s === 'TEMPO CHUVOSO' || s === 'CHUVA') return '#f0a500';
+  return '#a0aec0';
+}
+
+function progMapaRender() {
+  if (!progMapaMap) return;
+  const regs = progMapaGetFiltrados();
+
+  // Atualizar select de encarregados
+  const encSel = document.getElementById('prog-mapa-enc');
+  if (encSel) {
+    const encAtual = encSel.value;
+    const di = document.getElementById('prog-mapa-date');
+    const dataF = di ? di.value : '';
+    const base = dataF ? (progRegistros||[]).filter(r=>r.data===dataF) : (progRegistros||[]);
+    const encs = [...new Set(base.map(r=>r.encarregado).filter(Boolean))].sort();
+    encSel.innerHTML = '<option value="">Todos os encarregados</option>' +
+      encs.map(e=>`<option value="${e}" ${e===encAtual?'selected':''}>${e}</option>`).join('');
+    encSel.value = encAtual;
+  }
+
+  // Limpar camada
+  progMapaLayerGroup.clearLayers();
+
+  // Separar com/sem coord
+  const comCoord = [], semCoord = [];
+  regs.forEach(r => {
+    const coord = mapaProgGetCoord(r);
+    if (coord) comCoord.push({r, coord});
+    else semCoord.push(r);
+  });
+
+  // Contadores
+  const countEl = document.getElementById('prog-mapa-count');
+  if (countEl) countEl.textContent = `${comCoord.length} no mapa · ${semCoord.length} sem coord.`;
+
+  const listaCountEl = document.getElementById('prog-mapa-lista-count');
+  if (listaCountEl) listaCountEl.textContent = `${regs.length} obra(s)`;
+
+  // Cards de resumo
+  const cardsEl = document.getElementById('prog-mapa-cards');
+  if (cardsEl) {
+    const totalVP = regs.reduce((s,r)=>s+(r.valor_previsto||0),0);
+    const totalVR = regs.reduce((s,r)=>s+(r.valor_realizado||0),0);
+    const fmt = v => 'R$ ' + v.toLocaleString('pt-BR',{minimumFractionDigits:0,maximumFractionDigits:0});
+    const card = (icon,label,val,bg,color) =>
+      `<div style="background:${bg};border-radius:10px;padding:10px 16px;display:flex;align-items:center;gap:10px;min-width:120px;box-shadow:0 1px 6px rgba(0,0,0,0.07);">
+        <span style="font-size:1.3rem;">${icon}</span>
+        <div><div style="font-size:1rem;font-weight:900;color:${color};">${val}</div>
+        <div style="font-size:0.6rem;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:0.5px;">${label}</div></div></div>`;
+    cardsEl.innerHTML =
+      card('📝','Registros',regs.length,'#fff','#6b46c1') +
+      card('📍','Com coord.',comCoord.length,'#fff','#2b6cb0') +
+      card('❓','Sem coord.',semCoord.length,'#fff','#a0aec0') +
+      card('💰','Previsto',fmt(totalVP),'#fff','#276749') +
+      card('✅','Realizado',fmt(totalVR),'#fff','#0d7377');
+  }
+
+  // Adicionar marcadores
+  const bounds = [];
+  comCoord.forEach(({r, coord}) => {
+    const encInfo = (PROG_ENCARREGADOS||{})[r.encarregado]||{};
+    const sup = encInfo.supervisor || r.supervisor || '—';
+    const cor = progMapaGetCor(r.status);
+    const popup = `<div style="font-family:'Barlow',sans-serif;min-width:230px;max-width:290px;">
+      <div style="display:inline-block;background:${cor}22;color:${cor};padding:2px 10px;border-radius:4px;font-size:0.65rem;font-weight:800;margin-bottom:6px;">📅 PROGRAMADA</div>
+      <div style="font-size:0.9rem;font-weight:800;color:#1a365d;margin-bottom:4px;line-height:1.3;">${r.nome_obra||r.pep||'—'}</div>
+      <div style="font-size:0.7rem;color:#718096;font-weight:700;margin-bottom:8px;"><code style="background:#f7fafc;padding:1px 7px;border-radius:3px;">${r.pep||''}</code>${r.municipio?' · '+r.municipio:''}</div>
+      <div style="font-size:0.75rem;font-weight:700;color:#2d3748;margin-bottom:3px;">👷 <b>${r.encarregado||'—'}</b></div>
+      <div style="font-size:0.7rem;color:#718096;margin-bottom:3px;">🏢 ${sup}</div>
+      ${r.atividade?`<div style="font-size:0.7rem;color:#555;margin-bottom:3px;">🔧 ${r.atividade}</div>`:''}
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-top:10px;">
+        <div style="background:#f5f3ff;border-radius:6px;padding:7px;text-align:center;">
+          <div style="font-size:1rem;font-weight:800;color:#6b46c1;">${r.qtd_prevista||'—'}</div>
+          <div style="font-size:0.6rem;color:#888;font-weight:700;text-transform:uppercase;">Previsto</div>
+        </div>
+        <div style="background:#f0fff4;border-radius:6px;padding:7px;text-align:center;">
+          <div style="font-size:1rem;font-weight:800;color:#276749;">${r.qtd_realizada||'—'}</div>
+          <div style="font-size:0.6rem;color:#888;font-weight:700;text-transform:uppercase;">Realizado</div>
+        </div>
+      </div>
+      <a href="https://www.google.com/maps?q=${coord.lat},${coord.lon}" target="_blank"
+        style="display:block;text-align:center;margin-top:10px;background:#4285f4;color:#fff;padding:5px 12px;border-radius:7px;font-size:0.68rem;font-weight:800;text-decoration:none;">🗺️ Abrir no Google Maps</a>
+    </div>`;
+    const icon = L.divIcon({
+      className: '',
+      html: `<div style="width:16px;height:16px;border-radius:50%;background:${cor};border:3px solid #fff;box-shadow:0 2px 8px ${cor}99;cursor:pointer;transition:transform 0.1s;" onmouseover="this.style.transform='scale(1.4)'" onmouseout="this.style.transform='scale(1)'"></div>`,
+      iconSize:[16,16], iconAnchor:[8,8]
+    });
+    L.marker([coord.lat, coord.lon], {icon}).addTo(progMapaLayerGroup).bindPopup(popup, {maxWidth:310});
+    bounds.push([coord.lat, coord.lon]);
+  });
+
+  if (bounds.length) {
+    progMapaMap.fitBounds(bounds, {padding:[40,40], maxZoom:13});
+  }
+
+  // Tabela de obras
+  const tbody = document.getElementById('prog-mapa-tbody');
+  if (!tbody) return;
+  if (!regs.length) {
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:28px;color:#aaa;font-size:0.85rem;font-weight:600;">Nenhum registro para esta data. Use a aba LANÇAR para adicionar.</td></tr>`;
+    return;
+  }
+  const statusBadge = s => {
+    const cor = progMapaGetCor(s);
+    return s ? `<span style="background:${cor}22;color:${cor};padding:2px 8px;border-radius:4px;font-size:0.65rem;font-weight:800;">${s}</span>` : '—';
+  };
+  tbody.innerHTML = regs.map(r => {
+    const coord = mapaProgGetCoord(r);
+    const hasCoord = !!coord;
+    return `<tr style="border-bottom:1px solid #f0eeff;cursor:pointer;transition:background 0.12s;" onmouseover="this.style.background='#faf8ff'" onmouseout="this.style.background=''">
+      <td style="padding:9px 14px;font-size:0.8rem;font-weight:800;color:#2d3748;white-space:nowrap;">${r.encarregado||'—'}</td>
+      <td style="padding:9px 14px;font-family:monospace;font-size:0.74rem;font-weight:800;color:#6b46c1;white-space:nowrap;">${r.pep||'—'}</td>
+      <td style="padding:9px 14px;font-size:0.78rem;font-weight:700;color:#1a365d;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${r.nome_obra||''}">${r.nome_obra||'—'}</td>
+      <td style="padding:9px 14px;font-size:0.75rem;color:#555;white-space:nowrap;">${r.municipio||'—'}</td>
+      <td style="padding:9px 14px;text-align:center;">${statusBadge(r.status)}</td>
+      <td style="padding:9px 14px;text-align:center;">
+        ${hasCoord
+          ? `<span style="background:#c6f6d5;color:#276749;padding:2px 8px;border-radius:4px;font-size:0.65rem;font-weight:800;">📍 SIM</span>`
+          : `<span style="background:#e2e8f0;color:#718096;padding:2px 8px;border-radius:4px;font-size:0.65rem;font-weight:700;">—</span>`}
+      </td>
+      <td style="padding:9px 14px;text-align:center;">
+        ${hasCoord
+          ? `<button onclick="progMapaFocar(${coord.lat},${coord.lon})" style="background:#6b46c1;color:#fff;border:none;border-radius:6px;padding:4px 10px;font-family:'Barlow',sans-serif;font-size:0.65rem;font-weight:800;cursor:pointer;">🗺️ FOCAR</button>`
+          : `<a href="https://www.google.com/maps/search/${encodeURIComponent((r.nome_obra||r.pep||'')+', '+(r.municipio||'')+', Bahia')}" target="_blank" style="background:#718096;color:#fff;padding:4px 10px;border-radius:6px;font-size:0.65rem;font-weight:800;text-decoration:none;">🔍 BUSCAR</a>`}
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function progMapaFocar(lat, lon) {
+  if (!progMapaMap) return;
+  progMapaMap.setView([lat, lon], 15, {animate:true});
+  const mc = document.getElementById('prog-mapa-container');
+  if (mc) mc.scrollIntoView({behavior:'smooth', block:'center'});
+  // Abrir popup do marcador mais próximo
+  progMapaLayerGroup.eachLayer(layer => {
+    const ll = layer.getLatLng ? layer.getLatLng() : null;
+    if (ll && Math.abs(ll.lat - lat) < 0.0001 && Math.abs(ll.lng - lon) < 0.0001) {
+      layer.openPopup();
+    }
+  });
+}
+
+function progMapaZoomTodos() {
+  if (!progMapaMap || !progMapaLayerGroup) return;
+  const bounds = [];
+  progMapaLayerGroup.eachLayer(layer => {
+    const ll = layer.getLatLng ? layer.getLatLng() : null;
+    if (ll) bounds.push([ll.lat, ll.lng]);
+  });
+  if (bounds.length) progMapaMap.fitBounds(bounds, {padding:[40,40]});
 }
 
 // ── STATS CARDS ──
@@ -4224,6 +4558,7 @@ const PROG_TOTAIS_ENC = {"AMILTON COSTA": {"valor_previsto": 0.01, "valor_realiz
   <button id="prog-tab-form" onclick="progSwitchTab('form')" style="padding:8px 20px;border-radius:9px;border:none;font-family:'Barlow',sans-serif;font-size:0.78rem;font-weight:800;cursor:pointer;letter-spacing:0.5px;background:linear-gradient(135deg,#7e3af2,#9f7aea);color:#fff;">➕ LANÇAR</button>
   <button id="prog-tab-list" onclick="progSwitchTab('list')" style="padding:8px 20px;border-radius:9px;border:none;font-family:'Barlow',sans-serif;font-size:0.78rem;font-weight:800;cursor:pointer;letter-spacing:0.5px;background:transparent;color:rgba(255,255,255,0.5);">📋 REGISTROS</button>
   <button id="prog-tab-dash" onclick="progSwitchTab('dash')" style="padding:8px 20px;border-radius:9px;border:none;font-family:'Barlow',sans-serif;font-size:0.78rem;font-weight:800;cursor:pointer;letter-spacing:0.5px;background:transparent;color:rgba(255,255,255,0.5);">📊 DASHBOARD</button>
+  <button id="prog-tab-mapa" onclick="progSwitchTab('mapa')" style="padding:8px 20px;border-radius:9px;border:none;font-family:'Barlow',sans-serif;font-size:0.78rem;font-weight:800;cursor:pointer;letter-spacing:0.5px;background:transparent;color:rgba(255,255,255,0.5);">🗺️ MAPA</button>
 </div>
 </div><!-- /dark-header -->
 <div style="margin-bottom:16px;"></div>
@@ -4451,6 +4786,74 @@ const PROG_TOTAIS_ENC = {"AMILTON COSTA": {"valor_previsto": 0.01, "valor_realiz
     <div style="font-size:0.82rem;font-weight:800;color:#0b5e62;letter-spacing:0.5px;margin-bottom:14px;">🏆 ATIVIDADES MAIS LANÇADAS</div>
     <div id="prog-dash-ativ" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:8px;"></div>
   </div>
+</div>
+
+<!-- ===================== TAB: MAPA ===================== -->
+<div id="prog-view-mapa" style="display:none;">
+
+  <!-- Controles do mapa -->
+  <div style="background:#fff;border-radius:14px;padding:14px 18px;box-shadow:0 2px 12px rgba(0,0,0,0.08);margin-bottom:14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+    <div style="display:flex;align-items:center;gap:8px;flex:1;min-width:200px;">
+      <label style="font-size:0.68rem;font-weight:800;color:#888;letter-spacing:1px;text-transform:uppercase;white-space:nowrap;">📅 DATA:</label>
+      <input type="date" id="prog-mapa-date" onchange="progMapaRender()"
+        style="padding:6px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-family:'Barlow',sans-serif;font-size:0.82rem;font-weight:700;color:#1a365d;outline:none;cursor:pointer;transition:border-color 0.15s;"
+        onfocus="this.style.borderColor='#6b46c1'" onblur="this.style.borderColor='#e2e8f0'">
+      <select id="prog-mapa-enc" onchange="progMapaRender()"
+        style="padding:6px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-family:'Barlow',sans-serif;font-size:0.78rem;font-weight:700;color:#1a365d;outline:none;cursor:pointer;">
+        <option value="">Todos os encarregados</option>
+      </select>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;">
+      <span id="prog-mapa-count" style="font-size:0.75rem;font-weight:800;color:#6b46c1;background:#f5f3ff;padding:4px 12px;border-radius:20px;"></span>
+      <button onclick="progMapaZoomTodos()" style="padding:6px 14px;background:#6b46c1;color:#fff;border:none;border-radius:8px;font-family:'Barlow',sans-serif;font-size:0.72rem;font-weight:800;cursor:pointer;letter-spacing:0.3px;transition:all 0.15s;" onmouseover="this.style.background='#553c9a'" onmouseout="this.style.background='#6b46c1'">🔍 VER TODOS</button>
+    </div>
+  </div>
+
+  <!-- Cards de resumo -->
+  <div id="prog-mapa-cards" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;"></div>
+
+  <!-- Mapa Leaflet -->
+  <div style="background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,0.1);margin-bottom:14px;">
+    <div id="prog-mapa-container" style="height:520px;width:100%;background:#e8ecef;display:flex;align-items:center;justify-content:center;">
+      <div style="text-align:center;color:#aaa;">
+        <div style="font-size:2rem;margin-bottom:8px;">🗺️</div>
+        <div style="font-size:0.85rem;font-weight:600;">Carregando mapa...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Legenda -->
+  <div style="background:#fff;border-radius:12px;padding:12px 18px;box-shadow:0 2px 10px rgba(0,0,0,0.06);display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:14px;">
+    <span style="font-size:0.68rem;font-weight:800;color:#888;letter-spacing:1px;text-transform:uppercase;">LEGENDA:</span>
+    <div style="display:flex;align-items:center;gap:6px;"><div style="width:14px;height:14px;border-radius:50%;background:#6b46c1;border:2px solid #fff;box-shadow:0 1px 4px rgba(107,70,193,0.5);"></div><span style="font-size:0.72rem;font-weight:700;color:#555;">EXECUTADO</span></div>
+    <div style="display:flex;align-items:center;gap:6px;"><div style="width:14px;height:14px;border-radius:50%;background:#e53e3e;border:2px solid #fff;box-shadow:0 1px 4px rgba(229,62,62,0.5);"></div><span style="font-size:0.72rem;font-weight:700;color:#555;">NÃO EXECUTADO</span></div>
+    <div style="display:flex;align-items:center;gap:6px;"><div style="width:14px;height:14px;border-radius:50%;background:#2b6cb0;border:2px solid #fff;box-shadow:0 1px 4px rgba(43,108,176,0.5);"></div><span style="font-size:0.72rem;font-weight:700;color:#555;">EM EXECUÇÃO</span></div>
+    <div style="display:flex;align-items:center;gap:6px;"><div style="width:14px;height:14px;border-radius:50%;background:#f0a500;border:2px solid #fff;box-shadow:0 1px 4px rgba(240,165,0,0.5);"></div><span style="font-size:0.72rem;font-weight:700;color:#555;">SEM ACESSO / CHUVA</span></div>
+    <div style="display:flex;align-items:center;gap:6px;"><div style="width:14px;height:14px;border-radius:50%;background:#a0aec0;border:2px solid #fff;"></div><span style="font-size:0.72rem;font-weight:700;color:#555;">SEM COORD.</span></div>
+  </div>
+
+  <!-- Mini-lista das obras no mapa -->
+  <div style="background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.08);">
+    <div style="padding:12px 18px;background:linear-gradient(135deg,#4a1d96,#6b46c1);display:flex;align-items:center;justify-content:space-between;">
+      <span style="color:#fff;font-size:0.82rem;font-weight:800;letter-spacing:0.5px;">📌 OBRAS NO MAPA</span>
+      <span id="prog-mapa-lista-count" style="color:rgba(255,255,255,0.7);font-size:0.72rem;font-weight:700;"></span>
+    </div>
+    <div style="overflow-x:auto;">
+      <table style="width:100%;border-collapse:collapse;font-size:0.78rem;">
+        <thead><tr style="background:#f8f5ff;border-bottom:2px solid #e9d8fd;">
+          <th style="padding:10px 14px;text-align:left;font-weight:800;color:#553c9a;white-space:nowrap;">ENCARREGADO</th>
+          <th style="padding:10px 14px;text-align:left;font-weight:800;color:#553c9a;white-space:nowrap;">PEP</th>
+          <th style="padding:10px 14px;text-align:left;font-weight:800;color:#553c9a;min-width:160px;">OBRA</th>
+          <th style="padding:10px 14px;text-align:left;font-weight:800;color:#553c9a;white-space:nowrap;">MUNICÍPIO</th>
+          <th style="padding:10px 14px;text-align:center;font-weight:800;color:#553c9a;">STATUS</th>
+          <th style="padding:10px 14px;text-align:center;font-weight:800;color:#553c9a;">COORD.</th>
+          <th style="padding:10px 14px;text-align:center;font-weight:800;color:#553c9a;">AÇÃO</th>
+        </tr></thead>
+        <tbody id="prog-mapa-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
 </div>
 
 </div><!-- /page-prog -->
