@@ -592,6 +592,19 @@ body { font-family:'Barlow',sans-serif; background:#f0f4f5; min-height:100vh; pa
       <button class="btn-compare" id="comp-btn-compare" onclick="compCompareComSheets()" style="background:linear-gradient(135deg,#2b6cb0,#4299e1);opacity:1;">
         🔄 BUSCAR PLANILHA E COMPARAR COM BANCO
       </button>
+
+      <!-- Barra de auto-sync -->
+      <div style="display:flex;align-items:center;justify-content:center;gap:12px;margin-top:14px;flex-wrap:wrap;">
+        <span id="comp-auto-countdown" style="font-size:0.72rem;font-weight:700;color:#888;background:#f0f4f5;padding:5px 14px;border-radius:20px;letter-spacing:0.3px;white-space:nowrap;">
+          Calculando próxima sync...
+        </span>
+        <button id="comp-btn-manual-sync"
+          onclick="compManualSync()"
+          style="display:inline-flex;align-items:center;gap:6px;padding:6px 16px;background:#fff;border:1.5px solid #2b6cb0;color:#2b6cb0;border-radius:20px;font-family:'Barlow',sans-serif;font-size:0.72rem;font-weight:800;cursor:pointer;letter-spacing:0.3px;transition:all 0.2s;"
+          onmouseover="this.style.background='#ebf4ff'" onmouseout="this.style.background='#fff'">
+          <span id="comp-sync-icon">⚡</span> ATUALIZAR AGORA
+        </button>
+      </div>
     </div>
     <!-- HISTÓRICO POR DIA -->
     <div id="comp-historico-wrap" style="margin-bottom:20px;display:none;">
@@ -2807,32 +2820,35 @@ function compLimparHistorico() {
 compHistoricoLoad();
 
 // ─── AUTO-ATUALIZAÇÃO DO COMPARADOR ──────────────────────────────────────────
-const COMP_AUTO_REFRESH_MS = 5 * 60 * 1000; // 5 minutos
+// Atualiza 2x ao dia: 08:00 e 18:00
+const COMP_SCHEDULE_HOURS = [8, 18];
 let compAutoRefreshTimer = null;
 let compLastBancoTs = null; // timestamp do último banco conhecido
 
-async function compCheckForUpdates() {
-  // Só sincroniza se a página do comparador estiver visível
-  try {
-    // 1. Verifica se o banco no Supabase mudou
-    const res = await fetch(SUPA_URL + '/rest/v1/turno_data?key=eq.obras_base&select=updated_at', {
-      headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY }
-    });
-    if (!res.ok) return;
-    const data = await res.json();
-    if (!Array.isArray(data) || !data.length) return;
-    const ts = data[0].updated_at || '';
+function compMsUntilNext() {
+  const now = new Date();
+  const candidates = COMP_SCHEDULE_HOURS.map(h => {
+    const t = new Date(now); t.setHours(h, 0, 0, 0);
+    if (t <= now) t.setDate(t.getDate() + 1);
+    return t - now;
+  });
+  return Math.min(...candidates);
+}
 
-    if (compLastBancoTs === null) {
-      compLastBancoTs = ts;
-    } else if (ts && ts !== compLastBancoTs) {
-      // Banco foi atualizado — re-sincroniza Sheets e recompara
-      compLastBancoTs = ts;
-      await compAutoSincronizar();
-    }
-  } catch(e) {
-    // Silencioso
+function compNextScheduleTime() {
+  const now = new Date();
+  let best = null;
+  for (const h of COMP_SCHEDULE_HOURS) {
+    const t = new Date(now); t.setHours(h, 0, 0, 0);
+    if (t <= now) t.setDate(t.getDate() + 1);
+    if (!best || t < best) best = t;
   }
+  return best;
+}
+
+async function compCheckForUpdates() {
+  // Dispara a sincronização agendada
+  await compAutoSincronizar();
 }
 
 async function compAutoSincronizar() {
@@ -2892,29 +2908,57 @@ async function compAutoSincronizar() {
   }
 }
 
-let compCountdownSec = COMP_AUTO_REFRESH_MS / 1000;
+let compCountdownInterval = null;
 
 function compUpdateCountdown() {
-  compCountdownSec--;
-  if (compCountdownSec < 0) compCountdownSec = COMP_AUTO_REFRESH_MS / 1000;
-  const m = Math.floor(compCountdownSec / 60);
-  const s = compCountdownSec % 60;
   const el = document.getElementById('comp-auto-countdown');
-  if (el) el.textContent = 'Auto-sync ' + m + ':' + String(s).padStart(2,'0');
+  if (!el) return;
+  const ms = compMsUntilNext();
+  const totalSec = Math.floor(ms / 1000);
+  const h = Math.floor(totalSec / 3600);
+  const m = Math.floor((totalSec % 3600) / 60);
+  const s = totalSec % 60;
+  const next = compNextScheduleTime();
+  const pad = n => String(n).padStart(2, '0');
+  const horaStr = next ? pad(next.getHours()) + ':' + pad(next.getMinutes()) : '--:--';
+  el.textContent = 'Próx. sync ' + horaStr + ' (' + (h > 0 ? h + 'h ' : '') + pad(m) + ':' + pad(s) + ')';
 }
 
 function startCompAutoRefresh() {
-  if (compAutoRefreshTimer) clearInterval(compAutoRefreshTimer);
-  compCountdownSec = COMP_AUTO_REFRESH_MS / 1000;
-  compAutoRefreshTimer = setInterval(() => {
-    compCheckForUpdates();
-    compCountdownSec = COMP_AUTO_REFRESH_MS / 1000;
-  }, COMP_AUTO_REFRESH_MS);
-  setInterval(compUpdateCountdown, 1000);
+  if (compAutoRefreshTimer) clearTimeout(compAutoRefreshTimer);
+  if (compCountdownInterval) clearInterval(compCountdownInterval);
+
+  function agendarProximo() {
+    const ms = compMsUntilNext();
+    compAutoRefreshTimer = setTimeout(async () => {
+      await compCheckForUpdates();
+      agendarProximo(); // reagenda para o próximo horário
+    }, ms);
+  }
+
+  agendarProximo();
+  compUpdateCountdown();
+  compCountdownInterval = setInterval(compUpdateCountdown, 1000);
 }
 
 // Inicia o auto-refresh do comparador junto com o resto
 startCompAutoRefresh();
+
+// Atualização manual — reinicia o contador após executar
+async function compManualSync() {
+  const btn = document.getElementById('comp-btn-manual-sync');
+  const icon = document.getElementById('comp-sync-icon');
+  if (btn) { btn.disabled = true; btn.style.opacity = '0.5'; }
+  if (icon) icon.textContent = '⏳';
+  try {
+    await compAutoSincronizar();
+  } finally {
+    // Reinicia o agendamento do próximo horário automático
+    startCompAutoRefresh();
+    if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
+    if (icon) icon.textContent = '⚡';
+  }
+}
 
 // ─── MÊS HELPERS ──────────────────────────────────────────────────────────────
 const MESES_PT = ['','JAN','FEV','MAR','ABR','MAI','JUN','JUL','AGO','SET','OUT','NOV','DEZ'];
