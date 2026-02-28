@@ -375,6 +375,20 @@ body { font-family:'Barlow',sans-serif; background:#f0f4f5; min-height:100vh; pa
 
 <!-- PÁGINA 1: TURNO -->
 <div id="page-turno">
+
+  <!-- Banner de consulta histórica -->
+  <div id="turno-hist-bar" style="background:#1a2a3a;padding:10px 16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;border-bottom:2px solid #0d7377;">
+    <span style="font-size:0.72rem;font-weight:800;color:rgba(255,255,255,0.6);letter-spacing:1px;text-transform:uppercase;white-space:nowrap;">📅 CONSULTAR DIA:</span>
+    <input type="date" id="turno-hist-date"
+      style="padding:5px 10px;border:1.5px solid rgba(255,255,255,0.2);border-radius:8px;background:rgba(255,255,255,0.08);color:#fff;font-family:'Barlow',sans-serif;font-size:0.82rem;font-weight:700;outline:none;cursor:pointer;color-scheme:dark;"
+      onfocus="this.style.borderColor='#14a085'" onblur="this.style.borderColor='rgba(255,255,255,0.2)'"
+      onkeydown="if(event.key==='Enter') turnoHistBuscar()">
+    <button onclick="turnoHistBuscar()" style="padding:6px 16px;background:#14a085;color:#fff;border:none;border-radius:8px;font-family:'Barlow',sans-serif;font-size:0.75rem;font-weight:800;cursor:pointer;letter-spacing:0.5px;transition:background 0.15s;" onmouseover="this.style.background='#0d7377'" onmouseout="this.style.background='#14a085'">🔍 BUSCAR</button>
+    <button onclick="turnoHistHoje()" style="padding:6px 14px;background:transparent;color:rgba(255,255,255,0.5);border:1.5px solid rgba(255,255,255,0.15);border-radius:8px;font-family:'Barlow',sans-serif;font-size:0.75rem;font-weight:800;cursor:pointer;transition:all 0.15s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,0.5)'">↩ HOJE</button>
+    <div id="turno-hist-status" style="font-size:0.72rem;font-weight:700;color:rgba(255,255,255,0.5);margin-left:4px;"></div>
+    <div id="turno-hist-modo" style="display:none;margin-left:auto;background:#e53e3e22;border:1px solid #e53e3e66;border-radius:8px;padding:4px 12px;font-size:0.72rem;font-weight:800;color:#fc8181;letter-spacing:0.5px;">👁️ MODO LEITURA — DIA ANTERIOR</div>
+  </div>
+
   <div class="container">
     <div class="section">
       <div class="section-header green">
@@ -1092,18 +1106,137 @@ async function dbSaveTurno() {
   lsSet('turno', payload); // salva local imediatamente
   try {
     setDbStatus('syncing', 'Salvando...');
+    const now = new Date().toISOString();
+    // Salva o turno atual (chave fixa)
     const res = await fetch(SUPA_URL + '/rest/v1/turno_data', {
       method: 'POST',
       headers: { ...SUPA_HEADERS, 'Prefer': 'resolution=merge-duplicates' },
-      body: JSON.stringify({ key: 'turno', value: payload, updated_at: new Date().toISOString() })
+      body: JSON.stringify({ key: 'turno', value: payload, updated_at: now })
     });
     if (!res.ok) throw new Error('HTTP ' + res.status);
+    // Salva snapshot histórico por data (chave turno_hist_DD-MM-AAAA)
+    if (currentDate) {
+      const histKey = 'turno_hist_' + currentDate.replace(/\//g, '-');
+      fetch(SUPA_URL + '/rest/v1/turno_data', {
+        method: 'POST',
+        headers: { ...SUPA_HEADERS, 'Prefer': 'resolution=merge-duplicates' },
+        body: JSON.stringify({ key: histKey, value: payload, updated_at: now })
+      }).catch(() => {}); // silencioso — não bloquear o fluxo principal
+      // Salva também no localStorage como cache
+      lsSet(histKey, payload);
+    }
     setDbStatus('online', 'Salvo!');
     setTimeout(() => setDbStatus('online', 'Banco online'), 1500);
   } catch(e) {
     setDbStatus('local', 'Salvo local');
     setTimeout(() => setDbStatus('local', 'Dados locais'), 2000);
   }
+}
+
+// ─── HISTÓRICO DE TURNO ────────────────────────────────────────────────────────
+let turnoModoHistorico = false;
+
+function turnoHistBuscar() {
+  const input = document.getElementById('turno-hist-date');
+  const statusEl = document.getElementById('turno-hist-status');
+  const modoEl = document.getElementById('turno-hist-modo');
+  if (!input.value) { statusEl.textContent = '⚠️ Selecione uma data'; return; }
+
+  // Converter de AAAA-MM-DD para DD-MM-AAAA (formato da chave)
+  const [y, m, d] = input.value.split('-');
+  const dataFormatada = d + '/' + m + '/' + y;
+  const histKey = 'turno_hist_' + d + '-' + m + '-' + y;
+
+  statusEl.textContent = '⏳ Buscando ' + dataFormatada + '...';
+
+  // 1. Tenta Supabase
+  const controller = new AbortController();
+  const tid = setTimeout(() => controller.abort(), 8000);
+  fetch(SUPA_URL + '/rest/v1/turno_data?select=key,value&key=eq.' + histKey, {
+    headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY },
+    signal: controller.signal
+  })
+  .then(res => res.ok ? res.json() : Promise.reject('HTTP ' + res.status))
+  .then(data => {
+    clearTimeout(tid);
+    if (Array.isArray(data) && data.length > 0 && data[0].value) {
+      turnoHistExibir(data[0].value, dataFormatada, 'Supabase');
+    } else {
+      // 2. Tenta localStorage
+      const local = lsGet(histKey);
+      if (local) {
+        turnoHistExibir(local, dataFormatada, 'cache local');
+      } else {
+        statusEl.textContent = '❌ Sem registro para ' + dataFormatada;
+        statusEl.style.color = '#fc8181';
+      }
+    }
+  })
+  .catch(() => {
+    clearTimeout(tid);
+    // 2. Fallback localStorage
+    const local = lsGet(histKey);
+    if (local) {
+      turnoHistExibir(local, dataFormatada, 'cache local');
+    } else {
+      statusEl.textContent = '❌ Sem registro para ' + dataFormatada + ' (offline)';
+      statusEl.style.color = '#fc8181';
+    }
+  });
+}
+
+function turnoHistExibir(payload, dataFormatada, fonte) {
+  const statusEl = document.getElementById('turno-hist-status');
+  const modoEl = document.getElementById('turno-hist-modo');
+  turnoModoHistorico = true;
+
+  // Exibe dados históricos sem alterar o estado real
+  const okTemp = payload.ok || [];
+  const justifTemp = payload.justif || [];
+  const faltaTemp = payload.falta || [];
+
+  buildGridOk('abriu-grid', [...okTemp].sort());
+  buildGridJustif('justif-grid', [...justifTemp].sort((a,b)=>a.name.localeCompare(b.name)));
+  buildGridFalta('falta-grid', [...faltaTemp].sort());
+
+  document.getElementById('ok-count').textContent = okTemp.length;
+  document.getElementById('justif-count').textContent = justifTemp.length;
+  document.getElementById('falta-count').textContent = faltaTemp.length;
+  document.getElementById('page-title').textContent = 'TURNO ' + dataFormatada;
+  document.getElementById('page-sub').textContent = 'Histórico: ' + dataFormatada;
+  const total = okTemp.length + justifTemp.length + faltaTemp.length;
+  document.getElementById('footer-text').innerHTML =
+    'OBRAS - BA &nbsp;|&nbsp; HISTÓRICO &nbsp;|&nbsp; ' + total + ' equipes &nbsp;|&nbsp; ' + dataFormatada;
+
+  statusEl.textContent = '✅ ' + dataFormatada + ' — ' + total + ' equipes (' + fonte + ')';
+  statusEl.style.color = '#68d391';
+  modoEl.style.display = '';
+
+  // Torna os cards não-clicáveis (modo leitura)
+  setTimeout(() => {
+    document.querySelectorAll('#page-turno .card').forEach(c => {
+      c.style.pointerEvents = 'none';
+      c.style.opacity = '0.85';
+    });
+  }, 50);
+}
+
+function turnoHistHoje() {
+  const statusEl = document.getElementById('turno-hist-status');
+  const modoEl = document.getElementById('turno-hist-modo');
+  const input = document.getElementById('turno-hist-date');
+  turnoModoHistorico = false;
+  input.value = '';
+  statusEl.textContent = '';
+  statusEl.style.color = 'rgba(255,255,255,0.5)';
+  modoEl.style.display = 'none';
+  // Restaura estado atual
+  render();
+  // Reabilita cards
+  document.querySelectorAll('#page-turno .card').forEach(c => {
+    c.style.pointerEvents = '';
+    c.style.opacity = '';
+  });
 }
 
 async function dbSaveProducao() {
@@ -1189,6 +1322,7 @@ async function dbSaveComparador(mergedData, filename) {
 }
 // ─── RENDER ────────────────────────────────────────────────────────────────────
 function render() {
+  if (turnoModoHistorico) return; // não sobrescreve visualização histórica
   buildGridOk('abriu-grid', [...teams.ok].sort());
   buildGridJustif('justif-grid', [...teams.justif].sort((a,b)=>a.name.localeCompare(b.name)));
   buildGridFalta('falta-grid', [...teams.falta].sort());
