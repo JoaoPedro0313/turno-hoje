@@ -4210,7 +4210,8 @@ const PROG_TOTAIS_ENC = {"AMILTON COSTA": {"valor_previsto": 0.01, "valor_realiz
 </script>
 
 <!-- ===== TOPO: TÍTULO + STATS ===== -->
-<div style="display:flex;align-items:center;gap:12px;margin-bottom:18px;flex-wrap:wrap;">
+<div style="background:linear-gradient(135deg,#1a1a2e 0%,#16213e 50%,#0f3460 100%);border-radius:16px;padding:18px 22px;margin-bottom:18px;box-shadow:0 4px 20px rgba(0,0,0,0.35);">
+<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
   <div style="flex:1;min-width:200px;">
     <div style="font-size:1.05rem;font-weight:900;color:#fff;letter-spacing:0.5px;">📅 PROGRAMAÇÃO DIÁRIA</div>
     <div style="font-size:0.68rem;color:rgba(255,255,255,0.6);font-weight:600;margin-top:2px;">BASE JACOBINA · GERENTE ALÉCIO OLIVEIRA</div>
@@ -4219,11 +4220,13 @@ const PROG_TOTAIS_ENC = {"AMILTON COSTA": {"valor_previsto": 0.01, "valor_realiz
 </div>
 
 <!-- ===== TABS: LANÇAMENTO / REGISTROS / DASHBOARD ===== -->
-<div style="display:flex;gap:0;margin-bottom:16px;background:#1a2a3a;border-radius:12px;padding:4px;width:fit-content;">
+<div style="display:flex;gap:0;margin-top:14px;background:rgba(255,255,255,0.08);border-radius:12px;padding:4px;width:fit-content;border:1px solid rgba(255,255,255,0.1);">
   <button id="prog-tab-form" onclick="progSwitchTab('form')" style="padding:8px 20px;border-radius:9px;border:none;font-family:'Barlow',sans-serif;font-size:0.78rem;font-weight:800;cursor:pointer;letter-spacing:0.5px;background:linear-gradient(135deg,#7e3af2,#9f7aea);color:#fff;">➕ LANÇAR</button>
   <button id="prog-tab-list" onclick="progSwitchTab('list')" style="padding:8px 20px;border-radius:9px;border:none;font-family:'Barlow',sans-serif;font-size:0.78rem;font-weight:800;cursor:pointer;letter-spacing:0.5px;background:transparent;color:rgba(255,255,255,0.5);">📋 REGISTROS</button>
   <button id="prog-tab-dash" onclick="progSwitchTab('dash')" style="padding:8px 20px;border-radius:9px;border:none;font-family:'Barlow',sans-serif;font-size:0.78rem;font-weight:800;cursor:pointer;letter-spacing:0.5px;background:transparent;color:rgba(255,255,255,0.5);">📊 DASHBOARD</button>
 </div>
+</div><!-- /dark-header -->
+<div style="margin-bottom:16px;"></div>
 
 <!-- ===================== TAB: FORMULÁRIO ===================== -->
 <div id="prog-view-form">
