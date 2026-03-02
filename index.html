@@ -3913,9 +3913,10 @@ function progSwitchTab(tab) {
 let progMapaMap = null, progMapaLayerGroup = null;
 
 function progMapaInit() {
-  // Inicializar data padrão
+  // Não pré-preencher a data automaticamente para mostrar todos os registros
+  // O usuário pode filtrar por data se quiser
   const di = document.getElementById('prog-mapa-date');
-  if (di && !di.value) di.value = new Date().toISOString().split('T')[0];
+  // Deixar vazio por padrão para exibir todos os registros de março/mês atual
 
   // Garantir Leaflet carregado
   const doInit = () => {
@@ -3951,7 +3952,46 @@ function progMapaGetFiltrados() {
   const dataFiltro = di ? di.value : '';
   const encFiltro = encSel ? encSel.value : '';
   let regs = progRegistros || [];
-  if (dataFiltro) regs = regs.filter(r => r.data === dataFiltro);
+
+  if (dataFiltro) {
+    const filtrados = regs.filter(r => r.data === dataFiltro);
+    // Se não há registros para a data exata, mostrar todos do mesmo mês
+    if (filtrados.length > 0) {
+      regs = filtrados;
+    } else {
+      const mes = dataFiltro.substring(0, 7); // "YYYY-MM"
+      const doMes = regs.filter(r => r.data && r.data.startsWith(mes));
+      regs = doMes.length > 0 ? doMes : regs;
+      // Atualizar aviso visual se existir
+      const di2 = document.getElementById('prog-mapa-date-aviso');
+      if (!di2) {
+        const aviso = document.createElement('div');
+        aviso.id = 'prog-mapa-date-aviso';
+        aviso.style.cssText = 'font-size:0.7rem;font-weight:700;color:#b97400;background:#fffbf0;border:1px solid #f0a500;border-radius:6px;padding:4px 10px;margin-left:8px;white-space:nowrap;';
+        aviso.textContent = doMes.length > 0
+          ? `⚠️ Sem dados p/ ${dataFiltro.split('-').reverse().join('/')} — exibindo ${doMes.length} reg. de ${mes.split('-').reverse().join('/')}`
+          : `⚠️ Sem dados p/ ${dataFiltro.split('-').reverse().join('/')} — exibindo todos`;
+        const bar = document.querySelector('#prog-view-mapa > div:first-child');
+        if (bar) bar.appendChild(aviso);
+      } else {
+        di2.textContent = doMes.length > 0
+          ? `⚠️ Sem dados p/ ${dataFiltro.split('-').reverse().join('/')} — exibindo ${doMes.length} reg. de ${mes.split('-').reverse().join('/')}`
+          : `⚠️ Sem dados p/ ${dataFiltro.split('-').reverse().join('/')} — exibindo todos`;
+        di2.style.display = '';
+      }
+    }
+  } else {
+    // Esconder aviso quando não há filtro de data
+    const di2 = document.getElementById('prog-mapa-date-aviso');
+    if (di2) di2.style.display = 'none';
+  }
+
+  // Esconder aviso quando há resultados exatos
+  if (dataFiltro && regs.length > 0 && regs[0].data === dataFiltro) {
+    const di2 = document.getElementById('prog-mapa-date-aviso');
+    if (di2) di2.style.display = 'none';
+  }
+
   if (encFiltro) regs = regs.filter(r => r.encarregado === encFiltro);
   return regs;
 }
@@ -4062,7 +4102,7 @@ function progMapaRender() {
   const tbody = document.getElementById('prog-mapa-tbody');
   if (!tbody) return;
   if (!regs.length) {
-    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:28px;color:#aaa;font-size:0.85rem;font-weight:600;">Nenhum registro para esta data. Use a aba LANÇAR para adicionar.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:28px;color:#aaa;font-size:0.85rem;font-weight:600;">Nenhum registro encontrado. Use a aba LANÇAR para adicionar registros, ou limpe o filtro de data para ver todos.</td></tr>`;
     return;
   }
   const statusBadge = s => {
