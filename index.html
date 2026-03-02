@@ -4009,6 +4009,9 @@ function progMapaRender() {
   if (!progMapaMap) return;
   const regs = progMapaGetFiltrados();
 
+  // Re-renderizar rotas se ativas
+  if (progRotasAtivo) setTimeout(progRotasRender, 100);
+
   // Atualizar select de encarregados
   const encSel = document.getElementById('prog-mapa-enc');
   if (encSel) {
@@ -5021,10 +5024,38 @@ const PROG_TOTAIS_ENC = {"AMILTON COSTA": {"valor_previsto": 0.01, "valor_realiz
         <option value="">Todos os encarregados</option>
       </select>
     </div>
-    <div style="display:flex;align-items:center;gap:8px;">
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
       <span id="prog-mapa-count" style="font-size:0.75rem;font-weight:800;color:#6b46c1;background:#f5f3ff;padding:4px 12px;border-radius:20px;"></span>
       <button onclick="progMapaZoomTodos()" style="padding:6px 14px;background:#6b46c1;color:#fff;border:none;border-radius:8px;font-family:'Barlow',sans-serif;font-size:0.72rem;font-weight:800;cursor:pointer;letter-spacing:0.3px;transition:all 0.15s;" onmouseover="this.style.background='#553c9a'" onmouseout="this.style.background='#6b46c1'">🔍 VER TODOS</button>
+      <button onclick="progRotasToggle()" id="btn-rotas-toggle" style="padding:6px 14px;background:linear-gradient(135deg,#0d7377,#14a085);color:#fff;border:none;border-radius:8px;font-family:'Barlow',sans-serif;font-size:0.72rem;font-weight:800;cursor:pointer;letter-spacing:0.3px;transition:all 0.15s;display:flex;align-items:center;gap:5px;" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">🛣️ ROTAS OTIMIZADAS</button>
     </div>
+  </div>
+
+  <!-- Painel de Rotas Otimizadas -->
+  <div id="prog-rotas-painel" style="display:none;margin-bottom:14px;">
+    <div style="background:linear-gradient(135deg,#0b5e62,#0d7377,#14a085);border-radius:14px;padding:14px 18px;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <span style="font-size:1.4rem;">🛣️</span>
+        <div>
+          <div style="color:#fff;font-size:0.9rem;font-weight:800;letter-spacing:0.5px;">ROTAS OTIMIZADAS POR EQUIPE</div>
+          <div style="color:rgba(255,255,255,0.7);font-size:0.68rem;font-weight:600;margin-top:1px;" id="rotas-sub-info">Calculando rotas...</div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <label style="color:rgba(255,255,255,0.8);font-size:0.68rem;font-weight:800;text-transform:uppercase;letter-spacing:1px;">BASE:</label>
+        <select id="rotas-base-sel" onchange="progRotasRender()" style="padding:5px 10px;border-radius:7px;border:none;font-family:'Barlow',sans-serif;font-size:0.75rem;font-weight:700;color:#1a365d;outline:none;">
+          <option value="">— Escolha a base —</option>
+          <option value="-12.1297,-41.7015">IRC — Irecê</option>
+          <option value="-11.1815,-40.5090">JAC — Jacobina</option>
+          <option value="-12.5,-41.0">Personalizada</option>
+        </select>
+        <button onclick="progRotasLimpar()" style="padding:5px 12px;background:rgba(255,255,255,0.15);color:#fff;border:1px solid rgba(255,255,255,0.3);border-radius:7px;font-family:'Barlow',sans-serif;font-size:0.68rem;font-weight:800;cursor:pointer;">✕ FECHAR</button>
+      </div>
+    </div>
+    <!-- Cards de rotas por encarregado -->
+    <div id="prog-rotas-cards" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px;margin-bottom:12px;"></div>
+    <!-- Resumo total -->
+    <div id="prog-rotas-resumo" style="background:#fff;border-radius:12px;padding:12px 18px;box-shadow:0 2px 10px rgba(0,0,0,0.06);display:flex;align-items:center;gap:16px;flex-wrap:wrap;font-size:0.72rem;font-weight:700;color:#555;"></div>
   </div>
 
   <!-- Cards de resumo -->
@@ -5048,6 +5079,7 @@ const PROG_TOTAIS_ENC = {"AMILTON COSTA": {"valor_previsto": 0.01, "valor_realiz
     <div style="display:flex;align-items:center;gap:6px;"><div style="width:14px;height:14px;border-radius:50%;background:#2b6cb0;border:2px solid #fff;box-shadow:0 1px 4px rgba(43,108,176,0.5);"></div><span style="font-size:0.72rem;font-weight:700;color:#555;">EM EXECUÇÃO</span></div>
     <div style="display:flex;align-items:center;gap:6px;"><div style="width:14px;height:14px;border-radius:50%;background:#f0a500;border:2px solid #fff;box-shadow:0 1px 4px rgba(240,165,0,0.5);"></div><span style="font-size:0.72rem;font-weight:700;color:#555;">SEM ACESSO / CHUVA</span></div>
     <div style="display:flex;align-items:center;gap:6px;"><div style="width:14px;height:14px;border-radius:50%;background:#a0aec0;border:2px solid #fff;"></div><span style="font-size:0.72rem;font-weight:700;color:#555;">SEM COORD.</span></div>
+    <div style="display:flex;align-items:center;gap:6px;"><div style="width:20px;height:4px;border-radius:2px;background:linear-gradient(90deg,#0d7377,#14a085);"></div><span style="font-size:0.72rem;font-weight:700;color:#555;">ROTA OTIMIZADA</span></div>
   </div>
 
   <!-- Mini-lista das obras no mapa -->
@@ -5118,5 +5150,299 @@ const PROG_TOTAIS_ENC = {"AMILTON COSTA": {"valor_previsto": 0.01, "valor_realiz
   </div>
 </div>
 
+<script>
+// ═══════════════════════════════════════════════════════════════
+// SISTEMA DE ROTAS OTIMIZADAS
+// ═══════════════════════════════════════════════════════════════
+
+let progRotasAtivo = false;
+let progRotasLayerGroup = null;
+const ROTA_CORES = [
+  '#0d7377','#e53e3e','#2b6cb0','#d69e2e','#6b46c1',
+  '#38a169','#c05621','#2c5282','#b83280','#276749',
+  '#1a365d','#744210','#553c9a','#2d3748','#22543d'
+];
+
+function progRotasToggle() {
+  progRotasAtivo = !progRotasAtivo;
+  const painel = document.getElementById('prog-rotas-painel');
+  const btn = document.getElementById('btn-rotas-toggle');
+  if (progRotasAtivo) {
+    painel.style.display = 'block';
+    btn.style.background = 'linear-gradient(135deg,#276749,#38a169)';
+    btn.innerHTML = '✅ ROTAS ATIVAS';
+    progRotasRender();
+  } else {
+    progRotasLimpar();
+  }
+}
+
+function progRotasLimpar() {
+  progRotasAtivo = false;
+  const painel = document.getElementById('prog-rotas-painel');
+  const btn = document.getElementById('btn-rotas-toggle');
+  if (painel) painel.style.display = 'none';
+  if (btn) { btn.style.background = 'linear-gradient(135deg,#0d7377,#14a085)'; btn.innerHTML = '🛣️ ROTAS OTIMIZADAS'; }
+  if (progRotasLayerGroup && progMapaMap) { progRotasLayerGroup.clearLayers(); }
+}
+
+// Distância Haversine em km
+function haversineDist(a, b) {
+  const R = 6371;
+  const dLat = (b.lat - a.lat) * Math.PI / 180;
+  const dLon = (b.lon - a.lon) * Math.PI / 180;
+  const sinLat = Math.sin(dLat/2);
+  const sinLon = Math.sin(dLon/2);
+  const c = 2 * Math.asin(Math.sqrt(sinLat*sinLat + Math.cos(a.lat*Math.PI/180)*Math.cos(b.lat*Math.PI/180)*sinLon*sinLon));
+  return R * c;
+}
+
+// Algoritmo nearest-neighbor para otimização de rota (TSP heurístico)
+function otimizarRota(base, pontos) {
+  if (!pontos.length) return [];
+  const visited = new Array(pontos.length).fill(false);
+  const rota = [];
+  let atual = base;
+  for (let i = 0; i < pontos.length; i++) {
+    let melhorIdx = -1, melhorDist = Infinity;
+    pontos.forEach((p, idx) => {
+      if (visited[idx]) return;
+      const d = haversineDist(atual, p.coord);
+      if (d < melhorDist) { melhorDist = d; melhorIdx = idx; }
+    });
+    if (melhorIdx >= 0) {
+      visited[melhorIdx] = true;
+      rota.push({ ...pontos[melhorIdx], distFromPrev: melhorDist });
+      atual = pontos[melhorIdx].coord;
+    }
+  }
+  return rota;
+}
+
+// Calcular distância total de uma rota
+function calcDistTotal(base, rota) {
+  if (!rota.length) return 0;
+  let d = haversineDist(base, rota[0].coord);
+  for (let i = 1; i < rota.length; i++) d += haversineDist(rota[i-1].coord, rota[i].coord);
+  d += haversineDist(rota[rota.length-1].coord, base); // retorno à base
+  return d;
+}
+
+// Gerar URL Google Maps para rota completa
+function gerarURLGoogleMaps(base, rota) {
+  if (!rota.length) return '#';
+  const origin = `${base.lat},${base.lon}`;
+  const destination = rota.length === 1
+    ? `${rota[0].coord.lat},${rota[0].coord.lon}`
+    : `${rota[rota.length-1].coord.lat},${rota[rota.length-1].coord.lon}`;
+  const waypoints = rota.slice(0, -1).map(p => `${p.coord.lat},${p.coord.lon}`).join('|');
+  let url = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}&travelmode=driving`;
+  if (waypoints) url += `&waypoints=${encodeURIComponent(waypoints)}`;
+  return url;
+}
+
+function progRotasRender() {
+  if (!progMapaMap) return;
+
+  // Garantir layer group de rotas
+  if (!progRotasLayerGroup) {
+    progRotasLayerGroup = L.layerGroup().addTo(progMapaMap);
+  } else {
+    progRotasLayerGroup.clearLayers();
+    progRotasLayerGroup._baseAdded = false;
+  }
+
+  // Pegar base selecionada
+  const baseSel = document.getElementById('rotas-base-sel');
+  const baseVal = baseSel ? baseSel.value : '';
+  let base = null;
+  if (baseVal && baseVal !== 'Personalizada') {
+    const parts = baseVal.split(',');
+    base = { lat: parseFloat(parts[0]), lon: parseFloat(parts[1]) };
+  }
+
+  // Pegar registros com coordenadas
+  const regs = progMapaGetFiltrados();
+  const comCoord = regs.map(r => {
+    const coord = mapaProgGetCoord(r);
+    return coord ? { r, coord } : null;
+  }).filter(Boolean);
+
+  if (!comCoord.length) {
+    const cards = document.getElementById('prog-rotas-cards');
+    if (cards) cards.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:24px;color:#aaa;font-size:0.85rem;font-weight:600;">Nenhuma obra com coordenadas encontrada. Carregue o banco de obras para ver as rotas.</div>`;
+    return;
+  }
+
+  // Agrupar por encarregado
+  const porEnc = {};
+  comCoord.forEach(({r, coord}) => {
+    const enc = r.encarregado || '— SEM ENCARREGADO —';
+    if (!porEnc[enc]) porEnc[enc] = [];
+    porEnc[enc].push({ r, coord });
+  });
+
+  const encs = Object.keys(porEnc).sort();
+  let totalKm = 0, totalParadas = comCoord.length;
+
+  const cardsEl = document.getElementById('prog-rotas-cards');
+  if (!cardsEl) return;
+  cardsEl.innerHTML = '';
+
+  encs.forEach((enc, idx) => {
+    const cor = ROTA_CORES[idx % ROTA_CORES.length];
+    const pontos = porEnc[enc];
+
+    // Se não há base, usar centróide dos pontos como ponto de partida para TSP
+    const baseRota = base || (() => {
+      const latMed = pontos.reduce((s,p)=>s+p.coord.lat,0)/pontos.length;
+      const lonMed = pontos.reduce((s,p)=>s+p.coord.lon,0)/pontos.length;
+      return { lat: latMed, lon: lonMed };
+    })();
+
+    // Otimizar rota
+    const rotaOtim = otimizarRota(baseRota, pontos);
+    const distTotal = calcDistTotal(baseRota, rotaOtim);
+    const tempoHrs = distTotal / 60; // ~60km/h média em estrada BA
+    const tempoMin = Math.round(tempoHrs * 60);
+    totalKm += distTotal;
+
+    // Desenhar linha de rota no mapa
+    const latlngs = [];
+    if (base) latlngs.push([base.lat, base.lon]);
+    rotaOtim.forEach(p => latlngs.push([p.coord.lat, p.coord.lon]));
+    if (base && latlngs.length > 1) latlngs.push([base.lat, base.lon]); // retorno
+
+    if (latlngs.length > 1) {
+      // Linha principal da rota
+      L.polyline(latlngs, {
+        color: cor, weight: 3, opacity: 0.75,
+        dashArray: null
+      }).addTo(progRotasLayerGroup);
+
+      // Setas de direção (decoração)
+      L.polyline(latlngs, {
+        color: cor, weight: 6, opacity: 0.12
+      }).addTo(progRotasLayerGroup);
+    }
+
+    // Marcador numerado para cada parada
+    rotaOtim.forEach((p, ordem) => {
+      const numIcon = L.divIcon({
+        className: '',
+        html: `<div style="width:22px;height:22px;border-radius:50%;background:${cor};border:3px solid #fff;box-shadow:0 2px 8px ${cor}88;color:#fff;font-size:0.65rem;font-weight:900;display:flex;align-items:center;justify-content:center;cursor:pointer;">${ordem+1}</div>`,
+        iconSize:[22,22], iconAnchor:[11,11]
+      });
+      const popup = `<div style="font-family:'Barlow',sans-serif;min-width:220px;">
+        <div style="background:${cor}22;color:${cor};padding:3px 10px;border-radius:4px;font-size:0.65rem;font-weight:800;margin-bottom:6px;display:inline-block;">🛣️ PARADA ${ordem+1} de ${rotaOtim.length}</div>
+        <div style="font-size:0.88rem;font-weight:800;color:#1a365d;margin-bottom:3px;">${p.r.nome_obra||p.r.pep||'—'}</div>
+        <div style="font-size:0.7rem;color:#718096;margin-bottom:6px;"><code style="background:#f7fafc;padding:1px 6px;border-radius:3px;">${p.r.pep||''}</code> · ${p.r.municipio||''}</div>
+        <div style="font-size:0.75rem;font-weight:700;color:#2d3748;margin-bottom:2px;">👷 ${enc}</div>
+        ${ordem > 0 ? `<div style="font-size:0.68rem;color:#888;margin-bottom:6px;">📏 ${p.distFromPrev.toFixed(1)} km da parada anterior</div>` : `<div style="font-size:0.68rem;color:#888;margin-bottom:6px;">📏 Primeira parada</div>`}
+        <a href="https://www.google.com/maps?q=${p.coord.lat},${p.coord.lon}" target="_blank"
+          style="display:block;text-align:center;margin-top:8px;background:#4285f4;color:#fff;padding:5px 10px;border-radius:6px;font-size:0.65rem;font-weight:800;text-decoration:none;">🗺️ Ver no Google Maps</a>
+      </div>`;
+      L.marker([p.coord.lat, p.coord.lon], {icon: numIcon})
+        .addTo(progRotasLayerGroup)
+        .bindPopup(popup, {maxWidth:280});
+    });
+
+    // Marcador de base (se definida)
+    if (base) {
+      const baseIcon = L.divIcon({
+        className: '',
+        html: `<div style="width:26px;height:26px;border-radius:6px;background:#1a1a2e;border:3px solid #fff;box-shadow:0 2px 10px rgba(0,0,0,0.4);color:#fff;font-size:0.8rem;display:flex;align-items:center;justify-content:center;">🏢</div>`,
+        iconSize:[26,26], iconAnchor:[13,13]
+      });
+      if (!progRotasLayerGroup._baseAdded) {
+        L.marker([base.lat, base.lon], {icon: baseIcon})
+          .addTo(progRotasLayerGroup)
+          .bindPopup(`<div style="font-family:'Barlow',sans-serif;font-size:0.82rem;font-weight:800;">🏢 BASE / PONTO DE PARTIDA</div>`);
+        progRotasLayerGroup._baseAdded = true;
+      }
+    }
+
+    // URL Google Maps com rota completa
+    const gmUrl = gerarURLGoogleMaps(baseRota, rotaOtim);
+
+    // Card da equipe
+    const tempoStr = tempoMin >= 60
+      ? `${Math.floor(tempoMin/60)}h${tempoMin%60 > 0 ? ` ${tempoMin%60}min` : ''}`
+      : `${tempoMin} min`;
+
+    const card = document.createElement('div');
+    card.style.cssText = `background:#fff;border-radius:12px;padding:14px 16px;box-shadow:0 2px 12px rgba(0,0,0,0.08);border-left:4px solid ${cor};`;
+    card.innerHTML = `
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:10px;">
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:0.68rem;font-weight:800;color:${cor};text-transform:uppercase;letter-spacing:0.8px;margin-bottom:2px;">EQUIPE ${idx+1}</div>
+          <div style="font-size:0.82rem;font-weight:800;color:#1a365d;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${enc}</div>
+        </div>
+        <div style="display:flex;gap:6px;flex-shrink:0;">
+          <button onclick="progRotasFocar(${JSON.stringify(rotaOtim.map(p=>[p.coord.lat,p.coord.lon]))})" style="padding:4px 10px;background:${cor}22;color:${cor};border:1px solid ${cor}55;border-radius:6px;font-family:'Barlow',sans-serif;font-size:0.62rem;font-weight:800;cursor:pointer;">🗺️ FOCAR</button>
+          <a href="${gmUrl}" target="_blank" style="padding:4px 10px;background:#4285f4;color:#fff;border:none;border-radius:6px;font-family:'Barlow',sans-serif;font-size:0.62rem;font-weight:800;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:3px;">🚗 NAVEGAR</a>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px;">
+        <div style="text-align:center;background:#f8f9fa;border-radius:8px;padding:8px 4px;">
+          <div style="font-size:1.1rem;font-weight:900;color:${cor};">${rotaOtim.length}</div>
+          <div style="font-size:0.58rem;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:0.5px;">Paradas</div>
+        </div>
+        <div style="text-align:center;background:#f8f9fa;border-radius:8px;padding:8px 4px;">
+          <div style="font-size:1.1rem;font-weight:900;color:${cor};">${distTotal.toFixed(0)} km</div>
+          <div style="font-size:0.58rem;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:0.5px;">Distância</div>
+        </div>
+        <div style="text-align:center;background:#f8f9fa;border-radius:8px;padding:8px 4px;">
+          <div style="font-size:1.1rem;font-weight:900;color:${cor};">${tempoStr}</div>
+          <div style="font-size:0.58rem;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:0.5px;">Estimativa</div>
+        </div>
+      </div>
+      <div style="border-top:1px solid #f0f0f0;padding-top:8px;max-height:120px;overflow-y:auto;">
+        ${rotaOtim.map((p,i) => `
+          <div style="display:flex;align-items:center;gap:7px;padding:3px 0;border-bottom:1px solid #fafafa;" onclick="progMapaFocar(${p.coord.lat},${p.coord.lon})">
+            <div style="width:18px;height:18px;border-radius:50%;background:${cor};color:#fff;font-size:0.55rem;font-weight:900;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${i+1}</div>
+            <div style="flex:1;min-width:0;">
+              <div style="font-size:0.68rem;font-weight:700;color:#2d3748;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${p.r.nome_obra||p.r.pep||'—'}</div>
+              <div style="font-size:0.6rem;color:#aaa;">${p.r.municipio||''}</div>
+            </div>
+            <div style="font-size:0.6rem;color:#aaa;flex-shrink:0;">${p.distFromPrev.toFixed(1)}km</div>
+          </div>
+        `).join('')}
+      </div>
+    `;
+    cardsEl.appendChild(card);
+  });
+
+  // Resumo geral
+  const resumoEl = document.getElementById('prog-rotas-resumo');
+  if (resumoEl) {
+    const tempoTotalMin = Math.round(totalKm / 60 * 60);
+    const tempoStr = tempoTotalMin >= 60 ? `${Math.floor(tempoTotalMin/60)}h ${tempoTotalMin%60}min` : `${tempoTotalMin}min`;
+    resumoEl.innerHTML = `
+      <span style="font-size:0.65rem;font-weight:800;color:#888;text-transform:uppercase;letter-spacing:1.5px;">RESUMO GERAL:</span>
+      <span>🚗 <b>${encs.length}</b> equipes em campo</span>
+      <span>📍 <b>${totalParadas}</b> obras com coordenadas</span>
+      <span>📏 <b>${totalKm.toFixed(0)} km</b> total estimado</span>
+      <span>⏱️ <b>${tempoStr}</b> tempo estimado</span>
+      ${base ? `<span style="color:#0d7377;">🏢 Base: ${baseSel.options[baseSel.selectedIndex].text}</span>` : `<span style="color:#b97400;">⚠️ Selecione uma base para calcular retorno</span>`}
+    `;
+  }
+
+  // Info no header do painel
+  const subInfo = document.getElementById('rotas-sub-info');
+  if (subInfo) subInfo.textContent = `${encs.length} equipes · ${totalParadas} obras · ${totalKm.toFixed(0)} km total estimado`;
+
+  // Ajustar view do mapa
+  if (comCoord.length) {
+    const bounds = comCoord.map(({coord}) => [coord.lat, coord.lon]);
+    progMapaMap.fitBounds(bounds, {padding:[40,40], maxZoom:12});
+  }
+}
+
+function progRotasFocar(pontos) {
+  if (!progMapaMap || !pontos.length) return;
+  progMapaMap.fitBounds(pontos, {padding:[60,60], maxZoom:13});
+}
+</script>
 </body>
 </html>
