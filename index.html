@@ -490,10 +490,61 @@ function esc(s) {
 }
 
 
-const GSHEETS = {
-JACOBINA: 'https://docs.google.com/spreadsheets/d/142gvn8pNgJGTGDkidCfuOWMHJ2OCKpJd_FQU8zeo0x8/export?format=csv&gid=624598081',
-IRECE:    'https://docs.google.com/spreadsheets/d/14ImbZb8-OCBp78jDtd0QFkSLrMG5vXA7tzrM-x6KQVo/export?format=csv&gid=420931092'
+const GSHEETS_IDS = {
+  JACOBINA: '142gvn8pNgJGTGDkidCfuOWMHJ2OCKpJd_FQU8zeo0x8',
+  IRECE:    '14ImbZb8-OCBp78jDtd0QFkSLrMG5vXA7tzrM-x6KQVo'
 };
+const MESES_ABREV = ['JAN','FEV','MAR','ABR','MAI','JUN','JUL','AGO','SET','OUT','NOV','DEZ'];
+async function gsheetsGetURLAuto(utd) {
+  const now = new Date();
+  const mesAbrev = MESES_ABREV[now.getMonth()];
+  const anoAbrev = String(now.getFullYear()).slice(2);
+  const abaAlvo = mesAbrev + '.' + anoAbrev; // ex: "ABR.26"
+  const sheetId = GSHEETS_IDS[utd];
+  try {
+    const feedURL = 'https://docs.google.com/spreadsheets/d/' + sheetId + '/feeds/worksheets/default/public/full?alt=json';
+    const res = await fetch(feedURL);
+    if (!res.ok) throw new Error('feed indisponivel');
+    const json = await res.json();
+    const entries = json.feed.entry || [];
+    for (const entry of entries) {
+      const title = entry.title['$t'] || '';
+      if (title.toUpperCase().replace(/\s/g,'') === abaAlvo.replace(/\s/g,'')) {
+        const link = entry.link.find(l => l.rel === 'http://schemas.google.com/spreadsheets/2006#cellsfeed');
+        if (link) {
+          const gidMatch = link.href.match(/\/([0-9]+)\/cells/);
+          if (gidMatch) {
+            return 'https://docs.google.com/spreadsheets/d/' + sheetId + '/export?format=csv&gid=' + gidMatch[1];
+          }
+        }
+      }
+    }
+  } catch(e) {}
+  return null;
+}
+// GIDs de fallback por mês (caso o feed falhe)
+const GSHEETS_GIDS = {
+  JACOBINA: { 1:310661297, 2:1111886256, 3:624598081 },
+  IRECE:    { 1:1816810936, 2:420931092, 3:534264140 }
+};
+function gsheetsGetURLFallback(utd) {
+  const mes = new Date().getMonth() + 1;
+  const gid = GSHEETS_GIDS[utd] && GSHEETS_GIDS[utd][mes];
+  if (!gid) return null;
+  return 'https://docs.google.com/spreadsheets/d/' + GSHEETS_IDS[utd] + '/export?format=csv&gid=' + gid;
+}
+// Objeto GSHEETS com URLs resolvidas (inicializa com fallback, atualiza assincronamente)
+const GSHEETS = {
+  JACOBINA: gsheetsGetURLFallback('JACOBINA') || 'https://docs.google.com/spreadsheets/d/142gvn8pNgJGTGDkidCfuOWMHJ2OCKpJd_FQU8zeo0x8/export?format=csv&gid=624598081',
+  IRECE:    gsheetsGetURLFallback('IRECE')    || 'https://docs.google.com/spreadsheets/d/14ImbZb8-OCBp78jDtd0QFkSLrMG5vXA7tzrM-x6KQVo/export?format=csv&gid=534264140'
+};
+// Atualiza URLs automaticamente ao carregar
+(async function() {
+  const urlJ = await gsheetsGetURLAuto('JACOBINA');
+  const urlI = await gsheetsGetURLAuto('IRECE');
+  if (urlJ) GSHEETS.JACOBINA = urlJ;
+  if (urlI) GSHEETS.IRECE = urlI;
+})();
 function todayDate() { const d=new Date(); const p=n=>String(n).padStart(2,'0'); return p(d.getDate())+'/'+p(d.getMonth()+1)+'/'+d.getFullYear(); }
 const DEFAULTS = {
 date: todayDate(),
@@ -589,6 +640,7 @@ console.error('[localStorage] falhou mesmo após limpeza:', e2.message);
 }
 }
 }
+let progRegistros = [], progEditIdx = null;
 function applyRowData(row) {
 if (row.key==='turno') {
 const v = row.value;
@@ -2574,7 +2626,6 @@ const mc = document.getElementById('mapa-container');
 if (mc) mc.scrollIntoView({behavior:'smooth',block:'center'});
 }
 let mapaProgLayerGroup = null;
-let progRegistros = [], progEditIdx = null;
 mapaProgRender();
 function mapaProgGetFiltrados() {
 const dateInput = document.getElementById('mapa-prog-date');
