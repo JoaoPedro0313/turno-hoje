@@ -1247,14 +1247,19 @@ mapaProgOnShow();
 }, 120);
 }
 if (page==='prod') {
+// CORRIGIDO: null-checks para pwd-gate e prod-content (podem nao existir nesta versao do HTML)
+const pwdGate    = document.getElementById('pwd-gate');
+const prodContent = document.getElementById('prod-content');
+if (pwdGate && prodContent) {
 if (prodUnlocked) {
-document.getElementById('pwd-gate').style.display    = 'none';
-document.getElementById('prod-content').style.display = '';
+pwdGate.style.display     = 'none';
+prodContent.style.display  = '';
 renderProducao();
 } else {
-document.getElementById('pwd-gate').style.display    = '';
-document.getElementById('prod-content').style.display = 'none';
+pwdGate.style.display     = '';
+prodContent.style.display  = 'none';
 setTimeout(() => { const i = document.getElementById('pwd-input'); if(i) i.focus(); }, 100);
+}
 }
 }
 }
@@ -1576,6 +1581,7 @@ let lastUpdatedAt = null;
 async function checkForUpdates() {
 if (isFetching) return; // anti race-condition
 isFetching = true;
+// CORRIGIDO: envolver em try/catch global para que erros nao bloqueiem o resto do app
 try {
 const controller = new AbortController();
 const tid = setTimeout(() => controller.abort(), 8000);
@@ -1700,7 +1706,11 @@ return ts > max ? ts : max;
 } catch(e) {}
 startAutoRefresh();
 // Expose inner functions to window so onclick handlers can reach them
-window.switchPage = switchPage;
+// CORRIGIDO: versao segura de switchPage com try/catch global
+const _switchPageOriginal = switchPage;
+window.switchPage = function(page) {
+  try { _switchPageOriginal(page); } catch(e) { console.error('[switchPage] erro:', e); }
+};
 window.render = render;
 window.addTeam = addTeam;
 window.removeTeam = removeTeam;
@@ -1726,6 +1736,87 @@ window.progRenderList = progRenderList;
 window.progRenderDash = progRenderDash;
 window.progInit = progInit;
 window.sincronizarSheets = typeof sincronizarSheets === 'function' ? sincronizarSheets : window.sincronizarSheets;
+
+// ── CORREÇÃO: expor funções do comparador ao window (estavam inacessíveis pelo HTML) ──
+window.compCompareComSheets = compCompareComSheets;
+window.compManualSync       = compManualSync;
+window.compSetFilter        = compSetFilter;
+window.compRenderTable      = compRenderTable;
+window.compLimparHistorico  = compLimparHistorico;
+window.compHistoricoRender  = compHistoricoRender;
+window.histLimparFiltro     = histLimparFiltro;
+
+// ── Funções do mapa ──
+window.mapaFiltrar       = mapaFiltrar;
+window.mapaSetMes        = mapaSetMes;
+window.mapaSetUTD        = mapaSetUTD;
+window.mapaRenderFiltros = mapaRenderFiltros;
+window.mapaProgFocarObra = mapaProgFocarObra;
+
+// ── Funções de progresso diário ──
+window.progRender          = typeof progRender === 'function' ? progRender : undefined;
+window.progRenderStats     = progRenderStats;
+window.progRenderList      = progRenderList;
+window.progRenderDash      = progRenderDash;
+window.progInit            = progInit;
+window.progSwitchTab       = progSwitchTab;
+window.progSetSup          = typeof progSetSup === 'function' ? progSetSup : undefined;
+window.progOnSupChange     = typeof progOnSupChange === 'function' ? progOnSupChange : undefined;
+window.progOnEncChange     = typeof progOnEncChange === 'function' ? progOnEncChange : undefined;
+window.progPepSearch       = typeof progPepSearch === 'function' ? progPepSearch : undefined;
+window.progSelectPep       = typeof progSelectPep === 'function' ? progSelectPep : undefined;
+window.progOnTipoChange    = typeof progOnTipoChange === 'function' ? progOnTipoChange : undefined;
+window.progEditReg         = progEditReg;
+window.progDeleteReg       = progDeleteReg;
+window.progFocarMapa       = typeof progFocarMapa === 'function' ? progFocarMapa : undefined;
+
+// ── Funções administrativas ──
+window.openAdmModal   = openAdmModal;
+window.closeAdmModal  = closeAdmModal;
+window.checkAdmSenha  = checkAdmSenha;
+window.dbReconectar   = dbReconectar;
+
+// ── Funções de produção (senha) ──
+window.checkProdSenha = typeof checkProdSenha === 'function' ? checkProdSenha : undefined;
+window.unlockProd     = typeof unlockProd === 'function' ? unlockProd : undefined;
+
+// ── Funções do comparador restantes ──
+window.compSetMes         = compSetMes;
+window.histSetFiltroDia   = histSetFiltroDia;
+window.histToggleDia      = histToggleDia;
+
+// ── Funções do mapa de progresso ──
+window.mapaProgDestacarNoMapa = mapaProgDestacarNoMapa;
+window.mapaProgRender         = mapaProgRender;
+window.progMapaFocar          = progMapaFocar;
+window.progMapaRender         = progMapaRender;
+window.progMapaZoomTodos      = typeof progMapaZoomTodos === 'function' ? progMapaZoomTodos : undefined;
+window.progRotasFocar         = typeof progRotasFocar === 'function' ? progRotasFocar : undefined;
+window.progRotasLimpar        = typeof progRotasLimpar === 'function' ? progRotasLimpar : undefined;
+window.progRotasRender        = typeof progRotasRender === 'function' ? progRotasRender : undefined;
+window.progRotasToggle        = typeof progRotasToggle === 'function' ? progRotasToggle : undefined;
+
+// ── Funções do formulário de progresso ──
+window.progCalcValores = typeof progCalcValores === 'function' ? progCalcValores : undefined;
+window.progExportCSV   = typeof progExportCSV === 'function' ? progExportCSV : undefined;
+window.progFormClear   = typeof progFormClear === 'function' ? progFormClear : undefined;
+window.progFormSave    = typeof progFormSave === 'function' ? progFormSave : undefined;
+window.progOnAtivChange = typeof progOnAtivChange === 'function' ? progOnAtivChange : undefined;
+
+// ── Funções presença ──
+window.presenceSaveName = typeof presenceSaveName === 'function' ? presenceSaveName : undefined;
+
+// ── Funções gerais do modal e listas ──
+window.renderManageList = renderManageList;
+window.receberAbertura  = typeof receberAbertura === 'function' ? receberAbertura : undefined;
+window.limparProducao   = limparProducao;
+window.handleCSV        = handleCSV;
+window.handleAprCSV     = handleAprCSV;
+
+// ── Funções de tamanho de fonte ──
+window.adjustFontSize = adjustFontSize;
+window.resetFontSize  = resetFontSize;
+window.applyFontSize  = applyFontSize;
 })();
 // bancoDB e bancoDBInfo ja declarados no inicio do script
 let mapaMap=null, mapaLayerGroup=null, mapaData=[], mapaFiltroAtivo='TODOS', mapaUTDFiltro='TODAS', mapaMesFiltro='TODOS';
