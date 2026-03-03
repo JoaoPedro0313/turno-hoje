@@ -661,7 +661,8 @@ try { render(); } catch(e) {}
 try {
 const controller = new AbortController();
 const tid = setTimeout(() => controller.abort(), 10000);
-const res = await fetch(SUPA_URL + '/rest/v1/turno_data?select=key,value&key=neq.obras_base', {
+// Busca apenas as chaves leves (exclui obras_base e prog_diaria que têm carga separada)
+const res = await fetch(SUPA_URL + '/rest/v1/turno_data?select=key,value&key=in.(turno,producao,apr_data,comp_historico)', {
 headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY },
 signal: controller.signal
 });
@@ -680,11 +681,40 @@ lsSet(row.key, row.value);
 }
 setDbStatus('online', 'Banco online ✓');
 dbLoadObrasBase();
+// Carrega prog_diaria separadamente para garantir que não seja truncada
+dbLoadProgDiaria();
 } catch(e) {
 console.warn('[Supabase] Não conectou:', e.name, e.message);
 const temDados = teams.ok.length > 0 || teams.falta.length > 0;
 setDbStatus(temDados ? 'local' : 'offline',
 temDados ? 'Dados locais' : 'Sem conexão');
+}
+}
+async function dbLoadProgDiaria() {
+try {
+const controller = new AbortController();
+const tid = setTimeout(() => controller.abort(), 10000);
+const res = await fetch(
+  SUPA_URL + '/rest/v1/turno_data?select=key,value,updated_at&key=eq.prog_diaria&order=updated_at.desc&limit=1',
+  { headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY }, signal: controller.signal }
+);
+clearTimeout(tid);
+if (!res.ok) { console.warn('[dbLoadProgDiaria] HTTP', res.status); return; }
+const data = await res.json();
+if (Array.isArray(data) && data.length > 0 && Array.isArray(data[0].value)) {
+  const qtd = data[0].value.length;
+  console.log('[dbLoadProgDiaria] Carregado:', qtd, 'registros do banco');
+  progRegistros = data[0].value;
+  lsSet('prog_diaria', progRegistros);
+  try { progRenderStats(); } catch(e) {}
+  try { progRenderList(); } catch(e) {}
+  try { progRenderDash(); } catch(e) {}
+  try { if(typeof mapaProgRender==='function') mapaProgRender(); } catch(e) {}
+} else {
+  console.warn('[dbLoadProgDiaria] Nenhum dado encontrado. Resposta:', JSON.stringify(data).substring(0,200));
+}
+} catch(e) {
+console.warn('[dbLoadProgDiaria] Erro:', e.message);
 }
 }
 async function dbLoadObrasBase() {
@@ -2985,16 +3015,23 @@ async function progSaveToStorage() {
 lsSet('prog_diaria', progRegistros);
 try {
 setDbStatus('syncing', 'Salvando prog...');
+const now = new Date().toISOString();
+const payload = { key: 'prog_diaria', value: progRegistros, updated_at: now };
+// Usa upsert com on_conflict para garantir insert-or-update atômico
 const res = await fetch(SUPA_URL + '/rest/v1/turno_data', {
 method: 'POST',
-headers: { ...SUPA_HEADERS, 'Prefer': 'resolution=merge-duplicates' },
-body: JSON.stringify({ key: 'prog_diaria', value: progRegistros, updated_at: new Date().toISOString() })
+headers: { ...SUPA_HEADERS, 'Prefer': 'resolution=merge-duplicates,return=minimal' },
+body: JSON.stringify(payload)
 });
-if (!res.ok) throw new Error('HTTP ' + res.status);
-setDbStatus('online', 'Prog. salva!');
-setTimeout(() => setDbStatus('online', 'Banco online'), 1500);
+if (!res.ok) {
+const errBody = await res.text().catch(() => '');
+throw new Error('HTTP ' + res.status + ' ' + errBody.substring(0, 200));
+}
+console.log('[progSave] Salvo no Supabase. Registros:', progRegistros.length);
+setDbStatus('online', 'Prog. salva! ✓');
+setTimeout(() => setDbStatus('online', 'Banco online ✓'), 2000);
 } catch(e) {
-console.warn('[progSave] Supabase falhou, dados salvos localmente:', e.message);
+console.warn('[progSave] Supabase falhou, salvo só localmente:', e.message);
 setDbStatus('local', 'Salvo local');
 setTimeout(() => setDbStatus('local', 'Dados locais'), 2000);
 }
@@ -3649,23 +3686,12 @@ a.click();
 URL.revokeObjectURL(url);
 }
 async function progLoadFromSupabase() {
-  try {
-    const controller = new AbortController();
-    const tid = setTimeout(() => controller.abort(), 8000);
-    const res = await fetch(
-      SUPA_URL + '/rest/v1/turno_data?select=key,value&key=eq.prog_diaria',
-      { headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY }, signal: controller.signal }
-    );
-    clearTimeout(tid);
-    if (!res.ok) return false;
-    const data = await res.json();
-    if (Array.isArray(data) && data.length > 0 && Array.isArray(data[0].value)) {
-      progRegistros = data[0].value;
-      lsSet('prog_diaria', progRegistros);
-      return true;
-    }
-    return false;
-  } catch(e) { return false; }
+  // Delega para dbLoadProgDiaria (função central de carregamento)
+  if (typeof dbLoadProgDiaria === 'function') {
+    await dbLoadProgDiaria();
+    return progRegistros.length > 0;
+  }
+  return false;
 }
 async function progInit() {
   // 1) Carrega localStorage imediatamente para exibir algo rápido
