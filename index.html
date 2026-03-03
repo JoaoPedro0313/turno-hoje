@@ -1209,13 +1209,6 @@ document.getElementById('prod-content').style.display = 'none';
 setTimeout(() => { const i = document.getElementById('pwd-input'); if(i) i.focus(); }, 100);
 }
 }
-} else {
-err.textContent = 'Senha incorreta. Tente novamente.';
-input.classList.add('error');
-input.value = '';
-setTimeout(() => input.classList.remove('error'), 400);
-input.focus();
-}
 }
 function tirarPrint() {
 const pad = n => String(n).padStart(2,'0');
