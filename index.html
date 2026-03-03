@@ -1140,18 +1140,20 @@ input.focus();
 const SENHA_PRODUCAO = 'mariua2026';
 let prodUnlocked = false;
 function switchPage(page) {
-document.getElementById('page-turno').style.display = page==='turno' ? '' : 'none';
-document.getElementById('page-prod').style.display  = page==='prod'  ? '' : 'none';
-document.getElementById('page-apr').style.display   = page==='apr'   ? '' : 'none';
-document.getElementById('page-comp').style.display  = page==='comp'  ? '' : 'none';
+const _sel = (id, val) => { const el = document.getElementById(id); if (el) el.style.display = val; };
+_sel('page-turno', page==='turno' ? '' : 'none');
+_sel('page-prod',  page==='prod'  ? '' : 'none');
+_sel('page-apr',   page==='apr'   ? '' : 'none');
+_sel('page-comp',  page==='comp'  ? '' : 'none');
 const pgMapa = document.getElementById('page-mapa');
 if (pgMapa) pgMapa.style.display = page==='mapa' ? '' : 'none';
 const pgProg = document.getElementById('page-prog');
 if (pgProg) pgProg.style.display = page==='prog' ? '' : 'none';
-document.getElementById('nav-turno').className = 'page-nav-btn' + (page==='turno' ? ' active-turno' : '');
-document.getElementById('nav-prod').className  = 'page-nav-btn' + (page==='prod'  ? ' active-prod'  : '');
-document.getElementById('nav-apr').className   = 'page-nav-btn' + (page==='apr'   ? ' active-apr'   : '');
-document.getElementById('nav-comp').className  = 'page-nav-btn' + (page==='comp'  ? ' active-comp'  : '');
+const _nav = (id, cls) => { const el = document.getElementById(id); if (el) el.className = cls; };
+_nav('nav-turno', 'page-nav-btn' + (page==='turno' ? ' active-turno' : ''));
+_nav('nav-prod',  'page-nav-btn' + (page==='prod'  ? ' active-prod'  : ''));
+_nav('nav-apr',   'page-nav-btn' + (page==='apr'   ? ' active-apr'   : ''));
+_nav('nav-comp',  'page-nav-btn' + (page==='comp'  ? ' active-comp'  : ''));
 const navProg = document.getElementById('nav-prog');
 if (navProg) navProg.className = 'page-nav-btn' + (page==='prog' ? ' active-prog' : '');
 if (page==='mapa') {
