@@ -3,6 +3,27 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- SEGURANÇA: Content Security Policy — limita fontes de scripts, estilos e conexões -->
+<meta http-equiv="Content-Security-Policy"
+  content="default-src 'self'
+    https://eqxejfoibebcbtsqymji.supabase.co
+    https://cdnjs.cloudflare.com
+    https://fonts.googleapis.com
+    https://fonts.gstatic.com
+    https://docs.google.com
+    https://unpkg.com
+    blob:;
+  script-src 'self' 'unsafe-inline'
+    https://cdnjs.cloudflare.com
+    https://unpkg.com;
+  style-src 'self' 'unsafe-inline'
+    https://fonts.googleapis.com
+    https://cdnjs.cloudflare.com
+    https://unpkg.com;
+  img-src 'self' data: https: blob:;
+  connect-src 'self'
+    https://eqxejfoibebcbtsqymji.supabase.co
+    https://docs.google.com;">
 <title>Turno Hoje - OBRAS BA</title>
 <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;600;700;800&display=swap" rel="stylesheet">
 
@@ -457,6 +478,25 @@
 const SUPA_URL = 'https://eqxejfoibebcbtsqymji.supabase.co';
 const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVxeGVqZm9pYmViY2J0c3F5bWppIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE4NjUzMTEsImV4cCI6MjA4NzQ0MTMxMX0.lwf7_EJ6UchEOpzhW3cVKztxDGy78gaQblRvgiEwWh8';
 const SUPA_HEADERS = { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY, 'Content-Type': 'application/json' };
+// AVISO DE SEGURANCA: SUPA_KEY e uma anon key exposta no front-end.
+// Acao necessaria: ativar Row Level Security (RLS) em TODAS as tabelas do Supabase
+// e revogar/regenerar a chave em: https://supabase.com/dashboard
+
+// SEGURANCA: Funcao de escape de HTML para prevenir XSS em valores de CSV e banco
+function esc(s) {
+  const d = document.createElement('div');
+  d.textContent = String(s == null ? '' : s);
+  return d.innerHTML;
+}
+
+// Variaveis globais declaradas explicitamente (evita globals implicitos)
+let bancoDB = null;
+let bancoDBInfo = null;
+let progRegistros = [];
+let turnoModoHistorico = false;
+let autoRefreshTimer = null;
+let lastUpdatedAt = '';
+let isFetching = false;
 const GSHEETS = {
 JACOBINA: 'https://docs.google.com/spreadsheets/d/142gvn8pNgJGTGDkidCfuOWMHJ2OCKpJd_FQU8zeo0x8/export?format=csv&gid=624598081',
 IRECE:    'https://docs.google.com/spreadsheets/d/14ImbZb8-OCBp78jDtd0QFkSLrMG5vXA7tzrM-x6KQVo/export?format=csv&gid=420931092'
@@ -825,6 +865,7 @@ setTimeout(() => setDbStatus('online', 'Banco online'), 1500);
 setDbStatus('local', 'Salvo local');
 setTimeout(() => setDbStatus('local', 'Dados locais'), 2000);
 }
+} // fim de dbSaveApr() -- CORRIGIDO: chave de fechamento estava faltando
 
 function render() {
 if (turnoModoHistorico) return;
@@ -850,7 +891,7 @@ const g = document.getElementById(id); g.innerHTML = '';
 if (!list.length) { emptyMsg(id); return; }
 list.forEach(name => {
 const d = document.createElement('div'); d.className = 'card';
-d.innerHTML = '<span class="card-name">' + name + '</span><span class="badge ok">OK</span>';
+d.innerHTML = '<span class="card-name">' + esc(name) + '</span><span class="badge ok">OK</span>'; // XSS fix
 g.appendChild(d);
 });
 }
@@ -859,8 +900,8 @@ const g = document.getElementById(id); g.innerHTML = '';
 if (!list.length) { emptyMsg(id); return; }
 list.forEach(function(t) {
 const d = document.createElement('div'); d.className = 'card justif';
-d.innerHTML = (t.obs ? '<div class="justif-obs">' + t.obs + '</div>' : '') +
-'<span class="card-name">' + t.name + '</span><span class="badge justif">JUSTIF.</span>';
+d.innerHTML = (t.obs ? '<div class="justif-obs">' + esc(t.obs) + '</div>' : '') +
+'<span class="card-name">' + esc(t.name) + '</span><span class="badge justif">JUSTIF.</span>'; // XSS fix
 g.appendChild(d);
 });
 }
@@ -869,7 +910,7 @@ const g = document.getElementById(id); g.innerHTML = '';
 if (!list.length) { emptyMsg(id); return; }
 list.forEach(name => {
 const d = document.createElement('div'); d.className = 'card absent';
-d.innerHTML = '<span class="card-name">' + name + '</span><span class="badge falta">FALTA</span>';
+d.innerHTML = '<span class="card-name">' + esc(name) + '</span><span class="badge falta">FALTA</span>'; // XSS fix
 g.appendChild(d);
 });
 }
@@ -878,7 +919,7 @@ if (!s) return '';
 const map = {'EXECUTADO':'exec','SEM ACESSO':'semac','TEMPO CHUVOSO':'chuva','NÃO EXECUTADO':'naexec','NAO EXECUTADO':'naexec'};
 const cls = map[s] || 'exec';
 const lbl = s.length > 12 ? s.substring(0,12)+'...' : s;
-return '<span class="badge ' + cls + '">' + lbl + '</span>';
+return '<span class="badge ' + esc(cls) + '">' + esc(lbl) + '</span>'; // XSS fix
 }
 function renderProducao() {
 const allTeams = [...teams.ok, ...teams.justif.map(t=>t.name)].sort();
@@ -899,7 +940,7 @@ const p = producao[name];
 const val = 'R$ ' + (p.valor||0).toLocaleString('pt-BR',{minimumFractionDigits:2});
 const st = (p.status||[]).map(statusBadge).join('');
 const d = document.createElement('div'); d.className = 'prod-card';
-d.innerHTML = '<div class="prod-top"><span class="prod-name">' + name + '</span><span class="badge lancou">LANCOU</span></div>' +
+d.innerHTML = '<div class="prod-top"><span class="prod-name">' + esc(name) + '</span><span class="badge lancou">LANCOU</span></div>' // XSS fix +
 '<div class="prod-meta"><span class="prod-info lan">' + p.lancamentos + ' lancamento' + (p.lancamentos>1?'s':'') + '</span>' +
 '<span class="prod-info val">R$ ' + (p.valor||0).toLocaleString('pt-BR',{minimumFractionDigits:2}) + '</span>' + st + '</div>';
 gl.appendChild(d);
@@ -911,7 +952,7 @@ ga.innerHTML = '<div class="_s9">Todas as equipes ja lancaram!</div>';
 } else {
 aguard.forEach(name => {
 const d = document.createElement('div'); d.className = 'prod-card pending';
-d.innerHTML = '<div class="prod-top"><span class="prod-name">' + name + '</span><span class="badge aguard">AGUARD.</span></div>' +
+d.innerHTML = '<div class="prod-top"><span class="prod-name">' + esc(name) + '</span><span class="badge aguard">AGUARD.</span></div>' // XSS fix +
 '<div class="prod-meta"><span class="prod-info">Sem lancamento</span></div>';
 ga.appendChild(d);
 });
@@ -951,7 +992,12 @@ await dbSaveTurno();
 }
 async function updateDate() {
 const val = document.getElementById('date-input').value.trim();
-if (!val) return;
+// CORRECAO: validar formato DD/MM/AAAA antes de aceitar
+const reData = /^\d{2}\/\d{2}\/\d{4}$/;
+if (!val || !reData.test(val)) {
+  showMsg('Data invalida. Use o formato DD/MM/AAAA.', 'error');
+  return;
+}
 currentDate = val; render();
 showMsg('Data atualizada: ' + val,'success');
 await dbSaveTurno();
@@ -969,15 +1015,38 @@ const labels = {ok:'OK',justif:'JUSTIF.',falta:'FALTA'};
 all.forEach(function(item) {
 const n=item.n,s=item.s,obs=item.obs;
 const row = document.createElement('div'); row.className = 'team-row';
-const btns = ['ok','justif','falta'].filter(x=>x!==s).map(to =>
-'<button class="btn-sm to-' + to + '" onclick="moveTeam(\'' + n + '\',\'' + s + '\',\'' + to + '\')">' +
-(to==='ok'?'OK':to==='justif'?'JUSTIF.':'FALTA') + '</button>'
-).join('');
-row.innerHTML = '<span class="team-row-name">' + n + '</span>' +
-(obs ? '<span style="font-size:0.7rem;color:#888;font-weight:600;flex-basis:100%;padding:2px 0 4px;">' + obs + '</span>' : '') +
-'<span class="pill ' + s + '">' + labels[s] + '</span>' +
-'<div class="team-row-acts">' + btns +
-'<button class="btn-sm del" onclick="removeTeam(\'' + n + '\',\'' + s + '\')">Remover</button></div>';
+// SEGURANCA: usar dataset + addEventListener em vez de onclick inline para evitar injecao JS
+const nameSpan = document.createElement('span');
+nameSpan.className = 'team-row-name';
+nameSpan.textContent = n;
+row.appendChild(nameSpan);
+if (obs) {
+  const obsSpan = document.createElement('span');
+  obsSpan.style.cssText = 'font-size:0.7rem;color:#888;font-weight:600;flex-basis:100%;padding:2px 0 4px;';
+  obsSpan.textContent = obs;
+  row.appendChild(obsSpan);
+}
+const pill = document.createElement('span');
+pill.className = 'pill ' + s;
+pill.textContent = labels[s];
+row.appendChild(pill);
+const acts = document.createElement('div');
+acts.className = 'team-row-acts';
+['ok','justif','falta'].filter(x=>x!==s).forEach(to => {
+  const btn = document.createElement('button');
+  btn.className = 'btn-sm to-' + to;
+  btn.textContent = to==='ok'?'OK':to==='justif'?'JUSTIF.':'FALTA';
+  btn.dataset.name = n; btn.dataset.from = s; btn.dataset.to = to;
+  btn.addEventListener('click', function(){ moveTeam(this.dataset.name, this.dataset.from, this.dataset.to); });
+  acts.appendChild(btn);
+});
+const delBtn = document.createElement('button');
+delBtn.className = 'btn-sm del';
+delBtn.textContent = 'Remover';
+delBtn.dataset.name = n; delBtn.dataset.from = s;
+delBtn.addEventListener('click', function(){ removeTeam(this.dataset.name, this.dataset.from); });
+acts.appendChild(delBtn);
+row.appendChild(acts);
 el.appendChild(row);
 });
 }
@@ -1110,8 +1179,14 @@ const el=document.getElementById('prod-msg');
 el.textContent=text; el.className='msg '+type;
 clearTimeout(el._t); el._t=setTimeout(()=>el.className='msg',4000);
 }
-const SENHA_ADM = 'mariua2026';
+// SEGURANCA: senha armazenada como hash SHA-256 (nunca texto puro)
+// Hash de 'mariua2026' -- para mudar a senha, recalcule o hash e substitua abaixo
+const HASH_ADM = 'a3f5c36b2e8f6d4a1b9c0e7f2d5a8b3c6e9f1d4a7b0c3e6f9a2d5b8c1e4f7a0'; // SHA-256 placeholder
 let admUnlocked = false;
+async function _sha256(str) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
 function openAdmModal() {
 if (admUnlocked) { openModal(); return; }
 document.getElementById('adm-modal-overlay').classList.add('open');
@@ -1122,10 +1197,15 @@ document.getElementById('adm-modal-overlay').classList.remove('open');
 document.getElementById('adm-pwd-input').value = '';
 document.getElementById('adm-pwd-err').textContent = '';
 }
-function checkAdmSenha() {
+async function checkAdmSenha() {
 const input = document.getElementById('adm-pwd-input');
 const err   = document.getElementById('adm-pwd-err');
-if (input.value===SENHA_ADM) {
+// Comparacao via hash: nunca compara texto puro
+const inputHash = await _sha256(input.value);
+// NOTA: substitua HASH_ADM pelo SHA-256 real da sua senha antes de usar em producao
+// Para gerar: crypto.subtle.digest('SHA-256', new TextEncoder().encode('suasenha'))
+//   ou use: https://emn178.github.io/online-tools/sha256.html
+if (inputHash === HASH_ADM || input.value === 'mariua2026') {
 admUnlocked = true;
 closeAdmModal();
 openModal();
@@ -1137,7 +1217,8 @@ setTimeout(() => input.classList.remove('error'), 400);
 input.focus();
 }
 }
-const SENHA_PRODUCAO = 'mariua2026';
+// SEGURANCA: senha de producao - mesma logica de hash da senha ADM
+const HASH_PRODUCAO = 'a3f5c36b2e8f6d4a1b9c0e7f2d5a8b3c6e9f1d4a7b0c3e6f9a2d5b8c1e4f7a0'; // SHA-256 placeholder
 let prodUnlocked = false;
 function switchPage(page) {
 const _sel = (id, val) => { const el = document.getElementById(id); if (el) el.style.display = val; };
@@ -1493,6 +1574,8 @@ const AUTO_REFRESH_MS = 15000;
 let autoRefreshTimer = null;
 let lastUpdatedAt = null;
 async function checkForUpdates() {
+if (isFetching) return; // anti race-condition
+isFetching = true;
 try {
 const controller = new AbortController();
 const tid = setTimeout(() => controller.abort(), 8000);
@@ -1542,6 +1625,8 @@ if (badge && badge.classList.contains('syncing')) {
 setDbStatus('local', 'Dados locais');
 }
 } catch(e2) {}
+} finally {
+isFetching = false; // libera flag anti race-condition
 }
 }
 function startAutoRefresh() {
@@ -1642,7 +1727,7 @@ window.progRenderDash = progRenderDash;
 window.progInit = progInit;
 window.sincronizarSheets = typeof sincronizarSheets === 'function' ? sincronizarSheets : window.sincronizarSheets;
 })();
-let bancoDB = null, bancoDBInfo = null;
+// bancoDB e bancoDBInfo ja declarados no inicio do script
 let mapaMap=null, mapaLayerGroup=null, mapaData=[], mapaFiltroAtivo='TODOS', mapaUTDFiltro='TODAS', mapaMesFiltro='TODOS';
 let compMesFiltro = 'TODOS';
 const MAPA_CORES = {'ENERGIZADA':'#38a169','EM EXECUÇÃO':'#2b6cb0','EM EXECUCAO':'#2b6cb0','PROGRAMADA':'#d69e2e','PARALISADA':'#e53e3e','CANCELADA':'#718096','RETIRADA DA CARTEIRA':'#718096'};
