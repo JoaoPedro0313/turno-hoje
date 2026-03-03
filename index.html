@@ -693,7 +693,7 @@ body: JSON.stringify({ key: 'turno', value: payload, updated_at: now })
 });
 if (!res.ok) throw new Error('HTTP ' + res.status);
 if (currentDate) {
-const histKey = 'turno_hist_' + currentDate.replace(/\
+const histKey = 'turno_hist_' + currentDate.replace(/\//g, '-');
 fetch(SUPA_URL + '/rest/v1/turno_data', {
 method: 'POST',
 headers: { ...SUPA_HEADERS, 'Prefer': 'resolution=merge-duplicates' },
@@ -825,42 +825,7 @@ setTimeout(() => setDbStatus('online', 'Banco online'), 1500);
 setDbStatus('local', 'Salvo local');
 setTimeout(() => setDbStatus('local', 'Dados locais'), 2000);
 }
-});
-const info = {
-arquivos,
-count: mergedData.length,
-updatedAt: pad(now.getDate())+'/'+pad(now.getMonth()+1)+'/'+now.getFullYear()+' às '+pad(now.getHours())+':'+pad(now.getMinutes())
-};
-const mergedDataMin = typeof compMinimizarDados==='function' ? compMinimizarDados(mergedData) : mergedData;
-bancoDB = mergedData;
-bancoDBInfo = info;
-lsSet('obras_base', { data: mergedDataMin, info });
-compDataAnterior = mergedData;
-compBaseInfo = info;
-compUpdateBaseUI();
-try {
-setDbStatus('syncing', 'Salvando base...');
-const res = await fetch(SUPA_URL + '/rest/v1/turno_data', {
-method: 'POST',
-headers: {
-'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY,
-'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates'
-},
-body: JSON.stringify({ key: 'obras_base', value: { data: mergedDataMin, info }, updated_at: now.toISOString() })
-});
-if (!res.ok) {
-const errBody = await res.text().catch(() => '');
-throw new Error('HTTP ' + res.status + ': ' + errBody.substring(0, 200));
-}
-setDbStatus('online', 'Base salva!');
-setTimeout(() => setDbStatus('online', 'Banco online'), 1500);
-} catch(e) {
-console.error('[Supabase] Falha ao salvar obras_base:', e.message);
-setDbStatus('local', '⚠️ Salvo local (Supabase offline)');
-alert('❌ Falha ao salvar no Supabase:\n\n' + e.message + '\n\nOs dados foram preservados localmente, mas não serão visíveis em outros dispositivos.');
-setTimeout(() => setDbStatus('local', 'Dados locais'), 3000);
-}
-}
+
 function render() {
 if (turnoModoHistorico) return;
 buildGridOk('abriu-grid', [...teams.ok].sort());
@@ -1278,7 +1243,7 @@ width: 900,
 windowWidth: 900,
 }).then(canvas => {
 const a = document.createElement('a');
-a.download = 'turno_' + currentDate.replace(/\
+a.download = 'turno_' + currentDate.replace(/\//g, '_') + '.png';
 a.href = canvas.toDataURL('image/png');
 a.click();
 document.body.removeChild(wrapper);
@@ -1894,7 +1859,6 @@ const utdTag = r.utd ? `<span style="background:#ebf4ff;color:#2b6cb0;font-size:
 const stCls = 'status-' + (r.status||'DEFAULT').replace(/\s+/g,'_');
 return `<tr><td><code style="color:#0d7377;font-size:0.78rem;font-weight:800;">${r.pep}</code></td><td><div class="td-main">${r.titulo}${newTag}</div></td><td>${utdTag}</td><td><span class="status-badge ${stCls}">${r.status||'–'}</span></td><td class="diff-cell">${compDiffCell(r.cavaAnt,r.cavaAt,r.cavaDiff)}</td><td class="diff-cell">${compDiffCell(r.pRealAnt,r.pRealAt,r.pRealDiff)}</td><td class="diff-cell">${compDiffCell(r.pImpAnt,r.pImpAt,r.pImpDiff)}</td><td class="diff-cell"><span style="color:#5a6478">${r.pPrevAt!==null?r.pPrevAt:'—'}</span></td></tr>`;
 }).join('');
-} catch(e) { setDbStatus('offline', 'Erro ao resetar'); }
 }
 compHandleFileAtual();
 let compHistorico = [];
@@ -2088,7 +2052,7 @@ return '<tr style="border-bottom:1px solid #f0f2f5;background:'+(i%2===0?'#fff':
 '</tr>';
 }).join('')+
 '</tbody></table></div>';
-const safeDia = dia.replace(/\
+const safeDia = dia.replace(/\//g, '-');
 return '<div style="border:1.5px solid '+(isHoje?'#bee3f8':'#edf0f2')+';border-radius:12px;overflow:hidden;margin-bottom:10px;">'+
 '<div onclick="histToggleDia(\''+dia+'\')" style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;cursor:pointer;background:'+(isHoje?'#ebf4ff':'#f8fafc')+';gap:10px;flex-wrap:wrap;user-select:none;">'+
 '<div style="display:flex;align-items:center;gap:12px;flex:1;min-width:0;">'+
@@ -2399,13 +2363,11 @@ L.marker([d.lat,d.lon],{icon}).addTo(mapaLayerGroup).bindPopup(popup,{maxWidth:3
 bounds.push([d.lat,d.lon]);
 });
 if (bounds.length) mapaMap.fitBounds(bounds,{padding:[28,28]});
-});
 const mc = document.getElementById('mapa-container');
 if (mc) mc.scrollIntoView({behavior:'smooth',block:'center'});
 }
 let mapaProgLayerGroup = null;
 mapaProgRender();
-}
 function mapaProgGetFiltrados() {
 const dateInput = document.getElementById('mapa-prog-date');
 const encInput = document.getElementById('mapa-prog-enc');
@@ -2581,6 +2543,7 @@ el.style.background = type==='success' ? '#d0f0ee' : '#fde8e8';
 el.style.color = type==='success' ? '#0d7377' : '#c53030';
 clearTimeout(el._t); el._t = setTimeout(() => el.style.display = 'none', 5000);
 }
+function progHandleCSV(file) {
 document.getElementById('prog-file-name').textContent = '⏳ Lendo ' + file.name + '…';
 const reader = new FileReader();
 reader.onload = e => {
@@ -2752,12 +2715,6 @@ setDbStatus('local', '⚠️ Supabase rejeitou — salvo só local');
 throw new Error('HTTP ' + res.status + ': ' + errBody.substring(0, 200));
 }
 setDbStatus('online', '✅ Banco sincronizado!');
-}
-document.getElementById('prog-empty').style.display = '';
-document.getElementById('prog-btn-limpar').style.display = 'none';
-document.getElementById('prog-count-label').textContent = '';
-document.getElementById('prog-file-name').innerHTML = 'CSV: DATA · SUPERVISOR · ENCARREGADO · NOME DA OBRA · MUNICIPIO · PEP OBRA · ATIVIDADES &nbsp;·&nbsp; <strong style="color:#2b6cb0;">ou imagem JPG</strong>';
-document.getElementById('prog-sup-filtros').innerHTML = '';
 }
 async function progLoadFromStorage() {
 const ls = lsGet('prog_diaria');
