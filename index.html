@@ -3694,6 +3694,8 @@ async function progLoadFromSupabase() {
   return false;
 }
 async function progInit() {
+  // 0) Preenche selects de supervisor/programador/encarregado
+  try { progFillSelects(); } catch(e) {}
   // 1) Carrega localStorage imediatamente para exibir algo rápido
   try {
     const ls = lsGet('prog_diaria');
