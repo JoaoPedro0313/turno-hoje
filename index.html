@@ -2376,6 +2376,7 @@ const mc = document.getElementById('mapa-container');
 if (mc) mc.scrollIntoView({behavior:'smooth',block:'center'});
 }
 let mapaProgLayerGroup = null;
+let progRegistros = [], progEditIdx = null;
 mapaProgRender();
 function mapaProgGetFiltrados() {
 const dateInput = document.getElementById('mapa-prog-date');
@@ -2545,7 +2546,6 @@ dateInput.value = new Date().toISOString().split('T')[0];
 mapaProgRender();
 }
 let progData = [], progSupFiltro = 'TODOS';
-let progRegistros = [], progEditIdx = null;
 function progShowMsg(text, type) {
 const el = document.getElementById('prog-msg');
 el.textContent = text; el.style.display = 'block';
