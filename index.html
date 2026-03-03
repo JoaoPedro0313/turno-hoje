@@ -3843,11 +3843,30 @@ if (presenceEnabled) presencePoll();
 function presenceCloseModal() {
 document.getElementById('presence-modal').classList.remove('open');
 }
+async function presenceCheckTableExists() {
+  // Verifica se a tabela existe consultando o endpoint de schema (não gera erro 400)
+  try {
+    const res = await fetch(
+      SUPA_URL + '/rest/v1/' + PRESENCE_TABLE + '?limit=0',
+      { headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY } }
+    );
+    // 200 = tabela existe e acessível | 404/400/401 = não existe ou sem permissão
+    return res.ok;
+  } catch(e) {
+    return false;
+  }
+}
 async function presenceInit() {
 presenceUID = presenceGetUID();
 presenceMyName = presenceGetMyName();
+// Verifica se a tabela existe ANTES de tentar escrever nela
+const tableOk = await presenceCheckTableExists();
+if (!tableOk) {
+  presenceDisable('Tabela não encontrada (pré-check)');
+  return;
+}
 await presenceHeartbeat();
-if (!presenceEnabled) return; // tabela não existe, para aqui
+if (!presenceEnabled) return;
 await presencePoll();
 if (!presenceEnabled) return;
 presenceTimer = setInterval(presenceHeartbeat, PRESENCE_INTERVAL_MS);
