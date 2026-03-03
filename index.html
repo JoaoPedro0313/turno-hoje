@@ -1175,6 +1175,15 @@ setTimeout(() => { const i = document.getElementById('pwd-input'); if(i) i.focus
 }
 }
 }
+function atualizarRelatorio() {
+try { render(); } catch(e) {}
+try { renderProducao(); } catch(e) {}
+try { compUpdateBaseUI(); } catch(e) {}
+try { progRenderStats(); } catch(e) {}
+try { progRenderList(); } catch(e) {}
+try { progRenderDash(); } catch(e) {}
+dbReconectar();
+}
 function tirarPrint() {
 const pad = n => String(n).padStart(2,'0');
 const now = new Date();
@@ -2536,6 +2545,7 @@ dateInput.value = new Date().toISOString().split('T')[0];
 mapaProgRender();
 }
 let progData = [], progSupFiltro = 'TODOS';
+let progRegistros = [], progEditIdx = null;
 function progShowMsg(text, type) {
 const el = document.getElementById('prog-msg');
 el.textContent = text; el.style.display = 'block';
