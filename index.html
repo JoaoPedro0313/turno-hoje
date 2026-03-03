@@ -1614,6 +1614,33 @@ return ts > max ? ts : max;
 }
 } catch(e) {}
 startAutoRefresh();
+// Expose inner functions to window so onclick handlers can reach them
+window.switchPage = switchPage;
+window.render = render;
+window.addTeam = addTeam;
+window.removeTeam = removeTeam;
+window.moveTeam = moveTeam;
+window.updateDate = updateDate;
+window.selectStatus = selectStatus;
+window.tirarPrint = tirarPrint;
+window.atualizarRelatorio = atualizarRelatorio;
+window.renderApr = renderApr;
+window.setAprBase = setAprBase;
+window.setAprTipo = setAprTipo;
+window.buildTipoFilterBar = buildTipoFilterBar;
+window.aprFilterTable = aprFilterTable;
+window.switchTab = switchTab;
+window.dbBadgeClick = dbBadgeClick;
+window.presenceOpenModal = presenceOpenModal;
+window.presenceCloseModal = presenceCloseModal;
+window.turnoHistBuscar = turnoHistBuscar;
+window.turnoHistHoje = turnoHistHoje;
+window.progSwitchTab = progSwitchTab;
+window.progRenderStats = progRenderStats;
+window.progRenderList = progRenderList;
+window.progRenderDash = progRenderDash;
+window.progInit = progInit;
+window.sincronizarSheets = typeof sincronizarSheets === 'function' ? sincronizarSheets : window.sincronizarSheets;
 })();
 let bancoDB = null, bancoDBInfo = null;
 let mapaMap=null, mapaLayerGroup=null, mapaData=[], mapaFiltroAtivo='TODOS', mapaUTDFiltro='TODAS', mapaMesFiltro='TODOS';
@@ -4273,5 +4300,37 @@ if (!progMapaMap || !pontos.length) return;
 progMapaMap.fitBounds(pontos, {padding:[60,60], maxZoom:13});
 }
 </script>
+
+<div id="debug-bar" style="position:fixed;top:60px;right:10px;z-index:9999;background:#1a1a2e;color:#fff;padding:10px;border-radius:8px;font-family:monospace;font-size:12px;max-width:300px;box-shadow:0 4px 20px rgba(0,0,0,0.5);">
+  <div style="font-weight:bold;margin-bottom:6px;color:#0f0;">🔍 DEBUG</div>
+  <button onclick="testSwitchPage()" style="background:#0d7377;color:#fff;border:none;padding:4px 10px;border-radius:4px;cursor:pointer;margin:2px;font-size:11px;">Test switchPage</button>
+  <button onclick="document.getElementById('debug-bar').style.display='none'" style="background:#e53e3e;color:#fff;border:none;padding:4px 10px;border-radius:4px;cursor:pointer;margin:2px;font-size:11px;">Fechar</button>
+  <div id="debug-result" style="margin-top:6px;font-size:11px;line-height:1.5;"></div>
+</div>
+<script>
+function testSwitchPage() {
+  const out = document.getElementById('debug-result');
+  const tests = [
+    ['switchPage', typeof switchPage],
+    ['atualizarRelatorio', typeof atualizarRelatorio],
+    ['progInit', typeof progInit],
+    ['progRegistros', typeof progRegistros],
+    ['openAdmModal', typeof openAdmModal],
+  ];
+  const html = tests.map(([name, t]) => 
+    \`<div style="color:\${t==='function'||t==='object'?'#0f0':'#f44'}">\${t==='function'||t==='object'?'✅':'❌'} \${name}: \${t}</div>\`
+  ).join('');
+  out.innerHTML = html;
+  
+  // Try calling switchPage
+  try {
+    switchPage('apr');
+    out.innerHTML += '<div style="color:#0f0">✅ switchPage(apr) OK</div>';
+  } catch(e) {
+    out.innerHTML += '<div style="color:#f44">❌ switchPage error: ' + e.message + '</div>';
+  }
+}
+</script>
+
 </body>
 </html>
