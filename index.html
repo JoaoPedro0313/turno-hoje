@@ -3644,6 +3644,11 @@ let presenceMyName = '';
 let presenceTimer = null;
 let presencePollTimer = null;
 let presenceActive = [];
+// Controle de falhas: desabilita presence se tabela não existir (erro 400/404)
+let presenceEnabled = true;
+let presenceFailCount = 0;
+const PRESENCE_MAX_FAILS = 3;
+
 function presenceGetUID() {
 let uid = localStorage.getItem('mariua_uid');
 if (!uid) {
@@ -3666,8 +3671,21 @@ await presenceHeartbeat();
 if (saved) { saved.style.display='inline'; setTimeout(()=>saved.style.display='none', 2000); }
 }, 600);
 }
+function presenceDisable(reason) {
+if (!presenceEnabled) return;
+presenceEnabled = false;
+clearInterval(presenceTimer);
+clearInterval(presencePollTimer);
+presenceTimer = null;
+presencePollTimer = null;
+// Oculta o botão de presence para não confundir o usuário
+const btn = document.getElementById('presence-btn');
+if (btn) btn.style.display = 'none';
+console.warn('[Presence] Desabilitado — tabela "user_presence" indisponível no Supabase.', reason,
+'\n👉 Para habilitar: crie a tabela no Supabase conforme instruções.');
+}
 async function presenceHeartbeat() {
-if (!presenceUID) return;
+if (!presenceEnabled || !presenceUID) return;
 const now = new Date().toISOString();
 const page = (() => {
 const pages = ['turno','prod','apr','comp','mapa','prog'];
@@ -3678,7 +3696,7 @@ if (el && el.style.display!=='none') return p.toUpperCase();
 return 'TURNO';
 })();
 try {
-await fetch(SUPA_URL + '/rest/v1/' + PRESENCE_TABLE, {
+const res = await fetch(SUPA_URL + '/rest/v1/' + PRESENCE_TABLE, {
 method: 'POST',
 headers: { ...SUPA_HEADERS, 'Prefer': 'resolution=merge-duplicates' },
 body: JSON.stringify({
@@ -3689,22 +3707,39 @@ last_seen: now,
 user_agent: navigator.userAgent.substring(0,80)
 })
 });
-} catch(e) {  }
+if (res.status === 400 || res.status === 404 || res.status === 401) {
+presenceFailCount++;
+if (presenceFailCount >= PRESENCE_MAX_FAILS) {
+presenceDisable('HTTP ' + res.status);
+}
+} else {
+presenceFailCount = 0; // reset em caso de sucesso
+}
+} catch(e) { /* rede — não conta como falha de tabela */ }
 }
 async function presencePoll() {
+if (!presenceEnabled) return;
 try {
 const cutoff = new Date(Date.now() - PRESENCE_TTL_MS).toISOString();
 const res = await fetch(
 SUPA_URL + '/rest/v1/' + PRESENCE_TABLE + '?last_seen=gte.' + cutoff + '&order=last_seen.desc',
 { headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY } }
 );
+if (res.status === 400 || res.status === 404 || res.status === 401) {
+presenceFailCount++;
+if (presenceFailCount >= PRESENCE_MAX_FAILS) {
+presenceDisable('HTTP ' + res.status + ' no poll');
+}
+return;
+}
 if (!res.ok) return;
 const data = await res.json();
 if (Array.isArray(data)) {
+presenceFailCount = 0;
 presenceActive = data;
 presenceUpdateUI();
 }
-} catch(e) {  }
+} catch(e) { /* rede */ }
 }
 function presenceUpdateUI() {
 const count = presenceActive.length;
@@ -3752,7 +3787,7 @@ document.getElementById('presence-modal').classList.add('open');
 const input = document.getElementById('presence-my-name');
 if (input) input.value = presenceMyName;
 presenceRenderList();
-presencePoll();
+if (presenceEnabled) presencePoll();
 }
 function presenceCloseModal() {
 document.getElementById('presence-modal').classList.remove('open');
@@ -3761,14 +3796,16 @@ async function presenceInit() {
 presenceUID = presenceGetUID();
 presenceMyName = presenceGetMyName();
 await presenceHeartbeat();
+if (!presenceEnabled) return; // tabela não existe, para aqui
 await presencePoll();
+if (!presenceEnabled) return;
 presenceTimer = setInterval(presenceHeartbeat, PRESENCE_INTERVAL_MS);
 presencePollTimer = setInterval(presencePoll, PRESENCE_POLL_MS);
 document.querySelectorAll('.page-nav-btn').forEach(btn => {
-btn.addEventListener('click', () => setTimeout(presenceHeartbeat, 200));
+btn.addEventListener('click', () => { if (presenceEnabled) setTimeout(presenceHeartbeat, 200); });
 });
 document.addEventListener('visibilitychange', () => {
-if (!document.hidden) { presenceHeartbeat(); presencePoll(); }
+if (!document.hidden && presenceEnabled) { presenceHeartbeat(); presencePoll(); }
 });
 }
 window.addEventListener('load', () => {
