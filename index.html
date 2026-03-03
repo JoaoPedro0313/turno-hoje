@@ -1295,6 +1295,19 @@ setTimeout(() => { const i = document.getElementById('pwd-input'); if(i) i.focus
 }
 }
 }
+// Ao abrir aba PROG: re-sincroniza do banco para garantir dados atualizados
+if (page==='prog') {
+setTimeout(async () => {
+  try {
+    const fromDB = await progLoadFromSupabase();
+    if (fromDB) {
+      try { progRenderStats(); } catch(e) {}
+      try { progRenderList(); } catch(e) {}
+      try { progRenderDash(); } catch(e) {}
+    }
+  } catch(e) {}
+}, 200);
+}
 }
 function atualizarRelatorio() {
   try { render(); } catch(e) {}
@@ -3635,7 +3648,27 @@ a.href = url; a.download = 'programacao_diaria_' + new Date().toISOString().slic
 a.click();
 URL.revokeObjectURL(url);
 }
+async function progLoadFromSupabase() {
+  try {
+    const controller = new AbortController();
+    const tid = setTimeout(() => controller.abort(), 8000);
+    const res = await fetch(
+      SUPA_URL + '/rest/v1/turno_data?select=key,value&key=eq.prog_diaria',
+      { headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY }, signal: controller.signal }
+    );
+    clearTimeout(tid);
+    if (!res.ok) return false;
+    const data = await res.json();
+    if (Array.isArray(data) && data.length > 0 && Array.isArray(data[0].value)) {
+      progRegistros = data[0].value;
+      lsSet('prog_diaria', progRegistros);
+      return true;
+    }
+    return false;
+  } catch(e) { return false; }
+}
 async function progInit() {
+  // 1) Carrega localStorage imediatamente para exibir algo rápido
   try {
     const ls = lsGet('prog_diaria');
     if (ls && Array.isArray(ls) && progRegistros.length === 0) progRegistros = ls;
@@ -3643,8 +3676,16 @@ async function progInit() {
   try { progRenderStats(); } catch(e) {}
   try { progRenderList(); } catch(e) {}
   try { progRenderDash(); } catch(e) {}
+  // 2) Busca do Supabase para garantir dados mais recentes
+  const fromDB = await progLoadFromSupabase();
+  if (fromDB) {
+    try { progRenderStats(); } catch(e) {}
+    try { progRenderList(); } catch(e) {}
+    try { progRenderDash(); } catch(e) {}
+    try { if (typeof mapaProgRender==='function') mapaProgRender(); } catch(e) {}
+  }
 }
-window.addEventListener('load', () => setTimeout(progInit, 500));
+window.addEventListener('load', () => setTimeout(progInit, 600));
 const PRESENCE_TABLE = 'user_presence';
 const PRESENCE_TTL_MS = 2 * 60 * 1000;
 const PRESENCE_INTERVAL_MS = 20000;
