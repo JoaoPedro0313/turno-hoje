@@ -1176,13 +1176,13 @@ setTimeout(() => { const i = document.getElementById('pwd-input'); if(i) i.focus
 }
 }
 function atualizarRelatorio() {
-try { render(); } catch(e) {}
-try { renderProducao(); } catch(e) {}
-try { compUpdateBaseUI(); } catch(e) {}
-try { progRenderStats(); } catch(e) {}
-try { progRenderList(); } catch(e) {}
-try { progRenderDash(); } catch(e) {}
-dbReconectar();
+  try { render(); } catch(e) {}
+  try { renderProducao(); } catch(e) {}
+  try { compUpdateBaseUI(); } catch(e) {}
+  try { progRenderStats(); } catch(e) {}
+  try { progRenderList(); } catch(e) {}
+  try { progRenderDash(); } catch(e) {}
+  dbReconectar();
 }
 function tirarPrint() {
 const pad = n => String(n).padStart(2,'0');
@@ -3400,6 +3400,15 @@ const a = document.createElement('a');
 a.href = url; a.download = 'programacao_diaria_' + new Date().toISOString().slice(0,10) + '.csv';
 a.click();
 URL.revokeObjectURL(url);
+}
+async function progInit() {
+  try {
+    const ls = lsGet('prog_diaria');
+    if (ls && Array.isArray(ls) && progRegistros.length === 0) progRegistros = ls;
+  } catch(e) {}
+  try { progRenderStats(); } catch(e) {}
+  try { progRenderList(); } catch(e) {}
+  try { progRenderDash(); } catch(e) {}
 }
 window.addEventListener('load', () => setTimeout(progInit, 500));
 const PRESENCE_TABLE = 'user_presence';
