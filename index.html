@@ -952,12 +952,19 @@ const allTeams = [...teams.ok, ...teams.justif.map(t=>t.name)].sort();
 const lancou  = allTeams.filter(n => producao[n]);
 const aguard  = allTeams.filter(n => !producao[n]);
 const totalV  = lancou.reduce((s,n)=>s+(producao[n]?producao[n].valor||0:0), 0);
-document.getElementById('prod-lancou-count').textContent = lancou.length;
-document.getElementById('prod-valor-total').textContent  =
-'R$ ' + totalV.toLocaleString('pt-BR',{minimumFractionDigits:2});
-document.getElementById('lbl-lancou').textContent = lancou.length;
-document.getElementById('lbl-aguard').textContent = aguard.length;
-const gl = document.getElementById('prod-lancou-grid'); gl.innerHTML = '';
+// Null guards: elementos podem não existir se a aba Produção ainda não foi renderizada
+const elCount  = document.getElementById('prod-lancou-count');
+const elTotal  = document.getElementById('prod-valor-total');
+const elLancou = document.getElementById('lbl-lancou');
+const elAguard = document.getElementById('lbl-aguard');
+const gl       = document.getElementById('prod-lancou-grid');
+const ga       = document.getElementById('prod-aguard-grid');
+if (!gl || !ga) return; // aba de produção não está no DOM ainda
+if (elCount)  elCount.textContent  = lancou.length;
+if (elTotal)  elTotal.textContent  = 'R$ ' + totalV.toLocaleString('pt-BR',{minimumFractionDigits:2});
+if (elLancou) elLancou.textContent = lancou.length;
+if (elAguard) elAguard.textContent = aguard.length;
+gl.innerHTML = '';
 if (!lancou.length) {
 gl.innerHTML = '<div class="_s9">Nenhum lancamento registrado</div>';
 } else {
@@ -972,7 +979,7 @@ d.innerHTML = '<div class="prod-top"><span class="prod-name">' + esc(name) + '</
 gl.appendChild(d);
 });
 }
-const ga = document.getElementById('prod-aguard-grid'); ga.innerHTML = '';
+ga.innerHTML = '';
 if (!aguard.length) {
 ga.innerHTML = '<div class="_s9">Todas as equipes ja lancaram!</div>';
 } else {
@@ -3650,7 +3657,7 @@ let presenceActive = [];
 // Controle de falhas: desabilita presence se tabela não existir (erro 400/404)
 let presenceEnabled = true;
 let presenceFailCount = 0;
-const PRESENCE_MAX_FAILS = 3;
+const PRESENCE_MAX_FAILS = 1;
 
 function presenceGetUID() {
 let uid = localStorage.getItem('mariua_uid');
