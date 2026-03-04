@@ -254,6 +254,9 @@ console.error('[localStorage] falhou mesmo após limpeza:', e2.message);
 }
 }
 let progRegistros = [], progEditIdx = null;
+let aprData = [];
+let mapaMap=null, mapaLayerGroup=null, mapaData=[], mapaFiltroAtivo='TODOS', mapaUTDFiltro='TODAS', mapaMesFiltro='TODOS';
+let mapaMunFiltro='', mapaEncFiltro='', mapaCoordFiltro='TODAS';
 function applyRowData(row) {
 if (row.key==='turno') {
 const v = row.value;
@@ -1112,7 +1115,6 @@ function resetFontSize() { applyFontSize(100); }
 const saved = localStorage.getItem('cardFontSize');
 if (saved) { window.addEventListener('DOMContentLoaded', () => applyFontSize(saved)); applyFontSize(saved); }
 })();
-let aprData = [];
 function showAprMsg(text, type) {
 const el = document.getElementById('apr-import-msg');
 el.textContent = text; el.className = 'msg ' + type;
@@ -1858,8 +1860,6 @@ window.resetFontSize  = resetFontSize;
 window.applyFontSize  = applyFontSize;
 })();
 // bancoDB e bancoDBInfo ja declarados no inicio do script
-let mapaMap=null, mapaLayerGroup=null, mapaData=[], mapaFiltroAtivo='TODOS', mapaUTDFiltro='TODAS', mapaMesFiltro='TODOS';
-let mapaMunFiltro='', mapaEncFiltro='', mapaCoordFiltro='TODAS';
 let compMesFiltro = 'TODOS';
 const MAPA_CORES = {'ENERGIZADA':'#38a169','EM EXECUÇÃO':'#2b6cb0','EM EXECUCAO':'#2b6cb0','PROGRAMADA':'#d69e2e','PARALISADA':'#e53e3e','CANCELADA':'#718096','RETIRADA DA CARTEIRA':'#718096'};
 function mapaGetCor(s) { return MAPA_CORES[(s||'').toUpperCase().trim()]||'#a0aec0'; }
