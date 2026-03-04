@@ -636,7 +636,14 @@ if (row.key==='obras_base') {
 bancoDB     = row.value.data || null;
 bancoDBInfo = row.value.info || null;
 compUpdateBaseUI();
-if (bancoDB) setTimeout(mapaCarregarDoBanco, 300);
+if (bancoDB) setTimeout(() => {
+  mapaCarregarDoBanco();
+  // Se a aba Mapa estiver aberta, força invalidateSize após render
+  const pm = document.getElementById('page-mapa');
+  if (pm && pm.style.display !== 'none' && mapaMap) {
+    setTimeout(() => mapaMap.invalidateSize(), 200);
+  }
+}, 300);
 }
 if (row.key==='apr_data') {
 if (Array.isArray(row.value) && row.value.length > 0) aprData = row.value;
@@ -1305,19 +1312,16 @@ _nav('nav-comp',  'page-nav-btn' + (page==='comp'  ? ' active-comp'  : ''));
 const navProg = document.getElementById('nav-prog');
 if (navProg) navProg.className = 'page-nav-btn' + (page==='prog' ? ' active-prog' : '');
 if (page==='mapa') {
-  // Pequeno delay para o browser renderizar o container antes de init o Leaflet
   setTimeout(() => {
     if (bancoDB && bancoDB.length) {
-      if (!mapaData.length) mapaCarregarDoBanco();
-      else mapaEnsureLeaflet(() => { mapaRenderFiltros(); mapaFiltrar(); });
+      // Sempre recarrega para garantir dados atualizados
+      mapaCarregarDoBanco();
     } else {
+      // Sem banco local: inicia mapa vazio e tenta buscar do servidor
       mapaEnsureLeaflet(null);
-      // retry quando dados chegarem
-      const tryLoad = () => {
-        if (bancoDB && bancoDB.length) { if (!mapaData.length) mapaCarregarDoBanco(); }
-        else setTimeout(tryLoad, 800);
-      };
-      setTimeout(tryLoad, 800);
+      dbLoadObrasBase().then(() => {
+        if (bancoDB && bancoDB.length) mapaCarregarDoBanco();
+      }).catch(() => {});
     }
     mapaProgOnShow();
   }, 150);
@@ -2881,21 +2885,39 @@ btn.style.borderColor = isActive ? '#0d7377' : '#e2e8f0';
 mapaRenderFiltros(); mapaFiltrar();
 }
 function mapaCarregarDoBanco() {
-if (!bancoDB || !bancoDB.length) return;
+if (!bancoDB || !bancoDB.length) {
+  // Sem banco: mostra mapa vazio mas funcional
+  mapaEnsureLeaflet(null);
+  const mt = document.getElementById('mapa-titulo');
+  if (mt) mt.textContent = '⚠️ Banco vazio — sincronize as planilhas no Comparador';
+  return;
+}
 mapaData = bancoDB.map(obj => {
-const lat=mapaParseCoord(obj['LATITUDE']), lon=mapaParseCoord(obj['LONGITUDE']);
-return { pep:obj['PEP OBRA']||'', titulo:obj['TÍTULO']||obj['TITULO']||'', status:obj['STATUS DA OBRA']||'', mun:obj['MUNICIPIO']||obj['MUNICÍPIO']||'', utd:obj['_UTD']||'', lat, lon, cava:obj['CAVA REALIZADA']||'', postR:obj['POSTES  REALIZADO']||obj['POSTES REALIZADO']||'', postI:obj['POSTES  À IMPLANTA']||obj['POSTES À IMPLANTA']||'', enc:obj['ENCARREGADO']||'', mes:mesFromObra(obj)||'', temCoord:lat!==null&&lon!==null };
+  const lat=mapaParseCoord(obj['LATITUDE']), lon=mapaParseCoord(obj['LONGITUDE']);
+  return { pep:obj['PEP OBRA']||'', titulo:obj['TÍTULO']||obj['TITULO']||'', status:obj['STATUS DA OBRA']||'', mun:obj['MUNICIPIO']||obj['MUNICÍPIO']||'', utd:obj['_UTD']||'', lat, lon, cava:obj['CAVA REALIZADA']||'', postR:obj['POSTES  REALIZADO']||obj['POSTES REALIZADO']||'', postI:obj['POSTES  À IMPLANTA']||obj['POSTES À IMPLANTA']||'', enc:obj['ENCARREGADO']||'', mes:mesFromObra(obj)||'', temCoord:lat!==null&&lon!==null };
 });
 const comCoord = mapaData.filter(d=>d.temCoord).length;
+const semCoord = mapaData.length - comCoord;
 const info = bancoDBInfo||{};
 const mt = document.getElementById('mapa-titulo');
-if (mt) mt.textContent = '🗄️ Banco: '+mapaData.length+' obras ('+comCoord+' com coordenadas)'+(info.updatedAt?' · atualizado '+info.updatedAt:'');
+if (mt) {
+  if (comCoord === 0) {
+    mt.textContent = '⚠️ '+mapaData.length+' obras carregadas — nenhuma com coordenadas. Verifique se as colunas LATITUDE/LONGITUDE estão preenchidas na planilha.';
+    mt.style.color = '#c05621';
+  } else {
+    mt.textContent = '🗄️ '+mapaData.length+' obras ('+comCoord+' com coord · '+semCoord+' sem coord)'+(info.updatedAt?' · '+info.updatedAt:'');
+    mt.style.color = '#1a365d';
+  }
+}
 const ms = document.getElementById('mapa-stats-bar'); if (ms) ms.style.display='';
 const ml = document.getElementById('mapa-legenda'); if (ml) ml.style.display='flex';
-if (document.getElementById('page-mapa') && document.getElementById('page-mapa').style.display!=='none') {
-mapaEnsureLeaflet(() => { mapaRenderFiltros(); mapaFiltrar(); });
+const pageMapa = document.getElementById('page-mapa');
+if (pageMapa && pageMapa.style.display!=='none') {
+  mapaEnsureLeaflet(() => { mapaRenderFiltros(); mapaFiltrar(); });
+} else {
+  // Pre-processa mesmo sem aba visível para estar pronto quando abrir
+  mapaRenderFiltros && mapaRenderFiltros();
 }
-// Atualiza lista de obras disponíveis para rota
 mapaRotaObrasFiltradas = mapaData.filter(d=>d.temCoord);
 mapaRotaFiltrarLista();
 }
@@ -4456,11 +4478,17 @@ setTimeout(presenceInit, 1500);
         <div style="font-size:4rem;margin-bottom:16px;">&#128506;</div>
         <div style="font-size:1rem;font-weight:700;color:#555;">Aguardando banco de obras</div>
         <div style="font-size:0.8rem;margin-top:6px;margin-bottom:20px;">Sincronize as planilhas ou salve os CSVs no Comparador</div>
-        <button id="btn-sincronizar-sheets-mapa" onclick="sincronizarSheets()"
-          style="padding:12px 28px;background:linear-gradient(135deg,#276749,#38a169);color:#fff;border:none;border-radius:12px;font-family:'Barlow',sans-serif;font-size:0.88rem;font-weight:800;cursor:pointer;letter-spacing:0.5px;box-shadow:0 6px 20px rgba(56,161,105,0.4);display:flex;align-items:center;gap:10px;transition:all 0.2s;"
-          onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='none'">
-          &#8635; Sincronizar do Google Sheets
-        </button>
+        <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center;">
+          <button id="btn-sincronizar-sheets-mapa" onclick="sincronizarSheets()"
+            style="padding:12px 28px;background:linear-gradient(135deg,#276749,#38a169);color:#fff;border:none;border-radius:12px;font-family:'Barlow',sans-serif;font-size:0.88rem;font-weight:800;cursor:pointer;letter-spacing:0.5px;box-shadow:0 6px 20px rgba(56,161,105,0.4);display:flex;align-items:center;gap:10px;transition:all 0.2s;"
+            onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='none'">
+            &#8635; Sincronizar do Google Sheets
+          </button>
+          <button onclick="if(bancoDB&&bancoDB.length){mapaCarregarDoBanco();}else{dbLoadObrasBase().then(()=>mapaCarregarDoBanco());}"
+            style="padding:12px 20px;background:#2b6cb0;color:#fff;border:none;border-radius:12px;font-family:'Barlow',sans-serif;font-size:0.88rem;font-weight:800;cursor:pointer;display:flex;align-items:center;gap:8px;">
+            🔄 Carregar do banco
+          </button>
+        </div>
       </div>
     </div>
 
