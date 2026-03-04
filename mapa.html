@@ -432,6 +432,14 @@ let progRegistros = [], progEditIdx = null;
 let aprData = [];
 let mapaMap=null, mapaLayerGroup=null, mapaData=[], mapaFiltroAtivo='TODOS', mapaUTDFiltro='TODAS', mapaMesFiltro='TODOS';
 let mapaMunFiltro='', mapaEncFiltro='', mapaCoordFiltro='TODAS';
+let mapaRotaLayerGroup = null;
+let mapaRotaSelecionadas = [];
+let mapaRotaOrigemLatLon = null;
+let mapaRotaObrasFiltradas = [];
+let mapaProgLayerGroup = null;
+
+const MAPA_CORES = {'ENERGIZADA':'#38a169','EM EXECUÇÃO':'#2b6cb0','EM EXECUCAO':'#2b6cb0','PROGRAMADA':'#d69e2e','PARALISADA':'#e53e3e','CANCELADA':'#718096','RETIRADA DA CARTEIRA':'#718096'};
+function mapaGetCor(s) { return MAPA_CORES[(s||'').toUpperCase().trim()]||'#a0aec0'; }
 function applyRowData(row) {
 if (row.key==='turno') {
 const v = row.value;
@@ -1542,7 +1550,7 @@ autoRefreshTimer = setInterval(checkForUpdates, AUTO_REFRESH_MS);
 }
 
 (async function() {
-// FASE 1: UI instantânea do cache local (inclui obras do mapa se já sincronizou antes)
+// FASE 1: UI instantânea do cache local
 const now=new Date(); const pad=n=>String(n).padStart(2,'0');
 document.getElementById('page-time').textContent =
 'Gerado em: '+pad(now.getDate())+'/'+pad(now.getMonth()+1)+'/'+now.getFullYear()+' as '+pad(now.getHours())+':'+pad(now.getMinutes());
@@ -1553,11 +1561,11 @@ const temDados = teams.ok.length > 0 || teams.falta.length > 0;
 setDbStatus(temDados ? 'local' : 'offline', temDados ? 'Dados locais' : 'Sem dados');
 try { hideLoading(); } catch(e) {}
 try { const lo=document.getElementById('loading-overlay'); if(lo){ lo.classList.remove('show'); lo.style.display='none'; lo.style.pointerEvents='none'; } } catch(e) {}
-// Se já tem obras no cache, renderiza o mapa imediatamente
+// Se já tem obras em cache, renderiza o mapa imediatamente
 if (bancoDB && bancoDB.length) {
   setTimeout(() => { try { mapaCarregarDoBanco(); } catch(e) {} }, 150);
 }
-// FASE 2: banco em paralelo (inclui obras_base)
+// FASE 2: banco em paralelo (todas as chaves + obras_base)
 const sf = (path, t) => { const c=new AbortController(); const tid=setTimeout(()=>c.abort(),t||8000); return fetch(SUPA_URL+path,{headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY},signal:c.signal}).finally(()=>clearTimeout(tid)); };
 try {
   const [r1,r2,r3,r4] = await Promise.allSettled([
@@ -1579,14 +1587,11 @@ try {
     const d=await r3.value.json();
     if (Array.isArray(d)&&d.length>0&&Array.isArray(d[0].value)){progRegistros=d[0].value;lsSet('prog_diaria',progRegistros);try{progRenderStats();}catch(e){}try{progRenderList();}catch(e){}try{progRenderDash();}catch(e){}}
   }
-  // obras_base: aplica se veio do banco, depois força render do mapa
   if (r4.status==='fulfilled'&&r4.value.ok) {
     const d=await r4.value.json();
-    if (Array.isArray(d)&&d.length>0&&d[0].value&&d[0].value.data) {
-      applyRowData(d[0]); lsSet(d[0].key, d[0].value);
-    }
+    if (Array.isArray(d)&&d.length>0&&d[0].value&&d[0].value.data){applyRowData(d[0]);lsSet(d[0].key,d[0].value);}
   }
-  // Garante render do mapa após todas as cargas
+  // Garante render do mapa após todos os dados carregados
   setTimeout(() => { if (bancoDB && bancoDB.length) { try { mapaCarregarDoBanco(); } catch(e) {} } }, 300);
 } catch(e) { console.error('[startup]',e); }
 startAutoRefresh();
@@ -1658,10 +1663,7 @@ window.mapaLimparFiltrosExtras = function() {
 };
 
 // ── ROTA NO MAPA ──
-let mapaRotaLayerGroup = null;
-let mapaRotaSelecionadas = []; // [{pep, titulo, lat, lon, mun}]
-let mapaRotaOrigemLatLon = null; // {lat, lon}
-let mapaRotaObrasFiltradas = [];
+// mapaRota vars movidas para o topo
 
 function mapaRotaAbrir() {
   const sec = document.getElementById('mapa-rota-section');
@@ -2020,8 +2022,7 @@ window.applyFontSize  = applyFontSize;
 })();
 // bancoDB e bancoDBInfo ja declarados no inicio do script
 let compMesFiltro = 'TODOS';
-const MAPA_CORES = {'ENERGIZADA':'#38a169','EM EXECUÇÃO':'#2b6cb0','EM EXECUCAO':'#2b6cb0','PROGRAMADA':'#d69e2e','PARALISADA':'#e53e3e','CANCELADA':'#718096','RETIRADA DA CARTEIRA':'#718096'};
-function mapaGetCor(s) { return MAPA_CORES[(s||'').toUpperCase().trim()]||'#a0aec0'; }
+
 function mapaParseCoord(s) { if(!s)return null; const v=String(s).trim().split('\n')[0].trim().replace(',','.'); const n=parseFloat(v); return isNaN(n)?null:n; }
 function compNorm(s) { return (s||'').toUpperCase().replace(/\s+/g,'').normalize('NFD').replace(/[\u0300-\u036f]/g,''); }
 function compParseNum(v) { if (v===''||v===null||v===undefined) return null; const n=parseFloat(String(v).replace(',','.')); return isNaN(n)?null:n; }
@@ -2722,10 +2723,9 @@ function mapaEnsureLeaflet(cb) {
       mapaLayerGroup = L.layerGroup().addTo(mapaMap);
       mapaMap.setView([-11.5, -41.0], 8);
     }
-    // invalidateSize múltiplo garante render correto mesmo com container recém-visível
     mapaMap.invalidateSize();
     setTimeout(() => { mapaMap.invalidateSize(); if (cb) cb(); }, 100);
-    setTimeout(() => { mapaMap.invalidateSize(); }, 500);
+    setTimeout(() => { mapaMap.invalidateSize(); }, 600);
   };
   if (window.L) { doInit(); return; }
   if (!document.getElementById('leaflet-css')) {
@@ -2845,9 +2845,7 @@ bounds.push([d.lat,d.lon]);
 if (bounds.length) mapaMap.fitBounds(bounds,{padding:[28,28]});
 const mc = document.getElementById('mapa-container');
 if (mc) mc.scrollIntoView({behavior:'smooth',block:'center'});
-}
-let mapaProgLayerGroup = null;
-function mapaProgGetFiltrados() {
+}function mapaProgGetFiltrados() {
 const dateInput = document.getElementById('mapa-prog-date');
 const encInput = document.getElementById('mapa-prog-enc');
 const dataFiltro = dateInput ? dateInput.value : '';
