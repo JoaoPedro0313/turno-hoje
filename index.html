@@ -26,7 +26,8 @@
     https://docs.google.com
     https://*.googleusercontent.com
     https://sheets.googleapis.com
-    https://docs.googleapis.com;">
+    https://docs.googleapis.com
+    https://router.project-osrm.org;">
 <title>Turno Hoje - OBRAS BA</title>
 <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;600;700;800&display=swap" rel="stylesheet">
 
@@ -4297,7 +4298,7 @@ const PROG_TOTAIS_ENC = {"AMILTON COSTA": {"valor_previsto": 0.01, "valor_realiz
         <select id="rotas-base-sel" onchange="progRotasRender()" style="padding:5px 10px;border-radius:7px;border:none;font-family:'Barlow',sans-serif;font-size:0.75rem;font-weight:700;color:#1a365d;outline:none;">
           <option value="">— Escolha a base —</option>
           <option value="-12.1297,-41.7015">IRC — Irecê</option>
-          <option value="-11.1815,-40.5090">JAC — Jacobina</option>
+          <option value="-11.198490,-40.538386">JAC — Jacobina</option>
           <option value="-12.5,-41.0">Personalizada</option>
         </select>
         <button onclick="progRotasLimpar()" style="padding:5px 12px;background:rgba(255,255,255,0.15);color:#fff;border:1px solid rgba(255,255,255,0.3);border-radius:7px;font-family:'Barlow',sans-serif;font-size:0.68rem;font-weight:800;cursor:pointer;">✕ FECHAR</button>
@@ -4465,6 +4466,35 @@ let url = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=$
 if (waypoints) url += `&waypoints=${encodeURIComponent(waypoints)}`;
 return url;
 }
+async function drawOSRMRoute(latlngs, cor, layerGroup) {
+if (!latlngs || latlngs.length < 2) return;
+// OSRM aceita no máximo 100 waypoints por requisição; chunking se necessário
+const MAX_WP = 100;
+const segmentos = [];
+for (let i = 0; i < latlngs.length - 1; i += MAX_WP - 1) {
+segmentos.push(latlngs.slice(i, Math.min(i + MAX_WP, latlngs.length)));
+}
+for (const seg of segmentos) {
+try {
+// OSRM usa lon,lat (invertido em relação ao Leaflet)
+const coords = seg.map(([lat, lon]) => `${lon},${lat}`).join(';');
+const url = `https://router.project-osrm.org/route/v1/driving/${coords}?overview=full&geometries=geojson`;
+const resp = await fetch(url);
+const data = await resp.json();
+if (data.code === 'Ok' && data.routes && data.routes[0]) {
+const geom = data.routes[0].geometry;
+L.geoJSON(geom, { style: { color: cor, weight: 4, opacity: 0.85 } }).addTo(layerGroup);
+L.geoJSON(geom, { style: { color: cor, weight: 9, opacity: 0.13 } }).addTo(layerGroup);
+} else {
+// Fallback para linha reta se OSRM não retornar rota
+L.polyline(seg, { color: cor, weight: 3, opacity: 0.75, dashArray: '6,4' }).addTo(layerGroup);
+}
+} catch(e) {
+// Fallback para linha reta em caso de erro de rede
+L.polyline(seg, { color: cor, weight: 3, opacity: 0.75, dashArray: '6,4' }).addTo(layerGroup);
+}
+}
+}
 function progRotasRender() {
 if (!progMapaMap) return;
 if (!progRotasLayerGroup) {
@@ -4519,13 +4549,7 @@ if (base) latlngs.push([base.lat, base.lon]);
 rotaOtim.forEach(p => latlngs.push([p.coord.lat, p.coord.lon]));
 if (base && latlngs.length > 1) latlngs.push([base.lat, base.lon]);
 if (latlngs.length > 1) {
-L.polyline(latlngs, {
-color: cor, weight: 3, opacity: 0.75,
-dashArray: null
-}).addTo(progRotasLayerGroup);
-L.polyline(latlngs, {
-color: cor, weight: 6, opacity: 0.12
-}).addTo(progRotasLayerGroup);
+drawOSRMRoute(latlngs, cor, progRotasLayerGroup);
 }
 rotaOtim.forEach((p, ordem) => {
 const numIcon = L.divIcon({
