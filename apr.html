@@ -387,6 +387,23 @@ console.warn('[Supabase] Não conectou:', e.name, e.message);
 const temDados = teams.ok.length > 0 || teams.falta.length > 0;
 setDbStatus(temDados ? 'local' : 'offline',
 temDados ? 'Dados locais' : 'Sem conexão');
+// Mostrar diagnóstico automático na primeira falha de conexão
+if (!window._diagMostrado) {
+  window._diagMostrado = true;
+  const panel = document.getElementById('diag-panel');
+  const txt = document.getElementById('diag-text');
+  if (panel && txt) {
+    panel.style.display = 'block';
+    txt.innerHTML = `❌ <b>Falha ao conectar ao banco</b><br><br>
+<b>Erro:</b> ${e.name}: ${e.message}<br><br>
+<b>Causas mais comuns:</b><br>
+• ⏸️ <b>Projeto Supabase pausado</b> — o plano gratuito pausa após inatividade<br>
+• 🌐 Sem acesso à internet neste momento<br>
+• 🔒 Rede bloqueando o domínio supabase.co<br><br>
+<a href="https://supabase.com/dashboard/project/eqxejfoibebcbtsqymji" target="_blank" style="color:#7ee8fa;font-weight:700;">🔗 Verificar projeto no painel Supabase</a><br><br>
+<small style="color:#aaa">Dica: clique 2× no badge para diagnóstico detalhado</small>`;
+  }
+}
 }
 }
 async function dbLoadProgDiaria() {
