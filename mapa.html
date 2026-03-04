@@ -1008,7 +1008,7 @@ renderProducao();
 const qtdEq=Object.keys(nova).length;
 const totalL=Object.values(nova).reduce((s,v)=>s+v.lancamentos,0);
 const totalV=Object.values(nova).reduce((s,v)=>s+v.valor,0);
-document.getElementById('prod-summary').style.display='block';
+{const _el=document.getElementById('prod-summary');if(_el)_el.style.display='block';}
 document.getElementById('prod-summary-stats').innerHTML=
 '<div><span class="prod-stat-val">'+qtdEq+'</span><span class="prod-stat-lbl">Equipes</span></div>' +
 '<div><span class="prod-stat-val">'+totalL+'</span><span class="prod-stat-lbl">Lancamentos</span></div>' +
@@ -1022,7 +1022,7 @@ reader.readAsText(file,'utf-8');
 async function limparProducao() {
 if (!confirm('Limpar todos os dados de producao?')) return;
 producao={}; renderProducao();
-document.getElementById('prod-summary').style.display='none';
+{const _el=document.getElementById('prod-summary');if(_el)_el.style.display='none';}
 showProdMsg('Dados removidos.','success');
 await dbSaveProducao();
 }
@@ -1031,7 +1031,7 @@ selectedStatus=s;
 document.getElementById('opt-ok').className    ='radio-opt'+(s==='ok'    ?' sel-ok':'');
 document.getElementById('opt-justif').className='radio-opt'+(s==='justif'?' sel-justif':'');
 document.getElementById('opt-falta').className ='radio-opt'+(s==='falta' ?' sel-falta':'');
-document.getElementById('obs-group').style.display=s==='justif'?'block':'none';
+{const _el=document.getElementById('obs-group');if(_el)_el.style.display=s==='justif'?'block':'none';}
 }
 function switchTab(tab) {
 ['add','manage','import','prod','apr'].forEach(t=>{
@@ -1076,7 +1076,7 @@ r.readAsText(file,'utf-8');
 }
 function openModal()  { document.getElementById('modal-overlay').classList.add('open'); }
 function closeModal() { document.getElementById('modal-overlay').classList.remove('open'); }
-document.getElementById('modal-overlay').addEventListener('click',e=>{if(e.target.id==='modal-overlay')closeModal();});
+const _mo=document.getElementById('modal-overlay'); if(_mo) _mo.addEventListener('click',e=>{if(e.target.id==='modal-overlay')closeModal();});
 function showMsg(text,type) {
 const el=document.getElementById('add-msg');
 el.textContent=text; el.className='msg '+type;
@@ -1097,11 +1097,11 @@ async function _sha256(str) {
 }
 function openAdmModal() {
 if (admUnlocked) { openModal(); return; }
-document.getElementById('adm-modal-overlay').classList.add('open');
+{const _el=document.getElementById('adm-modal-overlay');if(_el)_el.classList.add('open');}
 setTimeout(()=>{ document.getElementById('adm-pwd-input').focus(); }, 100);
 }
 function closeAdmModal() {
-document.getElementById('adm-modal-overlay').classList.remove('open');
+{const _el=document.getElementById('adm-modal-overlay');if(_el)_el.classList.remove('open');}
 document.getElementById('adm-pwd-input').value = '';
 document.getElementById('adm-pwd-err').textContent = '';
 }
@@ -1453,9 +1453,9 @@ d.innerHTML = '<span class="card-name">' + name + '</span><span class="badge fal
 gNao.appendChild(d);
 });
 }
-document.getElementById('apr-results-section').style.display = '';
-document.getElementById('apr-naofez-section').style.display  = '';
-document.getElementById('apr-table-section').style.display   = '';
+{const _el=document.getElementById('apr-results-section');if(_el)_el.style.display = '';}
+{const _el=document.getElementById('apr-naofez-section');if(_el)_el.style.display  = '';}
+{const _el=document.getElementById('apr-table-section');if(_el)_el.style.display   = '';}
 buildTipoFilterBar();
 aprFilterTable();
 }
@@ -3102,10 +3102,10 @@ lat: coord?coord.lat:null, lon: coord?coord.lon:null,
 });
 }
 document.getElementById('prog-file-name').textContent = '✅ ' + file.name + ' — ' + progData.length + ' registros';
-document.getElementById('prog-resultado').style.display = '';
-document.getElementById('prog-img-area').style.display = 'none';
-document.getElementById('prog-empty').style.display = 'none';
-document.getElementById('prog-btn-limpar').style.display = '';
+{const _el=document.getElementById('prog-resultado');if(_el)_el.style.display = '';}
+{const _el=document.getElementById('prog-img-area');if(_el)_el.style.display = 'none';}
+{const _el=document.getElementById('prog-empty');if(_el)_el.style.display = 'none';}
+{const _el=document.getElementById('prog-btn-limpar');if(_el)_el.style.display = '';}
 progShowMsg('✅ ' + progData.length + ' registros importados!', 'success');
 progRenderSupFiltros(); progRender();
 } catch (err) { progShowMsg('Erro ao ler CSV: ' + err.message, 'error'); }
@@ -3119,10 +3119,10 @@ const img = document.getElementById('prog-img-preview');
 img.src = e.target.result;
 img.style.maxWidth = '100%';
 img.style.cursor = 'zoom-in';
-document.getElementById('prog-img-area').style.display = '';
-document.getElementById('prog-resultado').style.display = 'none';
-document.getElementById('prog-empty').style.display = 'none';
-document.getElementById('prog-btn-limpar').style.display = '';
+{const _el=document.getElementById('prog-img-area');if(_el)_el.style.display = '';}
+{const _el=document.getElementById('prog-resultado');if(_el)_el.style.display = 'none';}
+{const _el=document.getElementById('prog-empty');if(_el)_el.style.display = 'none';}
+{const _el=document.getElementById('prog-btn-limpar');if(_el)_el.style.display = '';}
 progData = []; progSupFiltro = 'TODOS';
 document.getElementById('prog-sup-filtros').innerHTML = '';
 document.getElementById('prog-file-name').textContent = '📷 ' + file.name;
@@ -3347,7 +3347,7 @@ document.getElementById('pf-pep-val').value = pep;
 document.getElementById('pf-nome-obra').value = titulo;
 document.getElementById('pf-municipio').value = municipio;
 document.getElementById('pf-ar').value = ar;
-document.getElementById('pf-pep-dd').style.display = 'none';
+{const _el=document.getElementById('pf-pep-dd');if(_el)_el.style.display = 'none';}
 }
 function progOnTipoChange() {
 const tipo = document.getElementById('pf-tipo').value;
@@ -4129,14 +4129,14 @@ return `<div class="presence-user-row ${isMe?'me':''}">
 }).join('');
 }
 function presenceOpenModal() {
-document.getElementById('presence-modal').classList.add('open');
+{const _el=document.getElementById('presence-modal');if(_el)_el.classList.add('open');}
 const input = document.getElementById('presence-my-name');
 if (input) input.value = presenceMyName;
 presenceRenderList();
 if (presenceEnabled) presencePoll();
 }
 function presenceCloseModal() {
-document.getElementById('presence-modal').classList.remove('open');
+{const _el=document.getElementById('presence-modal');if(_el)_el.classList.remove('open');}
 }
 async function presenceCheckTableExists() {
   // Verifica se a tabela existe consultando o endpoint de schema (não gera erro 400)
