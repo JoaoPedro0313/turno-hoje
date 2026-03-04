@@ -454,6 +454,9 @@ document.addEventListener('click', function(e) {
   btn.disabled = true;
   btn.style.cursor = 'default';
 });
+
+const MAPA_CORES = {'ENERGIZADA':'#38a169','EM EXECUÇÃO':'#2b6cb0','EM EXECUCAO':'#2b6cb0','PROGRAMADA':'#d69e2e','PARALISADA':'#e53e3e','CANCELADA':'#718096','RETIRADA DA CARTEIRA':'#718096'};
+function mapaGetCor(s) { return MAPA_CORES[(s||'').toUpperCase().trim()]||'#a0aec0'; }
 function applyRowData(row) {
 if (row.key==='turno') {
 const v = row.value;
@@ -2017,8 +2020,6 @@ window.applyFontSize  = applyFontSize;
 })();
 // bancoDB e bancoDBInfo ja declarados no inicio do script
 let compMesFiltro = 'TODOS';
-const MAPA_CORES = {'ENERGIZADA':'#38a169','EM EXECUÇÃO':'#2b6cb0','EM EXECUCAO':'#2b6cb0','PROGRAMADA':'#d69e2e','PARALISADA':'#e53e3e','CANCELADA':'#718096','RETIRADA DA CARTEIRA':'#718096'};
-function mapaGetCor(s) { return MAPA_CORES[(s||'').toUpperCase().trim()]||'#a0aec0'; }
 function mapaParseCoord(s) { if(!s)return null; const v=String(s).trim().split('\n')[0].trim().replace(',','.'); const n=parseFloat(v); return isNaN(n)?null:n; }
 function compNorm(s) { return (s||'').toUpperCase().replace(/\s+/g,'').normalize('NFD').replace(/[\u0300-\u036f]/g,''); }
 function compParseNum(v) { if (v===''||v===null||v===undefined) return null; const n=parseFloat(String(v).replace(',','.')); return isNaN(n)?null:n; }
