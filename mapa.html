@@ -438,8 +438,22 @@ let mapaRotaOrigemLatLon = null;
 let mapaRotaObrasFiltradas = [];
 let mapaProgLayerGroup = null;
 
-const MAPA_CORES = {'ENERGIZADA':'#38a169','EM EXECUÇÃO':'#2b6cb0','EM EXECUCAO':'#2b6cb0','PROGRAMADA':'#d69e2e','PARALISADA':'#e53e3e','CANCELADA':'#718096','RETIRADA DA CARTEIRA':'#718096'};
-function mapaGetCor(s) { return MAPA_CORES[(s||'').toUpperCase().trim()]||'#a0aec0'; }
+// Handler delegado para botão "Adicionar à rota" nos popups do mapa
+// Registrado AQUI (antes de qualquer await) para funcionar imediatamente
+document.addEventListener('click', function(e) {
+  const btn = e.target.closest('.mapa-rota-add-btn');
+  if (!btn) return;
+  const pep = btn.getAttribute('data-pep');
+  if (!pep) return;
+  const d = (mapaData||[]).find(x=>x.pep===pep);
+  if (!d || !d.temCoord) return;
+  if (mapaRotaSelecionadas.find(s=>s.pep===pep)) return;
+  mapaRotaAdicionarDoPopup(pep, d.titulo||d.pep, d.lat, d.lon, d.mun||'', d.status||'');
+  btn.textContent = '✓ Na rota';
+  btn.style.background = '#38a169';
+  btn.disabled = true;
+  btn.style.cursor = 'default';
+});
 function applyRowData(row) {
 if (row.key==='turno') {
 const v = row.value;
@@ -1561,11 +1575,7 @@ const temDados = teams.ok.length > 0 || teams.falta.length > 0;
 setDbStatus(temDados ? 'local' : 'offline', temDados ? 'Dados locais' : 'Sem dados');
 try { hideLoading(); } catch(e) {}
 try { const lo=document.getElementById('loading-overlay'); if(lo){ lo.classList.remove('show'); lo.style.display='none'; lo.style.pointerEvents='none'; } } catch(e) {}
-// Se já tem obras em cache, renderiza o mapa imediatamente
-if (bancoDB && bancoDB.length) {
-  setTimeout(() => { try { mapaCarregarDoBanco(); } catch(e) {} }, 150);
-}
-// FASE 2: banco em paralelo (todas as chaves + obras_base)
+if (bancoDB && bancoDB.length) { setTimeout(() => { try { mapaCarregarDoBanco(); } catch(e) {} }, 150); }
 const sf = (path, t) => { const c=new AbortController(); const tid=setTimeout(()=>c.abort(),t||8000); return fetch(SUPA_URL+path,{headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY},signal:c.signal}).finally(()=>clearTimeout(tid)); };
 try {
   const [r1,r2,r3,r4] = await Promise.allSettled([
@@ -1591,7 +1601,6 @@ try {
     const d=await r4.value.json();
     if (Array.isArray(d)&&d.length>0&&d[0].value&&d[0].value.data){applyRowData(d[0]);lsSet(d[0].key,d[0].value);}
   }
-  // Garante render do mapa após todos os dados carregados
   setTimeout(() => { if (bancoDB && bancoDB.length) { try { mapaCarregarDoBanco(); } catch(e) {} } }, 300);
 } catch(e) { console.error('[startup]',e); }
 startAutoRefresh();
@@ -1663,7 +1672,7 @@ window.mapaLimparFiltrosExtras = function() {
 };
 
 // ── ROTA NO MAPA ──
-// mapaRota vars movidas para o topo
+
 
 function mapaRotaAbrir() {
   const sec = document.getElementById('mapa-rota-section');
@@ -1907,37 +1916,23 @@ function mapaRotaAbrirWaze() {
   const url = `https://waze.com/ul?ll=${dest.lat},${dest.lon}&navigate=yes`;
   window.open(url, '_blank');
 }
-window.mapaRotaAdicionarDoPopup = function(pep, titulo, lat, lon, mun, status) {
+function mapaRotaAdicionarDoPopup(pep, titulo, lat, lon, mun, status) {
   if (mapaRotaSelecionadas.find(s=>s.pep===pep)) return;
   mapaRotaSelecionadas.push({pep, titulo, lat, lon, mun, status});
-  mapaRotaAtualizarSelecionadas();
+  if (typeof mapaRotaAtualizarSelecionadas === 'function') mapaRotaAtualizarSelecionadas();
   const sec = document.getElementById('mapa-rota-section');
   if (sec) sec.style.display='';
   const cnt = document.getElementById('mapa-rota-sel-count');
   if (cnt) cnt.textContent = mapaRotaSelecionadas.length;
-  mapaRotaFiltrarLista();
+  if (typeof mapaRotaFiltrarLista === 'function') mapaRotaFiltrarLista();
   const t = document.createElement('div');
   t.textContent = `✓ "${titulo}" adicionada à rota (${mapaRotaSelecionadas.length} parada${mapaRotaSelecionadas.length>1?'s':''})`;
   t.style.cssText='position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:#c05621;color:#fff;padding:10px 22px;border-radius:10px;font-family:Barlow,sans-serif;font-size:0.82rem;font-weight:800;z-index:9999;box-shadow:0 6px 20px rgba(192,86,33,0.45);letter-spacing:0.3px;white-space:nowrap;';
   document.body.appendChild(t);
   setTimeout(()=>t.remove(), 2500);
-};
+}
+window.mapaRotaAdicionarDoPopup = mapaRotaAdicionarDoPopup;
 
-// Delegated handler for popup route buttons
-document.addEventListener('click', function(e) {
-  const btn = e.target.closest('.mapa-rota-add-btn');
-  if (!btn) return;
-  const pep = btn.getAttribute('data-pep');
-  if (!pep) return;
-  const d = (mapaData||[]).find(x=>x.pep===pep);
-  if (!d || !d.temCoord) return;
-  if (mapaRotaSelecionadas.find(s=>s.pep===pep)) return;
-  mapaRotaAdicionarDoPopup(pep, d.titulo||d.pep, d.lat, d.lon, d.mun||'', d.status||'');
-  btn.textContent = '✓ Na rota';
-  btn.style.background = '#38a169';
-  btn.disabled = true;
-  btn.style.cursor = 'default';
-});
 
 window.mapaRotaAbrir = mapaRotaAbrir;
 window.mapaRotaFechar = mapaRotaFechar;
@@ -2022,7 +2017,8 @@ window.applyFontSize  = applyFontSize;
 })();
 // bancoDB e bancoDBInfo ja declarados no inicio do script
 let compMesFiltro = 'TODOS';
-
+const MAPA_CORES = {'ENERGIZADA':'#38a169','EM EXECUÇÃO':'#2b6cb0','EM EXECUCAO':'#2b6cb0','PROGRAMADA':'#d69e2e','PARALISADA':'#e53e3e','CANCELADA':'#718096','RETIRADA DA CARTEIRA':'#718096'};
+function mapaGetCor(s) { return MAPA_CORES[(s||'').toUpperCase().trim()]||'#a0aec0'; }
 function mapaParseCoord(s) { if(!s)return null; const v=String(s).trim().split('\n')[0].trim().replace(',','.'); const n=parseFloat(v); return isNaN(n)?null:n; }
 function compNorm(s) { return (s||'').toUpperCase().replace(/\s+/g,'').normalize('NFD').replace(/[\u0300-\u036f]/g,''); }
 function compParseNum(v) { if (v===''||v===null||v===undefined) return null; const n=parseFloat(String(v).replace(',','.')); return isNaN(n)?null:n; }
