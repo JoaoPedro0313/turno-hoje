@@ -134,7 +134,7 @@ window.presenceOpenModal = function() { if(window._presenceOpenModal) window._pr
       </div>
     </div>
     <div style="background:#fff;border-radius:14px;box-shadow:0 2px 14px rgba(0,0,0,0.08);overflow:hidden;position:relative;margin-bottom:14px;">
-      <div id="mapa-container" style="height:580px;width:100%;display:none;"></div>
+      <div id="mapa-container" style="height:580px;width:100%;"></div>
       <div id="mapa-map-toolbar" style="display:none;position:absolute;top:10px;right:10px;z-index:500;">
         <button onclick="mapaRotaAbrir()" style="padding:8px 16px;background:linear-gradient(135deg,#c05621,#dd6b20);color:#fff;border:none;border-radius:10px;font-family:'Barlow',sans-serif;font-size:0.75rem;font-weight:800;cursor:pointer;box-shadow:0 4px 14px rgba(192,86,33,0.4);display:flex;align-items:center;gap:6px;transition:all 0.15s;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">🛣️ Traçar Rota</button>
       </div>
@@ -1542,7 +1542,7 @@ autoRefreshTimer = setInterval(checkForUpdates, AUTO_REFRESH_MS);
 }
 
 (async function() {
-// FASE 1: UI instantânea do cache local
+// FASE 1: UI instantânea do cache local (inclui obras do mapa se já sincronizou antes)
 const now=new Date(); const pad=n=>String(n).padStart(2,'0');
 document.getElementById('page-time').textContent =
 'Gerado em: '+pad(now.getDate())+'/'+pad(now.getMonth()+1)+'/'+now.getFullYear()+' as '+pad(now.getHours())+':'+pad(now.getMinutes());
@@ -1553,41 +1553,41 @@ const temDados = teams.ok.length > 0 || teams.falta.length > 0;
 setDbStatus(temDados ? 'local' : 'offline', temDados ? 'Dados locais' : 'Sem dados');
 try { hideLoading(); } catch(e) {}
 try { const lo=document.getElementById('loading-overlay'); if(lo){ lo.classList.remove('show'); lo.style.display='none'; lo.style.pointerEvents='none'; } } catch(e) {}
-// FASE 2: banco em paralelo
+// Se já tem obras no cache, renderiza o mapa imediatamente
+if (bancoDB && bancoDB.length) {
+  setTimeout(() => { try { mapaCarregarDoBanco(); } catch(e) {} }, 150);
+}
+// FASE 2: banco em paralelo (inclui obras_base)
 const sf = (path, t) => { const c=new AbortController(); const tid=setTimeout(()=>c.abort(),t||8000); return fetch(SUPA_URL+path,{headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY},signal:c.signal}).finally(()=>clearTimeout(tid)); };
 try {
-  const [r1,r2,r3] = await Promise.allSettled([
+  const [r1,r2,r3,r4] = await Promise.allSettled([
     sf('/rest/v1/turno_data?select=key,value&key=in.(turno,producao,apr_data,comp_historico)',8000),
     sf('/rest/v1/turno_data?select=key,updated_at',5000),
-    sf('/rest/v1/turno_data?select=key,value,updated_at&key=eq.prog_diaria&order=updated_at.desc&limit=1',8000)
+    sf('/rest/v1/turno_data?select=key,value,updated_at&key=eq.prog_diaria&order=updated_at.desc&limit=1',8000),
+    sf('/rest/v1/turno_data?select=key,value&key=eq.obras_base',30000)
   ]);
-  if (r1.status==='fulfilled' && r1.value.ok) {
+  if (r1.status==='fulfilled'&&r1.value.ok) {
     const d=await r1.value.json();
-    if (Array.isArray(d)&&d.length>0) { d.forEach(row=>{applyRowData(row);lsSet(row.key,row.value);}); try{render();}catch(e){} if(aprData&&aprData.length>0){try{renderApr();}catch(e){}} }
+    if (Array.isArray(d)&&d.length>0){d.forEach(row=>{applyRowData(row);lsSet(row.key,row.value);});try{render();}catch(e){}}
     setDbStatus('online','Banco online ✓');
   }
-  if (r2.status==='fulfilled' && r2.value.ok) {
+  if (r2.status==='fulfilled'&&r2.value.ok) {
     const d=await r2.value.json();
-    if (Array.isArray(d)) lastUpdatedAt=d.reduce((max,row)=>{ const ts=row.updated_at||''; return ts>max?ts:max; },'');
+    if (Array.isArray(d)) lastUpdatedAt=d.reduce((max,row)=>{const ts=row.updated_at||'';return ts>max?ts:max;},'');
   }
-  if (r3.status==='fulfilled' && r3.value.ok) {
+  if (r3.status==='fulfilled'&&r3.value.ok) {
     const d=await r3.value.json();
-    if (Array.isArray(d)&&d.length>0&&Array.isArray(d[0].value)) { progRegistros=d[0].value; lsSet('prog_diaria',progRegistros); try{progRenderStats();}catch(e){} try{progRenderList();}catch(e){} try{progRenderDash();}catch(e){} try{if(typeof mapaProgRender==='function')mapaProgRender();}catch(e){} }
+    if (Array.isArray(d)&&d.length>0&&Array.isArray(d[0].value)){progRegistros=d[0].value;lsSet('prog_diaria',progRegistros);try{progRenderStats();}catch(e){}try{progRenderList();}catch(e){}try{progRenderDash();}catch(e){}}
   }
-  // obras_base: busca do banco E do cache local, garante mapa carregado
-  try {
-    const rObras = await sf('/rest/v1/turno_data?select=key,value&key=eq.obras_base', 30000);
-    if (rObras.ok) {
-      const d = await rObras.json();
-      if (Array.isArray(d) && d.length > 0 && d[0].value && d[0].value.data) {
-        applyRowData(d[0]); lsSet(d[0].key, d[0].value);
-      }
+  // obras_base: aplica se veio do banco, depois força render do mapa
+  if (r4.status==='fulfilled'&&r4.value.ok) {
+    const d=await r4.value.json();
+    if (Array.isArray(d)&&d.length>0&&d[0].value&&d[0].value.data) {
+      applyRowData(d[0]); lsSet(d[0].key, d[0].value);
     }
-  } catch(e) {}
-  // Garante que o mapa seja renderizado mesmo se só tinha cache local
-  if (bancoDB && bancoDB.length && !mapaMap) {
-    setTimeout(() => { try { mapaCarregarDoBanco(); } catch(e) {} }, 200);
   }
+  // Garante render do mapa após todas as cargas
+  setTimeout(() => { if (bancoDB && bancoDB.length) { try { mapaCarregarDoBanco(); } catch(e) {} } }, 300);
 } catch(e) { console.error('[startup]',e); }
 startAutoRefresh();
 // Expose inner functions to window so onclick handlers can reach them
@@ -2722,7 +2722,10 @@ function mapaEnsureLeaflet(cb) {
       mapaLayerGroup = L.layerGroup().addTo(mapaMap);
       mapaMap.setView([-11.5, -41.0], 8);
     }
-    setTimeout(() => { mapaMap.invalidateSize(); if (cb) cb(); }, 80);
+    // invalidateSize múltiplo garante render correto mesmo com container recém-visível
+    mapaMap.invalidateSize();
+    setTimeout(() => { mapaMap.invalidateSize(); if (cb) cb(); }, 100);
+    setTimeout(() => { mapaMap.invalidateSize(); }, 500);
   };
   if (window.L) { doInit(); return; }
   if (!document.getElementById('leaflet-css')) {
@@ -4182,7 +4185,6 @@ setTimeout(presenceInit, 1500);
 </script>
 
 <script>
-// Conexão persistente: heartbeat 15s + backoff exponencial + WebSocket Realtime
 (function() {
   var HB=15000,BMIN=3000,BMAX=60000,BF=1.8,RT='wss://eqxejfoibebcbtsqymji.supabase.co/realtime/v1/websocket';
   var KEY=(typeof SUPA_KEY!=='undefined')?SUPA_KEY:'';
