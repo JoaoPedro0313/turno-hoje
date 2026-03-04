@@ -1305,8 +1305,17 @@ if (navProg) navProg.className = 'page-nav-btn' + (page==='prog' ? ' active-prog
 if (page==='mapa') {
 setTimeout(() => {
 if (bancoDB && bancoDB.length) {
-if (!mapaData.length) mapaCarregarDoBanco();
-else mapaEnsureLeaflet(() => { if (mapaMap) mapaMap.invalidateSize(); mapaRenderFiltros(); mapaFiltrar(); });
+  if (!mapaData.length) mapaCarregarDoBanco();
+  else mapaEnsureLeaflet(() => { if (mapaMap) mapaMap.invalidateSize(); mapaRenderFiltros(); mapaFiltrar(); });
+} else {
+  // Garante que o mapa Leaflet inicialize mesmo sem dados ainda
+  mapaEnsureLeaflet(() => { if (mapaMap) mapaMap.invalidateSize(); });
+  // Tenta buscar dados e renderizar quando chegarem
+  const tryLoad = () => {
+    if (bancoDB && bancoDB.length) { if (!mapaData.length) mapaCarregarDoBanco(); }
+    else setTimeout(tryLoad, 800);
+  };
+  setTimeout(tryLoad, 800);
 }
 mapaProgOnShow();
 }, 120);
@@ -3000,7 +3009,8 @@ const bounds = [];
 filtered.forEach(d => {
 const cor = mapaGetCor(d.status);
 const jaSel = mapaRotaSelecionadas.find(s=>s.pep===d.pep);
-const rotaBtnHtml = d.temCoord ? `<button class="mapa-rota-add-btn" data-pep="${d.pep}" style="margin-top:10px;width:100%;padding:7px 0;background:${jaSel?'#38a169':'#c05621'};color:#fff;border:none;border-radius:8px;font-family:'Barlow',sans-serif;font-size:0.72rem;font-weight:800;cursor:${jaSel?'default':'pointer'};letter-spacing:0.5px;"${jaSel?' disabled':''}>🛣️ ${jaSel?'✓ Na rota':'+ Adicionar à rota'}</button>` : '';
+const pepAttr = (d.pep||'').replace(/"/g,'&quot;');
+const rotaBtnHtml = d.temCoord ? `<button class="mapa-rota-add-btn" data-pep="${pepAttr}" style="margin-top:10px;width:100%;padding:7px 0;background:${jaSel?'#38a169':'#c05621'};color:#fff;border:none;border-radius:8px;font-family:'Barlow',sans-serif;font-size:0.72rem;font-weight:800;cursor:${jaSel?'default':'pointer'};letter-spacing:0.5px;"${jaSel?' disabled':''}>🛣️ ${jaSel?'✓ Na rota':'+ Adicionar à rota'}</button>` : '';
 const utdTag = d.utd?`<span style="background:#ebf4ff;color:#2b6cb0;padding:1px 7px;border-radius:4px;font-size:0.65rem;font-weight:800;margin-left:4px;">${d.utd}</span>`:'';
 const popup = `<div style="font-family:'Barlow',sans-serif;min-width:230px;max-width:290px;"><div style="display:flex;align-items:center;gap:6px;margin-bottom:5px;"><span style="background:${cor}22;color:${cor};padding:2px 10px;border-radius:4px;font-size:0.68rem;font-weight:800;">${d.status||'–'}</span>${utdTag}</div><div style="font-size:0.9rem;font-weight:800;color:#1a365d;margin-bottom:6px;line-height:1.3;">${d.titulo||d.pep}</div><div style="font-size:0.7rem;color:#718096;font-weight:700;margin-bottom:10px;"><code class="_s21">${d.pep}</code>${d.mun?' · '+d.mun:''}</div><div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px;"><div style="background:#f0fff4;border-radius:6px;padding:7px 4px;text-align:center;"><div style="font-size:1.1rem;font-weight:800;color:#38a169;">${d.cava||'—'}</div><div class="_s22">Cava</div></div><div style="background:#ebf4ff;border-radius:6px;padding:7px 4px;text-align:center;"><div style="font-size:1.1rem;font-weight:800;color:#2b6cb0;">${d.postR||'—'}</div><div class="_s22">Postes Real.</div></div><div style="background:#fffbf0;border-radius:6px;padding:7px 4px;text-align:center;"><div style="font-size:1.1rem;font-weight:800;color:#d69e2e;">${d.postI||'—'}</div><div class="_s22">À Implantar</div></div></div>${d.enc?`<div style="font-size:0.7rem;color:#555;font-weight:700;margin-top:8px;">👷 ${d.enc}</div>`:''}${rotaBtnHtml}</div>`;
 const icon = L.divIcon({className:'',html:`<div style="width:13px;height:13px;border-radius:50%;background:${cor};border:2.5px solid #fff;box-shadow:0 1px 5px rgba(0,0,0,0.45);cursor:pointer;"></div>`,iconSize:[13,13],iconAnchor:[6,6]});
@@ -3012,7 +3022,6 @@ const mc = document.getElementById('mapa-container');
 if (mc) mc.scrollIntoView({behavior:'smooth',block:'center'});
 }
 let mapaProgLayerGroup = null;
-mapaProgRender();
 function mapaProgGetFiltrados() {
 const dateInput = document.getElementById('mapa-prog-date');
 const encInput = document.getElementById('mapa-prog-enc');
