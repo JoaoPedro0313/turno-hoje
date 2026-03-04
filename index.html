@@ -3128,9 +3128,52 @@ style="background:#6b46c1;color:#fff;border:none;border-radius:6px;padding:4px 1
 }
 function mapaProgGetCoord(reg) {
 if (!reg || !reg.pep) return null;
+// 1) Primeiro busca no banco de obras (mapaData)
 const found = (mapaData||[]).find(d => d.pep===reg.pep && d.temCoord);
 if (found) return { lat: found.lat, lon: found.lon };
+// 2) Fallback: coordenadas salvas manualmente no localStorage
+try {
+  const local = JSON.parse(localStorage.getItem('coords_manual')||'{}');
+  if (local[reg.pep]) return local[reg.pep];
+} catch(e) {}
 return null;
+}
+function coordManualSalvar(pep, lat, lon) {
+try {
+  const local = JSON.parse(localStorage.getItem('coords_manual')||'{}');
+  local[pep] = { lat: parseFloat(lat), lon: parseFloat(lon) };
+  localStorage.setItem('coords_manual', JSON.stringify(local));
+} catch(e) {}
+}
+async function coordManualBuscar(pep, nomePep, municipio) {
+  const btn = document.querySelector(`[data-buscar-pep="${pep}"]`);
+  if (btn) { btn.textContent = '⏳'; btn.disabled = true; }
+  const q = (nomePep || pep) + (municipio ? ', ' + municipio : '') + ', Bahia, Brasil';
+  try {
+    const url = 'https://nominatim.openstreetmap.org/search?q=' + encodeURIComponent(q) + '&format=json&limit=1&countrycodes=br';
+    const r = await fetch(url);
+    const data = await r.json();
+    if (data && data[0]) {
+      const lat = parseFloat(data[0].lat).toFixed(6);
+      const lon = parseFloat(data[0].lon).toFixed(6);
+      coordManualSalvar(pep, lat, lon);
+      if (progMapaMap) progMapaRender();
+    } else {
+      // Tenta só pelo município
+      const q2 = (municipio||'Bahia') + ', Bahia, Brasil';
+      const r2 = await fetch('https://nominatim.openstreetmap.org/search?q=' + encodeURIComponent(q2) + '&format=json&limit=1&countrycodes=br');
+      const d2 = await r2.json();
+      if (d2 && d2[0]) {
+        coordManualSalvar(pep, parseFloat(d2[0].lat).toFixed(6), parseFloat(d2[0].lon).toFixed(6));
+        if (progMapaMap) progMapaRender();
+      } else {
+        alert('Não foi possível encontrar coordenadas automaticamente.\nTente informar manualmente clicando na linha da obra.');
+      }
+    }
+  } catch(e) {
+    alert('Erro ao buscar coordenadas. Verifique sua conexão.');
+  }
+  if (btn) { btn.textContent = '🔍 BUSCAR'; btn.disabled = false; }
 }
 function mapaProgFocarObra(pep) {
 const found = (mapaData||[]).find(d => d.pep===pep && d.temCoord);
@@ -3794,7 +3837,7 @@ ${hasCoord
 <td class="_s5">
 ${hasCoord
 ? `<button onclick="progMapaFocar(${coord.lat},${coord.lon})" style="background:#6b46c1;color:#fff;border:none;border-radius:6px;padding:4px 10px;font-family:'Barlow',sans-serif;font-size:0.65rem;font-weight:800;cursor:pointer;">🗺️ FOCAR</button>`
-: `<a href="https://www.google.com/maps/search/${encodeURIComponent((r.nome_obra||r.pep||'')+', '+(r.municipio||'')+', Bahia')}" target="_blank" style="background:#718096;color:#fff;padding:4px 10px;border-radius:6px;font-size:0.65rem;font-weight:800;text-decoration:none;">🔍 BUSCAR</a>`}
+: `<button data-buscar-pep="${r.pep}" onclick="(function(btn){const pep=btn.getAttribute('data-buscar-pep');const nome=(btn.getAttribute('data-nome')||pep);const mun=(btn.getAttribute('data-mun')||'');coordManualBuscar(pep,nome,mun);})(this)" data-nome="${(r.nome_obra||r.pep||'').replace(/"/g,'&quot;')}" data-mun="${(r.municipio||'').replace(/"/g,'&quot;')}" style="background:#6b46c1;color:#fff;border:none;border-radius:6px;padding:4px 10px;font-family:'Barlow',sans-serif;font-size:0.65rem;font-weight:800;cursor:pointer;">🔍 BUSCAR</button>`}
 </td>
 </tr>`;
 }).join('');
