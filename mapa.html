@@ -138,7 +138,7 @@ window.presenceOpenModal = function() { if(window._presenceOpenModal) window._pr
       <div id="mapa-map-toolbar" style="display:none;position:absolute;top:10px;right:10px;z-index:500;">
         <button onclick="mapaRotaAbrir()" style="padding:8px 16px;background:linear-gradient(135deg,#c05621,#dd6b20);color:#fff;border:none;border-radius:10px;font-family:'Barlow',sans-serif;font-size:0.75rem;font-weight:800;cursor:pointer;box-shadow:0 4px 14px rgba(192,86,33,0.4);display:flex;align-items:center;gap:6px;transition:all 0.15s;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">🛣️ Traçar Rota</button>
       </div>
-      <div id="mapa-placeholder" style="height:580px;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#aaa;font-family:'Barlow',sans-serif;">
+      <div id="mapa-placeholder" style="height:580px;display:none;flex-direction:column;align-items:center;justify-content:center;color:#aaa;font-family:'Barlow',sans-serif;">
         <div style="font-size:4rem;margin-bottom:16px;">&#128506;</div>
         <div style="font-size:1rem;font-weight:700;color:#555;">Aguardando banco de obras</div>
         <div style="font-size:0.8rem;margin-top:6px;margin-bottom:20px;">Sincronize as planilhas ou salve os CSVs no Comparador</div>
@@ -2674,12 +2674,11 @@ mapaRenderFiltros(); mapaFiltrar();
 }
 function mapaCarregarDoBanco() {
 if (!bancoDB || !bancoDB.length) {
-  // Sem banco: mostra mapa vazio mas funcional
-  mapaEnsureLeaflet(null);
-  const mt = document.getElementById('mapa-titulo');
-  if (mt) mt.textContent = '⚠️ Banco vazio — sincronize as planilhas no Comparador';
+  const ph = document.getElementById('mapa-placeholder'); if (ph) ph.style.display='flex';
+  const mc = document.getElementById('mapa-container'); if (mc) mc.style.display='none';
   return;
 }
+const ph2 = document.getElementById('mapa-placeholder'); if (ph2) ph2.style.display='none';
 mapaData = bancoDB.map(obj => {
   const lat=mapaParseCoord(obj['LATITUDE']), lon=mapaParseCoord(obj['LONGITUDE']);
   return { pep:obj['PEP OBRA']||'', titulo:obj['TÍTULO']||obj['TITULO']||'', status:obj['STATUS DA OBRA']||'', mun:obj['MUNICIPIO']||obj['MUNICÍPIO']||'', utd:obj['_UTD']||'', lat, lon, cava:obj['CAVA REALIZADA']||'', postR:obj['POSTES  REALIZADO']||obj['POSTES REALIZADO']||'', postI:obj['POSTES  À IMPLANTA']||obj['POSTES À IMPLANTA']||'', enc:obj['ENCARREGADO']||'', mes:mesFromObra(obj)||'', temCoord:lat!==null&&lon!==null };
@@ -2710,7 +2709,7 @@ mapaRotaObrasFiltradas = mapaData.filter(d=>d.temCoord);
 mapaRotaFiltrarLista();
 }
 function mapaEnsureLeaflet(cb) {
-  const ph = document.getElementById('mapa-placeholder'); if (ph) ph.style.display='none';
+  const ph = document.getElementById('mapa-placeholder'); if (ph) ph.style.display='none'; // already hidden by default
   const mc = document.getElementById('mapa-container'); if (mc) mc.style.display='';
   const tb = document.getElementById('mapa-map-toolbar'); if (tb) tb.style.display='block';
   const doInit = () => {
