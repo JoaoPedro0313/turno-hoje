@@ -2665,6 +2665,15 @@ const encFiltro = encInput ? encInput.value : '';
 let regs = progRegistros || [];
 if (dataFiltro) regs = regs.filter(r => r.data===dataFiltro);
 if (encFiltro) regs = regs.filter(r => r.encarregado===encFiltro);
+if (progMapaFiltroStatus && progMapaFiltroStatus!=='TODOS') {
+const normalizeStatus = s => (s||'').toUpperCase().replace('Ã','A').replace('Ç','C').replace('Ã','A').replace('Ú','U');
+const target = normalizeStatus(progMapaFiltroStatus);
+regs = regs.filter(r => {
+const rs = normalizeStatus(r.status);
+if (target === 'SEM ACESSO') return rs==='SEM ACESSO' || rs==='CHUVA' || rs==='TEMPO CHUVOSO';
+return rs === target;
+});
+}
 return regs;
 }
 function mapaProgRender() {
@@ -3170,6 +3179,7 @@ id: progEditIdx!==null ? progRegistros[progEditIdx].id : Date.now().toString(36)
 data, supervisor: sup, programador: prog, encarregado: enc,
 qtd_colab, alojados, pep, nome_obra: nomeObra, municipio, ar_coelba: ar,
 atividade_cod: atParts[0], atividade: atParts[1], tipo, fator_k: fk,
+status: document.getElementById('pf-ocorrencia').value || '',
 qtd_previsto: prev, qtd_realizado: real, status_pct: status,
 valor_unitario: fk, valor_previsto: vprev, valor_realizado: vreal,
 criado_em: progEditIdx!==null ? progRegistros[progEditIdx].criado_em : new Date().toISOString()
@@ -3205,6 +3215,7 @@ const el = document.getElementById(id);
 if (el) el.value = '';
 });
 ['pf-qtd-colab','pf-qtd-prev','pf-qtd-real','pf-pep-input','pf-nome-obra','pf-municipio','pf-ar','pf-vunit','pf-vprev','pf-vreal','pf-status'].forEach(id => {
+const occEl = document.getElementById('pf-ocorrencia'); if(occEl) occEl.value = '';
 const el = document.getElementById(id);
 if (el) el.value = '';
 });
@@ -3231,7 +3242,7 @@ if (tab==='dash') progRenderDash();
 if (tab==='mapa') progMapaInit();
 }, 10);
 }
-let progMapaMap = null, progMapaLayerGroup = null;
+let progMapaMap = null, progMapaLayerGroup = null, progMapaFiltroStatus = 'TODOS';
 function progMapaInit() {
 const di = document.getElementById('prog-mapa-date');
 const doInit = () => {
@@ -3441,6 +3452,28 @@ if (ll) bounds.push([ll.lat, ll.lng]);
 });
 if (bounds.length) progMapaMap.fitBounds(bounds, {padding:[40,40]});
 }
+function progMapaSetStatus(key) {
+// Map button key back to status string
+const keyMap = {
+'TODOS':'TODOS','EXECUTADO':'EXECUTADO',
+'NAO_EXECUTADO':'NÃO EXECUTADO','EM_EXECUCAO':'EM EXECUÇÃO',
+'SEM_ACESSO':'SEM ACESSO'
+};
+progMapaFiltroStatus = keyMap[key] || key;
+// Update button styles
+const allIds = ['pmfbtn-TODOS','pmfbtn-EXECUTADO','pmfbtn-NAO_EXECUTADO','pmfbtn-EM_EXECUCAO','pmfbtn-SEM_ACESSO'];
+const colors = {'pmfbtn-TODOS':'#6b46c1','pmfbtn-EXECUTADO':'#6b46c1','pmfbtn-NAO_EXECUTADO':'#e53e3e','pmfbtn-EM_EXECUCAO':'#2b6cb0','pmfbtn-SEM_ACESSO':'#f0a500'};
+allIds.forEach(id => {
+const btn = document.getElementById(id);
+if (!btn) return;
+const active = id === 'pmfbtn-' + key;
+const col = colors[id] || '#6b46c1';
+btn.style.background = active ? col : '#fff';
+btn.style.color = active ? '#fff' : '#555';
+btn.style.borderColor = col;
+});
+progMapaRender();
+}
 function progRenderStats() {
 const el = document.getElementById('prog-stat-cards');
 if (!el) return;
@@ -3526,6 +3559,7 @@ progSwitchTab('form');
 setTimeout(() => {
 const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val || ''; };
 set('pf-data', r.data);
+const occ = document.getElementById('pf-ocorrencia'); if(occ) occ.value = r.status || '';
 set('pf-supervisor', r.supervisor);
 progFillEncarregados(r.supervisor);
 set('pf-encarregado', r.encarregado);
@@ -4168,6 +4202,17 @@ const PROG_TOTAIS_ENC = {"AMILTON COSTA": {"valor_previsto": 0.01, "valor_realiz
       <input type="text" id="pf-status" readonly style="width:100%;padding:9px 12px;border:1.5px solid #e8ecef;border-radius:9px;font-family:'Barlow',sans-serif;font-size:0.85rem;font-weight:800;color:#1a365d;background:#f8fafc;outline:none;box-sizing:border-box;">
     </div>
     <div>
+      <label class="_s1">OCORRÊNCIA</label>
+      <select id="pf-ocorrencia" class="_s6" onfocus="this.style.borderColor='#7e3af2'" onblur="this.style.borderColor='#e0e8f0'">
+        <option value="">Selecione...</option>
+        <option value="EXECUTADO">✅ EXECUTADO</option>
+        <option value="EM EXECUÇÃO">🔵 EM EXECUÇÃO</option>
+        <option value="NÃO EXECUTADO">🔴 NÃO EXECUTADO</option>
+        <option value="SEM ACESSO">🟡 SEM ACESSO</option>
+        <option value="CHUVA">🟡 CHUVA</option>
+      </select>
+    </div>
+    <div>
       <label class="_s1">VALOR PREVISTO</label>
       <input type="text" id="pf-vprev" readonly class="_s27">
     </div>
@@ -4320,14 +4365,16 @@ const PROG_TOTAIS_ENC = {"AMILTON COSTA": {"valor_previsto": 0.01, "valor_realiz
     </div>
   </div>
 
-  <div style="background:#fff;border-radius:12px;padding:12px 18px;box-shadow:0 2px 10px rgba(0,0,0,0.06);display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:14px;">
-    <span style="font-size:0.68rem;font-weight:800;color:#888;letter-spacing:1px;text-transform:uppercase;">LEGENDA:</span>
-    <div class="_s2"><div style="width:14px;height:14px;border-radius:50%;background:#6b46c1;border:2px solid #fff;box-shadow:0 1px 4px rgba(107,70,193,0.5);"></div><span class="_s7">EXECUTADO</span></div>
-    <div class="_s2"><div style="width:14px;height:14px;border-radius:50%;background:#e53e3e;border:2px solid #fff;box-shadow:0 1px 4px rgba(229,62,62,0.5);"></div><span class="_s7">NÃO EXECUTADO</span></div>
-    <div class="_s2"><div style="width:14px;height:14px;border-radius:50%;background:#2b6cb0;border:2px solid #fff;box-shadow:0 1px 4px rgba(43,108,176,0.5);"></div><span class="_s7">EM EXECUÇÃO</span></div>
-    <div class="_s2"><div style="width:14px;height:14px;border-radius:50%;background:#f0a500;border:2px solid #fff;box-shadow:0 1px 4px rgba(240,165,0,0.5);"></div><span class="_s7">SEM ACESSO / CHUVA</span></div>
-    <div class="_s2"><div style="width:14px;height:14px;border-radius:50%;background:#a0aec0;border:2px solid #fff;"></div><span class="_s7">SEM COORD.</span></div>
-    <div class="_s2"><div style="width:20px;height:4px;border-radius:2px;background:linear-gradient(90deg,#0d7377,#14a085);"></div><span class="_s7">ROTA OTIMIZADA</span></div>
+  <div style="background:#fff;border-radius:12px;padding:12px 18px;box-shadow:0 2px 10px rgba(0,0,0,0.06);display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:14px;">
+    <span style="font-size:0.68rem;font-weight:800;color:#888;letter-spacing:1px;text-transform:uppercase;white-space:nowrap;">FILTRAR:</span>
+    <button id="pmfbtn-TODOS" onclick="progMapaSetStatus('TODOS')" style="display:flex;align-items:center;gap:5px;padding:4px 12px;border-radius:20px;border:2px solid #6b46c1;background:#6b46c1;font-family:'Barlow',sans-serif;font-size:0.68rem;font-weight:800;cursor:pointer;color:#fff;transition:all 0.15s;">TODOS</button>
+    <button id="pmfbtn-EXECUTADO" onclick="progMapaSetStatus('EXECUTADO')" style="display:flex;align-items:center;gap:5px;padding:4px 12px;border-radius:20px;border:2px solid #6b46c1;background:#fff;font-family:'Barlow',sans-serif;font-size:0.68rem;font-weight:800;cursor:pointer;color:#555;transition:all 0.15s;"><div style="width:10px;height:10px;border-radius:50%;background:#6b46c1;flex-shrink:0;"></div>EXECUTADO</button>
+    <button id="pmfbtn-NAO_EXECUTADO" onclick="progMapaSetStatus('NAO_EXECUTADO')" style="display:flex;align-items:center;gap:5px;padding:4px 12px;border-radius:20px;border:2px solid #e53e3e;background:#fff;font-family:'Barlow',sans-serif;font-size:0.68rem;font-weight:800;cursor:pointer;color:#555;transition:all 0.15s;"><div style="width:10px;height:10px;border-radius:50%;background:#e53e3e;flex-shrink:0;"></div>NÃO EXECUTADO</button>
+    <button id="pmfbtn-EM_EXECUCAO" onclick="progMapaSetStatus('EM_EXECUCAO')" style="display:flex;align-items:center;gap:5px;padding:4px 12px;border-radius:20px;border:2px solid #2b6cb0;background:#fff;font-family:'Barlow',sans-serif;font-size:0.68rem;font-weight:800;cursor:pointer;color:#555;transition:all 0.15s;"><div style="width:10px;height:10px;border-radius:50%;background:#2b6cb0;flex-shrink:0;"></div>EM EXECUÇÃO</button>
+    <button id="pmfbtn-SEM_ACESSO" onclick="progMapaSetStatus('SEM_ACESSO')" style="display:flex;align-items:center;gap:5px;padding:4px 12px;border-radius:20px;border:2px solid #f0a500;background:#fff;font-family:'Barlow',sans-serif;font-size:0.68rem;font-weight:800;cursor:pointer;color:#555;transition:all 0.15s;"><div style="width:10px;height:10px;border-radius:50%;background:#f0a500;flex-shrink:0;"></div>SEM ACESSO / CHUVA</button>
+    <span style="border-left:1.5px solid #e2e8f0;height:18px;align-self:center;"></span>
+    <div class="_s2"><div style="width:18px;height:4px;border-radius:2px;background:linear-gradient(90deg,#0d7377,#14a085);"></div><span class="_s7">ROTA</span></div>
+    <div class="_s2"><div style="width:10px;height:10px;border-radius:50%;background:#a0aec0;border:1px solid #ccc;"></div><span class="_s7">SEM COORD.</span></div>
   </div>
 
   <div style="background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.08);">
