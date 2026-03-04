@@ -1390,10 +1390,7 @@ try { render(); } catch(e) {}
 }
 }, 60000);
 (async function() {
-const _loadTimeout = setTimeout(() => {
-const lo = document.getElementById('loading-overlay');
-if (lo) { lo.classList.remove('show'); lo.style.display = 'none'; }
-}, 2000);
+// ── FASE 1: renderiza imediatamente do cache local (< 50ms) ──────────────
 const now=new Date(); const pad=n=>String(n).padStart(2,'0');
 document.getElementById('page-time').textContent =
 'Gerado em: '+pad(now.getDate())+'/'+pad(now.getMonth()+1)+'/'+now.getFullYear()+' as '+pad(now.getHours())+':'+pad(now.getMinutes());
@@ -1402,34 +1399,71 @@ try { render(); } catch(e) {}
 if (aprData && aprData.length > 0) { try { renderApr(); } catch(e) {} }
 const temDados = teams.ok.length > 0 || teams.falta.length > 0;
 setDbStatus(temDados ? 'local' : 'offline', temDados ? 'Dados locais' : 'Sem dados');
-clearTimeout(_loadTimeout);
+// Esconde loading overlay imediatamente — usuário já vê a UI
 try { hideLoading(); } catch(e) {}
 try { const lo=document.getElementById('loading-overlay'); if(lo){ lo.classList.remove('show'); lo.style.display='none'; lo.style.pointerEvents='none'; } } catch(e) {}
+
+// ── FASE 2: busca banco em paralelo sem bloquear a UI ────────────────────
+// Todas as requisições disparam ao mesmo tempo (Promise.all)
+const supaFetch = (path, timeout) => {
+  const ctrl = new AbortController();
+  const tid = setTimeout(() => ctrl.abort(), timeout || 8000);
+  return fetch(SUPA_URL + path, {
+    headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY },
+    signal: ctrl.signal
+  }).finally(() => clearTimeout(tid));
+};
+
 try {
-await dbLoad(true);
-render();
+  // Dispara as 3 requisições principais ao mesmo tempo
+  const [resPrincipal, resTimestamps, resProgDiaria] = await Promise.allSettled([
+    supaFetch('/rest/v1/turno_data?select=key,value&key=in.(turno,producao,apr_data,comp_historico)', 8000),
+    supaFetch('/rest/v1/turno_data?select=key,updated_at', 5000),
+    supaFetch('/rest/v1/turno_data?select=key,value,updated_at&key=eq.prog_diaria&order=updated_at.desc&limit=1', 8000)
+  ]);
+
+  // Processa dados principais
+  if (resPrincipal.status === 'fulfilled' && resPrincipal.value.ok) {
+    const data = await resPrincipal.value.json();
+    if (Array.isArray(data) && data.length > 0) {
+      data.forEach(row => { applyRowData(row); lsSet(row.key, row.value); });
+      try { render(); } catch(e) {}
+      if (aprData && aprData.length > 0) { try { renderApr(); } catch(e) {} }
+    }
+    setDbStatus('online', 'Banco online ✓');
+  }
+
+  // Processa timestamps para autoRefresh
+  if (resTimestamps.status === 'fulfilled' && resTimestamps.value.ok) {
+    const data = await resTimestamps.value.json();
+    if (Array.isArray(data)) {
+      lastUpdatedAt = data.reduce((max, row) => {
+        const ts = row.updated_at || '';
+        return ts > max ? ts : max;
+      }, '');
+    }
+  }
+
+  // Processa prog_diaria
+  if (resProgDiaria.status === 'fulfilled' && resProgDiaria.value.ok) {
+    const data = await resProgDiaria.value.json();
+    if (Array.isArray(data) && data.length > 0 && Array.isArray(data[0].value)) {
+      progRegistros = data[0].value;
+      lsSet('prog_diaria', progRegistros);
+      try { progRenderStats(); } catch(e) {}
+      try { progRenderList(); } catch(e) {}
+      try { progRenderDash(); } catch(e) {}
+      try { if(typeof mapaProgRender==='function') mapaProgRender(); } catch(e) {}
+    }
+  }
+
+  // obras_base dispara em background (é pesado, não bloqueia o resto)
+  setTimeout(() => { try { dbLoadObrasBase(); } catch(e) {} }, 100);
+
 } catch(e) {
-console.error('[Supabase startup] Erro:', e);
+  console.error('[Supabase startup] Erro:', e);
 }
-if (aprData && aprData.length > 0) { try { renderApr(); } catch(e) {} }
-try {
-const controller2 = new AbortController();
-const tid2 = setTimeout(() => controller2.abort(), 8000);
-const res = await fetch(SUPA_URL + '/rest/v1/turno_data?select=key,updated_at', {
-headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY },
-signal: controller2.signal
-});
-clearTimeout(tid2);
-if (res.ok) {
-const data = await res.json();
-if (Array.isArray(data)) {
-lastUpdatedAt = data.reduce((max, row) => {
-const ts = row.updated_at || '';
-return ts > max ? ts : max;
-}, '');
-}
-}
-} catch(e) {}
+
 startAutoRefresh();
 // Expose inner functions to window so onclick handlers can reach them
 // CORRIGIDO: versao segura de switchPage com try/catch global
@@ -4023,229 +4057,26 @@ setTimeout(presenceInit, 1500);
 </script>
 
 <script>
-// ─────────────────────────────────────────────────────────────────────────────
-// SISTEMA DE CONEXÃO PERSISTENTE — Heartbeat + Backoff + Realtime
-// ─────────────────────────────────────────────────────────────────────────────
+// Auto-reconexão: tenta conectar ao Supabase a cada 30s se estiver offline
 (function() {
-  'use strict';
-
-  // ── Configuração ──────────────────────────────────────────────────────────
-  var HEARTBEAT_INTERVAL = 15000;   // Verifica conexão a cada 15s
-  var BACKOFF_MIN        = 3000;    // Primeira tentativa após 3s
-  var BACKOFF_MAX        = 60000;   // Nunca esperar mais de 60s
-  var BACKOFF_FACTOR     = 1.8;     // Fator de crescimento do backoff
-  var REALTIME_ENDPOINT  = 'wss://eqxejfoibebcbtsqymji.supabase.co/realtime/v1/websocket';
-  var SUPA_KEY_RT        = (typeof SUPA_KEY !== 'undefined') ? SUPA_KEY : '';
-
-  // ── Estado interno ────────────────────────────────────────────────────────
-  var _connected       = false;
-  var _reconnecting    = false;
-  var _backoffDelay    = BACKOFF_MIN;
-  var _backoffTimer    = null;
-  var _heartbeatTimer  = null;
-  var _realtimeSocket  = null;
-  var _realtimePing    = null;
-  var _visibilityBound = false;
-
-  // ── Helpers ───────────────────────────────────────────────────────────────
-  function isOffline() {
+  function tryReconnect() {
     var badge = document.getElementById('db-badge');
-    return badge && (badge.classList.contains('offline') || badge.classList.contains('local'));
-  }
-
-  function isOnline() {
-    var badge = document.getElementById('db-badge');
-    return badge && badge.classList.contains('online');
-  }
-
-  function log(msg) {
-    console.log('[Conexão] ' + msg);
-  }
-
-  // ── Reconexão com backoff exponencial ────────────────────────────────────
-  function scheduleReconnect(immediate) {
-    if (_reconnecting) return;
-    _reconnecting = true;
-    clearTimeout(_backoffTimer);
-
-    var delay = immediate ? 500 : _backoffDelay;
-    log('Aguardando ' + Math.round(delay/1000) + 's antes de reconectar...');
-
-    _backoffTimer = setTimeout(function() {
-      _reconnecting = false;
-      doReconnect();
-    }, delay);
-
-    // Aumenta o delay para a próxima tentativa (exponential backoff)
-    _backoffDelay = Math.min(_backoffDelay * BACKOFF_FACTOR, BACKOFF_MAX);
-  }
-
-  function doReconnect() {
-    if (!navigator.onLine) {
-      log('Sem rede — aguardando evento online...');
-      scheduleReconnect(false);
-      return;
-    }
-    log('Tentando reconectar ao banco...');
-    if (window.dbReconectar) {
-      window.dbReconectar().then(function() {
-        if (isOnline()) onConnected();
-        else scheduleReconnect(false);
-      }).catch(function() {
-        scheduleReconnect(false);
-      });
-    }
-  }
-
-  function onConnected() {
-    log('Conectado ✓');
-    _connected    = true;
-    _reconnecting = false;
-    _backoffDelay = BACKOFF_MIN; // Reseta backoff ao conectar
-    clearTimeout(_backoffTimer);
-    startRealtime();
-  }
-
-  function onDisconnected(reason) {
-    if (_connected) {
-      log('Desconectado: ' + (reason || 'timeout'));
-      _connected = false;
-    }
-    stopRealtime();
-    scheduleReconnect(false);
-  }
-
-  // ── Heartbeat: sondagem leve a cada 15s ──────────────────────────────────
-  function startHeartbeat() {
-    clearInterval(_heartbeatTimer);
-    _heartbeatTimer = setInterval(function() {
-      if (!navigator.onLine) { onDisconnected('sem rede'); return; }
-
-      // Sonda o Supabase com uma requisição ultra-leve (HEAD)
-      fetch(
-        (typeof SUPA_URL !== 'undefined' ? SUPA_URL : 'https://eqxejfoibebcbtsqymji.supabase.co')
-        + '/rest/v1/turno_data?select=key&limit=1',
-        {
-          method: 'HEAD',
-          headers: { 'apikey': SUPA_KEY_RT, 'Authorization': 'Bearer ' + SUPA_KEY_RT },
-          signal: AbortSignal.timeout(8000)
-        }
-      ).then(function(r) {
-        if (r.ok || r.status === 200) {
-          if (!_connected) onConnected();
-        } else {
-          onDisconnected('HTTP ' + r.status);
-        }
-      }).catch(function(e) {
-        if (e.name !== 'AbortError') onDisconnected(e.message);
-      });
-    }, HEARTBEAT_INTERVAL);
-  }
-
-  // ── Supabase Realtime via WebSocket ──────────────────────────────────────
-  // Recebe mudanças em tempo real (INSERT/UPDATE) sem polling
-  function startRealtime() {
-    stopRealtime();
-    if (!SUPA_KEY_RT) return;
-
-    try {
-      var wsUrl = REALTIME_ENDPOINT + '?apikey=' + SUPA_KEY_RT + '&vsn=1.0.0';
-      _realtimeSocket = new WebSocket(wsUrl);
-
-      _realtimeSocket.onopen = function() {
-        log('Realtime WebSocket conectado');
-        // Entra no canal turno_data
-        _realtimeSocket.send(JSON.stringify({
-          topic: 'realtime:public:turno_data',
-          event: 'phx_join',
-          payload: { user_token: SUPA_KEY_RT },
-          ref: '1'
-        }));
-        // Ping a cada 25s para manter o WS vivo
-        _realtimePing = setInterval(function() {
-          if (_realtimeSocket && _realtimeSocket.readyState === WebSocket.OPEN) {
-            _realtimeSocket.send(JSON.stringify({ topic: 'phoenix', event: 'heartbeat', payload: {}, ref: '0' }));
-          }
-        }, 25000);
-      };
-
-      _realtimeSocket.onmessage = function(evt) {
-        try {
-          var msg = JSON.parse(evt.data);
-          // Mudança detectada no banco — recarrega dados
-          if (msg.event === 'INSERT' || msg.event === 'UPDATE') {
-            log('Mudança recebida via Realtime — sincronizando...');
-            if (window.dbLoad) window.dbLoad(true).catch(function(){});
-          }
-        } catch(e) {}
-      };
-
-      _realtimeSocket.onerror = function() {
-        log('Realtime WebSocket erro — usando apenas polling');
-      };
-
-      _realtimeSocket.onclose = function(evt) {
-        clearInterval(_realtimePing);
-        _realtimeSocket = null;
-        if (_connected) {
-          // Tenta reconectar o WS após 10s sem interromper o resto
-          setTimeout(startRealtime, 10000);
-        }
-      };
-    } catch(e) {
-      log('WebSocket não suportado, usando apenas heartbeat');
-    }
-  }
-
-  function stopRealtime() {
-    clearInterval(_realtimePing);
-    if (_realtimeSocket) {
-      try { _realtimeSocket.close(); } catch(e) {}
-      _realtimeSocket = null;
-    }
-  }
-
-  // ── Visibilidade da aba: reconecta ao voltar ──────────────────────────────
-  function bindVisibility() {
-    if (_visibilityBound) return;
-    _visibilityBound = true;
-    document.addEventListener('visibilitychange', function() {
-      if (!document.hidden && isOffline()) {
-        log('Aba voltou ao foco — verificando conexão...');
-        scheduleReconnect(true);
+    if (badge && (badge.classList.contains('offline') || badge.classList.contains('local'))) {
+      if (window.dbReconectar) {
+        console.log('[AutoReconnect] Tentando reconectar...');
+        window.dbReconectar();
       }
-    });
+    }
   }
-
-  // ── Rede voltou ───────────────────────────────────────────────────────────
+  // Primeira tentativa após 3s (JS já carregado)
+  setTimeout(tryReconnect, 3000);
+  // Depois a cada 30s
+  setInterval(tryReconnect, 30000);
+  // Reconecta quando volta a ter internet
   window.addEventListener('online', function() {
-    log('Rede voltou — reconectando imediatamente...');
-    _backoffDelay = BACKOFF_MIN; // Reseta backoff
-    scheduleReconnect(true);
+    console.log('[AutoReconnect] Rede voltou, reconectando...');
+    setTimeout(tryReconnect, 1000);
   });
-
-  window.addEventListener('offline', function() {
-    log('Rede caiu');
-    onDisconnected('rede offline');
-  });
-
-  // ── Inicialização ─────────────────────────────────────────────────────────
-  window.addEventListener('load', function() {
-    bindVisibility();
-    startHeartbeat();
-    // Primeira conexão após 2s (deixa o app inicializar)
-    setTimeout(function() {
-      if (isOffline()) {
-        scheduleReconnect(true);
-      } else if (isOnline()) {
-        onConnected();
-      }
-    }, 2000);
-  });
-
-  // Expõe para uso externo se necessário
-  window._conexaoPersistente = { onConnected: onConnected, onDisconnected: onDisconnected };
-
 })();
 </script>
 
