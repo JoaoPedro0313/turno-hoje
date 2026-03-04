@@ -27,7 +27,8 @@
     https://*.googleusercontent.com
     https://sheets.googleapis.com
     https://docs.googleapis.com
-    https://router.project-osrm.org;">
+    https://router.project-osrm.org
+    https://nominatim.openstreetmap.org;">
 <title>Turno Hoje - OBRAS BA</title>
 <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;600;700;800&display=swap" rel="stylesheet">
 
@@ -4398,6 +4399,51 @@ const ROTA_CORES = [
 '#38a169','#c05621','#2c5282','#b83280','#276749',
 '#1a365d','#744210','#553c9a','#2d3748','#22543d'
 ];
+
+// ─── ALOJAMENTOS POR EQUIPE ────────────────────────────────────────────────
+let ALOJAMENTOS = {};
+try { ALOJAMENTOS = JSON.parse(localStorage.getItem('alojamentos_rotas') || '{}'); } catch(e) {}
+
+function _encKey(enc) {
+  return enc.replace(/[^a-zA-Z0-9]/g, '_');
+}
+function alojamentoSalvar(enc, lat, lon, label) {
+  if (!lat || !lon || isNaN(parseFloat(lat)) || isNaN(parseFloat(lon))) {
+    alert('Informe coordenadas válidas.'); return;
+  }
+  ALOJAMENTOS[enc] = { lat: parseFloat(lat), lon: parseFloat(lon), label: label || enc };
+  try { localStorage.setItem('alojamentos_rotas', JSON.stringify(ALOJAMENTOS)); } catch(e) {}
+  progRotasRender();
+}
+function alojamentoRemover(enc) {
+  delete ALOJAMENTOS[enc];
+  try { localStorage.setItem('alojamentos_rotas', JSON.stringify(ALOJAMENTOS)); } catch(e) {}
+  progRotasRender();
+}
+function alojamentoToggle(key) {
+  const el = document.getElementById('aloj-painel-' + key);
+  if (!el) return;
+  const visible = el.style.display !== 'none';
+  el.style.display = visible ? 'none' : 'block';
+}
+async function alojamentoBuscar(enc, key) {
+  const qEl = document.getElementById('aloj-q-' + key);
+  const latEl = document.getElementById('aloj-lat-' + key);
+  const lonEl = document.getElementById('aloj-lon-' + key);
+  const btn = document.getElementById('aloj-buscar-' + key);
+  if (!qEl || !qEl.value.trim()) { alert('Digite um endereço ou cidade para buscar.'); return; }
+  btn.textContent = '⏳'; btn.disabled = true;
+  try {
+    const url = 'https://nominatim.openstreetmap.org/search?q=' + encodeURIComponent(qEl.value) + '&format=json&limit=1&countrycodes=br';
+    const r = await fetch(url);
+    const data = await r.json();
+    if (data && data[0]) {
+      latEl.value = parseFloat(data[0].lat).toFixed(6);
+      lonEl.value = parseFloat(data[0].lon).toFixed(6);
+    } else { alert('Endereço não encontrado. Tente mais específico.'); }
+  } catch(e) { alert('Erro ao buscar. Insira as coordenadas manualmente.'); }
+  btn.textContent = '🔍 Buscar'; btn.disabled = false;
+}
 function progRotasToggle() {
 progRotasAtivo = !progRotasAtivo;
 const painel = document.getElementById('prog-rotas-painel');
@@ -4534,7 +4580,8 @@ cardsEl.innerHTML = '';
 encs.forEach((enc, idx) => {
 const cor = ROTA_CORES[idx % ROTA_CORES.length];
 const pontos = porEnc[enc];
-const baseRota = base || (() => {
+const aloj = ALOJAMENTOS[enc] || null;
+const baseRota = aloj || base || (() => {
 const latMed = pontos.reduce((s,p)=>s+p.coord.lat,0)/pontos.length;
 const lonMed = pontos.reduce((s,p)=>s+p.coord.lon,0)/pontos.length;
 return { lat: latMed, lon: lonMed };
@@ -4545,9 +4592,9 @@ const tempoHrs = distTotal / 60;
 const tempoMin = Math.round(tempoHrs * 60);
 totalKm += distTotal;
 const latlngs = [];
-if (base) latlngs.push([base.lat, base.lon]);
+if (aloj || base) latlngs.push([baseRota.lat, baseRota.lon]);
 rotaOtim.forEach(p => latlngs.push([p.coord.lat, p.coord.lon]));
-if (base && latlngs.length > 1) latlngs.push([base.lat, base.lon]);
+if ((aloj || base) && latlngs.length > 1) latlngs.push([baseRota.lat, baseRota.lon]);
 if (latlngs.length > 1) {
 drawOSRMRoute(latlngs, cor, progRotasLayerGroup);
 }
@@ -4570,7 +4617,20 @@ L.marker([p.coord.lat, p.coord.lon], {icon: numIcon})
 .addTo(progRotasLayerGroup)
 .bindPopup(popup, {maxWidth:280});
 });
-if (base) {
+// Marker de alojamento (por equipe)
+const encKey = _encKey(enc);
+if (aloj) {
+const alojIcon = L.divIcon({
+className: '',
+html: `<div style="width:26px;height:26px;border-radius:50%;background:${cor};border:3px solid #fff;box-shadow:0 2px 10px ${cor}88;color:#fff;font-size:0.85rem;display:flex;align-items:center;justify-content:center;">🏠</div>`,
+iconSize:[26,26], iconAnchor:[13,13]
+});
+L.marker([aloj.lat, aloj.lon], {icon: alojIcon})
+.addTo(progRotasLayerGroup)
+.bindPopup(`<div style="font-family:'Barlow',sans-serif;font-size:0.82rem;font-weight:800;">🏠 ALOJAMENTO · ${aloj.label||enc}</div><div style="font-size:0.68rem;color:#888;margin-top:2px;">${enc}</div>`);
+}
+// Marker de base global
+if (base && !aloj) {
 const baseIcon = L.divIcon({
 className: '',
 html: `<div style="width:26px;height:26px;border-radius:6px;background:#1a1a2e;border:3px solid #fff;box-shadow:0 2px 10px rgba(0,0,0,0.4);color:#fff;font-size:0.8rem;display:flex;align-items:center;justify-content:center;">🏢</div>`,
@@ -4625,6 +4685,35 @@ ${rotaOtim.map((p,i) => `
 <div style="font-size:0.6rem;color:#aaa;flex-shrink:0;">${p.distFromPrev.toFixed(1)}km</div>
 </div>
 `).join('')}
+</div>
+
+<!-- ALOJAMENTO PANEL -->
+<div style="margin-top:10px;border-top:1px dashed #e2e8f0;padding-top:8px;">
+<button onclick="alojamentoToggle('${encKey}')" style="width:100%;background:${aloj ? cor+'22' : '#f7fafc'};border:1.5px ${aloj ? 'solid '+cor : 'dashed #cbd5e0'};border-radius:8px;padding:6px 10px;font-family:'Barlow',sans-serif;font-size:0.68rem;font-weight:800;color:${aloj ? cor : '#718096'};cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:6px;">
+<span>${aloj ? '🏠 ALOJAMENTO: ' + (aloj.label||'Definido') : '🏠 DEFINIR ALOJAMENTO'}</span>
+<span style="font-size:0.75rem;">${aloj ? '✏️' : '+'}</span>
+</button>
+<div id="aloj-painel-${encKey}" style="display:none;margin-top:8px;background:#f8fafc;border-radius:10px;padding:12px;border:1px solid #e2e8f0;">
+  <div style="font-size:0.6rem;font-weight:800;color:#888;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">📍 Ponto de partida/retorno da equipe</div>
+  <div style="display:flex;gap:6px;margin-bottom:6px;">
+    <input id="aloj-q-${encKey}" placeholder="Cidade ou endereço..." style="flex:1;padding:6px 9px;border:1.5px solid #e2e8f0;border-radius:7px;font-family:'Barlow',sans-serif;font-size:0.72rem;font-weight:600;color:#2d3748;outline:none;background:#fff;" value="${aloj ? aloj.label : ''}">
+    <button id="aloj-buscar-${encKey}" onclick="alojamentoBuscar('${enc.replace(/'/g,"\'")}','${encKey}')" style="padding:6px 10px;background:#4a5568;color:#fff;border:none;border-radius:7px;font-family:'Barlow',sans-serif;font-size:0.68rem;font-weight:800;cursor:pointer;white-space:nowrap;">🔍 Buscar</button>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px;">
+    <div>
+      <div style="font-size:0.58rem;font-weight:800;color:#a0aec0;margin-bottom:2px;">LATITUDE</div>
+      <input id="aloj-lat-${encKey}" placeholder="-11.198490" style="width:100%;padding:5px 8px;border:1.5px solid #e2e8f0;border-radius:6px;font-family:'Barlow',sans-serif;font-size:0.72rem;color:#2d3748;outline:none;background:#fff;box-sizing:border-box;" value="${aloj ? aloj.lat : ''}">
+    </div>
+    <div>
+      <div style="font-size:0.58rem;font-weight:800;color:#a0aec0;margin-bottom:2px;">LONGITUDE</div>
+      <input id="aloj-lon-${encKey}" placeholder="-40.538386" style="width:100%;padding:5px 8px;border:1.5px solid #e2e8f0;border-radius:6px;font-family:'Barlow',sans-serif;font-size:0.72rem;color:#2d3748;outline:none;background:#fff;box-sizing:border-box;" value="${aloj ? aloj.lon : ''}">
+    </div>
+  </div>
+  <div style="display:flex;gap:6px;">
+    <button onclick="alojamentoSalvar('${enc.replace(/'/g,"\'")}', document.getElementById('aloj-lat-${encKey}').value, document.getElementById('aloj-lon-${encKey}').value, document.getElementById('aloj-q-${encKey}').value)" style="flex:1;padding:7px;background:${cor};color:#fff;border:none;border-radius:8px;font-family:'Barlow',sans-serif;font-size:0.7rem;font-weight:800;cursor:pointer;">✅ SALVAR</button>
+    ${aloj ? `<button onclick="alojamentoRemover('${enc.replace(/'/g,"\'")}') " style="padding:7px 12px;background:#fff;color:#e53e3e;border:1.5px solid #e53e3e;border-radius:8px;font-family:'Barlow',sans-serif;font-size:0.7rem;font-weight:800;cursor:pointer;">🗑️</button>` : ''}
+  </div>
+</div>
 </div>
 `;
 cardsEl.appendChild(card);
