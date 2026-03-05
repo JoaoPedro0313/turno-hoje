@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Turno Hoje - OBRAS BA</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+
+    body{
+      font-family:'Segoe UI',sans-serif;
+      background:#0b1120;
+      color:#cdd6f4;
+      min-height:100vh;
+      padding-bottom:70px;
+    }
+
+    /* LOADING */
+    #loading{
+      position:fixed;inset:0;background:#0b1120;
+      display:flex;align-items:center;justify-content:center;
+      z-index:999;flex-direction:column;gap:12px;
+      font-size:.9rem;color:#4a6a8a;
+    }
+    .spinner{
+      width:36px;height:36px;border:3px solid #1e2d45;
+      border-top-color:#00c896;border-radius:50%;
+      animation:spin .8s linear infinite;
+    }
+    @keyframes spin{to{transform:rotate(360deg)}}
+
+    /* HEADER */
+    header{
+      background:linear-gradient(180deg,#0d1b2e 0%,#0b1120 100%);
+      border-bottom:1px solid #1a2d45;
+      padding:10px 14px;
+      display:flex;align-items:center;gap:12px;
+      position:sticky;top:0;z-index:100;
+      box-shadow:0 2px 12px rgba(0,0,0,.5);
+    }
+    header img{
+      width:42px;height:42px;border-radius:8px;object-fit:cover;flex-shrink:0;
+    }
+    .hdr-txt{flex:1;min-width:0;}
+    .hdr-txt h1{
+      font-size:.78rem;font-weight:700;letter-spacing:.8px;
+      text-transform:uppercase;color:#cdd6f4;
+      white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+    }
+    .hdr-txt p{font-size:.62rem;color:#4a6a8a;margin-top:1px;}
+    .online-pill{
+      flex-shrink:0;
+      background:rgba(0,200,150,.12);border:1px solid rgba(0,200,150,.3);
+      color:#00c896;font-size:.6rem;font-weight:700;letter-spacing:.8px;
+      padding:3px 8px;border-radius:20px;white-space:nowrap;
+    }
+
+    /* PAGE HEADER */
+    .page-hdr{
+      padding:16px 14px 10px;border-bottom:1px solid #1a2d45;
+    }
+    .page-hdr h2{
+      font-size:1.05rem;font-weight:700;text-transform:uppercase;
+      letter-spacing:1px;color:#cdd6f4;display:flex;align-items:center;gap:7px;
+    }
+    .page-hdr p{font-size:.68rem;color:#4a6a8a;margin-top:4px;}
+
+    /* FILTER STRIP */
+    .filter-strip{
+      display:flex;gap:8px;padding:10px 14px;overflow-x:auto;scrollbar-width:none;align-items:center;
+    }
+    .filter-strip::-webkit-scrollbar{display:none}
+    .fbtn{
+      flex-shrink:0;background:#111c2e;border:1px solid #1a2d45;color:#4a6a8a;
+      padding:5px 14px;border-radius:20px;font-size:.72rem;font-weight:600;
+      letter-spacing:.3px;cursor:pointer;transition:all .18s;font-family:inherit;
+    }
+    .fbtn.active,.fbtn:hover{
+      background:rgba(0,200,150,.15);border-color:rgba(0,200,150,.5);color:#00c896;
+    }
+    .rbtn{
+      margin-left:auto;flex-shrink:0;background:rgba(0,144,255,.1);
+      border:1px solid rgba(0,144,255,.3);color:#4da6ff;padding:5px 12px;
+      border-radius:20px;font-size:.72rem;font-weight:600;cursor:pointer;
+      font-family:inherit;transition:all .18s;display:flex;align-items:center;gap:4px;
+    }
+    .rbtn:hover{background:rgba(0,144,255,.2);}
+    .rbtn.busy{opacity:.45;pointer-events:none;}
+
+    /* SUMMARY */
+    .summary-row{
+      display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:10px 14px;
+    }
+    .sum-card{
+      background:#111c2e;border:1px solid #1a2d45;border-radius:10px;
+      padding:12px 10px;text-align:center;
+    }
+    .sum-card .val{font-size:1.4rem;font-weight:700;color:#00c896;line-height:1;}
+    .sum-card .lbl{font-size:.6rem;color:#4a6a8a;text-transform:uppercase;letter-spacing:.8px;margin-top:3px;}
+
+    /* STATUS */
+    .status-line{padding:2px 14px 8px;font-size:.65rem;color:#4a6a8a;letter-spacing:.3px;}
+    .status-line.ok{color:#00c896;}
+    .status-line.err{color:#f38ba8;}
+
+    /* UTD BLOCK */
+    .utd-block{padding:0 14px 6px;}
+    .utd-bar{
+      display:flex;align-items:center;gap:8px;padding:8px 12px;
+      background:#111c2e;border:1px solid #1a2d45;border-radius:8px;margin-bottom:8px;
+    }
+    .utd-name{flex:1;font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:#cdd6f4;}
+    .utd-tag{font-size:.62rem;font-weight:700;padding:2px 9px;border-radius:12px;}
+    .utd-tag.irc{background:rgba(77,166,255,.12);color:#4da6ff;border:1px solid rgba(77,166,255,.28);}
+    .utd-tag.jac{background:rgba(245,158,11,.12);color:#f59e0b;border:1px solid rgba(245,158,11,.28);}
+
+    /* ENC CARDS */
+    .cards-list{display:flex;flex-direction:column;gap:7px;margin-bottom:18px;}
+    .enc-card{
+      background:#111c2e;border:1px solid #1a2d45;border-radius:10px;
+      padding:12px 13px;position:relative;overflow:hidden;transition:border-color .18s;
+    }
+    .enc-card:hover{border-color:#2a4a6a;}
+    .enc-card::before{
+      content:'';position:absolute;left:0;top:0;bottom:0;
+      width:3px;border-radius:0 2px 2px 0;
+    }
+    .enc-card.h::before{background:#f38ba8;}
+    .enc-card.m::before{background:#f59e0b;}
+    .enc-card.l::before{background:#00c896;}
+    .enc-card.n::before{background:#2a3a4a;}
+
+    .enc-row{display:flex;align-items:flex-start;gap:10px;}
+    .enc-info{flex:1;min-width:0;}
+    .enc-nome{font-size:.88rem;font-weight:700;color:#cdd6f4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .enc-mat{font-size:.62rem;color:#4a6a8a;margin-top:2px;font-family:monospace;}
+    .enc-obras{font-size:.68rem;color:#4a6a8a;margin-top:4px;}
+    .enc-obras b{color:#00c896;}
+    .enc-num-wrap{text-align:right;flex-shrink:0;}
+    .enc-num{font-size:1.55rem;font-weight:700;line-height:1;}
+    .enc-num.h{color:#f38ba8;}
+    .enc-num.m{color:#f59e0b;}
+    .enc-num.l{color:#00c896;}
+    .enc-num.n{color:#2a4a6a;}
+    .enc-plbl{font-size:.58rem;color:#4a6a8a;text-transform:uppercase;letter-spacing:.8px;}
+    .bar-wrap{height:2px;background:rgba(255,255,255,.05);border-radius:2px;overflow:hidden;margin-top:9px;}
+    .bar{height:100%;border-radius:2px;transition:width .5s ease;}
+    .bar.h{background:#f38ba8;}.bar.m{background:#f59e0b;}.bar.l{background:#00c896;}
+
+    /* EMPTY */
+    .empty-card{
+      background:#111c2e;border:1px dashed #1a2d45;border-radius:10px;
+      padding:24px;text-align:center;color:#4a6a8a;font-size:.8rem;line-height:1.7;
+    }
+    .empty-card .ei{font-size:1.8rem;margin-bottom:6px;}
+
+    /* BOTTOM NAV */
+    nav.bnav{
+      position:fixed;bottom:0;left:0;right:0;
+      background:#080e1a;border-top:1px solid #1a2d45;
+      display:flex;overflow-x:auto;scrollbar-width:none;z-index:200;
+    }
+    nav.bnav::-webkit-scrollbar{display:none}
+    nav.bnav a{
+      flex:0 0 auto;min-width:60px;
+      display:flex;flex-direction:column;align-items:center;
+      padding:8px 10px 10px;text-decoration:none;color:#4a6a8a;
+      font-size:.57rem;font-weight:700;letter-spacing:.4px;text-transform:uppercase;
+      border-top:2px solid transparent;transition:color .18s,border-color .18s;white-space:nowrap;
+    }
+    nav.bnav a .ico{font-size:1.05rem;margin-bottom:2px;}
+    nav.bnav a:hover{color:#8899aa;}
+    nav.bnav a.active{color:#00c896;border-top-color:#00c896;}
+  </style>
+</head>
+<body>
+
+<div id="loading"><div class="spinner"></div><span>Carregando...</span></div>
+
+<header>
+  <img src="data:image/png;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/4gHYSUNDX1BST0ZJTEUAAQEAAAHIAAAAAAQwAABtbnRyUkdCIFhZWiAH4AABAAEAAAAAAABhY3NwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAA9tYAAQAAAADTLQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAlkZXNjAAAA8AAAACRyWFlaAAABFAAAABRnWFlaAAABKAAAABRiWFlaAAABPAAAABR3dHB0AAABUAAAABRyVFJDAAABZAAAAChnVFJDAAABZAAAAChiVFJDAAABZAAAAChjcHJ0AAABjAAAADxtbHVjAAAAAAAAAAEAAAAMZW5VUwAAAAgAAAAcAHMAUgBHAEJYWVogAAAAAAAAb6IAADj1AAADkFhZWiAAAAAAAABimQAAt4UAABjaWFlaIAAAAAAAACSgAAAPhAAAts9YWVogAAAAAAAA9tYAAQAAAADTLXBhcmEAAAAAAAQAAAACZmYAAPKnAAANWQAAE9AAAApbAAAAAAAAAABtbHVjAAAAAAAAAAEAAAAMZW5VUwAAACAAAAAcAEcAbwBvAGcAbABlACAASQBuAGMALgAgADIAMAAxADb/2wBDAAUDBAQEAwUEBAQFBQUGBwwIBwcHBw8LCwkMEQ8SEhEPERETFhwXExQaFRERGCEYGh0dHx8fExciJCIeJBweHx7/wAARC" alt="Mariuá"
+    onerror="this.style.cssText='width:42px;height:42px;border-radius:8px;background:#1a3a5c;color:#fff;display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0';this.textContent='M'"/>
+  <div class="hdr-txt">
+    <h1>SISTEMA DE OBRAS</h1>
+    <p>BASE JACOBINA · GERENTE ALÉCIO OLIVEIRA</p>
+  </div>
+  <span class="online-pill" id="pill">⬤ LOCAL</span>
+</header>
+
+<div class="page-hdr">
+  <h2>📈 PROJEÇÃO</h2>
+  <p>Postes previstos por encarregado · UTD JACOBINA &amp; UTD IRECÊ</p>
+</div>
+
+<div class="filter-strip">
+  <button class="fbtn active" onclick="filtro('todos',this)">Todos</button>
+  <button class="fbtn" onclick="filtro('irece',this)">UTD IRECÊ</button>
+  <button class="fbtn" onclick="filtro('jacobina',this)">UTD JACOBINA</button>
+  <button class="rbtn" id="rbtn" onclick="carregar()">🔄 Atualizar</button>
+</div>
+
+<div class="summary-row">
+  <div class="sum-card"><div class="val" id="sEnc">—</div><div class="lbl">Encarregados</div></div>
+  <div class="sum-card"><div class="val" id="sPost">—</div><div class="lbl">Postes</div></div>
+  <div class="sum-card"><div class="val" id="sObr">—</div><div class="lbl">Obras</div></div>
+</div>
+
+<div class="status-line" id="st">Aguardando...</div>
+
+<div class="utd-block" id="blkI">
+  <div class="utd-bar">
+    <span class="utd-name">🗺 UTD IRECÊ</span>
+    <span class="utd-tag irc" id="tagI">—</span>
+  </div>
+  <div class="cards-list" id="lstI"></div>
+</div>
+
+<div class="utd-block" id="blkJ">
+  <div class="utd-bar">
+    <span class="utd-name">🏗 UTD JACOBINA</span>
+    <span class="utd-tag jac" id="tagJ">—</span>
+  </div>
+  <div class="cards-list" id="lstJ"></div>
+</div>
+
+<nav class="bnav">
+  <a href="turno.html"><span class="ico">📋</span>Turno do Dia</a>
+  <a href="apr.html"><span class="ico">⚠️</span>APR</a>
+  <a href="posto.html" class="active"><span class="ico">📈</span>Projeção</a>
+  <a href="comp.html"><span class="ico">⚡</span>Comparador</a>
+  <a href="mapa.html"><span class="ico">📍</span>Mapa</a>
+  <a href="prog.html"><span class="ico">📅</span>Prog. Diária</a>
+</nav>
+
+<script>
+const BASE = {
+  irece:[
+    {nome:'EDMILSON RIBEIRO DO NASCIMENTO',  mat:'MRA354575',    postes:278,obras:2},
+    {nome:'EDILSON DE SOUZA SANTOS',         mat:'MRA/NTS284548',postes:259,obras:3},
+    {nome:'IRISMAR MARQUES SILVA',           mat:'NTS493543',    postes:186,obras:4},
+    {nome:'ALEX SANDRO SANTOS BISPO',        mat:'MRA877502',    postes:68, obras:2},
+    {nome:'WILIAN DA SILVA SENA',            mat:'MRA032577',    postes:42, obras:1},
+    {nome:'ALAN NUNES BARRETO',              mat:'MRA415566',    postes:29, obras:3},
+    {nome:'ENES RAMOS DA SILVA',             mat:'MRA084535',    postes:27, obras:2},
+    {nome:'MARCOS PAULO CARDOSO',            mat:'MRA647589',    postes:26, obras:1},
+    {nome:'JARBAS SOUZA AMORIM',             mat:'MRA987502',    postes:23, obras:1},
+    {nome:'ESMERALDO DOS SANTOS OLIVEIRA',   mat:'NTS551535',    postes:22, obras:1},
+    {nome:'ELIEZER BATISTA',                 mat:'MRA307554',    postes:13, obras:1},
+    {nome:'ROMERO DIAS SILVA',               mat:'MRA755556',    postes:12, obras:1},
+    {nome:'VANILSON LUCIO DOS SANTOS SILVA', mat:'MRA368534',    postes:7,  obras:1},
+    {nome:'UBERDAN CERQUEIRA DA SILVA',      mat:'MRA654557',    postes:1,  obras:1},
+  ],
+  jacobina:[]
+};
+
+function t(p,mx){const r=mx>0?p/mx:0;return r>.55?'h':r>.22?'m':p>0?'l':'n';}
+
+function render(lstId,tagId,data){
+  const lst=document.getElementById(lstId),tag=document.getElementById(tagId);
+  if(!data||!data.length){
+    tag.textContent='Sem dados';
+    lst.innerHTML=`<div class="empty-card"><div class="ei">📋</div>Nenhum encarregado atribuído.<br><span style="font-size:.65rem">Atribua na planilha para aparecer aqui.</span></div>`;
+    return;
+  }
+  const mx=Math.max(...data.map(d=>d.postes));
+  tag.textContent=`${data.length} enc · ${data.reduce((s,d)=>s+d.postes,0)} postes`;
+  lst.innerHTML=data.map(d=>{
+    const cl=t(d.postes,mx),pct=mx>0?(d.postes/mx*100).toFixed(0):0;
+    return`<div class="enc-card ${cl}">
+      <div class="enc-row">
+        <div class="enc-info">
+          <div class="enc-nome">${d.nome}</div>
+          <div class="enc-mat">${d.mat||'—'}</div>
+          <div class="enc-obras"><b>${d.obras}</b> obra${d.obras!==1?'s':''} atribuída${d.obras!==1?'s':''}</div>
+        </div>
+        <div class="enc-num-wrap">
+          <div class="enc-num ${cl}">${d.postes}</div>
+          <div class="enc-plbl">postes</div>
+        </div>
+      </div>
+      <div class="bar-wrap"><div class="bar ${cl}" style="width:${pct}%"></div></div>
+    </div>`;
+  }).join('');
+}
+
+function summary(i,j){
+  const a=[...(i||[]),...(j||[])];
+  document.getElementById('sEnc').textContent=a.length;
+  document.getElementById('sPost').textContent=a.reduce((s,d)=>s+d.postes,0);
+  document.getElementById('sObr').textContent=a.reduce((s,d)=>s+d.obras,0);
+}
+
+function filtro(f,btn){
+  document.querySelectorAll('.fbtn').forEach(b=>b.classList.remove('active'));
+  if(btn)btn.classList.add('active');
+  document.getElementById('blkI').style.display=f==='jacobina'?'none':'';
+  document.getElementById('blkJ').style.display=f==='irece'?'none':'';
+}
+
+async function fetchCSV(sid,gid){
+  try{
+    const r=await fetch(`https://docs.google.com/spreadsheets/d/${sid}/export?format=csv&gid=${gid}`,{credentials:'include'});
+    if(!r.ok)throw 0;return await r.text();
+  }catch{return null;}
+}
+
+function parseCSV(csv){
+  if(!csv)return null;
+  const lines=csv.split('\n');
+  let eC=-1,pC=-1,hi=-1;
+  for(let i=0;i<Math.min(8,lines.length);i++){
+    const c=lines[i].split(',');
+    const ei=c.findIndex(x=>x.includes('ENCARREGADO'));
+    const pi=c.findIndex(x=>x.includes('POSTES')&&x.includes('PREVISTOS'));
+    if(ei>-1&&pi>-1){eC=ei;pC=pi;hi=i;break;}
+  }
+  if(hi<0)return null;
+  const m={};
+  for(let i=hi+1;i<lines.length;i++){
+    const c=lines[i].split(',');
+    const raw=(c[eC]||'').replace(/"/g,'').trim();
+    if(!raw||raw.includes('#N/A')||raw==='​')continue;
+    const nome=raw.split(' - ')[0].trim().toUpperCase();
+    const mat=raw.includes(' - ')?raw.split(' - ')[1].trim():'';
+    const p=parseInt(c[pC]||'0')||0;
+    if(!m[nome])m[nome]={nome,mat,postes:0,obras:0};
+    m[nome].postes+=p;m[nome].obras+=1;
+  }
+  const arr=Object.values(m).sort((a,b)=>b.postes-a.postes);
+  return arr.length?arr:null;
+}
+
+async function carregar(){
+  const rb=document.getElementById('rbtn'),st=document.getElementById('st');
+  rb.classList.add('busy');rb.textContent='⏳ Buscando...';
+  st.textContent='Consultando planilhas...';st.className='status-line';
+
+  const[cI,cJ]=await Promise.all([
+    fetchCSV('14ImbZb8-OCBp78jDtd0QFkSLrMG5vXA7tzrM-x6KQVo','534264140'),
+    fetchCSV('142gvn8pNgJGTGDkidCfuOWMHJ2OCKpJd_FQU8zeo0x8','257935593'),
+  ]);
+  const lI=parseCSV(cI),lJ=parseCSV(cJ);
+  const irece=lI||BASE.irece,jac=lJ||BASE.jacobina;
+  const live=!!(lI||lJ);
+
+  render('lstI','tagI',irece);
+  render('lstJ','tagJ',jac);
+  summary(irece,jac);
+
+  if(live){
+    st.textContent='✅ Dados ao vivo — '+new Date().toLocaleTimeString('pt-BR');
+    st.className='status-line ok';
+    document.getElementById('pill').textContent='⬤ ONLINE';
+  }else{
+    st.textContent='⚠ Dados locais — planilhas não acessíveis externamente';
+    st.className='status-line err';
+  }
+  rb.classList.remove('busy');rb.innerHTML='🔄 Atualizar';
+  document.getElementById('loading').style.display='none';
+}
+
+carregar();
+</script>
+</body>
+</html>
