@@ -4562,11 +4562,17 @@ function postoFiltro(f, btn) {
 }
 
 async function postoFetchCSV(sid, gid) {
-  try {
-    const r = await fetch(`https://docs.google.com/spreadsheets/d/${sid}/export?format=csv&gid=${gid}`, {credentials:'include'});
-    if (!r.ok) throw 0;
-    return await r.text();
-  } catch { return null; }
+  // Tenta URL de publicação (requer "Publicar na web" no Google Sheets)
+  const urlPub    = `https://docs.google.com/spreadsheets/d/${sid}/pub?output=csv&gid=${gid}`;
+  // Fallback: URL de exportação (requer apenas compartilhamento público)
+  const urlExport = `https://docs.google.com/spreadsheets/d/${sid}/export?format=csv&gid=${gid}`;
+  for (const url of [urlPub, urlExport]) {
+    try {
+      const r = await fetch(url, {mode:'cors'});
+      if (r.ok) return await r.text();
+    } catch {}
+  }
+  return null;
 }
 
 function postoParseCSV(csv) {
