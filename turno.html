@@ -89,6 +89,7 @@ window.presenceOpenModal = function() { if(window._presenceOpenModal) window._pr
   <a class="page-nav-btn active-turno" href="turno.html">&#128203; TURNO DO DIA</a>
   <a class="page-nav-btn" href="apr.html">&#9888; APR</a>
   <a class="page-nav-btn" href="comp.html">&#9889; COMPARADOR</a>
+  <a class="page-nav-btn" href="posto__1_.html">&#128200; POSTO</a>
   <a class="page-nav-btn" href="mapa.html">&#128205; MAPA</a>
   <a class="page-nav-btn" href="prog.html">&#128197; PROG. DI&#193;RIA</a>
 </div>
@@ -4100,6 +4101,288 @@ setTimeout(presenceInit, 1500);
 </script>
 
 <button onclick="if(window.tirarPrint)window.tirarPrint();else window.print()" title="Imprimir" style="position:fixed;bottom:18px;right:18px;z-index:200;background:rgba(43,108,176,0.82);color:#fff;border:none;border-radius:50%;width:44px;height:44px;font-size:1.15rem;cursor:pointer;box-shadow:0 2px 10px rgba(43,108,176,0.35);display:flex;align-items:center;justify-content:center;transition:all 0.2s;backdrop-filter:blur(4px);" onmouseover="this.style.background='rgba(26,74,128,0.95)';this.style.transform='scale(1.1)'" onmouseout="this.style.background='rgba(43,108,176,0.82)';this.style.transform='scale(1)'">&#128247;</button>
+
+<!-- Engrenagem de Configurações -->
+<button id="gear-btn" title="Configurações" onclick="document.getElementById('gear-modal').style.display='flex'" style="position:fixed;bottom:18px;left:18px;z-index:200;background:rgba(13,115,119,0.82);color:#fff;border:none;border-radius:50%;width:44px;height:44px;font-size:1.2rem;cursor:pointer;box-shadow:0 2px 10px rgba(13,115,119,0.35);display:flex;align-items:center;justify-content:center;transition:all 0.2s;backdrop-filter:blur(4px);" onmouseover="this.style.background='rgba(8,80,84,0.95)';this.style.transform='scale(1.1) rotate(30deg)'" onmouseout="this.style.background='rgba(13,115,119,0.82)';this.style.transform='scale(1) rotate(0deg)'">
+  <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="12" r="3"></circle>
+    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+  </svg>
+</button>
+
+<!-- Modal de Configurações NOVO -->
+<!-- Modal de Configurações -->
+<div id="gear-modal" style="display:none;position:fixed;inset:0;background:rgba(10,20,30,0.65);z-index:500;align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(4px);">
+  <div style="background:#fff;border-radius:20px;width:100%;max-width:440px;box-shadow:0 32px 80px rgba(0,0,0,0.25);overflow:hidden;max-height:92vh;display:flex;flex-direction:column;">
+    <div style="background:linear-gradient(135deg,#0b5e62,#14a085);padding:18px 24px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <div style="width:36px;height:36px;border-radius:10px;background:rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;font-size:1.1rem;">⚙️</div>
+        <div>
+          <div style="color:#fff;font-size:1rem;font-weight:800;letter-spacing:0.5px;">Configurações</div>
+          <div style="color:rgba(255,255,255,0.65);font-size:0.72rem;font-weight:600;">Sistema OBRAS BA</div>
+        </div>
+      </div>
+      <button onclick="document.getElementById('gear-modal').style.display='none'" style="background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.2);color:#fff;width:34px;height:34px;border-radius:10px;cursor:pointer;font-size:1rem;font-weight:800;display:flex;align-items:center;justify-content:center;">✕</button>
+    </div>
+    <div style="padding:24px;overflow-y:auto;">
+
+      <!-- TURNO -->
+      <div style="font-size:0.68rem;font-weight:800;color:#0d7377;letter-spacing:2px;text-transform:uppercase;margin-bottom:14px;padding-bottom:8px;border-bottom:2px solid #c0e8e5;">📋 Arquivo de Turno</div>
+
+      <!-- Formato esperado -->
+      <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:0.72rem;color:#555;">
+        <div style="font-weight:800;color:#0d7377;margin-bottom:5px;">Formato esperado (.csv, separador <code>;</code>)</div>
+        <code style="display:block;background:#f0f4f5;border-radius:6px;padding:8px 10px;font-size:0.7rem;line-height:1.8;color:#2d3748;">data;01/03/2026<br>nome;status;obs<br>ALAN-IRC;ok;<br>CARLOS-JAC;falta;<br>JOSE-IRC;justif;Motivo</code>
+        <div style="color:#888;margin-top:5px;">Status aceitos: <strong>ok</strong>, <strong>falta</strong>, <strong>justif</strong></div>
+      </div>
+
+      <!-- Drop zone -->
+      <div id="gear-dropzone"
+        style="border:2px dashed #c0e8e5;border-radius:12px;padding:20px 16px;text-align:center;cursor:pointer;background:linear-gradient(135deg,#f0fafa,#e8f6f5);margin-bottom:12px;transition:all 0.2s;"
+        onclick="document.getElementById('gear-file-input').click()"
+        ondragover="event.preventDefault();this.style.borderColor='#0d7377';this.style.background='#d0efed';"
+        ondragleave="this.style.borderColor='#c0e8e5';this.style.background='linear-gradient(135deg,#f0fafa,#e8f6f5)';"
+        ondrop="event.preventDefault();this.style.borderColor='#c0e8e5';this.style.background='linear-gradient(135deg,#f0fafa,#e8f6f5)';gearImportarTurno(event.dataTransfer.files[0]);">
+        <div style="font-size:1.8rem;margin-bottom:6px;">📂</div>
+        <div style="font-size:0.85rem;font-weight:800;color:#0d7377;">Clique ou arraste o arquivo</div>
+        <div style="font-size:0.72rem;color:#888;margin-top:3px;">Formato aceito: <strong>.csv</strong></div>
+      </div>
+      <input type="file" id="gear-file-input" accept=".csv" style="display:none;" onchange="gearImportarTurno(this.files[0]);this.value='';">
+
+      <!-- Feedback -->
+      <div id="gear-import-msg" style="display:none;font-size:0.78rem;font-weight:700;padding:10px 14px;border-radius:9px;margin-bottom:12px;"></div>
+
+      <!-- Preview -->
+      <div id="gear-import-preview" style="display:none;background:#f0fafa;border:1px solid #c0e8e5;border-radius:10px;padding:14px 16px;margin-bottom:12px;">
+        <div style="font-size:0.68rem;font-weight:800;color:#0d7377;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:10px;">📊 Preview do Arquivo</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;text-align:center;margin-bottom:10px;">
+          <div style="background:#fff;border-radius:8px;padding:8px 4px;border:1px solid #c0e8e5;">
+            <div id="gear-prev-ok" style="font-size:1.5rem;font-weight:800;color:#0d7377;">0</div>
+            <div style="font-size:0.62rem;font-weight:700;color:#888;text-transform:uppercase;">Abriram</div>
+          </div>
+          <div style="background:#fff;border-radius:8px;padding:8px 4px;border:1px solid #fde8b0;">
+            <div id="gear-prev-justif" style="font-size:1.5rem;font-weight:800;color:#b97400;">0</div>
+            <div style="font-size:0.62rem;font-weight:700;color:#888;text-transform:uppercase;">Justif.</div>
+          </div>
+          <div style="background:#fff;border-radius:8px;padding:8px 4px;border:1px solid #fde8e8;">
+            <div id="gear-prev-falta" style="font-size:1.5rem;font-weight:800;color:#c53030;">0</div>
+            <div style="font-size:0.62rem;font-weight:700;color:#888;text-transform:uppercase;">Faltas</div>
+          </div>
+        </div>
+        <div id="gear-prev-date" style="font-size:0.72rem;font-weight:700;color:#555;margin-bottom:12px;text-align:center;"></div>
+        <button id="gear-confirm-btn" onclick="gearConfirmarImport()" style="width:100%;padding:11px;background:linear-gradient(135deg,#0d7377,#14a085);color:#fff;border:none;border-radius:10px;font-family:'Barlow',sans-serif;font-size:0.88rem;font-weight:800;cursor:pointer;" onmouseover="this.style.opacity='0.88'" onmouseout="this.style.opacity='1'">✅ Confirmar e Aplicar</button>
+      </div>
+
+      <!-- Exportar -->
+      <button onclick="gearExportarTurno()" style="width:100%;padding:11px;background:#ebf4ff;color:#2b6cb0;border:2px solid #bee3f8;border-radius:10px;font-family:'Barlow',sans-serif;font-size:0.88rem;font-weight:800;cursor:pointer;margin-bottom:20px;transition:all 0.15s;" onmouseover="this.style.background='#2b6cb0';this.style.color='#fff'" onmouseout="this.style.background='#ebf4ff';this.style.color='#2b6cb0'">⬇️ Exportar Turno Atual (.csv)</button>
+
+      <!-- APARÊNCIA -->
+      <div style="font-size:0.68rem;font-weight:800;color:#aaa;letter-spacing:2px;text-transform:uppercase;margin-bottom:14px;padding-bottom:8px;border-bottom:1px solid #f0f2f5;">🎨 Aparência</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid #f0f2f5;margin-bottom:20px;">
+        <div>
+          <div style="font-size:0.88rem;font-weight:700;color:#2d3748;">Modo Escuro</div>
+          <div style="font-size:0.72rem;color:#888;margin-top:2px;">Alterna tema claro/escuro</div>
+        </div>
+        <label style="position:relative;display:inline-block;width:44px;height:24px;cursor:pointer;">
+          <input type="checkbox" id="dark-mode-toggle" style="opacity:0;width:0;height:0;" onchange="toggleDarkMode(this.checked)">
+          <span id="dark-mode-slider" style="position:absolute;cursor:pointer;inset:0;background:#ccc;border-radius:24px;transition:0.3s;"></span>
+          <span id="dark-mode-knob" style="position:absolute;height:18px;width:18px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:0.3s;box-shadow:0 1px 4px rgba(0,0,0,0.2);"></span>
+        </label>
+      </div>
+
+      <!-- DADOS -->
+      <div style="font-size:0.68rem;font-weight:800;color:#aaa;letter-spacing:2px;text-transform:uppercase;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid #f0f2f5;">🗄️ Dados</div>
+      <button onclick="if(confirm('Limpar cache local?')){localStorage.clear();location.reload();}" style="width:100%;padding:11px;background:#fff5f5;color:#c53030;border:2px solid #fde8e8;border-radius:10px;font-family:'Barlow',sans-serif;font-size:0.88rem;font-weight:800;cursor:pointer;margin-bottom:10px;transition:all 0.15s;" onmouseover="this.style.background='#c53030';this.style.color='#fff'" onmouseout="this.style.background='#fff5f5';this.style.color='#c53030'">🗑️ Limpar Cache Local</button>
+      <button onclick="if(window.dbReconectar)window.dbReconectar();document.getElementById('gear-modal').style.display='none';" style="width:100%;padding:11px;background:linear-gradient(135deg,#0d7377,#14a085);color:#fff;border:none;border-radius:10px;font-family:'Barlow',sans-serif;font-size:0.88rem;font-weight:800;cursor:pointer;transition:all 0.15s;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">🔄 Reconectar ao Banco</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+
+  // ── PARSEAR CSV DE TURNO ────────────────────────────────
+  function _parseTurnoCSV(text) {
+    // Remove BOM
+    text = text.replace(/^\uFEFF/, '');
+    const lines = text.split(/\r?\n/).map(l => l.trim()).filter(l => l && !l.startsWith('#'));
+
+    let date = '';
+    let dataLines = [];
+    let headerIdx = -1;
+
+    for (let i = 0; i < lines.length; i++) {
+      const lower = lines[i].toLowerCase();
+      // Linha de data: "data;DD/MM/YYYY"
+      if (lower.startsWith('data;')) {
+        date = lines[i].split(';')[1]?.trim() || '';
+        continue;
+      }
+      // Linha de cabeçalho: "nome;status" ou "nome;status;obs"
+      if (lower.startsWith('nome;status')) {
+        headerIdx = i;
+        dataLines = lines.slice(i + 1);
+        break;
+      }
+    }
+
+    if (headerIdx === -1) {
+      // Tenta sem cabeçalho: assume nome;status;obs
+      dataLines = lines.filter(l => !l.toLowerCase().startsWith('data;'));
+    }
+
+    const ok = [], falta = [], justif = [];
+
+    for (const line of dataLines) {
+      if (!line) continue;
+      const parts = line.split(';');
+      const nome   = (parts[0] || '').trim().replace(/^"|"$/g, '');
+      const status = (parts[1] || '').trim().toLowerCase().replace(/^"|"$/g, '');
+      const obs    = (parts[2] || '').trim().replace(/^"|"$/g, '');
+      if (!nome) continue;
+      if (status === 'ok')     ok.push(nome);
+      else if (status === 'falta') falta.push(nome);
+      else if (status === 'justif' || status === 'justificado' || status === 'justificada') justif.push({ name: nome, obs });
+    }
+
+    return { date, ok, falta, justif };
+  }
+
+  // ── IMPORTAR TURNO ──────────────────────────────────────
+  let _gearPayloadPendente = null;
+
+  window.gearImportarTurno = function(file) {
+    const msgEl  = document.getElementById('gear-import-msg');
+    const prevEl = document.getElementById('gear-import-preview');
+    _gearPayloadPendente = null;
+    prevEl.style.display = 'none';
+    if (msgEl) msgEl.style.display = 'none';
+
+    if (!file) return;
+    if (!file.name.toLowerCase().endsWith('.csv')) {
+      _gearShowMsg('❌ Formato inválido. Envie um arquivo .csv', 'error');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      try {
+        const payload = _parseTurnoCSV(e.target.result);
+
+        if (payload.ok.length + payload.falta.length + payload.justif.length === 0) {
+          _gearShowMsg('❌ Nenhum dado encontrado. Verifique o formato do arquivo.', 'error');
+          return;
+        }
+
+        _gearPayloadPendente = payload;
+        _gearShowMsg('✅ Arquivo lido com sucesso. Confira o preview abaixo.', 'success');
+
+        document.getElementById('gear-prev-ok').textContent    = payload.ok.length;
+        document.getElementById('gear-prev-justif').textContent = payload.justif.length;
+        document.getElementById('gear-prev-falta').textContent  = payload.falta.length;
+        document.getElementById('gear-prev-date').textContent   = payload.date ? '📅 Data: ' + payload.date : '';
+        prevEl.style.display = 'block';
+      } catch(err) {
+        _gearShowMsg('❌ Erro ao ler o arquivo: ' + err.message, 'error');
+      }
+    };
+    reader.readAsText(file, 'utf-8');
+  };
+
+  window.gearConfirmarImport = function() {
+    if (!_gearPayloadPendente) return;
+    const payload = _gearPayloadPendente;
+
+    if (typeof teams !== 'undefined') {
+      teams.ok     = payload.ok     || [];
+      teams.justif = payload.justif || [];
+      teams.falta  = payload.falta  || [];
+    }
+    if (typeof currentDate !== 'undefined' && payload.date) {
+      currentDate = payload.date;
+    }
+
+    if (typeof lsSet === 'function') {
+      lsSet('turno', { date: currentDate, ok: teams.ok, justif: teams.justif, falta: teams.falta });
+    }
+    if (typeof dbSaveTurno === 'function') dbSaveTurno();
+    try { render(); } catch(e) {}
+
+    document.getElementById('gear-modal').style.display = 'none';
+    document.getElementById('gear-import-preview').style.display = 'none';
+    _gearPayloadPendente = null;
+  };
+
+  // ── EXPORTAR TURNO ─────────────────────────────────────
+  window.gearExportarTurno = function() {
+    try {
+      const date  = (typeof currentDate !== 'undefined') ? currentDate : '';
+      const ok    = (typeof teams !== 'undefined') ? teams.ok    : [];
+      const justf = (typeof teams !== 'undefined') ? teams.justif: [];
+      const falta = (typeof teams !== 'undefined') ? teams.falta : [];
+
+      let csv = 'data;' + date + '\n';
+      csv += 'nome;status;obs\n';
+      ok.forEach(n    => { csv += n + ';ok;\n'; });
+      justf.forEach(t => { csv += t.name + ';justif;' + (t.obs || '') + '\n'; });
+      falta.forEach(n => { csv += n + ';falta;\n'; });
+
+      const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement('a');
+      const dateStr = date.replace(/\//g, '-') || 'turno';
+      a.href     = url;
+      a.download = 'turno_' + dateStr + '.csv';
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch(e) {
+      alert('Erro ao exportar: ' + e.message);
+    }
+  };
+
+  // ── HELPER ─────────────────────────────────────────────
+  function _gearShowMsg(txt, tipo) {
+    const el = document.getElementById('gear-import-msg');
+    if (!el) return;
+    el.textContent = txt;
+    el.style.display = 'block';
+    el.style.background = tipo === 'success' ? '#d0f0ee' : '#fde8e8';
+    el.style.color      = tipo === 'success' ? '#0d7377' : '#c53030';
+    el.style.borderLeft = '3px solid ' + (tipo === 'success' ? '#0d7377' : '#c53030');
+  }
+
+  // ── MODO ESCURO ────────────────────────────────────────
+  function toggleDarkMode(on) {
+    const slider = document.getElementById('dark-mode-slider');
+    const knob   = document.getElementById('dark-mode-knob');
+    if (on) {
+      document.body.style.filter = 'invert(1) hue-rotate(180deg)';
+      document.querySelectorAll('img, video, canvas, .top-bar-logo').forEach(el => el.style.filter = 'invert(1) hue-rotate(180deg)');
+      slider.style.background = '#0d7377';
+      knob.style.transform = 'translateX(20px)';
+      localStorage.setItem('mariua_darkmode','1');
+    } else {
+      document.body.style.filter = '';
+      document.querySelectorAll('img, video, canvas, .top-bar-logo').forEach(el => el.style.filter = '');
+      slider.style.background = '#ccc';
+      knob.style.transform = 'translateX(0)';
+      localStorage.setItem('mariua_darkmode','0');
+    }
+  }
+  window.toggleDarkMode = toggleDarkMode;
+
+  // Fechar clicando fora
+  document.getElementById('gear-modal').addEventListener('click', function(e){
+    if (e.target === this) this.style.display = 'none';
+  });
+
+  // Restaurar dark mode ao carregar
+  if (localStorage.getItem('mariua_darkmode') === '1') {
+    const tog = document.getElementById('dark-mode-toggle');
+    if (tog) { tog.checked = true; toggleDarkMode(true); }
+  }
+})();
+</script>
 
 </body>
 </html>
