@@ -249,17 +249,37 @@ function postoFiltro(f, btn) {
   if (blkJ) blkJ.style.display = f === 'irece'    ? 'none' : '';
 }
 
-async function postoFetchCSV(sid, gid) {
-  // Tenta URL de publicação (requer "Publicar na web" no Google Sheets)
-  const urlPub    = `https://docs.google.com/spreadsheets/d/${sid}/pub?output=csv&gid=${gid}`;
-  // Fallback: URL de exportação (requer apenas compartilhamento público)
-  const urlExport = `https://docs.google.com/spreadsheets/d/${sid}/export?format=csv&gid=${gid}`;
-  for (const url of [urlPub, urlExport]) {
-    try {
-      const r = await fetch(url, {mode:'cors'});
-      if (r.ok) return await r.text();
-    } catch {}
+// ── MESMA BASE DE PLANILHAS DO COMPARADOR ──
+const GSHEETS_BASE = {
+  IRECE:    'https://docs.google.com/spreadsheets/d/14ImbZb8-OCBp78jDtd0QFkSLrMG5vXA7tzrM-x6KQVo/export?format=csv&gid=',
+  JACOBINA: 'https://docs.google.com/spreadsheets/d/142gvn8pNgJGTGDkidCfuOWMHJ2OCKpJd_FQU8zeo0x8/export?format=csv&gid=',
+};
+// Para adicionar novo mês: inserir { ano: AAAA, mes: M, gidJacobina: XXXXXX, gidIrece: XXXXXX }
+const GSHEETS_MESES = [
+  { ano: 2026, mes: 1,  gidJacobina: 310661297,  gidIrece: 1816810936 },
+  { ano: 2026, mes: 2,  gidJacobina: 1111886256, gidIrece: 420931092  },
+  { ano: 2026, mes: 3,  gidJacobina: 624598081,  gidIrece: 534264140  },
+  { ano: 2026, mes: 4,  gidJacobina: 257935593,  gidIrece: 534264140  },
+];
+function gsheetsGetURL(utd) {
+  const now = new Date();
+  const ano = now.getFullYear();
+  const mes = now.getMonth() + 1;
+  const entrada = GSHEETS_MESES.find(e => e.ano === ano && e.mes === mes);
+  if (!entrada) {
+    const recente = GSHEETS_MESES[GSHEETS_MESES.length - 1];
+    const gid = utd === 'JACOBINA' ? recente.gidJacobina : recente.gidIrece;
+    return GSHEETS_BASE[utd] + gid;
   }
+  const gid = utd === 'JACOBINA' ? entrada.gidJacobina : entrada.gidIrece;
+  return GSHEETS_BASE[utd] + gid;
+}
+
+async function postoFetchCSV(url) {
+  try {
+    const r = await fetch(url, {mode:'cors'});
+    if (r.ok) return await r.text();
+  } catch {}
   return null;
 }
 
@@ -291,20 +311,23 @@ function postoParseCSV(csv) {
 }
 
 async function postoCarregar() {
-  if (postoCarregado) return; // não recarrega se já tem dados ao vivo
+  if (postoCarregado) return;
   const rb = document.getElementById('posto-rbtn');
   const st = document.getElementById('posto-st');
   if (rb) { rb.classList.add('busy'); rb.textContent='⏳ Buscando...'; }
   if (st) { st.textContent='Consultando planilhas...'; st.className='posto-status-line'; }
 
+  const urlI = gsheetsGetURL('IRECE');
+  const urlJ = gsheetsGetURL('JACOBINA');
+
   const [cI, cJ] = await Promise.all([
-    postoFetchCSV('14ImbZb8-OCBp78jDtd0QFkSLrMG5vXA7tzrM-x6KQVo','534264140'),
-    postoFetchCSV('142gvn8pNgJGTGDkidCfuOWMHJ2OCKpJd_FQU8zeo0x8','257935593'),
+    postoFetchCSV(urlI),
+    postoFetchCSV(urlJ),
   ]);
   const lI  = postoParseCSV(cI);
   const lJ  = postoParseCSV(cJ);
   const irece = lI || POSTO_BASE.irece;
-  const jac   = lJ || POSTO_BASE.jacobina;
+  const jac   = lJ || [];
   const live  = !!(lI || lJ);
 
   postoRender('posto-lstI','posto-tagI', irece);
@@ -318,7 +341,6 @@ async function postoCarregar() {
     if (st) { st.textContent='⚠ Dados locais — planilhas não acessíveis externamente'; st.className='posto-status-line err'; }
   }
   if (rb) { rb.classList.remove('busy'); rb.innerHTML='🔄 Atualizar'; }
-  // permite forçar atualização ao clicar em Atualizar mesmo com dados ao vivo
   if (rb) rb.onclick = function() { postoCarregado = false; postoCarregar(); };
 }
 window.postoCarregar = postoCarregar;
