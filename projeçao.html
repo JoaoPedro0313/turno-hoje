@@ -285,26 +285,32 @@ async function postoFetchCSV(url) {
 }
 
 // Extrai dados de encarregado/postes do bancoDB (obras_base do Supabase)
+// Campos salvos por compMinimizarDados: _UTD, ENCARREGADO, POSTES PREVISTOS, etc.
 function postoFromBanco(utdLabel) {
   if (!bancoDB || !bancoDB.length) return null;
-  const utdNorm = utdLabel.toUpperCase().replace('Ê','E').replace('È','E');
+  // Filtra pela UTD — _UTD é 'JACOBINA' ou 'IRECÊ'
   const obras = bancoDB.filter(o => {
-    const u = (o.utd || o._UTD || o['UTD'] || '').toUpperCase().replace('Ê','E').replace('È','E');
-    return u.includes(utdNorm) || (utdNorm === 'IRECE' && u.includes('IREC')) || (utdNorm === 'JACOBINA' && u.includes('JACOBINA'));
+    const u = (o['_UTD'] || '').toUpperCase();
+    if (utdLabel === 'JACOBINA') return u === 'JACOBINA';
+    if (utdLabel === 'IRECE')    return u === 'IRECÊ' || u === 'IRECE' || u.startsWith('IREC');
+    return false;
   });
   if (!obras.length) return null;
   const m = {};
   obras.forEach(o => {
-    const raw = (o['ENCARREGADO'] || o['encarregado'] || '').trim();
-    if (!raw || raw.includes('#N/A')) return;
-    const nome = raw.split(' - ')[0].trim().toUpperCase();
-    const mat  = raw.includes(' - ') ? raw.split(' - ')[1].trim() : '';
-    const p    = parseInt(o['POSTES PREVISTOS'] || o['postePrev'] || o['postes'] || 0) || 0;
-    if (!m[nome]) m[nome] = {nome, mat, postes:0, obras:0};
+    const raw = (o['ENCARREGADO'] || '').trim();
+    if (!raw || raw.includes('#N/A') || raw === '') return;
+    // Formato: "NOME COMPLETO - MATRICULA"
+    const partes = raw.split(' - ');
+    const nome = partes[0].trim().toUpperCase();
+    const mat  = partes[1] ? partes[1].trim() : '';
+    const p    = parseInt(o['POSTES PREVISTOS'] || 0) || 0;
+    if (!nome) return;
+    if (!m[nome]) m[nome] = { nome, mat, postes: 0, obras: 0 };
     m[nome].postes += p;
     m[nome].obras  += 1;
   });
-  const arr = Object.values(m).filter(x => x.nome).sort((a,b) => b.postes - a.postes);
+  const arr = Object.values(m).sort((a, b) => b.postes - a.postes);
   return arr.length ? arr : null;
 }
 
