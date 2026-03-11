@@ -160,6 +160,30 @@ body{font-family:'Barlow',sans-serif;background:#f0f4f5;min-height:100vh;padding
 </div>
 
 <script>
+// ── SUPABASE ──
+const SUPA_URL = 'https://eqxejfoibebcbtsqymji.supabase.co';
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVxeGVqZm9pYmViY2J0c3F5bWppIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE4NjUzMTEsImV4cCI6MjA4NzQ0MTMxMX0.lwf7_EJ6UchEOpzhW3cVKztxDGy78gaQblRvgiEwWh8';
+const SUPA_HEADERS = { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY };
+
+function lsGet(key) { try { const v = localStorage.getItem('mariua_' + key); return v ? JSON.parse(v) : null; } catch(e) { return null; } }
+function lsSet(key, val) { try { localStorage.setItem('mariua_' + key, JSON.stringify(val)); } catch(e) { console.warn('[localStorage] falhou:', e.message); } }
+
+let bancoDB = null;
+let bancoDBInfo = null;
+
+function setDbBadge(mode, txt) {
+  const badge = document.getElementById('db-badge');
+  const dbTxt = document.getElementById('db-text');
+  if (!badge) return;
+  badge.className = 'db-badge ' + mode;
+  const dot = badge.querySelector('.db-dot');
+  if (dot) {
+    dot.style.background = mode === 'online' ? '#14a085' : mode === 'local' ? '#38a169' : '#e53e3e';
+    dot.style.boxShadow  = mode === 'online' ? '0 0 6px #14a085' : 'none';
+  }
+  if (dbTxt) dbTxt.textContent = txt;
+}
+
 // Relógio
 function updateClock() {
   const now = new Date();
@@ -170,29 +194,6 @@ function updateClock() {
 }
 updateClock();
 setInterval(updateClock, 1000);
-
-// ── POSTO LOGIC ──
-const POSTO_BASE = {
-  irece:[
-    {nome:'EDMILSON RIBEIRO DO NASCIMENTO',  mat:'MRA354575',    postes:278,obras:2},
-    {nome:'EDILSON DE SOUZA SANTOS',         mat:'MRA/NTS284548',postes:259,obras:3},
-    {nome:'IRISMAR MARQUES SILVA',           mat:'NTS493543',    postes:186,obras:4},
-    {nome:'ALEX SANDRO SANTOS BISPO',        mat:'MRA877502',    postes:68, obras:2},
-    {nome:'WILIAN DA SILVA SENA',            mat:'MRA032577',    postes:42, obras:1},
-    {nome:'ALAN NUNES BARRETO',              mat:'MRA415566',    postes:29, obras:3},
-    {nome:'ENES RAMOS DA SILVA',             mat:'MRA084535',    postes:27, obras:2},
-    {nome:'MARCOS PAULO CARDOSO',            mat:'MRA647589',    postes:26, obras:1},
-    {nome:'JARBAS SOUZA AMORIM',             mat:'MRA987502',    postes:23, obras:1},
-    {nome:'ESMERALDO DOS SANTOS OLIVEIRA',   mat:'NTS551535',    postes:22, obras:1},
-    {nome:'ELIEZER BATISTA',                 mat:'MRA307554',    postes:13, obras:1},
-    {nome:'ROMERO DIAS SILVA',               mat:'MRA755556',    postes:12, obras:1},
-    {nome:'VANILSON LUCIO DOS SANTOS SILVA', mat:'MRA368534',    postes:7,  obras:1},
-    {nome:'UBERDAN CERQUEIRA DA SILVA',      mat:'MRA654557',    postes:1,  obras:1},
-  ],
-  jacobina:[]
-};
-
-let postoCarregado = false;
 
 function postoTier(p, mx) {
   const r = mx > 0 ? p / mx : 0;
@@ -283,6 +284,30 @@ async function postoFetchCSV(url) {
   return null;
 }
 
+// Extrai dados de encarregado/postes do bancoDB (obras_base do Supabase)
+function postoFromBanco(utdLabel) {
+  if (!bancoDB || !bancoDB.length) return null;
+  const utdNorm = utdLabel.toUpperCase().replace('Ê','E').replace('È','E');
+  const obras = bancoDB.filter(o => {
+    const u = (o.utd || o._UTD || o['UTD'] || '').toUpperCase().replace('Ê','E').replace('È','E');
+    return u.includes(utdNorm) || (utdNorm === 'IRECE' && u.includes('IREC')) || (utdNorm === 'JACOBINA' && u.includes('JACOBINA'));
+  });
+  if (!obras.length) return null;
+  const m = {};
+  obras.forEach(o => {
+    const raw = (o['ENCARREGADO'] || o['encarregado'] || '').trim();
+    if (!raw || raw.includes('#N/A')) return;
+    const nome = raw.split(' - ')[0].trim().toUpperCase();
+    const mat  = raw.includes(' - ') ? raw.split(' - ')[1].trim() : '';
+    const p    = parseInt(o['POSTES PREVISTOS'] || o['postePrev'] || o['postes'] || 0) || 0;
+    if (!m[nome]) m[nome] = {nome, mat, postes:0, obras:0};
+    m[nome].postes += p;
+    m[nome].obras  += 1;
+  });
+  const arr = Object.values(m).filter(x => x.nome).sort((a,b) => b.postes - a.postes);
+  return arr.length ? arr : null;
+}
+
 function postoParseCSV(csv) {
   if (!csv) return null;
   const lines = csv.split('\n');
@@ -310,38 +335,77 @@ function postoParseCSV(csv) {
   return arr.length ? arr : null;
 }
 
+async function postoLoadObrasBase() {
+  // 1) tenta Supabase
+  try {
+    const controller = new AbortController();
+    const tid = setTimeout(() => controller.abort(), 15000);
+    const res = await fetch(SUPA_URL + '/rest/v1/turno_data?select=key,value&key=eq.obras_base', {
+      headers: SUPA_HEADERS, signal: controller.signal
+    });
+    clearTimeout(tid);
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data) && data.length > 0 && data[0].value && data[0].value.data) {
+        bancoDB     = data[0].value.data;
+        bancoDBInfo = data[0].value.info || null;
+        lsSet('obras_base', data[0].value);
+        setDbBadge('online', 'Banco online ✓');
+        return true;
+      }
+    }
+  } catch(e) { console.warn('[Supabase] obras_base:', e.message); }
+  // 2) tenta localStorage
+  const local = lsGet('obras_base');
+  if (local && local.data && local.data.length) {
+    bancoDB     = local.data;
+    bancoDBInfo = local.info || null;
+    setDbBadge('local', 'Dados locais');
+    return true;
+  }
+  setDbBadge('offline', 'Sem conexão');
+  return false;
+}
+
 async function postoCarregar() {
-  if (postoCarregado) return;
   const rb = document.getElementById('posto-rbtn');
   const st = document.getElementById('posto-st');
   if (rb) { rb.classList.add('busy'); rb.textContent='⏳ Buscando...'; }
-  if (st) { st.textContent='Consultando planilhas...'; st.className='posto-status-line'; }
+  if (st) { st.textContent='Conectando ao banco...'; st.className='posto-status-line'; }
 
-  const urlI = gsheetsGetURL('IRECE');
-  const urlJ = gsheetsGetURL('JACOBINA');
+  // Carrega banco primeiro
+  await postoLoadObrasBase();
 
-  const [cI, cJ] = await Promise.all([
-    postoFetchCSV(urlI),
-    postoFetchCSV(urlJ),
-  ]);
-  const lI  = postoParseCSV(cI);
-  const lJ  = postoParseCSV(cJ);
-  const irece = lI || POSTO_BASE.irece;
-  const jac   = lJ || [];
-  const live  = !!(lI || lJ);
+  // Tenta extrair do banco
+  let irece = postoFromBanco('IRECE');
+  let jac   = postoFromBanco('JACOBINA');
+  let fonte = '';
 
-  postoRender('posto-lstI','posto-tagI', irece);
-  postoRender('posto-lstJ','posto-tagJ', jac);
+  if (irece || jac) {
+    fonte = '✅ Banco de dados — ' + new Date().toLocaleTimeString('pt-BR');
+    if (st) { st.textContent = fonte; st.className = 'posto-status-line ok'; }
+  } else {
+    // Fallback: busca direto nas planilhas
+    if (st) { st.textContent='Banco sem dados, buscando planilhas...'; st.className='posto-status-line'; }
+    const urlI = gsheetsGetURL('IRECE');
+    const urlJ = gsheetsGetURL('JACOBINA');
+    const [cI, cJ] = await Promise.all([postoFetchCSV(urlI), postoFetchCSV(urlJ)]);
+    irece = postoParseCSV(cI);
+    jac   = postoParseCSV(cJ);
+    if (irece || jac) {
+      fonte = '✅ Planilhas ao vivo — ' + new Date().toLocaleTimeString('pt-BR');
+      if (st) { st.textContent = fonte; st.className = 'posto-status-line ok'; }
+    } else {
+      if (st) { st.textContent = '⚠ Sem dados — verifique conexão e banco'; st.className = 'posto-status-line err'; }
+    }
+  }
+
+  postoRender('posto-lstI', 'posto-tagI', irece || []);
+  postoRender('posto-lstJ', 'posto-tagJ', jac   || []);
   postoSummary(irece, jac);
 
-  if (live) {
-    if (st) { st.textContent='✅ Dados ao vivo — '+new Date().toLocaleTimeString('pt-BR'); st.className='posto-status-line ok'; }
-    postoCarregado = true;
-  } else {
-    if (st) { st.textContent='⚠ Dados locais — planilhas não acessíveis externamente'; st.className='posto-status-line err'; }
-  }
   if (rb) { rb.classList.remove('busy'); rb.innerHTML='🔄 Atualizar'; }
-  if (rb) rb.onclick = function() { postoCarregado = false; postoCarregar(); };
+  if (rb) rb.onclick = function() { bancoDB = null; postoCarregar(); };
 }
 window.postoCarregar = postoCarregar;
 window.postoFiltro   = postoFiltro;
