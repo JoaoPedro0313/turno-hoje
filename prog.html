@@ -142,9 +142,9 @@ window.presenceOpenModal = function() { if(window._presenceOpenModal) window._pr
   <a class="page-nav-btn" href="turno.html">&#128203; TURNO DO DIA</a>
   <a class="page-nav-btn" href="apr.html">&#9888; APR</a>
   <a class="page-nav-btn" href="comp.html">&#9889; COMPARADOR</a>
+  <button class="page-nav-btn" id="nav-posto" onclick="switchPage('posto')">&#128200; PROJE&#199;&#195;O</button>
   <a class="page-nav-btn" href="mapa.html">&#128205; MAPA</a>
   <a class="page-nav-btn active-prog" href="prog.html">&#128197; PROG. DI&#193;RIA</a>
-  <button class="page-nav-btn" id="nav-posto" onclick="switchPage('posto')">&#128200; PROJE&#199;&#195;O</button>
 </div>
 <div id="page-prog">
 <div style="max-width:100%;margin:0;padding:12px 8px 80px;">
@@ -4588,6 +4588,7 @@ async function progInit() {
   }
 }
 window.addEventListener('load', () => setTimeout(progInit, 600));
+window.addEventListener('load', () => { if (typeof switchPage === 'function') switchPage('prog'); });
 const PRESENCE_TABLE = 'user_presence';
 const PRESENCE_TTL_MS = 2 * 60 * 1000;
 const PRESENCE_INTERVAL_MS = 20000;
