@@ -67,12 +67,29 @@ window.presenceOpenModal = function() { if(window._presenceOpenModal) window._pr
       <div class="top-bar-brand">
         <span class="top-bar-title" id="page-title">APR</span>
       </div>
+    </div>
+    <div class="top-bar-center">
+      <div class="top-bar-clock" id="page-time"></div>
+    </div>
+    <div class="top-bar-right">
+      <div class="db-badge local" id="db-badge" onclick="if(window.dbBadgeClick)window.dbBadgeClick()" title="Clique para reconectar" style="cursor:pointer;"><span class="db-dot"></span><span id="db-text">Dados locais</span></div>
+      <button class="presence-btn" id="presence-btn" onclick="if(window.presenceOpenModal)window.presenceOpenModal()" title="Ver quem está online">
+        <span class="presence-dot"></span><span id="presence-count-label">1 online</span>
+      </button>
+    </div>
+  </div>
+  <div id="diag-panel" style="display:none;position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:#1a202c;color:#e2e8f0;padding:14px 20px;border-radius:12px;font-family:monospace;font-size:0.75rem;z-index:9999;max-width:480px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,0.5);">
+    <div style="font-weight:800;margin-bottom:8px;color:#68d391;">🔍 DIAGNÓSTICO SUPABASE</div>
+    <div id="diag-text">Testando...</div>
+    <button onclick="document.getElementById('diag-panel').style.display='none'" style="margin-top:10px;background:#e53e3e;color:#fff;border:none;border-radius:6px;padding:4px 12px;cursor:pointer;font-size:0.72rem;">Fechar</button>
+  </div>
+</div>
 
 <div class="page-nav">
   <a class="page-nav-btn" href="turno.html">&#128203; TURNO DO DIA</a>
   <a class="page-nav-btn active-apr" href="apr.html">&#9888; APR</a>
   <a class="page-nav-btn" href="comp.html">&#9889; COMPARADOR</a>
-  <a class="page-nav-btn" href="projeçao.html">&#128200; PROJEÇÃO</a>
+  <button class="page-nav-btn" id="nav-posto" onclick="switchPage('posto')">&#128200; PROJEÇÃO</button>
   <a class="page-nav-btn" href="mapa.html">&#128205; MAPA</a>
   <a class="page-nav-btn" href="prog.html">&#128197; PROG. DI&#193;RIA</a>
 </div>
