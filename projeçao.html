@@ -107,7 +107,7 @@ body{font-family:'Barlow',sans-serif;background:#f0f4f5;min-height:100vh;padding
       <div class="top-bar-clock" id="page-time"></div>
     </div>
     <div class="top-bar-right">
-      <div class="db-badge local" id="db-badge">
+      <div class="db-badge local" id="db-badge" onclick="dbBadgeClick()" style="cursor:pointer;" title="Clique para reconectar · duplo clique para diagnóstico">
         <span class="db-dot"></span>
         <span id="db-text">Dados locais</span>
       </div>
@@ -160,265 +160,309 @@ body{font-family:'Barlow',sans-serif;background:#f0f4f5;min-height:100vh;padding
 </div>
 
 <script>
-// ── SUPABASE ──
+// ── SUPABASE — cópia exata do comparador ──
 const SUPA_URL = 'https://eqxejfoibebcbtsqymji.supabase.co';
 const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVxeGVqZm9pYmViY2J0c3F5bWppIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE4NjUzMTEsImV4cCI6MjA4NzQ0MTMxMX0.lwf7_EJ6UchEOpzhW3cVKztxDGy78gaQblRvgiEwWh8';
-const SUPA_HEADERS = { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY };
 
-function lsGet(key) { try { const v = localStorage.getItem('mariua_' + key); return v ? JSON.parse(v) : null; } catch(e) { return null; } }
-function lsSet(key, val) { try { localStorage.setItem('mariua_' + key, JSON.stringify(val)); } catch(e) { console.warn('[localStorage] falhou:', e.message); } }
+function lsGet(k){ try{ const v=localStorage.getItem('mariua_'+k); return v?JSON.parse(v):null; }catch(e){ return null; } }
+function lsSet(k,v){ try{ localStorage.setItem('mariua_'+k,JSON.stringify(v)); }catch(e){} }
 
-let bancoDB = null;
-let bancoDBInfo = null;
+let bancoDB=null, bancoDBInfo=null;
 
-function setDbBadge(mode, txt) {
-  const badge = document.getElementById('db-badge');
-  const dbTxt = document.getElementById('db-text');
-  if (!badge) return;
-  badge.className = 'db-badge ' + mode;
-  const dot = badge.querySelector('.db-dot');
-  if (dot) {
-    dot.style.background = mode === 'online' ? '#14a085' : mode === 'local' ? '#38a169' : '#e53e3e';
-    dot.style.boxShadow  = mode === 'online' ? '0 0 6px #14a085' : 'none';
-  }
-  if (dbTxt) dbTxt.textContent = txt;
+function setDbBadge(mode,txt){
+  const b=document.getElementById('db-badge'), t=document.getElementById('db-text');
+  if(!b) return;
+  b.className='db-badge '+mode;
+  const dot=b.querySelector('.db-dot');
+  if(dot){ dot.style.background=mode==='online'?'#14a085':mode==='local'?'#38a169':'#e53e3e'; dot.style.boxShadow=mode==='online'?'0 0 6px #14a085':'none'; }
+  if(t) t.textContent=txt;
 }
 
 // Relógio
-function updateClock() {
-  const now = new Date();
-  const p = n => String(n).padStart(2,'0');
-  document.getElementById('page-time').textContent =
-    p(now.getDate())+'/'+p(now.getMonth()+1)+'/'+now.getFullYear()+' '+
-    p(now.getHours())+':'+p(now.getMinutes())+':'+p(now.getSeconds());
+function updateClock(){
+  const now=new Date(), p=n=>String(n).padStart(2,'0');
+  const el=document.getElementById('page-time');
+  if(el) el.textContent=p(now.getDate())+'/'+p(now.getMonth()+1)+'/'+now.getFullYear()+' '+p(now.getHours())+':'+p(now.getMinutes())+':'+p(now.getSeconds());
 }
-updateClock();
-setInterval(updateClock, 1000);
+updateClock(); setInterval(updateClock,1000);
 
-function postoTier(p, mx) {
-  const r = mx > 0 ? p / mx : 0;
-  return r > .55 ? 'h' : r > .22 ? 'm' : p > 0 ? 'l' : 'n';
+// ── PLANILHAS — mesmo GSHEETS_MESES do comparador ──
+const GSHEETS_BASE={
+  IRECE:   'https://docs.google.com/spreadsheets/d/14ImbZb8-OCBp78jDtd0QFkSLrMG5vXA7tzrM-x6KQVo/export?format=csv&gid=',
+  JACOBINA:'https://docs.google.com/spreadsheets/d/142gvn8pNgJGTGDkidCfuOWMHJ2OCKpJd_FQU8zeo0x8/export?format=csv&gid='
+};
+const GSHEETS_MESES=[
+  {ano:2026,mes:1,gidJacobina:310661297, gidIrece:1816810936},
+  {ano:2026,mes:2,gidJacobina:1111886256,gidIrece:420931092},
+  {ano:2026,mes:3,gidJacobina:624598081, gidIrece:534264140},
+  {ano:2026,mes:4,gidJacobina:257935593, gidIrece:534264140}
+];
+function gsheetsGetURL(utd){
+  const now=new Date(), ano=now.getFullYear(), mes=now.getMonth()+1;
+  const e=GSHEETS_MESES.find(x=>x.ano===ano&&x.mes===mes)||GSHEETS_MESES[GSHEETS_MESES.length-1];
+  return GSHEETS_BASE[utd]+(utd==='JACOBINA'?e.gidJacobina:e.gidIrece);
 }
 
-function postoRender(lstId, tagId, data) {
-  const lst = document.getElementById(lstId);
-  const tag = document.getElementById(tagId);
-  if (!lst || !tag) return;
-  if (!data || !data.length) {
-    tag.textContent = 'Sem dados';
-    lst.innerHTML = `<div class="posto-empty-card"><div class="ei">📋</div>Nenhum encarregado atribuído.<br><span style="font-size:.65rem">Atribua na planilha para aparecer aqui.</span></div>`;
+// ── EXTRAÇÃO DO bancoDB ──
+// bancoDB armazena campos: _UTD, ENCARREGADO, POSTES PREVISTOS (compMinimizarDados)
+function postoFromBanco(utdLabel){
+  if(!bancoDB||!bancoDB.length) return null;
+  const obras=bancoDB.filter(o=>{
+    const u=(o['_UTD']||'').toUpperCase();
+    return utdLabel==='JACOBINA'?u==='JACOBINA':(u==='IRECÊ'||u==='IRECE'||u.startsWith('IREC'));
+  });
+  if(!obras.length) return null;
+  const m={};
+  obras.forEach(o=>{
+    const raw=(o['ENCARREGADO']||'').trim();
+    if(!raw||raw.includes('#N/A')) return;
+    const partes=raw.split(' - ');
+    const nome=partes[0].trim().toUpperCase();
+    const mat=partes[1]?partes[1].trim():'';
+    const p=parseInt(o['POSTES PREVISTOS']||0)||0;
+    if(!nome) return;
+    if(!m[nome]) m[nome]={nome,mat,postes:0,obras:0};
+    m[nome].postes+=p; m[nome].obras+=1;
+  });
+  const arr=Object.values(m).sort((a,b)=>b.postes-a.postes);
+  return arr.length?arr:null;
+}
+
+// ── PARSE CSV FALLBACK ──
+async function postoFetchCSV(url){
+  try{ const r=await fetch(url,{mode:'cors'}); if(r.ok) return await r.text(); }catch(e){}
+  return null;
+}
+function postoParseCSV(csv){
+  if(!csv) return null;
+  const lines=csv.split('\n'); let eC=-1,pC=-1,hi=-1;
+  for(let i=0;i<Math.min(8,lines.length);i++){
+    const c=lines[i].split(',');
+    const ei=c.findIndex(x=>x.includes('ENCARREGADO'));
+    const pi=c.findIndex(x=>x.includes('POSTES')&&x.includes('PREVISTOS'));
+    if(ei>-1&&pi>-1){eC=ei;pC=pi;hi=i;break;}
+  }
+  if(hi<0) return null;
+  const m={};
+  for(let i=hi+1;i<lines.length;i++){
+    const c=lines[i].split(',');
+    const raw=(c[eC]||'').replace(/"/g,'').trim();
+    if(!raw||raw.includes('#N/A')) continue;
+    const nome=raw.split(' - ')[0].trim().toUpperCase();
+    const mat=raw.includes(' - ')?raw.split(' - ')[1].trim():'';
+    const p=parseInt(c[pC]||'0')||0;
+    if(!m[nome]) m[nome]={nome,mat,postes:0,obras:0};
+    m[nome].postes+=p; m[nome].obras+=1;
+  }
+  const arr=Object.values(m).sort((a,b)=>b.postes-a.postes);
+  return arr.length?arr:null;
+}
+
+// ── RENDER ──
+function postoTier(p,mx){ const r=mx>0?p/mx:0; return r>.55?'h':r>.22?'m':p>0?'l':'n'; }
+
+function postoRender(lstId,tagId,data){
+  const lst=document.getElementById(lstId), tag=document.getElementById(tagId);
+  if(!lst||!tag) return;
+  if(!data||!data.length){
+    tag.textContent='Sem dados';
+    lst.innerHTML='<div class="posto-empty-card"><div class="ei">📋</div>Nenhum encarregado atribuído.<br><span style="font-size:.65rem">Sincronize a carteira no Comparador.</span></div>';
     return;
   }
-  const mx = Math.max(...data.map(d => d.postes));
-  tag.textContent = `${data.length} enc · ${data.reduce((s,d) => s+d.postes, 0)} postes`;
-  lst.innerHTML = data.map(d => {
-    const cl = postoTier(d.postes, mx);
-    const pct = mx > 0 ? (d.postes / mx * 100).toFixed(0) : 0;
-    return `<div class="posto-enc-card ${cl}">
-      <div class="posto-enc-row">
-        <div class="posto-enc-info">
-          <div class="posto-enc-nome">${d.nome}</div>
-          <div class="posto-enc-mat">${d.mat || '—'}</div>
-          <div class="posto-enc-obras"><b>${d.obras}</b> obra${d.obras!==1?'s':''} atribuída${d.obras!==1?'s':''}</div>
-        </div>
-        <div class="posto-enc-num-wrap">
-          <div class="posto-enc-num ${cl}">${d.postes}</div>
-          <div class="posto-enc-plbl">postes</div>
-        </div>
-      </div>
-      <div class="posto-bar-wrap"><div class="posto-bar ${cl}" style="width:${pct}%"></div></div>
-    </div>`;
+  const mx=Math.max(...data.map(d=>d.postes));
+  tag.textContent=data.length+' enc · '+data.reduce((s,d)=>s+d.postes,0)+' postes';
+  lst.innerHTML=data.map(d=>{
+    const cl=postoTier(d.postes,mx), pct=mx>0?(d.postes/mx*100).toFixed(0):0;
+    return '<div class="posto-enc-card '+cl+'">'+
+      '<div class="posto-enc-row">'+
+        '<div class="posto-enc-info">'+
+          '<div class="posto-enc-nome">'+d.nome+'</div>'+
+          '<div class="posto-enc-mat">'+(d.mat||'—')+'</div>'+
+          '<div class="posto-enc-obras"><b>'+d.obras+'</b> obra'+(d.obras!==1?'s':'')+'</div>'+
+        '</div>'+
+        '<div class="posto-enc-num-wrap">'+
+          '<div class="posto-enc-num '+cl+'">'+d.postes+'</div>'+
+          '<div class="posto-enc-plbl">postes</div>'+
+        '</div>'+
+      '</div>'+
+      '<div class="posto-bar-wrap"><div class="posto-bar '+cl+'" style="width:'+pct+'%"></div></div>'+
+    '</div>';
   }).join('');
 }
 
-function postoSummary(i, j) {
-  const a = [...(i||[]),...(j||[])];
-  const enc  = document.getElementById('psEnc');
-  const post = document.getElementById('psPost');
-  const obr  = document.getElementById('psObr');
-  if (enc)  enc.textContent  = a.length;
-  if (post) post.textContent = a.reduce((s,d)=>s+d.postes,0);
-  if (obr)  obr.textContent  = a.reduce((s,d)=>s+d.obras,0);
+function postoSummary(i,j){
+  const a=[...(i||[]),...(j||[])];
+  const eEl=document.getElementById('psEnc'), pEl=document.getElementById('psPost'), oEl=document.getElementById('psObr');
+  if(eEl) eEl.textContent=a.length;
+  if(pEl) pEl.textContent=a.reduce((s,d)=>s+d.postes,0);
+  if(oEl) oEl.textContent=a.reduce((s,d)=>s+d.obras,0);
 }
 
-function postoFiltro(f, btn) {
-  document.querySelectorAll('#page-posto .posto-fbtn').forEach(b => b.classList.remove('active'));
-  if (btn) btn.classList.add('active');
-  const blkI = document.getElementById('posto-blkI');
-  const blkJ = document.getElementById('posto-blkJ');
-  if (blkI) blkI.style.display = f === 'jacobina' ? 'none' : '';
-  if (blkJ) blkJ.style.display = f === 'irece'    ? 'none' : '';
+function postoFiltro(f,btn){
+  document.querySelectorAll('#page-posto .posto-fbtn').forEach(b=>b.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+  const blkI=document.getElementById('posto-blkI'), blkJ=document.getElementById('posto-blkJ');
+  if(blkI) blkI.style.display=f==='jacobina'?'none':'';
+  if(blkJ) blkJ.style.display=f==='irece'?'none':'';
 }
 
-// ── MESMA BASE DE PLANILHAS DO COMPARADOR ──
-const GSHEETS_BASE = {
-  IRECE:    'https://docs.google.com/spreadsheets/d/14ImbZb8-OCBp78jDtd0QFkSLrMG5vXA7tzrM-x6KQVo/export?format=csv&gid=',
-  JACOBINA: 'https://docs.google.com/spreadsheets/d/142gvn8pNgJGTGDkidCfuOWMHJ2OCKpJd_FQU8zeo0x8/export?format=csv&gid=',
-};
-// Para adicionar novo mês: inserir { ano: AAAA, mes: M, gidJacobina: XXXXXX, gidIrece: XXXXXX }
-const GSHEETS_MESES = [
-  { ano: 2026, mes: 1,  gidJacobina: 310661297,  gidIrece: 1816810936 },
-  { ano: 2026, mes: 2,  gidJacobina: 1111886256, gidIrece: 420931092  },
-  { ano: 2026, mes: 3,  gidJacobina: 624598081,  gidIrece: 534264140  },
-  { ano: 2026, mes: 4,  gidJacobina: 257935593,  gidIrece: 534264140  },
-];
-function gsheetsGetURL(utd) {
-  const now = new Date();
-  const ano = now.getFullYear();
-  const mes = now.getMonth() + 1;
-  const entrada = GSHEETS_MESES.find(e => e.ano === ano && e.mes === mes);
-  if (!entrada) {
-    const recente = GSHEETS_MESES[GSHEETS_MESES.length - 1];
-    const gid = utd === 'JACOBINA' ? recente.gidJacobina : recente.gidIrece;
-    return GSHEETS_BASE[utd] + gid;
-  }
-  const gid = utd === 'JACOBINA' ? entrada.gidJacobina : entrada.gidIrece;
-  return GSHEETS_BASE[utd] + gid;
-}
-
-async function postoFetchCSV(url) {
-  try {
-    const r = await fetch(url, {mode:'cors'});
-    if (r.ok) return await r.text();
-  } catch {}
-  return null;
-}
-
-// Extrai dados de encarregado/postes do bancoDB (obras_base do Supabase)
-// Campos salvos por compMinimizarDados: _UTD, ENCARREGADO, POSTES PREVISTOS, etc.
-function postoFromBanco(utdLabel) {
-  if (!bancoDB || !bancoDB.length) return null;
-  // Filtra pela UTD — _UTD é 'JACOBINA' ou 'IRECÊ'
-  const obras = bancoDB.filter(o => {
-    const u = (o['_UTD'] || '').toUpperCase();
-    if (utdLabel === 'JACOBINA') return u === 'JACOBINA';
-    if (utdLabel === 'IRECE')    return u === 'IRECÊ' || u === 'IRECE' || u.startsWith('IREC');
-    return false;
-  });
-  if (!obras.length) return null;
-  const m = {};
-  obras.forEach(o => {
-    const raw = (o['ENCARREGADO'] || '').trim();
-    if (!raw || raw.includes('#N/A') || raw === '') return;
-    // Formato: "NOME COMPLETO - MATRICULA"
-    const partes = raw.split(' - ');
-    const nome = partes[0].trim().toUpperCase();
-    const mat  = partes[1] ? partes[1].trim() : '';
-    const p    = parseInt(o['POSTES PREVISTOS'] || 0) || 0;
-    if (!nome) return;
-    if (!m[nome]) m[nome] = { nome, mat, postes: 0, obras: 0 };
-    m[nome].postes += p;
-    m[nome].obras  += 1;
-  });
-  const arr = Object.values(m).sort((a, b) => b.postes - a.postes);
-  return arr.length ? arr : null;
-}
-
-function postoParseCSV(csv) {
-  if (!csv) return null;
-  const lines = csv.split('\n');
-  let eC=-1, pC=-1, hi=-1;
-  for (let i = 0; i < Math.min(8, lines.length); i++) {
-    const c = lines[i].split(',');
-    const ei = c.findIndex(x => x.includes('ENCARREGADO'));
-    const pi = c.findIndex(x => x.includes('POSTES') && x.includes('PREVISTOS'));
-    if (ei > -1 && pi > -1) { eC=ei; pC=pi; hi=i; break; }
-  }
-  if (hi < 0) return null;
-  const m = {};
-  for (let i = hi+1; i < lines.length; i++) {
-    const c = lines[i].split(',');
-    const raw = (c[eC]||'').replace(/"/g,'').trim();
-    if (!raw || raw.includes('#N/A') || raw==='​') continue;
-    const nome = raw.split(' - ')[0].trim().toUpperCase();
-    const mat  = raw.includes(' - ') ? raw.split(' - ')[1].trim() : '';
-    const p    = parseInt(c[pC]||'0') || 0;
-    if (!m[nome]) m[nome] = {nome, mat, postes:0, obras:0};
-    m[nome].postes += p;
-    m[nome].obras  += 1;
-  }
-  const arr = Object.values(m).sort((a,b) => b.postes - a.postes);
-  return arr.length ? arr : null;
-}
-
-async function postoLoadObrasBase() {
-  // 1) tenta Supabase
-  try {
-    const controller = new AbortController();
-    const tid = setTimeout(() => controller.abort(), 15000);
-    const res = await fetch(SUPA_URL + '/rest/v1/turno_data?select=key,value&key=eq.obras_base', {
-      headers: SUPA_HEADERS, signal: controller.signal
+// ── CARREGA obras_base — cópia exata do dbLoadObrasBase do comparador ──
+async function postoLoadObrasBase(){
+  try{
+    const controller=new AbortController();
+    const tid=setTimeout(()=>controller.abort(),30000);
+    const res=await fetch(SUPA_URL+'/rest/v1/turno_data?select=key,value&key=eq.obras_base',{
+      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY},
+      signal:controller.signal
     });
     clearTimeout(tid);
-    if (res.ok) {
-      const data = await res.json();
-      if (Array.isArray(data) && data.length > 0 && data[0].value && data[0].value.data) {
-        bancoDB     = data[0].value.data;
-        bancoDBInfo = data[0].value.info || null;
-        lsSet('obras_base', data[0].value);
-        setDbBadge('online', 'Banco online ✓');
-        return true;
+    if(!res.ok){ console.warn('[Supabase] obras_base HTTP',res.status); }
+    else{
+      const data=await res.json();
+      if(Array.isArray(data)&&data.length>0&&data[0].value&&data[0].value.data){
+        const supaCount=(data[0].value.data||[]).length;
+        if(supaCount>0){
+          bancoDB=data[0].value.data;
+          bancoDBInfo=data[0].value.info||null;
+          lsSet('obras_base',data[0].value);
+          setDbBadge('online','Banco online ✓');
+          console.log('[Supabase] obras_base:',supaCount,'obras');
+          return true;
+        }
       }
     }
-  } catch(e) { console.warn('[Supabase] obras_base:', e.message); }
-  // 2) tenta localStorage
-  const local = lsGet('obras_base');
-  if (local && local.data && local.data.length) {
-    bancoDB     = local.data;
-    bancoDBInfo = local.info || null;
-    setDbBadge('local', 'Dados locais');
+  }catch(e){
+    console.warn('[Supabase] obras_base não carregou:',e.name,e.message);
+  }
+  // fallback localStorage
+  const local=lsGet('obras_base');
+  if(local&&local.data&&local.data.length){
+    bancoDB=local.data; bancoDBInfo=local.info||null;
+    setDbBadge('local','Dados locais');
+    console.log('[localStorage] obras_base:',bancoDB.length,'obras');
     return true;
   }
-  setDbBadge('offline', 'Sem conexão');
+  setDbBadge('offline','Sem conexão');
   return false;
 }
 
-async function postoCarregar() {
-  const rb = document.getElementById('posto-rbtn');
-  const st = document.getElementById('posto-st');
-  if (rb) { rb.classList.add('busy'); rb.textContent='⏳ Buscando...'; }
-  if (st) { st.textContent='Conectando ao banco...'; st.className='posto-status-line'; }
+// ── STARTUP — mesmo padrão do comparador ──
+async function postoCarregar(){
+  const rb=document.getElementById('posto-rbtn'), st=document.getElementById('posto-st');
+  if(rb){rb.classList.add('busy');rb.textContent='⏳ Buscando...';}
+  if(st){st.textContent='Conectando ao banco...';st.className='posto-status-line';}
 
-  // Carrega banco primeiro
-  await postoLoadObrasBase();
-
-  // Tenta extrair do banco
-  let irece = postoFromBanco('IRECE');
-  let jac   = postoFromBanco('JACOBINA');
-  let fonte = '';
-
-  if (irece || jac) {
-    fonte = '✅ Banco de dados — ' + new Date().toLocaleTimeString('pt-BR');
-    if (st) { st.textContent = fonte; st.className = 'posto-status-line ok'; }
-  } else {
-    // Fallback: busca direto nas planilhas
-    if (st) { st.textContent='Banco sem dados, buscando planilhas...'; st.className='posto-status-line'; }
-    const urlI = gsheetsGetURL('IRECE');
-    const urlJ = gsheetsGetURL('JACOBINA');
-    const [cI, cJ] = await Promise.all([postoFetchCSV(urlI), postoFetchCSV(urlJ)]);
-    irece = postoParseCSV(cI);
-    jac   = postoParseCSV(cJ);
-    if (irece || jac) {
-      fonte = '✅ Planilhas ao vivo — ' + new Date().toLocaleTimeString('pt-BR');
-      if (st) { st.textContent = fonte; st.className = 'posto-status-line ok'; }
-    } else {
-      if (st) { st.textContent = '⚠ Sem dados — verifique conexão e banco'; st.className = 'posto-status-line err'; }
+  // Mostra cache local imediatamente
+  const cache=lsGet('obras_base');
+  if(cache&&cache.data&&cache.data.length){
+    bancoDB=cache.data; bancoDBInfo=cache.info||null;
+    const iC=postoFromBanco('IRECE'), jC=postoFromBanco('JACOBINA');
+    if(iC||jC){
+      postoRender('posto-lstI','posto-tagI',iC||[]);
+      postoRender('posto-lstJ','posto-tagJ',jC||[]);
+      postoSummary(iC,jC);
+      if(st){st.textContent='⏳ Cache local — atualizando...';st.className='posto-status-line';}
     }
   }
 
-  postoRender('posto-lstI', 'posto-tagI', irece || []);
-  postoRender('posto-lstJ', 'posto-tagJ', jac   || []);
-  postoSummary(irece, jac);
+  // Busca Supabase
+  await postoLoadObrasBase();
 
-  if (rb) { rb.classList.remove('busy'); rb.innerHTML='🔄 Atualizar'; }
-  if (rb) rb.onclick = function() { bancoDB = null; postoCarregar(); };
+  let irece=postoFromBanco('IRECE'), jac=postoFromBanco('JACOBINA');
+
+  if(irece||jac){
+    if(st){st.textContent='✅ Banco de dados — '+new Date().toLocaleTimeString('pt-BR');st.className='posto-status-line ok';}
+  } else {
+    if(st){st.textContent='Banco sem dados, tentando planilhas...';st.className='posto-status-line';}
+    const [cI,cJ]=await Promise.all([postoFetchCSV(gsheetsGetURL('IRECE')),postoFetchCSV(gsheetsGetURL('JACOBINA'))]);
+    irece=postoParseCSV(cI); jac=postoParseCSV(cJ);
+    if(irece||jac){
+      if(st){st.textContent='✅ Planilhas ao vivo — '+new Date().toLocaleTimeString('pt-BR');st.className='posto-status-line ok';}
+    } else {
+      if(st){st.textContent='⚠ Sem dados — sincronize a carteira no Comparador';st.className='posto-status-line err';}
+    }
+  }
+
+  postoRender('posto-lstI','posto-tagI',irece||[]);
+  postoRender('posto-lstJ','posto-tagJ',jac||[]);
+  postoSummary(irece,jac);
+
+  if(rb){rb.classList.remove('busy');rb.innerHTML='🔄 Atualizar';}
+  if(rb) rb.onclick=function(){bancoDB=null;postoCarregar();};
 }
-window.postoCarregar = postoCarregar;
-window.postoFiltro   = postoFiltro;
+window.postoCarregar=postoCarregar;
+window.postoFiltro=postoFiltro;
 
 
-// Carrega ao abrir
-postoCarregar();
+async function diagSupabase(){
+  const panel=document.getElementById('diag-panel');
+  const txt=document.getElementById('diag-text');
+  if(!panel||!txt) return;
+  panel.style.display='block';
+  txt.innerHTML='⏳ Testando conexão...';
+  const t0=Date.now();
+  try{
+    const r0=await fetch(SUPA_URL+'/rest/v1/',{
+      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}
+    });
+    const ms0=Date.now()-t0;
+    txt.innerHTML='✅ Projeto acessível (HTTP '+r0.status+', '+ms0+'ms)<br>⏳ Testando tabela <b>turno_data</b>...';
+  }catch(e0){
+    const ms0=Date.now()-t0;
+    txt.innerHTML='❌ Não alcançou o Supabase após '+ms0+'ms<br><b>'+e0.name+':</b> '+e0.message+'<br><br><b>Causas prováveis:</b><br>• Sem internet<br>• Projeto Supabase pausado (plano gratuito pausa por inatividade)<br><br><a href="https://supabase.com/dashboard/project/eqxejfoibebcbtsqymji" target="_blank" style="color:#7ee8fa;font-weight:700;">🔗 Abrir projeto no Supabase</a>';
+    return;
+  }
+  try{
+    const t1=Date.now();
+    const res=await fetch(SUPA_URL+'/rest/v1/turno_data?select=key,value&key=eq.obras_base',{
+      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}
+    });
+    const ms=Date.now()-t1;
+    const body=await res.text();
+    if(res.ok){
+      let obrasCount=0;
+      try{ const d=JSON.parse(body); if(Array.isArray(d)&&d.length&&d[0].value&&d[0].value.data) obrasCount=d[0].value.data.length; }catch(e){}
+      txt.innerHTML='✅ Conectado! HTTP '+res.status+' · '+ms+'ms<br>'+(obrasCount>0?'📦 <b>'+obrasCount+' obras</b> encontradas no banco':'⚠️ Tabela ok mas <b>obras_base vazio</b> — sincronize no Comparador')+'<br><br>Recarregando dados...';
+      await postoCarregar();
+      setTimeout(()=>{ panel.style.display='none'; },3000);
+    }else{
+      txt.innerHTML='❌ HTTP '+res.status+' · '+ms+'ms<br><small style="color:#ffd">'+body.substring(0,300)+'</small><br><br><a href="https://supabase.com/dashboard/project/eqxejfoibebcbtsqymji" target="_blank" style="color:#7ee8fa;font-weight:700;">🔗 Abrir projeto no Supabase</a>';
+    }
+  }catch(e){
+    txt.innerHTML='❌ Erro ao acessar tabela: '+e.name+': '+e.message;
+  }
+}
+let _badgeClickTimer=null;
+function dbBadgeClick(){
+  if(_badgeClickTimer){
+    clearTimeout(_badgeClickTimer);
+    _badgeClickTimer=null;
+    diagSupabase();
+  }else{
+    _badgeClickTimer=setTimeout(()=>{
+      _badgeClickTimer=null;
+      bancoDB=null; postoCarregar();
+    },300);
+  }
+}
+
+// Startup
+(async function(){
+  const local=lsGet('obras_base');
+  if(local&&local.data&&local.data.length){
+    bancoDB=local.data; bancoDBInfo=local.info||null;
+    setDbBadge('local','Dados locais');
+  } else {
+    setDbBadge('offline','Sem dados');
+  }
+  await postoCarregar();
+})();
 </script>
+
+<div id="diag-panel" style="display:none;position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:#1a202c;color:#e2e8f0;padding:14px 20px;border-radius:12px;font-family:monospace;font-size:0.75rem;z-index:9999;max-width:480px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,0.5);">
+  <b style="color:#7ee8fa;">🔍 Diagnóstico Supabase</b>
+  <div id="diag-text" style="margin-top:8px;">Testando...</div>
+  <button onclick="document.getElementById('diag-panel').style.display='none'" style="margin-top:10px;background:#e53e3e;color:#fff;border:none;border-radius:6px;padding:4px 12px;cursor:pointer;font-size:0.72rem;">Fechar</button>
+</div>
 </body>
 </html>
