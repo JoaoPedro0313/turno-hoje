@@ -311,21 +311,79 @@ function updateClock(){
 }
 updateClock(); setInterval(updateClock,1000);
 
-// ── PLANILHAS ──
-const GSHEETS_BASE={
-  IRECE:   'https://docs.google.com/spreadsheets/d/14ImbZb8-OCBp78jDtd0QFkSLrMG5vXA7tzrM-x6KQVo/export?format=csv&gid=',
-  JACOBINA:'https://docs.google.com/spreadsheets/d/142gvn8pNgJGTGDkidCfuOWMHJ2OCKpJd_FQU8zeo0x8/export?format=csv&gid='
+// ── PLANILHAS — idêntico ao comp.html ──
+const GSHEETS_BASE = {
+  JACOBINA: 'https://docs.google.com/spreadsheets/d/142gvn8pNgJGTGDkidCfuOWMHJ2OCKpJd_FQU8zeo0x8/export?format=csv&gid=',
+  IRECE:    'https://docs.google.com/spreadsheets/d/14ImbZb8-OCBp78jDtd0QFkSLrMG5vXA7tzrM-x6KQVo/export?format=csv&gid='
 };
-const GSHEETS_MESES=[
-  {ano:2026,mes:1,gidJacobina:310661297, gidIrece:1816810936},
-  {ano:2026,mes:2,gidJacobina:1111886256,gidIrece:420931092},
-  {ano:2026,mes:3,gidJacobina:624598081, gidIrece:534264140},
-  {ano:2026,mes:4,gidJacobina:257935593, gidIrece:534264140}
+const GSHEETS_MESES = [
+  { ano: 2026, mes: 1,  gidJacobina: 310661297,  gidIrece: 1816810936 },
+  { ano: 2026, mes: 2,  gidJacobina: 1111886256, gidIrece: 420931092  },
+  { ano: 2026, mes: 3,  gidJacobina: 624598081,  gidIrece: 534264140  }
 ];
-function gsheetsGetURL(utd){
-  const now=new Date(), ano=now.getFullYear(), mes=now.getMonth()+1;
-  const e=GSHEETS_MESES.find(x=>x.ano===ano&&x.mes===mes)||GSHEETS_MESES[GSHEETS_MESES.length-1];
-  return GSHEETS_BASE[utd]+(utd==='JACOBINA'?e.gidJacobina:e.gidIrece);
+function gsheetsGetURL(utd) {
+  const now = new Date(), ano = now.getFullYear(), mes = now.getMonth() + 1;
+  const entrada = GSHEETS_MESES.find(e => e.ano === ano && e.mes === mes);
+  if (!entrada) {
+    const recente = GSHEETS_MESES[GSHEETS_MESES.length - 1];
+    return GSHEETS_BASE[utd] + (utd === 'JACOBINA' ? recente.gidJacobina : recente.gidIrece);
+  }
+  return GSHEETS_BASE[utd] + (utd === 'JACOBINA' ? entrada.gidJacobina : entrada.gidIrece);
+}
+const GSHEETS = {
+  JACOBINA: gsheetsGetURL('JACOBINA'),
+  IRECE:    gsheetsGetURL('IRECE')
+};
+
+// Parse CSV exatamente como o comp.html — usa PapaParse, headers em maiúsculo
+async function ensurePapa() {
+  if (window.Papa) return;
+  await new Promise((res, rej) => {
+    const s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js';
+    s.onload = res; s.onerror = rej; document.head.appendChild(s);
+  });
+}
+
+function planilhaParseCSVText(text, utdLabel) {
+  const rows = Papa.parse(text.replace(/^\uFEFF/,''), { skipEmptyLines: true }).data;
+  let headerIdx = -1;
+  for (let i = 0; i < Math.min(rows.length, 10); i++) {
+    const r = rows[i].map(c => String(c).trim().toUpperCase());
+    if ((r.some(c => c === 'NOTA') && r.some(c => c.includes('PEP'))) ||
+        (r.some(c => c === 'PEP OBRA') && r.some(c => c === 'STATUS DA OBRA'))) {
+      headerIdx = i; break;
+    }
+  }
+  if (headerIdx === -1) return null;
+  const headers = rows[headerIdx].map(c => String(c).trim().replace(/\n/g,' ').toUpperCase());
+  const data = [];
+  for (let i = headerIdx + 1; i < rows.length; i++) {
+    const row = rows[i];
+    if (!row.some(c => String(c).trim())) continue;
+    const obj = { _UTD: utdLabel || '' };
+    headers.forEach((h, idx) => { obj[h] = String(row[idx] || '').trim(); });
+    if (obj['PEP OBRA']) data.push(obj);
+  }
+  return data;
+}
+
+function postoFromPlanilha(data, utdLabel) {
+  if (!data || !data.length) return null;
+  const m = {};
+  data.forEach(o => {
+    const raw = (o['ENCARREGADO'] || '').trim();
+    if (!raw || raw.includes('#N/A') || raw === '-') return;
+    const partes = raw.split(' - ');
+    const nome = partes[0].trim().toUpperCase();
+    const mat  = partes[1] ? partes[1].trim() : '';
+    const p = parseInt(o['POSTES PREVISTOS'] || '0') || 0;
+    if (!nome) return;
+    if (!m[nome]) m[nome] = { nome, mat, postes: 0, obras: 0 };
+    m[nome].postes += p; m[nome].obras += 1;
+  });
+  const arr = Object.values(m).sort((a, b) => b.postes - a.postes);
+  return arr.length ? arr : null;
 }
 
 // ── HELPER — lê campo com variações de nome ──
@@ -379,35 +437,6 @@ function postoFromBanco(utdLabel){
   return arr.length?arr:null;
 }
 
-// ── PARSE CSV ──
-async function postoFetchCSV(url){
-  try{ const r=await fetch(url,{mode:'cors'}); if(r.ok) return await r.text(); }catch(e){}
-  return null;
-}
-function postoParseCSV(csv){
-  if(!csv) return null;
-  const lines=csv.split('\n'); let eC=-1,pC=-1,hi=-1;
-  for(let i=0;i<Math.min(8,lines.length);i++){
-    const c=lines[i].split(',');
-    const ei=c.findIndex(x=>x.includes('ENCARREGADO'));
-    const pi=c.findIndex(x=>x.includes('POSTES')&&x.includes('PREVISTOS'));
-    if(ei>-1&&pi>-1){eC=ei;pC=pi;hi=i;break;}
-  }
-  if(hi<0) return null;
-  const m={};
-  for(let i=hi+1;i<lines.length;i++){
-    const c=lines[i].split(',');
-    const raw=(c[eC]||'').replace(/"/g,'').trim();
-    if(!raw||raw.includes('#N/A')) continue;
-    const nome=raw.split(' - ')[0].trim().toUpperCase();
-    const mat=raw.includes(' - ')?raw.split(' - ')[1].trim():'';
-    const p=parseInt(c[pC]||'0')||0;
-    if(!m[nome]) m[nome]={nome,mat,postes:0,obras:0};
-    m[nome].postes+=p; m[nome].obras+=1;
-  }
-  const arr=Object.values(m).sort((a,b)=>b.postes-a.postes);
-  return arr.length?arr:null;
-}
 
 // ── RENDER ──
 const META = 50;
@@ -543,71 +572,61 @@ async function postoLoadObrasBase(){
 }
 
 
-function postoDebugCampos(){
-  if(!bancoDB||!bancoDB.length) return;
-  const o=bancoDB[0];
-  const campos=Object.keys(o);
-  const posteKey=campos.find(k=>k.replace(/\s+/g,' ').trim().toUpperCase().includes('POSTES PREV'));
-  console.log('[DEBUG campos]', campos);
-  console.log('[DEBUG POSTES KEY]', posteKey, '=', posteKey?o[posteKey]:'N/A');
-  console.log('[DEBUG _UTD]', o['_UTD']);
-  console.log('[DEBUG ENCARREGADO]', o['ENCARREGADO']);
-  // exibe na status line
-  const st=document.getElementById('posto-st');
-  if(st){
-    const enc=o['ENCARREGADO']||'N/A';
-    const utd=o['_UTD']||'N/A';
-    const pk=posteKey||'NÃO ENCONTRADO';
-    const pv=posteKey?o[posteKey]:'N/A';
-    st.innerHTML='🔍 DEBUG: UTD=<b>'+utd+'</b> | POSTES KEY=<b>'+pk+'</b>=<b>'+pv+'</b> | ENC=<b>'+enc+'</b>';
-    st.className='status-line';
-  }
-}
-
 async function postoCarregar(){
   const rb=document.getElementById('posto-rbtn'), st=document.getElementById('posto-st');
   if(rb){rb.classList.add('busy');rb.textContent='⏳ Buscando...';}
-  if(st){st.textContent='Conectando ao banco...';st.className='status-line';}
+  if(st){st.textContent='Buscando planilhas...';st.className='status-line';}
 
-  const cache=lsGet('obras_base');
-  if(cache&&cache.data&&cache.data.length){
-    bancoDB=cache.data; bancoDBInfo=cache.info||null;
-    const iC=postoFromBanco('IRECE'), jC=postoFromBanco('JACOBINA');
-    if(iC||jC){
-      postoRender('posto-lstI','posto-tagI',iC||[]);
-      postoRender('posto-lstJ','posto-tagJ',jC||[]);
-      postoSummary(iC,jC);
-      if(st){st.textContent='⏳ Cache local — atualizando...';st.className='status-line';}
+  try {
+    await ensurePapa();
+    const [resJac, resIrc] = await Promise.all([
+      fetch(GSHEETS.JACOBINA),
+      fetch(GSHEETS.IRECE)
+    ]);
+    if (!resJac.ok || !resIrc.ok) throw new Error('HTTP ' + (!resJac.ok ? resJac.status : resIrc.status));
+    const [textJac, textIrc] = await Promise.all([resJac.text(), resIrc.text()]);
+    const dataJac = planilhaParseCSVText(textJac, 'JACOBINA');
+    const dataIrc = planilhaParseCSVText(textIrc, 'IRECE');
+    if (!dataJac && !dataIrc) throw new Error('Nenhum dado válido nas planilhas');
+
+    const irece = postoFromPlanilha(dataIrc, 'IRECE');
+    const jac   = postoFromPlanilha(dataJac, 'JACOBINA');
+
+    postoRender('posto-lstI','posto-tagI',irece||[]);
+    postoRender('posto-lstJ','posto-tagJ',jac||[]);
+    postoSummary(irece,jac);
+
+    const now = new Date(), pad = n => String(n).padStart(2,'0');
+    const hora = pad(now.getDate())+'/'+pad(now.getMonth()+1)+'/'+now.getFullYear()+' '+pad(now.getHours())+':'+pad(now.getMinutes());
+    if(st){st.textContent='✅ Planilha ao vivo — '+hora;st.className='status-line ok';}
+
+  } catch(e) {
+    console.warn('[postoCarregar] planilha falhou:', e.message, '— tentando banco...');
+    if(st){st.textContent='Planilha indisponível, carregando banco...';st.className='status-line';}
+
+    // Fallback: banco Supabase / localStorage
+    const cache=lsGet('obras_base');
+    if(cache&&cache.data&&cache.data.length){
+      bancoDB=cache.data; bancoDBInfo=cache.info||null;
     }
-  }
+    await postoLoadObrasBase();
 
-  await postoLoadObrasBase();
+    const irece=postoFromBanco('IRECE'), jac=postoFromBanco('JACOBINA');
+    postoRender('posto-lstI','posto-tagI',irece||[]);
+    postoRender('posto-lstJ','posto-tagJ',jac||[]);
+    postoSummary(irece,jac);
 
-  postoDebugCampos(); // DEBUG TEMPORÁRIO
-
-  let irece=postoFromBanco('IRECE'), jac=postoFromBanco('JACOBINA');
-
-  if(irece||jac){
-    const info=bancoDBInfo;
-    const infoTxt=info?(` · ${info.count||''} obras · atualizado ${info.updatedAt||''}`):('');
-    if(st){st.textContent='✅ Banco de dados'+infoTxt;st.className='status-line ok';}
-  } else {
-    if(st){st.textContent='Banco sem dados, tentando planilhas...';st.className='status-line';}
-    const [cI,cJ]=await Promise.all([postoFetchCSV(gsheetsGetURL('IRECE')),postoFetchCSV(gsheetsGetURL('JACOBINA'))]);
-    irece=postoParseCSV(cI); jac=postoParseCSV(cJ);
     if(irece||jac){
-      if(st){st.textContent='✅ Planilhas ao vivo — '+new Date().toLocaleTimeString('pt-BR');st.className='status-line ok';}
+      const info=bancoDBInfo;
+      const infoTxt=info?(' · '+info.count+' obras · '+info.updatedAt):'';
+      if(st){st.textContent='⚠ Planilha offline — banco'+infoTxt;st.className='status-line';}
     } else {
-      if(st){st.textContent='⚠ Sem dados — sincronize a carteira no Comparador';st.className='status-line err';}
+      if(st){st.textContent='⚠ Sem dados — verifique conexão';st.className='status-line err';}
     }
   }
-
-  postoRender('posto-lstI','posto-tagI',irece||[]);
-  postoRender('posto-lstJ','posto-tagJ',jac||[]);
-  postoSummary(irece,jac);
 
   if(rb){rb.classList.remove('busy');rb.innerHTML='🔄 Atualizar';}
-  if(rb) rb.onclick=function(){bancoDB=null;postoCarregar();};
+  if(rb) rb.onclick=function(){postoCarregar();};
 }
 window.postoCarregar=postoCarregar;
 window.postoFiltro=postoFiltro;
