@@ -85,142 +85,125 @@ body{font-family:'Barlow',sans-serif;background:var(--bg);min-height:100vh;paddi
 .status-line.ok{color:var(--teal);}
 .status-line.err{color:var(--red);}
 
-/* ── UTD BLOCKS — novo layout unificado ── */
-.utd-grid{display:flex;flex-direction:column;gap:0;padding:14px 12px 8px;}
+/* ── UTD BLOCKS — kanban 2 colunas ── */
+.utd-grid{
+  display:grid;
+  grid-template-columns:1fr;
+  gap:12px;
+  padding:12px 12px 8px;
+}
+@media(min-width:640px){
+  .utd-grid{grid-template-columns:1fr 1fr;}
+}
+/* quando só um bloco está visível, ocupa tudo */
+.utd-grid:has(> div[style*="display: none"]),
+.utd-grid:has(> div[style*="display:none"]){
+  grid-template-columns:1fr !important;
+}
 
-.utd-block{margin-bottom:18px;}
+.utd-block{display:flex;flex-direction:column;}
 
 /* ── UTD HEADER ── */
 .utd-head{
   display:flex;align-items:center;justify-content:space-between;
-  padding:10px 16px;
-  background:linear-gradient(90deg,#0a4a4d 0%,#0d7377 100%);
-  border-radius:10px 10px 0 0;
-  border:1px solid #0a4a4d;
+  padding:7px 12px;
+  border-radius:8px 8px 0 0;
+  border:1px solid transparent;
   border-bottom:none;
 }
+#posto-blkI .utd-head{background:#085041;border-color:#085041;}
+#posto-blkJ .utd-head{background:#0C447C;border-color:#0C447C;}
+
 .utd-name{
-  font-family:'Barlow Condensed',sans-serif;font-size:1rem;
-  font-weight:900;text-transform:uppercase;letter-spacing:2.5px;color:#fff;
+  font-family:'Barlow Condensed',sans-serif;font-size:.88rem;
+  font-weight:900;text-transform:uppercase;letter-spacing:2px;color:#fff;
 }
-.utd-tag{font-size:.62rem;font-weight:800;padding:3px 12px;border-radius:20px;}
-.utd-tag.irc{background:rgba(255,255,255,.2);color:#fff;border:1px solid rgba(255,255,255,.4);}
-.utd-tag.jac{background:rgba(255,165,0,.25);color:#ffe0a0;border:1px solid rgba(255,165,0,.5);}
+.utd-tag{font-size:.58rem;font-weight:800;padding:2px 10px;border-radius:20px;}
+.utd-tag.irc{background:rgba(255,255,255,.18);color:#9FE1CB;border:1px solid rgba(255,255,255,.3);}
+.utd-tag.jac{background:rgba(255,255,255,.18);color:#B5D4F4;border:1px solid rgba(255,255,255,.3);}
 
 /* ── RANKING LIST ── */
 .rank-list{
   background:var(--surface);
   border:1px solid var(--border);
   border-top:none;
-  border-radius:0 0 10px 10px;
+  border-radius:0 0 8px 8px;
   overflow:hidden;
+  flex:1;
 }
 
-/* ── RANK CARD — novo design ── */
+/* ── RANK CARD — kanban compacto ── */
 .rank-card{
-  display:grid;
-  grid-template-columns:48px 1fr auto;
-  grid-template-rows:auto auto auto;
-  align-items:start;
-  gap:0 12px;
-  padding:12px 14px 10px 0;
+  display:block;
+  padding:8px 10px 7px 0;
   border-bottom:1px solid var(--border);
-  transition:background .15s;
+  border-left:3px solid transparent;
+  transition:background .12s;
   position:relative;
-  overflow:hidden;
 }
 .rank-card:last-child{border-bottom:none;}
 .rank-card:hover{background:#f5fafa;}
+.rank-card.h{border-left-color:var(--red);}
+.rank-card.m{border-left-color:var(--amber);}
+.rank-card.l{border-left-color:var(--teal);}
+.rank-card.n{border-left-color:var(--border);}
 
-/* Número + barra lateral colorida */
-.rank-num-col{
-  grid-column:1;grid-row:1/4;
-  display:flex;flex-direction:column;align-items:center;
-  justify-content:flex-start;padding-top:2px;
-  border-right:3px solid transparent;
-  padding-right:10px;padding-left:14px;
-}
-.rank-card.h .rank-num-col{border-color:var(--red);}
-.rank-card.m .rank-num-col{border-color:var(--amber);}
-.rank-card.l .rank-num-col{border-color:var(--teal);}
-.rank-card.n .rank-num-col{border-color:var(--border);}
-
+/* linha topo: número + nome + badge */
+.rank-top-row{display:flex;align-items:center;gap:7px;padding-left:10px;min-width:0;}
 .rank-num{
-  width:28px;height:28px;border-radius:8px;
+  width:20px;height:20px;border-radius:5px;flex-shrink:0;
   display:flex;align-items:center;justify-content:center;
-  font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:.9rem;
-  flex-shrink:0;
+  font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:.75rem;
 }
 .rank-num.h{background:#fde8e8;color:var(--red);}
 .rank-num.m{background:#fef3d0;color:#9a6800;}
 .rank-num.l{background:rgba(13,115,119,.12);color:var(--teal);}
 .rank-num.n{background:#f0f4f5;color:#aaa;}
 
-/* Conteúdo principal */
-.rank-main{grid-column:2;grid-row:1;min-width:0;}
-.rank-side{grid-column:3;grid-row:1;display:flex;flex-direction:column;align-items:flex-end;gap:4px;padding-top:2px;padding-right:14px;}
-
-/* Nome do encarregado */
 .rank-nome{
-  font-size:.9rem;font-weight:900;color:var(--text);
-  line-height:1.2;letter-spacing:.3px;
+  font-size:.8rem;font-weight:800;color:var(--text);
+  flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.2;
 }
-.rank-mat{font-size:.6rem;color:var(--muted);font-family:monospace;letter-spacing:.3px;margin-top:1px;}
-
-/* Badge meta */
-.rank-badge{font-size:.62rem;font-weight:800;padding:3px 10px;border-radius:20px;white-space:nowrap;}
+.rank-badge{font-size:.58rem;font-weight:800;padding:2px 8px;border-radius:20px;white-space:nowrap;flex-shrink:0;}
 .rank-badge.ok{background:rgba(13,115,119,.12);color:var(--teal);border:1px solid rgba(13,115,119,.3);}
 .rank-badge.warn{background:rgba(240,165,0,.12);color:#9a6800;border:1px solid rgba(240,165,0,.3);}
-.rank-badge.over{background:rgba(229,62,62,.1);color:var(--red);border:1px solid rgba(229,62,62,.25);}
+.rank-badge.over{background:rgba(229,62,62,.08);color:var(--red);border:1px solid rgba(229,62,62,.2);}
 
-/* Postes count no lado */
-.rank-postes-big{
-  font-family:'Barlow Condensed',sans-serif;font-size:1.6rem;font-weight:900;
-  line-height:1;color:var(--text);
-}
-.rank-postes-big.h{color:var(--red);}
-.rank-postes-big.m{color:var(--amber);}
-.rank-postes-big.l{color:var(--teal);}
-.rank-postes-lbl{font-size:.55rem;font-weight:700;color:var(--muted);text-align:right;letter-spacing:.5px;text-transform:uppercase;}
-
-/* Barra de progresso */
-.rank-bar-row{grid-column:2/-1;grid-row:2;padding-right:14px;margin-top:8px;}
-.rank-bar-track{height:8px;background:#edf1f2;border-radius:4px;overflow:visible;position:relative;}
-.rank-bar-fill{height:100%;border-radius:4px;transition:width .6s cubic-bezier(.4,0,.2,1);min-width:2px;position:relative;}
-.rank-bar-fill.h{background:linear-gradient(90deg,#c53030,var(--red));}
-.rank-bar-fill.m{background:linear-gradient(90deg,#9a6800,var(--amber));}
-.rank-bar-fill.l{background:linear-gradient(90deg,#0a5c60,var(--teal));}
+/* barra fina */
+.rank-bar-wrap{padding:5px 10px 0 37px;}
+.rank-bar-track{height:5px;background:#edf1f2;border-radius:3px;overflow:visible;position:relative;}
+.rank-bar-fill{height:100%;border-radius:3px;transition:width .55s ease;min-width:2px;}
+.rank-bar-fill.h{background:var(--red);}
+.rank-bar-fill.m{background:var(--amber);}
+.rank-bar-fill.l{background:var(--teal);}
 .rank-bar-fill.n{background:var(--border);}
-.rank-bar-meta{position:absolute;top:-3px;bottom:-3px;width:2px;background:rgba(0,0,0,.2);border-radius:1px;}
-.rank-bar-meta::after{content:'META';position:absolute;top:-14px;left:50%;transform:translateX(-50%);font-size:.45rem;font-weight:800;color:var(--muted);letter-spacing:.3px;white-space:nowrap;}
+.rank-bar-meta{position:absolute;top:-3px;bottom:-3px;width:1.5px;background:rgba(0,0,0,.18);border-radius:1px;}
+.rank-bar-meta::after{content:'META';position:absolute;top:-13px;left:50%;transform:translateX(-50%);font-size:.42rem;font-weight:800;color:var(--muted);letter-spacing:.3px;white-space:nowrap;}
 
-/* Obras count row */
-.rank-info-row{grid-column:2;grid-row:3;margin-top:5px;display:flex;align-items:center;gap:8px;}
-.rank-obras{font-size:.65rem;color:var(--muted);font-weight:700;}
+/* sub-linha: matrícula + obras */
+.rank-sub-row{display:flex;align-items:center;justify-content:space-between;padding:3px 10px 0 37px;}
+.rank-mat{font-size:.58rem;color:var(--muted);font-family:monospace;letter-spacing:.3px;}
+.rank-obras{font-size:.6rem;color:var(--muted);font-weight:700;}
 .rank-obras b{color:var(--teal);font-weight:900;}
 
 /* Toggle obras button */
 .rank-toggle{
-  grid-column:2/-1;grid-row:3;
-  justify-self:end;padding-right:14px;
-  display:flex;align-items:center;gap:4px;
-  font-size:.62rem;font-weight:800;color:var(--teal);
-  cursor:pointer;background:none;border:none;font-family:'Barlow',sans-serif;
-  margin-top:5px;
+  display:inline-flex;align-items:center;gap:3px;margin-left:37px;margin-top:4px;
+  font-size:.6rem;font-weight:800;color:var(--teal);
+  cursor:pointer;background:none;border:none;font-family:'Barlow',sans-serif;padding:0;
 }
 .rank-toggle:hover{color:#0a5c60;}
-.rank-toggle-arrow{font-size:.55rem;transition:transform .2s;}
+.rank-toggle-arrow{font-size:.5rem;transition:transform .2s;}
 .rank-toggle.open .rank-toggle-arrow{transform:rotate(180deg);}
 
-/* ── OBRAS INLINE — redesign ── */
-.rank-obras-panel{grid-column:1/-1;display:none;margin-top:8px;}
+/* ── OBRAS INLINE — kanban ── */
+.rank-obras-panel{display:none;margin-top:6px;}
 .rank-obras-panel.open{display:block;}
 .rank-obras-inner{
   background:#f8fafb;
-  border:1px solid var(--border);
-  border-radius:8px;
+  border-top:1px solid var(--border);
   overflow:hidden;
-  margin:0 14px 4px 48px;
+  margin:0;
 }
 .obra-row{
   display:grid;
@@ -663,9 +646,8 @@ body{font-family:'Barlow',sans-serif;background:var(--bg);min-height:100vh;paddi
       <div class="rank-list" id="posto-lstJ"></div>
     </div>
 
-  </div>
+  </div><!-- /utd-grid -->
 
-  <!-- PLANILHA EXCEL-STYLE -->
   <div class="obras-planilha" id="obras-planilha" style="display:none;">
 
     <!-- Barra de título da janela -->
@@ -1131,26 +1113,20 @@ function postoRender(lstId,tagId,data){
     }).join('');
 
     return `<div class="rank-card ${cl}" id="card_${uid}">
-      <div class="rank-num-col">
+      <div class="rank-top-row">
         <div class="rank-num ${cl}">${i+1}</div>
-      </div>
-      <div class="rank-main">
-        <div class="rank-nome">${d.nome}</div>
-        <div class="rank-mat">${d.mat||''}</div>
-      </div>
-      <div class="rank-side">
-        <div class="rank-postes-big ${cl}">${d.postes}</div>
-        <div class="rank-postes-lbl">postes</div>
+        <span class="rank-nome">${d.nome}</span>
         <span class="rank-badge ${mSt}">${d.postes>=META?'✅ Meta':'Faltam '+(META-d.postes)}</span>
       </div>
-      <div class="rank-bar-row">
+      <div class="rank-bar-wrap">
         <div class="rank-bar-track">
           <div class="rank-bar-fill ${cl}" style="width:${pct}%"></div>
           ${showMarker?`<div class="rank-bar-meta" style="left:${metaMarkerPct}%"></div>`:''}
         </div>
       </div>
-      <div class="rank-info-row">
-        <span class="rank-obras"><b>${d.obras}</b> obra${d.obras!==1?'s':''}</span>
+      <div class="rank-sub-row">
+        <span class="rank-mat">${d.mat||''}</span>
+        <span class="rank-obras"><b>${d.obras}</b> obra${d.obras!==1?'s':''} · <span style="font-family:'Barlow Condensed',sans-serif;font-size:.75rem;font-weight:900;color:${cl==='h'?'var(--red)':cl==='m'?'var(--amber)':'var(--teal)'}">${d.postes}</span> postes</span>
       </div>
       ${lista.length?`
       <button class="rank-toggle" id="tog_${uid}" onclick="postoToggleObras('${uid}')">
@@ -1281,12 +1257,16 @@ function postoRenderChart(irece, jac) {
 function postoFiltro(f,btn){
   document.querySelectorAll('#page-posto .fbtn').forEach(b=>b.classList.remove('active'));
   if(btn) btn.classList.add('active');
-  const blkI=document.getElementById('posto-blkI'), blkJ=document.getElementById('posto-blkJ');
-  const gapJ=document.getElementById('gap-j');
+  else {
+    const todosBtn = document.querySelector('#page-posto .fbtn');
+    if(todosBtn) todosBtn.classList.add('active');
+  }
+  const blkI=document.getElementById('posto-blkI');
+  const blkJ=document.getElementById('posto-blkJ');
+  const grid=document.querySelector('.utd-grid');
   if(blkI) blkI.style.display=f==='jacobina'?'none':'';
   if(blkJ) blkJ.style.display=f==='irece'?'none':'';
-  // show gap on mobile when both visible
-  if(gapJ) gapJ.style.display=(f==='todos')?'block':'none';
+  if(grid) grid.style.gridTemplateColumns=(f==='todos')?'':'1fr';
 }
 
 // ── LOAD — mesmo padrão exato do comp.html ──
