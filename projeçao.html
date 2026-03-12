@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Projeção — OBRAS BA</title>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@400;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 :root{
@@ -181,6 +182,25 @@ body{font-family:'Barlow',sans-serif;background:var(--bg);min-height:100vh;paddi
 
 /* ── SPACING between sections ── */
 .section-gap{height:12px;background:var(--bg);}
+/* ── GRÁFICO ── */
+.chart-section{background:var(--surface);border-radius:14px;margin:0 12px 18px;padding:18px 18px 14px;box-shadow:0 2px 12px rgba(0,0,0,0.07);overflow:hidden;}
+.chart-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px;}
+.chart-title{font-size:0.75rem;font-weight:800;color:var(--teal);letter-spacing:1.5px;text-transform:uppercase;}
+.chart-legend{display:flex;gap:14px;align-items:center;}
+.chart-legend-item{display:flex;align-items:center;gap:5px;font-size:0.65rem;font-weight:700;color:var(--muted);}
+.chart-legend-dot{width:10px;height:10px;border-radius:3px;flex-shrink:0;}
+.chart-wrap{position:relative;width:100%;}
+
+/* ── FILTRO MÊS ── */
+.mes-bar{padding:6px 12px 10px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
+.mes-bar::-webkit-scrollbar{display:none;}
+.mes-bar-lbl{font-size:0.62rem;font-weight:800;color:var(--muted);letter-spacing:1.5px;text-transform:uppercase;white-space:nowrap;margin-right:2px;}
+.mes-btn{padding:5px 13px;border:1.5px solid var(--border);background:#fff;border-radius:20px;font-family:'Barlow',sans-serif;font-size:0.72rem;font-weight:800;color:var(--muted);cursor:pointer;transition:all 0.15s;white-space:nowrap;letter-spacing:0.3px;}
+.mes-btn:hover{border-color:var(--teal);color:var(--teal);}
+.mes-btn.active{background:var(--teal);border-color:var(--teal);color:#fff;box-shadow:0 2px 8px rgba(13,115,119,0.3);}
+.mes-btn.todos{border-style:dashed;}
+.mes-count{font-size:0.6rem;font-weight:700;opacity:0.7;margin-left:3px;}
+
 </style>
 </head>
 <body>
@@ -248,6 +268,22 @@ body{font-family:'Barlow',sans-serif;background:var(--bg);min-height:100vh;paddi
     </div>
   </div>
 
+
+  <!-- GRÁFICO -->
+  <div class="chart-section" id="chart-section" style="display:none;">
+    <div class="chart-header">
+      <span class="chart-title">📊 Postes Previstos por Encarregado</span>
+      <div class="chart-legend">
+        <span class="chart-legend-item"><span class="chart-legend-dot" style="background:#0d7377"></span>UTD IRECÊ</span>
+        <span class="chart-legend-item"><span class="chart-legend-dot" style="background:#2b6cb0"></span>UTD JACOBINA</span>
+        <span class="chart-legend-item"><span class="chart-legend-dot" style="background:#e53e3e;opacity:.6"></span>Meta 50</span>
+      </div>
+    </div>
+    <div class="chart-wrap">
+      <canvas id="posto-chart"></canvas>
+    </div>
+  </div>
+
   <!-- FILTERS -->
   <div class="filter-bar">
     <button class="fbtn active" onclick="postoFiltro('todos',this)">Todos</button>
@@ -258,6 +294,13 @@ body{font-family:'Barlow',sans-serif;background:var(--bg);min-height:100vh;paddi
 
   <!-- STATUS -->
   <div class="status-line" id="posto-st">Aguardando...</div>
+
+
+  <!-- MÊS FILTER -->
+  <div class="mes-bar" id="mes-bar" style="display:none;">
+    <span class="mes-bar-lbl">📅 MÊS</span>
+    <button class="mes-btn todos active" data-mes="TODOS" onclick="postoSetMes('TODOS',this)">Todos</button>
+  </div>
 
   <!-- UTD GRID -->
   <div class="utd-grid">
@@ -463,6 +506,97 @@ function postoFromPlanilha(data) {
 }
 
 
+
+// ── MÊS helpers (idêntico ao comp.html) ──
+const MESES_PT = ['','JAN','FEV','MAR','ABR','MAI','JUN','JUL','AGO','SET','OUT','NOV','DEZ'];
+const MESES_ORDER = {'JAN':1,'FEV':2,'MAR':3,'ABR':4,'MAI':5,'JUN':6,'JUL':7,'AGO':8,'SET':9,'OUT':10,'NOV':11,'DEZ':12};
+
+function parseMesObra(dateStr) {
+  if (!dateStr) return null;
+  const s = String(dateStr).trim().split(/[\s\n]/)[0].trim();
+  const parts = s.split('/');
+  if (parts.length < 3) return null;
+  const m = parseInt(parts[1], 10);
+  if (m < 1 || m > 12) return null;
+  let y = parseInt(parts[2], 10);
+  if (isNaN(y)) return null;
+  if (y < 100) y += 2000;
+  return (MESES_PT[m] || '?') + '/' + String(y).slice(-2);
+}
+
+function mesFromObra(obj) {
+  if (!obj) return null;
+  const candidates = [
+    obj['REPROGRAMAÇÃO FIM'] || obj['REPROGRAMACAO FIM'] || '',
+    obj['FIM PREVISTO']  || obj['FIM  PREVISTO'] || '',
+    obj['INCIO PREVISTO'] || obj['INÍCIO PREVISTO'] || obj['INICIO PREVISTO'] || '',
+    obj['MÊS'] || obj['MES'] || '',
+  ];
+  for (const c of candidates) { const m = parseMesObra(c); if (m) return m; }
+  // fallback: campo MÊS pode já vir no formato "MAR/26"
+  const mesRaw = obj['MÊS'] || obj['MES'] || '';
+  if (mesRaw && /^[A-Z]{3}\/\d{2}$/i.test(mesRaw.trim())) return mesRaw.trim().toUpperCase();
+  return null;
+}
+
+function sortMeses(meses) {
+  return meses.sort((a, b) => {
+    if (a === 'TODOS') return -1; if (b === 'TODOS') return 1;
+    const [ma, ya] = a.split('/'); const [mb, yb] = b.split('/');
+    const ya2 = parseInt(ya)||0, yb2 = parseInt(yb)||0;
+    if (ya2 !== yb2) return ya2 - yb2;
+    return (MESES_ORDER[ma]||0) - (MESES_ORDER[mb]||0);
+  });
+}
+
+// Dataset global com mês por obra
+let _dadosComMes = { irece: null, jac: null }; // arrays com campo .mes
+let _mesFiltro = 'TODOS';
+
+function postoSetMes(mes, btn) {
+  _mesFiltro = mes;
+  document.querySelectorAll('#mes-bar .mes-btn').forEach(b => b.classList.toggle('active', b.dataset.mes === mes));
+  postoAplicarFiltros();
+}
+window.postoSetMes = postoSetMes;
+
+function agruparComMes(obras, mesFiltro) {
+  // filtra por mês se necessário
+  const filtradas = mesFiltro === 'TODOS' ? obras : obras.filter(o => mesFromObra(o) === mesFiltro);
+  return agruparPorEncarregado(filtradas);
+}
+
+function postoAplicarFiltros() {
+  const irece = agruparComMes(_dadosComMes.irece || [], _mesFiltro);
+  const jac   = agruparComMes(_dadosComMes.jac   || [], _mesFiltro);
+  postoRender('posto-lstI','posto-tagI', irece||[]);
+  postoRender('posto-lstJ','posto-tagJ', jac||[]);
+  postoSummary(irece, jac);
+}
+
+function postoAtualizarMesBar(irece, jac) {
+  const bar = document.getElementById('mes-bar');
+  if (!bar) return;
+
+  const todas = [...(irece||[]), ...(jac||[])];
+  const mesesSet = new Set();
+  todas.forEach(o => { const m = mesFromObra(o); if (m) mesesSet.add(m); });
+  const meses = sortMeses(['TODOS', ...mesesSet]);
+
+  if (meses.length <= 1) { bar.style.display = 'none'; return; }
+  bar.style.display = 'flex';
+
+  const mesCount = m => {
+    if (m === 'TODOS') return todas.length;
+    return todas.filter(o => mesFromObra(o) === m).length;
+  };
+
+  bar.innerHTML = '<span class="mes-bar-lbl">📅 MÊS</span>' +
+    meses.map(m =>
+      `<button class="mes-btn ${m==='TODOS'?'todos':''} ${m===_mesFiltro?'active':''}" data-mes="${m}" onclick="postoSetMes('${m}',this)">${m}<span class="mes-count">${mesCount(m)}</span></button>`
+    ).join('');
+}
+
 // ── RENDER ──
 const META = 50;
 function postoTier(p,mx){ const r=mx>0?p/mx:0; return r>.55?'h':r>.22?'m':p>0?'l':'n'; }
@@ -525,6 +659,108 @@ function postoSummary(i,j){
   if(eEl) eEl.textContent=a.length;
   if(pEl) pEl.textContent=a.reduce((s,d)=>s+d.postes,0);
   if(oEl) oEl.textContent=a.reduce((s,d)=>s+d.obras,0);
+  postoRenderChart(i,j);
+}
+
+// ── GRÁFICO ──
+let _chart = null;
+function postoRenderChart(irece, jac) {
+  const sec = document.getElementById('chart-section');
+  const canvas = document.getElementById('posto-chart');
+  if (!sec || !canvas) return;
+
+  const iArr = irece || [];
+  const jArr = jac   || [];
+  const all  = [
+    ...iArr.map(d => ({ ...d, utd: 'I' })),
+    ...jArr.map(d => ({ ...d, utd: 'J' }))
+  ].sort((a, b) => b.postes - a.postes);
+
+  if (!all.length) { sec.style.display = 'none'; return; }
+  sec.style.display = 'block';
+
+  const labels  = all.map(d => d.nome.split(' ').slice(0,2).join(' '));
+  const values  = all.map(d => d.postes);
+  const colors  = all.map(d => d.utd === 'I' ? 'rgba(13,115,119,0.85)' : 'rgba(43,108,176,0.85)');
+  const borders = all.map(d => d.utd === 'I' ? '#0d7377' : '#2b6cb0');
+
+  // altura dinâmica: 38px por barra, mínimo 200
+  const h = Math.max(200, all.length * 38);
+  canvas.style.height = h + 'px';
+
+  if (_chart) { _chart.destroy(); _chart = null; }
+
+  _chart = new Chart(canvas, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Postes previstos',
+        data: values,
+        backgroundColor: colors,
+        borderColor: borders,
+        borderWidth: 1.5,
+        borderRadius: 5,
+        borderSkipped: false,
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: ctx => ' ' + ctx.parsed.x + ' postes · ' + all[ctx.dataIndex].obras + ' obra(s)',
+            title: ctx => all[ctx.dataIndex].nome
+          },
+          backgroundColor: '#1a2533',
+          titleFont: { weight: '800', size: 12 },
+          bodyFont: { size: 11 },
+          padding: 10,
+          cornerRadius: 8,
+        },
+        annotation: undefined
+      },
+      scales: {
+        x: {
+          beginAtZero: true,
+          grid: { color: 'rgba(0,0,0,0.05)' },
+          ticks: { font: { family: 'Barlow', size: 11, weight: '700' }, color: '#7a8a99' },
+          afterDataLimits(scale) {
+            // linha de meta
+            scale.max = Math.max(scale.max, 55);
+          }
+        },
+        y: {
+          grid: { display: false },
+          ticks: { font: { family: 'Barlow', size: 11, weight: '700' }, color: '#1a2533' }
+        }
+      }
+    },
+    plugins: [{
+      id: 'metaLine',
+      afterDraw(chart) {
+        const { ctx, chartArea: { top, bottom }, scales: { x } } = chart;
+        const xPos = x.getPixelForValue(50);
+        ctx.save();
+        ctx.beginPath();
+        ctx.moveTo(xPos, top);
+        ctx.lineTo(xPos, bottom);
+        ctx.strokeStyle = 'rgba(229,62,62,0.7)';
+        ctx.lineWidth = 2;
+        ctx.setLineDash([5, 4]);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.fillStyle = 'rgba(229,62,62,0.9)';
+        ctx.font = 'bold 10px Barlow, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('META', xPos, top - 4);
+        ctx.restore();
+      }
+    }]
+  });
 }
 
 function postoFiltro(f,btn){
@@ -628,6 +864,10 @@ async function postoCarregar(){
     const dataJac = planilhaParseCSVText(textJac, 'JACOBINA');
     const dataIrc = planilhaParseCSVText(textIrc, 'IRECE');
     if ((dataJac&&dataJac.length)||(dataIrc&&dataIrc.length)) {
+      // guarda obras brutas para filtro de mês
+      _dadosComMes = { irece: dataIrc||[], jac: dataJac||[] };
+      _mesFiltro = 'TODOS';
+      postoAtualizarMesBar(dataIrc, dataJac);
       const irece = postoFromPlanilha(dataIrc);
       const jac   = postoFromPlanilha(dataJac);
       postoRender('posto-lstI','posto-tagI',irece||[]);
@@ -645,6 +885,13 @@ async function postoCarregar(){
   // 3. Se planilha falhou, atualiza do Supabase
   if (!usouPlanilha) {
     await postoLoadObrasBase();
+    // filtra obras do banco por UTD e guarda brutas para filtro de mês
+    const norm = s => (s||'').trim().toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+    const obrasBancoI = (bancoDB||[]).filter(o => { const u=norm(o['_UTD']); return u==='IRECE'||u.startsWith('IREC'); });
+    const obrasBancoJ = (bancoDB||[]).filter(o => norm(o['_UTD'])==='JACOBINA');
+    _dadosComMes = { irece: obrasBancoI, jac: obrasBancoJ };
+    _mesFiltro = 'TODOS';
+    postoAtualizarMesBar(obrasBancoI, obrasBancoJ);
     const irece=postoFromBanco('IRECE'), jac=postoFromBanco('JACOBINA');
     postoRender('posto-lstI','posto-tagI',irece||[]);
     postoRender('posto-lstJ','posto-tagJ',jac||[]);
