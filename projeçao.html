@@ -328,26 +328,53 @@ function gsheetsGetURL(utd){
   return GSHEETS_BASE[utd]+(utd==='JACOBINA'?e.gidJacobina:e.gidIrece);
 }
 
+// ── HELPER — lê campo com variações de nome ──
+function findVal(o){
+  const keys=[].slice.call(arguments,1);
+  if(!o) return '';
+  for(const k of keys){
+    if(o[k]!==undefined&&o[k]!==null&&String(o[k]).trim()!=='') return o[k];
+  }
+  // busca normalizada como fallback
+  const norm=s=>s.replace(/\s+/g,' ').trim().toUpperCase();
+  const objKeys=Object.keys(o);
+  for(const k of keys){
+    const kn=norm(k);
+    const found=objKeys.find(ok=>norm(ok)===kn);
+    if(found!==undefined&&o[found]!==undefined&&String(o[found]).trim()!=='') return o[found];
+  }
+  return '';
+}
+
 // ── EXTRAÇÃO DO bancoDB ──
 function postoFromBanco(utdLabel){
   if(!bancoDB||!bancoDB.length) return null;
+
+  if(bancoDB[0]) console.log('[projeção] campos:', Object.keys(bancoDB[0]));
+
   const obras=bancoDB.filter(o=>{
-    const u=(o['_UTD']||'').toUpperCase();
-    return utdLabel==='JACOBINA'?u==='JACOBINA':(u==='IRECÊ'||u==='IRECE'||u.startsWith('IREC'));
+    const u=(o['_UTD']||'').trim().toUpperCase()
+      .normalize('NFD').replace(/[̀-ͯ]/g,'');
+    if(utdLabel==='JACOBINA') return u==='JACOBINA';
+    return u==='IRECE'||u.startsWith('IREC');
   });
+
   if(!obras.length) return null;
+
   const m={};
   obras.forEach(o=>{
-    const raw=(o['ENCARREGADO']||'').trim();
-    if(!raw||raw.includes('#N/A')) return;
+    const raw=String(findVal(o,'ENCARREGADO')).trim();
+    if(!raw||raw.includes('#N/A')||raw==='-') return;
     const partes=raw.split(' - ');
     const nome=partes[0].trim().toUpperCase();
     const mat=partes[1]?partes[1].trim():'';
-    const p=parseInt(o['POSTES PREVISTOS']||0)||0;
+    const pStr=findVal(o,'POSTES PREVISTOS','POSTES  PREVISTOS');
+    const p=parseInt(pStr)||0;
     if(!nome) return;
     if(!m[nome]) m[nome]={nome,mat,postes:0,obras:0};
     m[nome].postes+=p; m[nome].obras+=1;
   });
+
   const arr=Object.values(m).sort((a,b)=>b.postes-a.postes);
   return arr.length?arr:null;
 }
@@ -515,6 +542,28 @@ async function postoLoadObrasBase(){
   return false;
 }
 
+
+function postoDebugCampos(){
+  if(!bancoDB||!bancoDB.length) return;
+  const o=bancoDB[0];
+  const campos=Object.keys(o);
+  const posteKey=campos.find(k=>k.replace(/\s+/g,' ').trim().toUpperCase().includes('POSTES PREV'));
+  console.log('[DEBUG campos]', campos);
+  console.log('[DEBUG POSTES KEY]', posteKey, '=', posteKey?o[posteKey]:'N/A');
+  console.log('[DEBUG _UTD]', o['_UTD']);
+  console.log('[DEBUG ENCARREGADO]', o['ENCARREGADO']);
+  // exibe na status line
+  const st=document.getElementById('posto-st');
+  if(st){
+    const enc=o['ENCARREGADO']||'N/A';
+    const utd=o['_UTD']||'N/A';
+    const pk=posteKey||'NÃO ENCONTRADO';
+    const pv=posteKey?o[posteKey]:'N/A';
+    st.innerHTML='🔍 DEBUG: UTD=<b>'+utd+'</b> | POSTES KEY=<b>'+pk+'</b>=<b>'+pv+'</b> | ENC=<b>'+enc+'</b>';
+    st.className='status-line';
+  }
+}
+
 async function postoCarregar(){
   const rb=document.getElementById('posto-rbtn'), st=document.getElementById('posto-st');
   if(rb){rb.classList.add('busy');rb.textContent='⏳ Buscando...';}
@@ -533,6 +582,8 @@ async function postoCarregar(){
   }
 
   await postoLoadObrasBase();
+
+  postoDebugCampos(); // DEBUG TEMPORÁRIO
 
   let irece=postoFromBanco('IRECE'), jac=postoFromBanco('JACOBINA');
 
