@@ -526,16 +526,30 @@ function parseMesObra(dateStr) {
 
 function mesFromObra(obj) {
   if (!obj) return null;
+
+  // 1. Campo MÊS direto (salvo pelo compMinimizarDados) — formato "MAR/26" ou "3/2026"
+  const mesRaw = obj['MÊS'] || obj['MES'] || '';
+  if (mesRaw) {
+    const t = mesRaw.trim().toUpperCase();
+    // já no formato "MAR/26"
+    if (/^[A-ZÇÉÊÁÃÓ]{3}\/\d{2}$/i.test(t)) return t;
+    // tenta parsear como data "01/03/2026"
+    const mp = parseMesObra(t);
+    if (mp) return mp;
+  }
+
+  // 2. DATA DE LANÇAMENTO (também salvo pelo compMinimizarDados)
+  const dataLanc = obj['DATA DE LANÇAMENTO'] || obj['DATA DE LANCAMENTO'] || '';
+  if (dataLanc) { const m = parseMesObra(dataLanc); if (m) return m; }
+
+  // 3. Campos de datas completas (disponíveis na planilha ao vivo)
   const candidates = [
     obj['REPROGRAMAÇÃO FIM'] || obj['REPROGRAMACAO FIM'] || '',
     obj['FIM PREVISTO']  || obj['FIM  PREVISTO'] || '',
-    obj['INCIO PREVISTO'] || obj['INÍCIO PREVISTO'] || obj['INICIO PREVISTO'] || '',
-    obj['MÊS'] || obj['MES'] || '',
+    obj['INÍCIO PREVISTO'] || obj['INCIO PREVISTO'] || obj['INICIO PREVISTO'] || '',
   ];
   for (const c of candidates) { const m = parseMesObra(c); if (m) return m; }
-  // fallback: campo MÊS pode já vir no formato "MAR/26"
-  const mesRaw = obj['MÊS'] || obj['MES'] || '';
-  if (mesRaw && /^[A-Z]{3}\/\d{2}$/i.test(mesRaw.trim())) return mesRaw.trim().toUpperCase();
+
   return null;
 }
 
