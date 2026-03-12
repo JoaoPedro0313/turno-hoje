@@ -192,7 +192,50 @@ body{font-family:'Barlow',sans-serif;background:var(--bg);min-height:100vh;paddi
 .chart-legend-dot{width:10px;height:10px;border-radius:3px;flex-shrink:0;}
 .chart-wrap{position:relative;width:100%;}
 
-/* ── FILTRO MÊS ── */
+/* ── PLANILHA VIEW ── */
+#page-planilha{display:none;background:var(--bg);min-height:100vh;padding-bottom:60px;}
+.plan-toolbar{background:var(--surface);border-bottom:1px solid var(--border);padding:10px 14px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;position:sticky;top:96px;z-index:80;}
+.plan-search{flex:1;min-width:140px;padding:7px 12px;border:1.5px solid var(--border);border-radius:20px;font-family:'Barlow',sans-serif;font-size:.78rem;font-weight:600;outline:none;color:var(--text);}
+.plan-search:focus{border-color:var(--teal);box-shadow:0 0 0 3px rgba(13,115,119,.1);}
+.plan-sel{padding:7px 10px;border:1.5px solid var(--border);border-radius:20px;font-family:'Barlow',sans-serif;font-size:.78rem;font-weight:700;color:var(--text);background:#fff;outline:none;cursor:pointer;}
+.plan-sel:focus{border-color:var(--teal);}
+.plan-export{flex-shrink:0;background:rgba(13,115,119,.1);border:1.5px solid rgba(13,115,119,.35);color:var(--teal);padding:7px 14px;border-radius:20px;font-family:'Barlow',sans-serif;font-size:.72rem;font-weight:800;cursor:pointer;transition:all .18s;display:flex;align-items:center;gap:5px;}
+.plan-export:hover{background:rgba(13,115,119,.2);}
+.plan-count{font-size:.68rem;font-weight:700;color:var(--muted);white-space:nowrap;}
+.plan-table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:12px;border-radius:12px;box-shadow:0 2px 12px rgba(0,0,0,.08);}
+.plan-table{width:100%;border-collapse:collapse;background:var(--surface);font-size:.75rem;min-width:760px;}
+.plan-table thead th{background:linear-gradient(135deg,#0a4a4d,#0d7377);color:#fff;font-family:'Barlow Condensed',sans-serif;font-size:.72rem;font-weight:800;letter-spacing:1px;text-transform:uppercase;padding:10px 12px;text-align:left;white-space:nowrap;cursor:pointer;user-select:none;position:sticky;top:0;}
+.plan-table thead th:hover{background:rgba(15,138,130,.9);}
+.plan-table thead th .sort-icon{margin-left:4px;opacity:.5;font-size:.65rem;}
+.plan-table thead th.sort-asc .sort-icon,.plan-table thead th.sort-desc .sort-icon{opacity:1;}
+.plan-table tbody tr{border-bottom:1px solid var(--border);transition:background .12s;}
+.plan-table tbody tr:hover{background:#f2f9f9;}
+.plan-table tbody tr:last-child{border-bottom:none;}
+.plan-table td{padding:9px 12px;color:var(--text);vertical-align:middle;}
+.plan-td-enc{font-weight:800;color:var(--teal);white-space:nowrap;}
+.plan-td-titulo{max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600;}
+.plan-td-pep{font-family:monospace;font-size:.68rem;color:var(--muted);}
+.plan-td-num{font-family:'Barlow Condensed',sans-serif;font-size:.9rem;font-weight:900;text-align:center;}
+.plan-td-num.hi{color:var(--teal);}
+.plan-td-num.lo{color:var(--red);}
+.plan-td-num.zero{color:var(--muted);}
+.plan-td-status{white-space:nowrap;}
+.plan-status-pill{display:inline-flex;align-items:center;font-size:.6rem;font-weight:800;padding:2px 8px;border-radius:10px;letter-spacing:.3px;}
+.plan-status-pill.exec{background:rgba(13,115,119,.12);color:var(--teal);border:1px solid rgba(13,115,119,.3);}
+.plan-status-pill.conc{background:rgba(45,184,100,.12);color:#276749;border:1px solid rgba(45,184,100,.3);}
+.plan-status-pill.parad{background:rgba(229,62,62,.1);color:var(--red);border:1px solid rgba(229,62,62,.25);}
+.plan-status-pill.other{background:#f0f4f5;color:var(--muted);border:1px solid var(--border);}
+.plan-td-utd{white-space:nowrap;}
+.plan-utd-badge{display:inline-flex;font-size:.6rem;font-weight:800;padding:2px 8px;border-radius:10px;}
+.plan-utd-badge.irc{background:rgba(13,115,119,.1);color:var(--teal);border:1px solid rgba(13,115,119,.2);}
+.plan-utd-badge.jac{background:rgba(240,165,0,.1);color:#9a6800;border:1px solid rgba(240,165,0,.25);}
+.plan-empty{text-align:center;padding:40px 20px;color:var(--muted);font-size:.82rem;font-weight:600;}
+.plan-summary-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:0;background:var(--surface);border-bottom:2px solid var(--border);margin-bottom:0;}
+.plan-sum-item{padding:12px 8px;text-align:center;border-right:1px solid var(--border);}
+.plan-sum-item:last-child{border-right:none;}
+.plan-sum-val{font-family:'Barlow Condensed',sans-serif;font-size:1.6rem;font-weight:900;color:var(--teal);line-height:1;}
+.plan-sum-lbl{font-size:.55rem;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-top:2px;font-weight:700;}
+
 .mes-bar{padding:6px 12px 10px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
 .mes-bar::-webkit-scrollbar{display:none;}
 .mes-bar-lbl{font-size:0.62rem;font-weight:800;color:var(--muted);letter-spacing:1.5px;text-transform:uppercase;white-space:nowrap;margin-right:2px;}
@@ -237,6 +280,7 @@ body{font-family:'Barlow',sans-serif;background:var(--bg);min-height:100vh;paddi
   <a class="page-nav-btn active-posto" href="projeçao.html">📈 PROJEÇÃO</a>
   <a class="page-nav-btn" href="mapa.html">📍 MAPA</a>
   <a class="page-nav-btn" href="prog.html">📅 PROG. DIÁRIA</a>
+  <button class="page-nav-btn" id="nav-planilha" onclick="togglePlanilha()">📋 PLANILHA</button>
 </div>
 
 <!-- MAIN -->
@@ -330,10 +374,68 @@ body{font-family:'Barlow',sans-serif;background:var(--bg);min-height:100vh;paddi
       <div class="rank-list" id="posto-lstJ"></div>
     </div>
 
-  </div>
+</div>
 </div>
 
-<script>
+<!-- PLANILHA VIEW -->
+<div id="page-planilha">
+  <div class="page-header">
+    <div class="page-header-content">
+      <h2>📋 Planilha de Obras</h2>
+      <p>Todas as obras com encarregados, postes e status · UTD JACOBINA &amp; UTD IRECÊ</p>
+    </div>
+  </div>
+
+  <!-- SUMMARY STRIP -->
+  <div class="plan-summary-strip">
+    <div class="plan-sum-item"><div class="plan-sum-val" id="pl-total">—</div><div class="plan-sum-lbl">Total obras</div></div>
+    <div class="plan-sum-item"><div class="plan-sum-val" id="pl-prev">—</div><div class="plan-sum-lbl">Postes prev.</div></div>
+    <div class="plan-sum-item"><div class="plan-sum-val" id="pl-real">—</div><div class="plan-sum-lbl">Postes real.</div></div>
+    <div class="plan-sum-item"><div class="plan-sum-val" id="pl-enc">—</div><div class="plan-sum-lbl">Encarregados</div></div>
+  </div>
+
+  <!-- TOOLBAR -->
+  <div class="plan-toolbar">
+    <input class="plan-search" id="pl-search" type="text" placeholder="🔍 Buscar obra, encarregado, município..." oninput="planilhaFiltrar()">
+    <select class="plan-sel" id="pl-utd" onchange="planilhaFiltrar()">
+      <option value="">Todas UTDs</option>
+      <option value="IRECE">UTD IRECÊ</option>
+      <option value="JACOBINA">UTD JACOBINA</option>
+    </select>
+    <select class="plan-sel" id="pl-status" onchange="planilhaFiltrar()">
+      <option value="">Todos status</option>
+      <option value="EXECU">Em execução</option>
+      <option value="CONC">Concluída</option>
+      <option value="PARAL">Paralisada</option>
+    </select>
+    <select class="plan-sel" id="pl-mes" onchange="planilhaFiltrar()">
+      <option value="">Todos meses</option>
+    </select>
+    <button class="plan-export" onclick="planilhaExportCSV()">⬇ Exportar CSV</button>
+    <span class="plan-count" id="pl-count">0 obras</span>
+  </div>
+
+  <!-- TABLE -->
+  <div class="plan-table-wrap">
+    <table class="plan-table" id="pl-table">
+      <thead>
+        <tr>
+          <th onclick="planilhaSort('utd')" id="th-utd">UTD <span class="sort-icon">↕</span></th>
+          <th onclick="planilhaSort('enc')" id="th-enc">Encarregado <span class="sort-icon">↕</span></th>
+          <th onclick="planilhaSort('titulo')" id="th-titulo">Título / PEP <span class="sort-icon">↕</span></th>
+          <th onclick="planilhaSort('mun')" id="th-mun">Município <span class="sort-icon">↕</span></th>
+          <th onclick="planilhaSort('mes')" id="th-mes">Mês <span class="sort-icon">↕</span></th>
+          <th onclick="planilhaSort('prev')" id="th-prev">Prev. <span class="sort-icon">↕</span></th>
+          <th onclick="planilhaSort('real')" id="th-real">Real. <span class="sort-icon">↕</span></th>
+          <th onclick="planilhaSort('status')" id="th-status">Status <span class="sort-icon">↕</span></th>
+        </tr>
+      </thead>
+      <tbody id="pl-tbody">
+        <tr><td colspan="8" class="plan-empty">Aguardando dados...</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
 // ── SUPABASE ──
 const SUPA_URL = 'https://eqxejfoibebcbtsqymji.supabase.co';
 const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVxeGVqZm9pYmViY2J0c3F5bWppIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE4NjUzMTEsImV4cCI6MjA4NzQ0MTMxMX0.lwf7_EJ6UchEOpzhW3cVKztxDGy78gaQblRvgiEwWh8';
@@ -1038,7 +1140,171 @@ function dbBadgeClick(){
   }
 }
 
+// ── PLANILHA ──
+let _planilhaRows = [];
+let _planilhaSort = { col: 'utd', dir: 1 };
+let _planilhaVisible = false;
+
+function togglePlanilha() {
+  _planilhaVisible = !_planilhaVisible;
+  const pp = document.getElementById('page-posto');
+  const pl = document.getElementById('page-planilha');
+  const nb = document.getElementById('nav-planilha');
+  if (_planilhaVisible) {
+    pp.style.display = 'none'; pl.style.display = 'block';
+    nb.classList.add('active-posto');
+    planilhaRebuild();
+  } else {
+    pp.style.display = 'block'; pl.style.display = 'none';
+    nb.classList.remove('active-posto');
+  }
+}
+window.togglePlanilha = togglePlanilha;
+
+function planilhaRebuild() {
+  const rows = [];
+  const processObras = (obras, utd) => {
+    (obras||[]).forEach(o => {
+      const raw = String(getEncarregado(o)).trim();
+      const partes = raw.split(' - ');
+      const enc = partes[0].trim().toUpperCase() || '—';
+      rows.push({
+        utd, enc,
+        titulo: getTitulo(o) || '—',
+        pep: (o['PEP OBRA']||'').trim(),
+        mun: getMun(o) || '—',
+        mes: mesFromObra(o) || '—',
+        prev: getPostesPrevistos(o),
+        real: getPostesReal(o),
+        status: getStatus(o) || '—',
+      });
+    });
+  };
+  processObras(_dadosComMes.irece, 'IRECE');
+  processObras(_dadosComMes.jac, 'JACOBINA');
+  _planilhaRows = rows;
+
+  const selMes = document.getElementById('pl-mes');
+  if (selMes) {
+    const mesesSet = new Set(rows.map(r=>r.mes).filter(m=>m&&m!=='—'));
+    const meses = sortMeses([...mesesSet]);
+    selMes.innerHTML = '<option value="">Todos meses</option>' + meses.map(m=>`<option value="${m}">${m}</option>`).join('');
+  }
+  planilhaFiltrar();
+}
+
+function planilhaFiltrar() {
+  const q  = (document.getElementById('pl-search')||{}).value||'';
+  const utd = (document.getElementById('pl-utd')||{}).value||'';
+  const st = (document.getElementById('pl-status')||{}).value||'';
+  const mes = (document.getElementById('pl-mes')||{}).value||'';
+  const ql = q.toLowerCase();
+
+  let rows = _planilhaRows.filter(r => {
+    if (utd && !r.utd.includes(utd)) return false;
+    if (st && !r.status.toUpperCase().includes(st)) return false;
+    if (mes && r.mes !== mes) return false;
+    if (ql) {
+      const hay = (r.enc+r.titulo+r.pep+r.mun+r.status).toLowerCase();
+      if (!hay.includes(ql)) return false;
+    }
+    return true;
+  });
+
+  const { col, dir } = _planilhaSort;
+  rows.sort((a, b) => {
+    let va = a[col], vb = b[col];
+    if (col==='prev'||col==='real') return (va - vb) * dir;
+    return String(va).localeCompare(String(vb), 'pt') * dir;
+  });
+
+  const plTotal = document.getElementById('pl-total');
+  const plPrev  = document.getElementById('pl-prev');
+  const plReal  = document.getElementById('pl-real');
+  const plEnc   = document.getElementById('pl-enc');
+  const plCount = document.getElementById('pl-count');
+  if (plTotal) plTotal.textContent = rows.length;
+  if (plPrev)  plPrev.textContent  = rows.reduce((s,r)=>s+r.prev,0);
+  if (plReal)  plReal.textContent  = rows.reduce((s,r)=>s+r.real,0);
+  if (plEnc)   plEnc.textContent   = new Set(rows.map(r=>r.enc)).size;
+  if (plCount) plCount.textContent = rows.length + ' obras';
+
+  const tbody = document.getElementById('pl-tbody');
+  if (!tbody) return;
+  if (!rows.length) {
+    tbody.innerHTML = '<tr><td colspan="8" class="plan-empty">Nenhuma obra encontrada.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = rows.map(r => {
+    const utdCl = r.utd==='IRECE'?'irc':'jac';
+    const stKey = /EXECU/i.test(r.status)?'exec':/CONC/i.test(r.status)?'conc':/PARAL|PARAD|SUSP/i.test(r.status)?'parad':'other';
+    const prevCl = r.prev>=50?'hi':r.prev>0?'hi':'zero';
+    const titShort = r.titulo.length>50?r.titulo.slice(0,48)+'…':r.titulo;
+    return `<tr>
+      <td class="plan-td-utd"><span class="plan-utd-badge ${utdCl}">${r.utd}</span></td>
+      <td class="plan-td-enc">${r.enc}</td>
+      <td class="plan-td-titulo" title="${r.titulo}">${titShort}${r.pep?`<br><span class="plan-td-pep">${r.pep}</span>`:''}</td>
+      <td>${r.mun}</td>
+      <td style="white-space:nowrap;font-size:.7rem;font-weight:700;color:#7b2d8b">${r.mes}</td>
+      <td class="plan-td-num ${prevCl}">${r.prev||'—'}</td>
+      <td class="plan-td-num ${r.real>0?'hi':'zero'}">${r.real||'—'}</td>
+      <td class="plan-td-status"><span class="plan-status-pill ${stKey}">${r.status}</span></td>
+    </tr>`;
+  }).join('');
+}
+window.planilhaFiltrar = planilhaFiltrar;
+
+function planilhaSort(col) {
+  if (_planilhaSort.col === col) _planilhaSort.dir *= -1;
+  else { _planilhaSort.col = col; _planilhaSort.dir = 1; }
+  document.querySelectorAll('.plan-table thead th').forEach(th => {
+    th.classList.remove('sort-asc','sort-desc');
+    const si = th.querySelector('.sort-icon'); if(si) si.textContent='↕';
+  });
+  const thEl = document.getElementById('th-'+col);
+  if (thEl) {
+    thEl.classList.add(_planilhaSort.dir===1?'sort-asc':'sort-desc');
+    const si = thEl.querySelector('.sort-icon');
+    if(si) si.textContent = _planilhaSort.dir===1?'↑':'↓';
+  }
+  planilhaFiltrar();
+}
+window.planilhaSort = planilhaSort;
+
+function planilhaExportCSV() {
+  const q  = (document.getElementById('pl-search')||{}).value||'';
+  const utd = (document.getElementById('pl-utd')||{}).value||'';
+  const st = (document.getElementById('pl-status')||{}).value||'';
+  const mes = (document.getElementById('pl-mes')||{}).value||'';
+  const ql = q.toLowerCase();
+  let rows = _planilhaRows.filter(r => {
+    if (utd && !r.utd.includes(utd)) return false;
+    if (st && !r.status.toUpperCase().includes(st)) return false;
+    if (mes && r.mes !== mes) return false;
+    if (ql) { const hay=(r.enc+r.titulo+r.pep+r.mun+r.status).toLowerCase(); if(!hay.includes(ql)) return false; }
+    return true;
+  });
+  const esc = v => '"' + String(v).replace(/"/g,'""') + '"';
+  const header = ['UTD','Encarregado','Título','PEP','Município','Mês','Prev.','Real.','Status'];
+  const lines = [header.map(esc).join(','), ...rows.map(r =>
+    [r.utd,r.enc,r.titulo,r.pep,r.mun,r.mes,r.prev,r.real,r.status].map(esc).join(',')
+  )];
+  const blob = new Blob(['\uFEFF'+lines.join('\r\n')], {type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href=url; a.download='obras_projecao.csv'; a.click();
+  setTimeout(()=>URL.revokeObjectURL(url),2000);
+}
+window.planilhaExportCSV = planilhaExportCSV;
+
+// Atualiza planilha quando novos dados carregam
+const _origPostoSummary = postoSummary;
+postoSummary = function(i,j){
+  _origPostoSummary(i,j);
+  if(_planilhaVisible) planilhaRebuild();
+};
+
 // Startup
+
 (async function(){
   const local=lsGet('obras_base');
   if(local&&local.data&&local.data.length){
