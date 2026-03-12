@@ -1428,9 +1428,20 @@ window.oplToggle = oplToggle;
 
 function oplRebuild() {
   const rows = [];
+
+  // Usa _dadosComMes se disponível, senão cai no bancoDB diretamente
+  let srcIrece = (_dadosComMes && _dadosComMes.irece && _dadosComMes.irece.length) ? _dadosComMes.irece : null;
+  let srcJac   = (_dadosComMes && _dadosComMes.jac   && _dadosComMes.jac.length)   ? _dadosComMes.jac   : null;
+  if (!srcIrece && !srcJac) {
+    const norm = s => (s||'').trim().toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+    srcIrece = (bancoDB||[]).filter(o => { const u=norm(o['_UTD']); return u==='IRECE'||u.startsWith('IREC'); });
+    srcJac   = (bancoDB||[]).filter(o => norm(o['_UTD'])==='JACOBINA');
+  }
+
   const process = (obras, utd) => {
     (obras || []).forEach(o => {
       const raw = String(getEncarregado(o)).trim();
+      if (!raw || raw.includes('#N/A') || raw === '-') return;
       const enc = raw.split(' - ')[0].trim().toUpperCase() || '—';
       rows.push({
         utd, enc,
@@ -1444,9 +1455,14 @@ function oplRebuild() {
       });
     });
   };
-  process(_dadosComMes.irece, 'IRECE');
-  process(_dadosComMes.jac, 'JACOBINA');
+  process(srcIrece, 'IRECE');
+  process(srcJac, 'JACOBINA');
   _oplRows = rows;
+
+  const tbody = document.getElementById('opl-tbody');
+  if (!rows.length && tbody) {
+    tbody.innerHTML = '<tr><td colspan="10" class="opl-empty">⚠ Sem dados — clique em 🔄 Atualizar primeiro</td></tr>';
+  }
 
   // popula filtro de mês
   const selMes = document.getElementById('opl-mes');
