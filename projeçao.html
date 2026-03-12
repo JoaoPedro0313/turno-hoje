@@ -85,93 +85,168 @@ body{font-family:'Barlow',sans-serif;background:var(--bg);min-height:100vh;paddi
 .status-line.ok{color:var(--teal);}
 .status-line.err{color:var(--red);}
 
-/* ── UTD BLOCKS ── */
-.utd-grid{display:grid;grid-template-columns:1fr;gap:0;}
+/* ── UTD BLOCKS — novo layout unificado ── */
+.utd-grid{display:flex;flex-direction:column;gap:0;padding:14px 12px 8px;}
 
-@media(min-width:800px){
-  .utd-grid{grid-template-columns:1fr 1fr;gap:16px;padding:16px;}
-}
-
-.utd-block{padding:12px 14px 16px;}
-
-@media(min-width:800px){
-  .utd-block{padding:0;background:transparent;}
-}
+.utd-block{margin-bottom:18px;}
 
 /* ── UTD HEADER ── */
-.utd-head{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:var(--surface);border-bottom:2px solid var(--border);position:sticky;top:0;z-index:5;}
-@media(min-width:800px){
-  .utd-head{border-radius:12px 12px 0 0;border:1px solid var(--border);border-bottom:2px solid var(--border);}
+.utd-head{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:10px 16px;
+  background:linear-gradient(90deg,#0a4a4d 0%,#0d7377 100%);
+  border-radius:10px 10px 0 0;
+  border:1px solid #0a4a4d;
+  border-bottom:none;
 }
-.utd-name{font-family:'Barlow Condensed',sans-serif;font-size:1rem;font-weight:900;text-transform:uppercase;letter-spacing:2px;color:var(--text);}
-.utd-tag{font-size:.62rem;font-weight:800;padding:4px 12px;border-radius:12px;}
-.utd-tag.irc{background:rgba(43,108,176,.1);color:#2b6cb0;border:1px solid rgba(43,108,176,.25);}
-.utd-tag.jac{background:rgba(240,165,0,.1);color:#b97400;border:1px solid rgba(240,165,0,.3);}
+.utd-name{
+  font-family:'Barlow Condensed',sans-serif;font-size:1rem;
+  font-weight:900;text-transform:uppercase;letter-spacing:2.5px;color:#fff;
+}
+.utd-tag{font-size:.62rem;font-weight:800;padding:3px 12px;border-radius:20px;}
+.utd-tag.irc{background:rgba(255,255,255,.2);color:#fff;border:1px solid rgba(255,255,255,.4);}
+.utd-tag.jac{background:rgba(255,165,0,.25);color:#ffe0a0;border:1px solid rgba(255,165,0,.5);}
 
 /* ── RANKING LIST ── */
-.rank-list{background:var(--surface);border-top:none;}
-@media(min-width:800px){
-  .rank-list{border:1px solid var(--border);border-top:none;border-radius:0 0 12px 12px;overflow:hidden;}
+.rank-list{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-top:none;
+  border-radius:0 0 10px 10px;
+  overflow:hidden;
 }
 
-/* ── RANK CARD ── */
-.rank-card{display:grid;grid-template-columns:28px 1fr;align-items:center;gap:0 10px;padding:10px 14px 10px;border-bottom:1px solid var(--border);transition:background .15s;position:relative;}
+/* ── RANK CARD — novo design ── */
+.rank-card{
+  display:grid;
+  grid-template-columns:48px 1fr auto;
+  grid-template-rows:auto auto auto;
+  align-items:start;
+  gap:0 12px;
+  padding:12px 14px 10px 0;
+  border-bottom:1px solid var(--border);
+  transition:background .15s;
+  position:relative;
+  overflow:hidden;
+}
 .rank-card:last-child{border-bottom:none;}
-.rank-card:hover{background:#f8fafb;}
+.rank-card:hover{background:#f5fafa;}
 
-/* rank number badge */
-.rank-num{width:24px;height:24px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:.82rem;flex-shrink:0;grid-row:1/3;}
+/* Número + barra lateral colorida */
+.rank-num-col{
+  grid-column:1;grid-row:1/4;
+  display:flex;flex-direction:column;align-items:center;
+  justify-content:flex-start;padding-top:2px;
+  border-right:3px solid transparent;
+  padding-right:10px;padding-left:14px;
+}
+.rank-card.h .rank-num-col{border-color:var(--red);}
+.rank-card.m .rank-num-col{border-color:var(--amber);}
+.rank-card.l .rank-num-col{border-color:var(--teal);}
+.rank-card.n .rank-num-col{border-color:var(--border);}
+
+.rank-num{
+  width:28px;height:28px;border-radius:8px;
+  display:flex;align-items:center;justify-content:center;
+  font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:.9rem;
+  flex-shrink:0;
+}
 .rank-num.h{background:#fde8e8;color:var(--red);}
 .rank-num.m{background:#fef3d0;color:#9a6800;}
-.rank-num.l{background:rgba(13,115,119,.1);color:var(--teal);}
+.rank-num.l{background:rgba(13,115,119,.12);color:var(--teal);}
 .rank-num.n{background:#f0f4f5;color:#aaa;}
 
-/* top row: name + badge */
-.rank-top{display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0;}
-.rank-nome{font-size:.83rem;font-weight:800;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;line-height:1.2;}
-.rank-badge{font-size:.6rem;font-weight:800;padding:2px 7px;border-radius:10px;letter-spacing:.3px;white-space:nowrap;flex-shrink:0;}
+/* Conteúdo principal */
+.rank-main{grid-column:2;grid-row:1;min-width:0;}
+.rank-side{grid-column:3;grid-row:1;display:flex;flex-direction:column;align-items:flex-end;gap:4px;padding-top:2px;padding-right:14px;}
+
+/* Nome do encarregado */
+.rank-nome{
+  font-size:.9rem;font-weight:900;color:var(--text);
+  line-height:1.2;letter-spacing:.3px;
+}
+.rank-mat{font-size:.6rem;color:var(--muted);font-family:monospace;letter-spacing:.3px;margin-top:1px;}
+
+/* Badge meta */
+.rank-badge{font-size:.62rem;font-weight:800;padding:3px 10px;border-radius:20px;white-space:nowrap;}
 .rank-badge.ok{background:rgba(13,115,119,.12);color:var(--teal);border:1px solid rgba(13,115,119,.3);}
 .rank-badge.warn{background:rgba(240,165,0,.12);color:#9a6800;border:1px solid rgba(240,165,0,.3);}
 .rank-badge.over{background:rgba(229,62,62,.1);color:var(--red);border:1px solid rgba(229,62,62,.25);}
 
-/* bar row with value inside */
-.rank-bar-wrap{position:relative;margin-top:5px;}
-.rank-bar-track{height:18px;background:var(--bg);border-radius:5px;overflow:hidden;position:relative;}
-.rank-bar-fill{height:100%;border-radius:5px;transition:width .5s ease;min-width:2px;}
+/* Postes count no lado */
+.rank-postes-big{
+  font-family:'Barlow Condensed',sans-serif;font-size:1.6rem;font-weight:900;
+  line-height:1;color:var(--text);
+}
+.rank-postes-big.h{color:var(--red);}
+.rank-postes-big.m{color:var(--amber);}
+.rank-postes-big.l{color:var(--teal);}
+.rank-postes-lbl{font-size:.55rem;font-weight:700;color:var(--muted);text-align:right;letter-spacing:.5px;text-transform:uppercase;}
+
+/* Barra de progresso */
+.rank-bar-row{grid-column:2/-1;grid-row:2;padding-right:14px;margin-top:8px;}
+.rank-bar-track{height:8px;background:#edf1f2;border-radius:4px;overflow:visible;position:relative;}
+.rank-bar-fill{height:100%;border-radius:4px;transition:width .6s cubic-bezier(.4,0,.2,1);min-width:2px;position:relative;}
 .rank-bar-fill.h{background:linear-gradient(90deg,#c53030,var(--red));}
 .rank-bar-fill.m{background:linear-gradient(90deg,#9a6800,var(--amber));}
 .rank-bar-fill.l{background:linear-gradient(90deg,#0a5c60,var(--teal));}
 .rank-bar-fill.n{background:var(--border);}
-/* value label inside bar */
-.rank-bar-val{position:absolute;left:8px;top:50%;transform:translateY(-50%);font-family:'Barlow Condensed',sans-serif;font-size:.8rem;font-weight:900;color:#fff;letter-spacing:.5px;pointer-events:none;text-shadow:0 1px 3px rgba(0,0,0,.25);white-space:nowrap;}
-.rank-bar-val.n{color:var(--muted);}
-/* meta marker at 50-postes */
-.rank-bar-meta{position:absolute;top:0;bottom:0;width:2px;background:rgba(255,255,255,.55);border-radius:1px;pointer-events:none;}
-.rank-bar-meta::after{content:'META';position:absolute;top:-14px;left:50%;transform:translateX(-50%);font-size:.48rem;font-weight:800;color:var(--muted);letter-spacing:.4px;white-space:nowrap;}
-/* sub info */
-.rank-sub{display:flex;align-items:center;gap:7px;margin-top:3px;}
-.rank-mat{font-size:.58rem;color:var(--muted);font-family:monospace;letter-spacing:.3px;}
-.rank-obras{font-size:.6rem;color:var(--muted);font-weight:700;}
+.rank-bar-meta{position:absolute;top:-3px;bottom:-3px;width:2px;background:rgba(0,0,0,.2);border-radius:1px;}
+.rank-bar-meta::after{content:'META';position:absolute;top:-14px;left:50%;transform:translateX(-50%);font-size:.45rem;font-weight:800;color:var(--muted);letter-spacing:.3px;white-space:nowrap;}
+
+/* Obras count row */
+.rank-info-row{grid-column:2;grid-row:3;margin-top:5px;display:flex;align-items:center;gap:8px;}
+.rank-obras{font-size:.65rem;color:var(--muted);font-weight:700;}
 .rank-obras b{color:var(--teal);font-weight:900;}
 
-/* left accent stripe */
-.rank-card::before{content:'';position:absolute;left:0;top:6px;bottom:6px;width:3px;border-radius:0 2px 2px 0;}
-.rank-card.h::before{background:var(--red);}
-.rank-card.m::before{background:var(--amber);}
-.rank-card.l::before{background:var(--teal);}
-.rank-card.n::before{background:var(--border);}
+/* Toggle obras button */
+.rank-toggle{
+  grid-column:2/-1;grid-row:3;
+  justify-self:end;padding-right:14px;
+  display:flex;align-items:center;gap:4px;
+  font-size:.62rem;font-weight:800;color:var(--teal);
+  cursor:pointer;background:none;border:none;font-family:'Barlow',sans-serif;
+  margin-top:5px;
+}
+.rank-toggle:hover{color:#0a5c60;}
+.rank-toggle-arrow{font-size:.55rem;transition:transform .2s;}
+.rank-toggle.open .rank-toggle-arrow{transform:rotate(180deg);}
 
-/* ── OBRAS INLINE ── */
-.rank-obras-inline{grid-column:1/-1;margin-top:6px;border-top:1px solid var(--border);padding-top:6px;display:flex;flex-direction:column;gap:3px;}
-.obra-row{display:flex;align-items:center;gap:7px;padding:4px 6px;border-radius:6px;background:#fafbfc;border:1px solid #edf0f2;}
-.obra-row:hover{background:#f0f7ff;}
-.obra-tag-num{font-family:'Barlow Condensed',sans-serif;font-size:.75rem;font-weight:900;color:#fff;background:var(--teal);border-radius:4px;padding:1px 5px;flex-shrink:0;min-width:20px;text-align:center;}
-.obra-row-titulo{font-size:.72rem;font-weight:700;color:var(--text);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3;}
-.obra-row-mun{font-size:.62rem;color:var(--muted);white-space:nowrap;flex-shrink:0;}
-.obra-row-mes{font-size:.6rem;font-weight:800;color:#7b2d8b;white-space:nowrap;flex-shrink:0;}
-.obra-row-prev{font-family:'Barlow Condensed',sans-serif;font-size:.85rem;font-weight:900;color:var(--teal);flex-shrink:0;white-space:nowrap;}
+/* ── OBRAS INLINE — redesign ── */
+.rank-obras-panel{grid-column:1/-1;display:none;margin-top:8px;}
+.rank-obras-panel.open{display:block;}
+.rank-obras-inner{
+  background:#f8fafb;
+  border:1px solid var(--border);
+  border-radius:8px;
+  overflow:hidden;
+  margin:0 14px 4px 48px;
+}
+.obra-row{
+  display:grid;
+  grid-template-columns:24px 1fr auto auto auto auto;
+  align-items:center;
+  gap:0 8px;
+  padding:6px 10px;
+  border-bottom:1px solid #edf0f2;
+  font-size:.72rem;
+}
+.obra-row:last-child{border-bottom:none;}
+.obra-row:hover{background:#eef6f6;}
+.obra-tag-num{
+  font-family:'Barlow Condensed',sans-serif;font-size:.72rem;font-weight:900;
+  color:#fff;background:var(--teal);border-radius:4px;
+  padding:1px 4px;text-align:center;min-width:20px;
+}
+.obra-row-titulo{font-weight:700;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.obra-row-mun{font-size:.6rem;color:var(--muted);white-space:nowrap;}
+.obra-row-mes{font-size:.62rem;font-weight:800;color:#7b2d8b;white-space:nowrap;}
+.obra-row-prev{
+  font-family:'Barlow Condensed',sans-serif;font-size:.88rem;font-weight:900;
+  color:var(--teal);white-space:nowrap;text-align:right;
+}
 .obra-row-prev span{font-size:.55rem;font-weight:700;color:var(--muted);}
-.obra-row-status{font-size:.55rem;font-weight:800;padding:2px 6px;border-radius:5px;white-space:nowrap;flex-shrink:0;}
+.obra-row-status{font-size:.55rem;font-weight:800;padding:2px 7px;border-radius:4px;white-space:nowrap;}
 .obra-row-status.exec{background:rgba(13,115,119,.1);color:var(--teal);}
 .obra-row-status.conc{background:rgba(45,184,100,.12);color:#276749;}
 .obra-row-status.parad{background:rgba(229,62,62,.1);color:var(--red);}
@@ -1034,48 +1109,56 @@ function postoRender(lstId,tagId,data){
   tag.textContent=data.length+' enc · '+data.reduce((s,d)=>s+d.postes,0)+' postes · '+atingiram+'/'+data.length+' na meta';
 
   lst.innerHTML=data.map((d,i)=>{
-    const cl=postoTier(d.postes,mx), pct=mx>0?(d.postes/mx*100).toFixed(1):0;
-    const metaMarkerPct = mx>0 ? Math.min((META/mx*100),100).toFixed(1) : 0;
+    const cl=postoTier(d.postes,mx);
+    const pct=mx>0?(d.postes/mx*100).toFixed(1):0;
+    const metaMarkerPct=mx>0?Math.min((META/mx*100),100).toFixed(1):0;
     const mSt=metaStatus(d.postes);
-    const label=d.postes>0?`${d.postes} postes`:'0 postes';
-    const showMarker = mx >= META;
-    const uid = lstId+'_'+i;
+    const showMarker=mx>=META;
+    const uid=lstId+'_'+i;
+    const lista=d.lista||[];
 
-    // obras inline rows
-    const lista = d.lista||[];
-    const obrasInline = lista.map((ob,oi)=>{
-      const stCl = /EXECU/i.test(ob.status)?'exec':/CONC/i.test(ob.status)?'conc':/PARAL|PARAD|SUSP/i.test(ob.status)?'parad':'other';
-      const tit = ob.titulo || ob.pep || '—';
-      const munStr = ob.mun ? `<span class="obra-row-mun">📍${ob.mun}</span>` : '';
-      const mesStr = ob.mes ? `<span class="obra-row-mes">${ob.mes}</span>` : '';
-      const stStr  = ob.status ? `<span class="obra-row-status ${stCl}">${ob.status}</span>` : '';
+    const obrasHtml=lista.map((ob,oi)=>{
+      const stCl=/EXECU/i.test(ob.status)?'exec':/CONC/i.test(ob.status)?'conc':/PARAL|PARAD|SUSP/i.test(ob.status)?'parad':'other';
+      const tit=ob.titulo||ob.pep||'—';
       return `<div class="obra-row">
         <span class="obra-tag-num">${oi+1}</span>
         <span class="obra-row-titulo" title="${tit}">${tit}</span>
-        ${munStr}${mesStr}
+        ${ob.mun?`<span class="obra-row-mun">📍${ob.mun}</span>`:''}
+        ${ob.mes?`<span class="obra-row-mes">${ob.mes}</span>`:''}
         <span class="obra-row-prev">${ob.prev}<span> postes</span></span>
-        ${stStr}
+        ${ob.status?`<span class="obra-row-status ${stCl}">${ob.status}</span>`:''}
       </div>`;
     }).join('');
 
     return `<div class="rank-card ${cl}" id="card_${uid}">
-      <div class="rank-num ${cl}">${i+1}</div>
-      <div class="rank-top">
-        <span class="rank-nome">${d.nome}</span>
+      <div class="rank-num-col">
+        <div class="rank-num ${cl}">${i+1}</div>
+      </div>
+      <div class="rank-main">
+        <div class="rank-nome">${d.nome}</div>
+        <div class="rank-mat">${d.mat||''}</div>
+      </div>
+      <div class="rank-side">
+        <div class="rank-postes-big ${cl}">${d.postes}</div>
+        <div class="rank-postes-lbl">postes</div>
         <span class="rank-badge ${mSt}">${d.postes>=META?'✅ Meta':'Faltam '+(META-d.postes)}</span>
       </div>
-      <div class="rank-bar-wrap">
+      <div class="rank-bar-row">
         <div class="rank-bar-track">
           <div class="rank-bar-fill ${cl}" style="width:${pct}%"></div>
-          <span class="rank-bar-val ${cl}">${label}</span>
           ${showMarker?`<div class="rank-bar-meta" style="left:${metaMarkerPct}%"></div>`:''}
         </div>
       </div>
-      <div class="rank-sub" style="grid-column:2">
-        <span class="rank-mat">${d.mat||'—'}</span>
+      <div class="rank-info-row">
         <span class="rank-obras"><b>${d.obras}</b> obra${d.obras!==1?'s':''}</span>
       </div>
-      ${lista.length?`<div class="rank-obras-inline">${obrasInline}</div>`:''}
+      ${lista.length?`
+      <button class="rank-toggle" id="tog_${uid}" onclick="postoToggleObras('${uid}')">
+        <span class="rank-toggle-arrow">▼</span> ver obras
+      </button>
+      <div class="rank-obras-panel" id="panel_${uid}">
+        <div class="rank-obras-inner">${obrasHtml}</div>
+      </div>`:''}
     </div>`;
   }).join('');
 }
