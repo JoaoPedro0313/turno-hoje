@@ -192,145 +192,262 @@ body{font-family:'Barlow',sans-serif;background:var(--bg);min-height:100vh;paddi
 .chart-legend-dot{width:10px;height:10px;border-radius:3px;flex-shrink:0;}
 .chart-wrap{position:relative;width:100%;}
 
-/* ── PLANILHA EXCEL-STYLE ── */
-.obras-planilha{margin:14px 10px 24px;border:1px solid #b0b7bc;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.12);}
+/* ══════════════════════════════════════════
+   PLANILHA — VISUAL EXCEL FIEL
+   ══════════════════════════════════════════ */
 
-/* Barra de título estilo Excel (verde escuro) */
-.obras-planilha-head{display:flex;align-items:center;justify-content:space-between;padding:0;gap:0;flex-wrap:wrap;background:#1d6a35;border-bottom:2px solid #155228;}
-.obras-planilha-title{font-family:'Barlow',sans-serif;font-size:.72rem;font-weight:700;color:#fff;letter-spacing:.3px;padding:6px 12px;display:flex;align-items:center;gap:6px;}
-.obras-planilha-title::before{content:'⊞';font-size:.85rem;}
+/* Container geral */
+.obras-planilha{
+  margin:14px 10px 28px;
+  border:1px solid #8e8e8e;
+  background:#fff;
+  box-shadow:2px 2px 6px rgba(0,0,0,.25);
+  font-family:Calibri,'Segoe UI',Arial,sans-serif;
+  font-size:13px;
+}
 
-/* Ribbon toolbar estilo Excel */
-.opl-ribbon{display:flex;align-items:center;gap:1px;padding:4px 6px;background:#f3f3f3;border-bottom:1px solid #c8c8c8;flex-wrap:wrap;}
-.opl-ribbon-group{display:flex;align-items:center;gap:3px;padding:0 6px 0 0;border-right:1px solid #d0d0d0;margin-right:3px;}
-.opl-ribbon-group:last-child{border-right:none;margin-right:0;margin-left:auto;}
-.opl-ribbon-label{font-size:.58rem;color:#666;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-right:2px;}
-.opl-search{padding:3px 8px;border:1px solid #ababab;background:#fff;font-family:Calibri,sans-serif;font-size:.75rem;color:#333;outline:none;width:160px;height:22px;}
-.opl-search:focus{border-color:#217346;box-shadow:inset 0 0 0 1px #217346;}
-.opl-sel{padding:2px 5px;border:1px solid #ababab;background:#fff;font-family:Calibri,sans-serif;font-size:.75rem;color:#333;outline:none;cursor:pointer;height:22px;}
-.opl-sel:focus{border-color:#217346;}
-.opl-btn{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border:1px solid transparent;background:transparent;font-family:Calibri,sans-serif;font-size:.73rem;color:#333;cursor:pointer;height:22px;white-space:nowrap;}
-.opl-btn:hover{background:#e8e8e8;border-color:#c0c0c0;}
-.opl-btn.green{background:#217346;color:#fff;border-color:#155228;}
-.opl-btn.green:hover{background:#1a5c38;}
-.opl-count{font-size:.68rem;color:#555;font-family:Calibri,sans-serif;padding:0 4px;}
+/* ── Barra de título (janela Excel) ── */
+.xl-titlebar{
+  background:linear-gradient(180deg,#2e7d32 0%,#1b5e20 100%);
+  display:flex;align-items:center;justify-content:space-between;
+  padding:4px 8px;border-bottom:1px solid #145214;
+}
+.xl-titlebar-left{display:flex;align-items:center;gap:6px;}
+.xl-titlebar-icon{font-size:14px;}
+.xl-titlebar-name{font-size:11px;font-weight:700;color:#fff;letter-spacing:.3px;}
+.xl-titlebar-file{font-size:11px;color:rgba(255,255,255,.65);}
+.xl-titlebar-btns{display:flex;gap:2px;}
+.xl-titlebar-btns span{width:11px;height:11px;border-radius:50%;display:inline-block;}
+.xl-titlebar-btns span:nth-child(1){background:#ff5f57;}
+.xl-titlebar-btns span:nth-child(2){background:#ffbd2e;}
+.xl-titlebar-btns span:nth-child(3){background:#28c940;}
 
-/* Formula bar */
-.opl-formulabar{display:flex;align-items:center;background:#fff;border-bottom:1px solid #c8c8c8;padding:0;}
-.opl-fb-name{width:80px;min-width:80px;border-right:1px solid #c8c8c8;padding:3px 6px;font-family:Calibri,sans-serif;font-size:.73rem;color:#333;text-align:center;background:#f3f3f3;}
-.opl-fb-fx{padding:2px 8px;font-family:Calibri,sans-serif;font-size:.73rem;color:#555;font-style:italic;}
+/* ── Ribbon (abas Arquivo / Início / etc.) ── */
+.xl-ribbon-tabs{
+  display:flex;align-items:flex-end;
+  background:#217346;
+  padding:0 4px;
+  gap:1px;
+  border-bottom:2px solid #185c32;
+}
+.xl-tab{
+  padding:5px 14px 4px;
+  font-size:11px;font-weight:600;color:rgba(255,255,255,.75);
+  cursor:pointer;border-radius:3px 3px 0 0;
+  border:1px solid transparent;border-bottom:none;
+  background:transparent;
+  font-family:Calibri,'Segoe UI',Arial,sans-serif;
+}
+.xl-tab.active{background:#fff;color:#217346;font-weight:700;border-color:#c8c8c8;}
+.xl-tab:not(.active):hover{background:rgba(255,255,255,.15);color:#fff;}
 
-/* Wrapper com scroll */
-.opl-wrap{overflow:auto;max-height:520px;-webkit-overflow-scrolling:touch;position:relative;}
-.opl-wrap::-webkit-scrollbar{width:12px;height:12px;}
-.opl-wrap::-webkit-scrollbar-track{background:#f0f0f0;border-left:1px solid #d0d0d0;}
-.opl-wrap::-webkit-scrollbar-thumb{background:#b0b0b0;border:2px solid #f0f0f0;}
-.opl-wrap::-webkit-scrollbar-thumb:hover{background:#888;}
+/* ── Ribbon body (comandos) ── */
+.xl-ribbon-body{
+  background:#fff;
+  border-bottom:1px solid #c8c8c8;
+  padding:4px 8px;
+  display:flex;align-items:center;gap:6px;flex-wrap:wrap;
+}
+.xl-ribbon-sep{width:1px;height:28px;background:#d0d0d0;margin:0 2px;}
+.xl-rb-group{display:flex;align-items:center;gap:3px;}
+.xl-rb-label{font-size:10px;color:#555;font-weight:600;letter-spacing:.3px;margin-right:2px;}
+.xl-search{
+  height:22px;padding:0 7px;
+  border:1px solid #8e8e8e;
+  font-family:Calibri,sans-serif;font-size:12px;color:#000;
+  outline:none;background:#fff;width:170px;
+}
+.xl-search:focus{border-color:#217346;box-shadow:0 0 0 1px #217346;}
+.xl-sel{
+  height:22px;padding:0 4px;
+  border:1px solid #8e8e8e;
+  font-family:Calibri,sans-serif;font-size:12px;color:#000;
+  background:#fff;outline:none;cursor:pointer;
+}
+.xl-sel:focus{border-color:#217346;}
+.xl-btn{
+  height:22px;padding:0 10px;
+  border:1px solid #8e8e8e;
+  background:linear-gradient(180deg,#fff 0%,#f0f0f0 100%);
+  font-family:Calibri,sans-serif;font-size:12px;color:#000;
+  cursor:pointer;display:inline-flex;align-items:center;gap:4px;
+  white-space:nowrap;
+}
+.xl-btn:hover{background:linear-gradient(180deg,#dce6f1 0%,#c5d9f1 100%);border-color:#7b9ed9;}
+.xl-btn:active{background:#c5d9f1;}
+.xl-btn.green-btn{background:linear-gradient(180deg,#4aaa5c 0%,#217346 100%);color:#fff;border-color:#155228;font-weight:700;}
+.xl-btn.green-btn:hover{background:linear-gradient(180deg,#5dbb6e 0%,#2e8a56 100%);}
+.xl-livecount{font-size:11px;color:#595959;font-family:Calibri,sans-serif;}
+
+/* ── Barra de nome / fórmula ── */
+.xl-formulabar{
+  display:flex;align-items:stretch;
+  background:#fff;border-bottom:1px solid #c8c8c8;
+  height:22px;
+}
+.xl-namebox{
+  width:68px;min-width:68px;
+  border-right:2px solid #c8c8c8;
+  display:flex;align-items:center;justify-content:center;
+  font-family:Calibri,sans-serif;font-size:12px;color:#000;
+  background:#fff;font-weight:700;
+}
+.xl-fx-icon{
+  padding:0 6px;border-right:1px solid #c8c8c8;
+  display:flex;align-items:center;
+  font-size:12px;color:#595959;font-style:italic;font-family:'Times New Roman',serif;
+}
+.xl-fx-val{
+  flex:1;padding:0 6px;
+  font-family:Calibri,sans-serif;font-size:12px;color:#595959;
+  display:flex;align-items:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+
+/* ── Wrapper scroll ── */
+.opl-wrap{
+  overflow:auto;max-height:500px;
+  -webkit-overflow-scrolling:touch;
+}
+.opl-wrap::-webkit-scrollbar{width:14px;height:14px;}
+.opl-wrap::-webkit-scrollbar-track{background:#f0f0f0;border:1px solid #d4d4d4;}
+.opl-wrap::-webkit-scrollbar-thumb{background:#ababab;border:2px solid #f0f0f0;}
+.opl-wrap::-webkit-scrollbar-thumb:hover{background:#787878;}
 .opl-wrap::-webkit-scrollbar-corner{background:#f0f0f0;}
 
-/* Tabela */
-.opl-table{border-collapse:collapse;font-family:Calibri,sans-serif;font-size:.78rem;color:#000;white-space:nowrap;width:100%;}
-
-/* Cabeçalho de colunas (cinza Excel) */
-.opl-table thead tr.col-header th{
-  background:#f3f3f3;
-  border-right:1px solid #d0d0d0;
-  border-bottom:2px solid #b0b7bc;
-  padding:3px 6px;
-  font-family:Calibri,sans-serif;
-  font-size:.72rem;
-  font-weight:700;
-  color:#000;
-  text-align:center;
+/* ── Tabela Excel ── */
+.opl-table{
+  border-collapse:collapse;
+  font-family:Calibri,'Segoe UI',Arial,sans-serif;
+  font-size:12px;color:#000;
   white-space:nowrap;
-  cursor:pointer;
-  user-select:none;
-  position:sticky;
-  top:0;
-  z-index:3;
-  min-width:30px;
+  table-layout:auto;
+  width:100%;
 }
-.opl-table thead tr.col-header th:first-child{
-  background:#f3f3f3;
-  min-width:36px;
-  width:36px;
-  cursor:default;
-  position:sticky;
-  left:0;
-  z-index:4;
-}
-.opl-table thead tr.col-header th:hover:not(:first-child){background:#dce6f1;color:#1f497d;}
-.opl-table thead tr.col-header th.asc,
-.opl-table thead tr.col-header th.desc{background:#dce6f1;color:#1f497d;}
-.opl-col-label{display:flex;align-items:center;justify-content:center;gap:3px;}
-.opl-col-label .si{font-size:.6rem;opacity:.5;}
-.opl-table thead tr.col-header th.asc .si,
-.opl-table thead tr.col-header th.desc .si{opacity:1;}
 
-/* Linha do número de linha (coluna A do Excel) */
+/* Cabeçalho de letras de coluna */
+.opl-table thead tr.xl-colhead th{
+  background:#f2f2f2;
+  border-right:1px solid #d4d4d4;
+  border-bottom:1px solid #b3b3b3;
+  padding:1px 4px 2px;
+  font-size:11px;font-weight:700;color:#444;
+  text-align:center;
+  cursor:pointer;user-select:none;
+  position:sticky;top:0;z-index:3;
+  min-width:28px;height:18px;
+  box-sizing:border-box;
+}
+.opl-table thead tr.xl-colhead th:first-child{
+  width:42px;min-width:42px;cursor:default;
+  position:sticky;left:0;z-index:4;
+  border-right:1px solid #b3b3b3;
+}
+.opl-table thead tr.xl-colhead th:hover:not(:first-child){
+  background:#dce6f1;color:#0070c0;border-bottom-color:#0070c0;
+}
+.opl-table thead tr.xl-colhead th.xl-col-active{
+  background:#217346;color:#fff;border-bottom-color:#155228;
+}
+
+/* Linha de cabeçalho de dados (linha 1 do Excel) */
+.opl-table thead tr.xl-datahead th{
+  background:#d9e1f2;
+  border:1px solid #b3b3b3;
+  padding:2px 6px;
+  font-size:12px;font-weight:700;color:#000;
+  text-align:center;
+  cursor:pointer;user-select:none;
+  position:sticky;top:18px;z-index:3;
+  white-space:nowrap;
+}
+.opl-table thead tr.xl-datahead th:first-child{
+  background:#f2f2f2;cursor:default;
+  font-size:11px;color:#444;
+  position:sticky;left:0;z-index:4;
+  border-right:1px solid #b3b3b3;
+}
+.opl-table thead tr.xl-datahead th:hover:not(:first-child){background:#bdd7ee;color:#000;}
+.opl-table thead tr.xl-datahead th.xl-sorted{background:#bdd7ee;}
+.xl-sort-arrow{font-size:9px;margin-left:3px;opacity:.7;}
+
+/* Número de linha */
 .opl-row-num{
-  background:#f3f3f3;
-  border-right:1px solid #d0d0d0;
-  border-bottom:1px solid #e0e0e0;
+  background:#f2f2f2;
+  border-right:1px solid #b3b3b3;
+  border-bottom:1px solid #d4d4d4;
   padding:0 4px;
-  font-size:.68rem;
-  font-weight:600;
-  color:#666;
+  font-size:11px;font-weight:400;color:#444;
   text-align:right;
-  min-width:36px;
-  width:36px;
-  position:sticky;
-  left:0;
-  z-index:2;
+  width:42px;min-width:42px;
+  position:sticky;left:0;z-index:2;
   user-select:none;
 }
+.opl-table tbody tr.xl-row-sel .opl-row-num{
+  background:#217346;color:#fff;border-right-color:#155228;
+}
 
-/* Células */
-.opl-table tbody tr{border-bottom:1px solid #e4e4e4;}
-.opl-table tbody tr:nth-child(even){background:#f9fbfa;}
-.opl-table tbody tr:nth-child(odd){background:#fff;}
-.opl-table tbody tr:hover td{background:#e8f5e9!important;outline:1px solid #217346;}
-.opl-table tbody tr.selected td{background:#cce5ff!important;outline:1px solid #1f497d;}
+/* Células de dados */
+.opl-table tbody tr{border-bottom:1px solid #d4d4d4;}
+.opl-table tbody tr:nth-child(even) td:not(.opl-row-num){background:#fff;}
+.opl-table tbody tr:nth-child(odd)  td:not(.opl-row-num){background:#fff;}
+.opl-table tbody tr:hover td:not(.opl-row-num){background:#e2efda!important;}
+.opl-table tbody tr.xl-row-sel td:not(.opl-row-num){
+  background:#cce5ff!important;
+  outline:2px solid #0070c0;outline-offset:-1px;
+}
 
 .opl-table td{
-  border-right:1px solid #e4e4e4;
-  padding:2px 6px;
-  height:20px;
-  max-width:220px;
-  overflow:hidden;
-  text-overflow:ellipsis;
+  border-right:1px solid #d4d4d4;
+  border-bottom:1px solid #d4d4d4;
+  padding:1px 5px;
+  height:18px;line-height:18px;
   vertical-align:middle;
+  overflow:hidden;text-overflow:ellipsis;
 }
-.opl-table td:focus{outline:2px solid #217346;outline-offset:-1px;}
 
-/* Colunas específicas */
-.opl-c-utd{text-align:center;min-width:80px;}
-.opl-c-enc{min-width:130px;font-weight:600;}
-.opl-c-titulo{min-width:200px;}
-.opl-c-pep{font-family:'Courier New',monospace;font-size:.7rem;color:#444;min-width:100px;}
-.opl-c-mun{min-width:110px;}
-.opl-c-mes{text-align:center;min-width:60px;color:#7b2d8b;font-weight:600;}
-.opl-c-num{text-align:right;min-width:60px;font-weight:600;}
-.opl-c-num.pos{color:#155228;}
-.opl-c-num.zero{color:#999;}
-.opl-c-status{min-width:120px;}
+/* Larguras de colunas */
+.opl-c-utd{min-width:82px;text-align:center;}
+.opl-c-enc{min-width:150px;font-weight:600;}
+.opl-c-titulo{min-width:220px;max-width:280px;}
+.opl-c-pep{min-width:110px;font-family:'Courier New',monospace;font-size:11px;color:#333;}
+.opl-c-mun{min-width:120px;}
+.opl-c-mes{min-width:54px;text-align:center;color:#7030a0;font-weight:700;}
+.opl-c-num{min-width:58px;text-align:right;font-weight:700;}
+.opl-c-num.pos{color:#1a5c38;}
+.opl-c-num.zero{color:#a6a6a6;}
+.opl-c-status{min-width:140px;}
 
-/* Chips dentro das células */
-.opl-chip{display:inline-block;font-size:.65rem;font-weight:700;padding:1px 6px;border-radius:2px;}
-.opl-chip.irc{background:#e2efea;color:#1a5c38;border:1px solid #a9d4b8;}
-.opl-chip.jac{background:#fff2cc;color:#7d5a00;border:1px solid #f0c060;}
-.opl-chip.exec{background:#e2efea;color:#1a5c38;}
-.opl-chip.conc{background:#daeef3;color:#1f4e79;}
-.opl-chip.parad{background:#fce4d6;color:#9c1e00;}
-.opl-chip.other{background:#f2f2f2;color:#666;}
+/* Tags de célula (chips Excel-like) */
+.xl-tag{
+  display:inline-block;
+  font-size:11px;font-weight:700;
+  padding:0 5px;
+  border:1px solid;
+}
+.xl-tag.irc{background:#e2efea;color:#1a5c38;border-color:#a9d4b8;}
+.xl-tag.jac{background:#fff2cc;color:#7d4f00;border-color:#f0c060;}
+.xl-tag.exec{background:#e2efea;color:#1a5c38;border-color:#a9d4b8;}
+.xl-tag.conc{background:#daeef3;color:#1f497d;border-color:#9dc3e6;}
+.xl-tag.parad{background:#fce4d6;color:#843c0c;border-color:#f4b183;}
+.xl-tag.other{background:#f2f2f2;color:#595959;border-color:#d4d4d4;}
 
-/* Célula vazia */
-.opl-empty{text-align:center;padding:28px;color:#999;font-size:.78rem;font-family:Calibri,sans-serif;}
+/* Vazio */
+.opl-empty{text-align:center;padding:32px;color:#595959;font-size:12px;font-family:Calibri,sans-serif;}
 
-/* Barra de status estilo Excel (rodapé) */
-.opl-statusbar{display:flex;align-items:center;gap:16px;padding:2px 10px;background:#217346;border-top:1px solid #155228;}
-.opl-statusbar span{font-family:Calibri,sans-serif;font-size:.68rem;color:rgba(255,255,255,.9);}
-.opl-statusbar span b{font-weight:700;color:#fff;}
+/* ── Barra de status (rodapé Excel) ── */
+.xl-statusbar{
+  display:flex;align-items:center;
+  background:#217346;
+  border-top:1px solid #155228;
+  padding:2px 8px;gap:20px;
+}
+.xl-statusbar span{
+  font-family:Calibri,sans-serif;font-size:11px;color:rgba(255,255,255,.85);
+  white-space:nowrap;
+}
+.xl-statusbar span b{color:#fff;font-weight:700;}
+.xl-statusbar-right{margin-left:auto;display:flex;align-items:center;gap:4px;}
+.xl-zoom{font-size:11px;color:rgba(255,255,255,.7);font-family:Calibri,sans-serif;}
 
 /* ── FILTRO MÊS ── */
 .mes-bar{padding:6px 12px 10px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
@@ -476,62 +593,92 @@ body{font-family:'Barlow',sans-serif;background:var(--bg);min-height:100vh;paddi
   <!-- PLANILHA EXCEL-STYLE -->
   <div class="obras-planilha" id="obras-planilha" style="display:none;">
 
-    <!-- Barra de título verde Excel -->
-    <div class="obras-planilha-head">
-      <span class="obras-planilha-title">Planilha de Obras · UTD JACOBINA &amp; UTD IRECÊ</span>
+    <!-- Barra de título da janela -->
+    <div class="xl-titlebar">
+      <div class="xl-titlebar-left">
+        <span class="xl-titlebar-icon">🟩</span>
+        <span class="xl-titlebar-name">obras_projecao.xlsx</span>
+        <span class="xl-titlebar-file">— Microsoft Excel</span>
+      </div>
+      <div class="xl-titlebar-btns">
+        <span></span><span></span><span></span>
+      </div>
     </div>
 
-    <!-- Ribbon / toolbar -->
-    <div class="opl-ribbon">
-      <div class="opl-ribbon-group">
-        <span class="opl-ribbon-label">Filtrar:</span>
-        <input class="opl-search" id="opl-search" type="text" placeholder="🔍 Buscar..." oninput="oplFiltrar()">
+    <!-- Abas ribbon -->
+    <div class="xl-ribbon-tabs">
+      <button class="xl-tab active">Início</button>
+      <button class="xl-tab">Inserir</button>
+      <button class="xl-tab">Dados</button>
+      <button class="xl-tab">Exibir</button>
+    </div>
+
+    <!-- Ribbon comandos -->
+    <div class="xl-ribbon-body">
+      <div class="xl-rb-group">
+        <span class="xl-rb-label">Filtrar:</span>
+        <input class="xl-search" id="opl-search" type="text" placeholder="🔍 Pesquisar..." oninput="oplFiltrar()">
       </div>
-      <div class="opl-ribbon-group">
-        <select class="opl-sel" id="opl-utd" onchange="oplFiltrar()">
+      <div class="xl-ribbon-sep"></div>
+      <div class="xl-rb-group">
+        <select class="xl-sel" id="opl-utd" onchange="oplFiltrar()">
           <option value="">Todas UTDs</option>
           <option value="IRECE">IRECÊ</option>
           <option value="JACOBINA">JACOBINA</option>
         </select>
-        <select class="opl-sel" id="opl-status" onchange="oplFiltrar()">
+        <select class="xl-sel" id="opl-status" onchange="oplFiltrar()">
           <option value="">Todos status</option>
           <option value="EXECU">Em execução</option>
           <option value="CONC">Concluída</option>
           <option value="PARAL">Paralisada</option>
         </select>
-        <select class="opl-sel" id="opl-mes" onchange="oplFiltrar()">
+        <select class="xl-sel" id="opl-mes" onchange="oplFiltrar()">
           <option value="">Todos meses</option>
         </select>
       </div>
-      <div class="opl-ribbon-group">
-        <button class="opl-btn green" onclick="oplExportCSV()">⬇ Exportar CSV</button>
+      <div class="xl-ribbon-sep"></div>
+      <div class="xl-rb-group">
+        <button class="xl-btn green-btn" onclick="oplExportCSV()">💾 Salvar CSV</button>
       </div>
-      <div class="opl-ribbon-group">
-        <span class="opl-count" id="opl-count">—</span>
-      </div>
+      <span class="xl-livecount" id="opl-count" style="margin-left:auto;">—</span>
     </div>
 
-    <!-- Formula bar -->
-    <div class="opl-formulabar">
-      <div class="opl-fb-name" id="opl-cellref">A1</div>
-      <div class="opl-fb-fx">ƒx &nbsp;<span id="opl-cellval">—</span></div>
+    <!-- Barra de fórmula -->
+    <div class="xl-formulabar">
+      <div class="xl-namebox" id="opl-namebox">A1</div>
+      <div class="xl-fx-icon"><i>f</i>x</div>
+      <div class="xl-fx-val" id="opl-fxval">—</div>
     </div>
 
     <!-- Tabela -->
-    <div class="opl-wrap" id="opl-wrap">
+    <div class="opl-wrap">
       <table class="opl-table" id="opl-table">
         <thead>
-          <tr class="col-header">
-            <th style="text-align:center;">#</th>
-            <th class="opl-c-utd" onclick="oplSort('utd')" id="oplth-utd"><div class="opl-col-label">UTD<span class="si">↕</span></div></th>
-            <th class="opl-c-enc" onclick="oplSort('enc')" id="oplth-enc"><div class="opl-col-label">Encarregado<span class="si">↕</span></div></th>
-            <th class="opl-c-titulo" onclick="oplSort('titulo')" id="oplth-titulo"><div class="opl-col-label">Título da Obra<span class="si">↕</span></div></th>
-            <th class="opl-c-pep" onclick="oplSort('pep')" id="oplth-pep"><div class="opl-col-label">PEP<span class="si">↕</span></div></th>
-            <th class="opl-c-mun" onclick="oplSort('mun')" id="oplth-mun"><div class="opl-col-label">Município<span class="si">↕</span></div></th>
-            <th class="opl-c-mes" onclick="oplSort('mes')" id="oplth-mes"><div class="opl-col-label">Mês<span class="si">↕</span></div></th>
-            <th class="opl-c-num" onclick="oplSort('prev')" id="oplth-prev"><div class="opl-col-label">Prev.<span class="si">↕</span></div></th>
-            <th class="opl-c-num" onclick="oplSort('real')" id="oplth-real"><div class="opl-col-label">Real.<span class="si">↕</span></div></th>
-            <th class="opl-c-status" onclick="oplSort('status')" id="oplth-status"><div class="opl-col-label">Status<span class="si">↕</span></div></th>
+          <!-- Fila de letras de coluna -->
+          <tr class="xl-colhead">
+            <th></th>
+            <th id="xlch-utd">A</th>
+            <th id="xlch-enc">B</th>
+            <th id="xlch-titulo">C</th>
+            <th id="xlch-pep">D</th>
+            <th id="xlch-mun">E</th>
+            <th id="xlch-mes">F</th>
+            <th id="xlch-prev">G</th>
+            <th id="xlch-real">H</th>
+            <th id="xlch-status">I</th>
+          </tr>
+          <!-- Fila de cabeçalho dos dados (linha 1) -->
+          <tr class="xl-datahead">
+            <th>1</th>
+            <th class="opl-c-utd" onclick="oplSort('utd')" id="oplth-utd">UTD<span class="xl-sort-arrow" id="xlsa-utd"></span></th>
+            <th class="opl-c-enc" onclick="oplSort('enc')" id="oplth-enc">Encarregado<span class="xl-sort-arrow" id="xlsa-enc"></span></th>
+            <th class="opl-c-titulo" onclick="oplSort('titulo')" id="oplth-titulo">Título da Obra<span class="xl-sort-arrow" id="xlsa-titulo"></span></th>
+            <th class="opl-c-pep" onclick="oplSort('pep')" id="oplth-pep">PEP<span class="xl-sort-arrow" id="xlsa-pep"></span></th>
+            <th class="opl-c-mun" onclick="oplSort('mun')" id="oplth-mun">Município<span class="xl-sort-arrow" id="xlsa-mun"></span></th>
+            <th class="opl-c-mes" onclick="oplSort('mes')" id="oplth-mes">Mês<span class="xl-sort-arrow" id="xlsa-mes"></span></th>
+            <th class="opl-c-num" onclick="oplSort('prev')" id="oplth-prev">Postes Prev.<span class="xl-sort-arrow" id="xlsa-prev"></span></th>
+            <th class="opl-c-num" onclick="oplSort('real')" id="oplth-real">Postes Real.<span class="xl-sort-arrow" id="xlsa-real"></span></th>
+            <th class="opl-c-status" onclick="oplSort('status')" id="oplth-status">Status<span class="xl-sort-arrow" id="xlsa-status"></span></th>
           </tr>
         </thead>
         <tbody id="opl-tbody">
@@ -540,12 +687,15 @@ body{font-family:'Barlow',sans-serif;background:var(--bg);min-height:100vh;paddi
       </table>
     </div>
 
-    <!-- Status bar verde Excel (rodapé) -->
-    <div class="opl-statusbar">
+    <!-- Barra de status Excel rodapé -->
+    <div class="xl-statusbar">
       <span>Contagem: <b id="opl-sb-count">0</b></span>
-      <span>Postes Prev.: <b id="opl-sb-prev">0</b></span>
-      <span>Postes Real.: <b id="opl-sb-real">0</b></span>
+      <span>Soma Prev.: <b id="opl-sb-prev">0</b></span>
+      <span>Soma Real.: <b id="opl-sb-real">0</b></span>
       <span>Encarregados: <b id="opl-sb-enc">0</b></span>
+      <div class="xl-statusbar-right">
+        <span class="xl-zoom">🔍 100%</span>
+      </div>
     </div>
 
   </div>
@@ -1355,47 +1505,53 @@ function oplFiltrar() {
     const stKey = /EXECU/i.test(r.status) ? 'exec'
                 : /CONC/i.test(r.status)  ? 'conc'
                 : /PARAL|PARAD|SUSP/i.test(r.status) ? 'parad' : 'other';
-    const rowN = i + 1;
-    const titShort = r.titulo.length > 40 ? r.titulo.slice(0,38)+'…' : r.titulo;
-    return `<tr onclick="oplSelectRow(this, ${i}, '${r.enc.replace(/'/g,'\\'')} — ${titShort.replace(/'/g,'\\'')}')" title="${r.titulo}">
+    const rowN = i + 2; // linha 1 = cabeçalho
+    const titShort = r.titulo.length > 45 ? r.titulo.slice(0,43)+'…' : r.titulo;
+    const encShort = r.enc.length > 22 ? r.enc.slice(0,20)+'…' : r.enc;
+    return `<tr onclick="oplSelectRow(this,${i},'${r.enc.replace(/'/g,"\\'")}','${titShort.replace(/'/g,"\\'")}','${r.pep}')" title="${r.titulo}">
       <td class="opl-row-num">${rowN}</td>
-      <td class="opl-c-utd"><span class="opl-chip ${utdCl}">${r.utd}</span></td>
-      <td class="opl-c-enc">${r.enc}</td>
+      <td class="opl-c-utd"><span class="xl-tag ${utdCl}">${r.utd}</span></td>
+      <td class="opl-c-enc">${encShort}</td>
       <td class="opl-c-titulo">${titShort}</td>
-      <td class="opl-c-pep">${r.pep||'—'}</td>
+      <td class="opl-c-pep">${r.pep||''}</td>
       <td class="opl-c-mun">${r.mun}</td>
       <td class="opl-c-mes">${r.mes}</td>
-      <td class="opl-c-num ${r.prev>0?'pos':'zero'}">${r.prev||'—'}</td>
-      <td class="opl-c-num ${r.real>0?'pos':'zero'}">${r.real||'—'}</td>
-      <td class="opl-c-status"><span class="opl-chip ${stKey}">${r.status}</span></td>
+      <td class="opl-c-num ${r.prev>0?'pos':'zero'}">${r.prev||''}</td>
+      <td class="opl-c-num ${r.real>0?'pos':'zero'}">${r.real||''}</td>
+      <td class="opl-c-status"><span class="xl-tag ${stKey}">${r.status}</span></td>
     </tr>`;
   }).join('');
 }
 window.oplFiltrar = oplFiltrar;
 
-function oplSelectRow(tr, idx, label) {
-  document.querySelectorAll('#opl-tbody tr.selected').forEach(r=>r.classList.remove('selected'));
-  tr.classList.add('selected');
-  const ref = document.getElementById('opl-cellref');
-  const val = document.getElementById('opl-cellval');
-  if(ref) ref.textContent = 'A'+(idx+2);
-  if(val) val.textContent = label;
+function oplSelectRow(tr, idx, enc, titulo, pep) {
+  document.querySelectorAll('#opl-tbody tr.xl-row-sel').forEach(r=>r.classList.remove('xl-row-sel'));
+  tr.classList.add('xl-row-sel');
+  const nb = document.getElementById('opl-namebox');
+  const fx = document.getElementById('opl-fxval');
+  if(nb) nb.textContent = 'B'+(idx+2);
+  if(fx) fx.textContent = enc + (titulo ? ' — ' + titulo : '') + (pep ? ' ['+pep+']' : '');
 }
 window.oplSelectRow = oplSelectRow;
 
 function oplSort(col) {
   if (_oplSort.col === col) _oplSort.dir *= -1;
   else { _oplSort.col = col; _oplSort.dir = 1; }
-  document.querySelectorAll('.opl-table thead th').forEach(th => {
-    th.classList.remove('asc', 'desc');
-    const si = th.querySelector('.si'); if (si) si.textContent = '↕';
+  // reset all col header highlights
+  ['utd','enc','titulo','pep','mun','mes','prev','real','status'].forEach(c => {
+    const th = document.getElementById('oplth-'+c);
+    const ch = document.getElementById('xlch-'+c);
+    const sa = document.getElementById('xlsa-'+c);
+    if(th) th.classList.remove('xl-sorted');
+    if(ch) ch.classList.remove('xl-col-active');
+    if(sa) sa.textContent = '';
   });
-  const th = document.getElementById('oplth-' + col);
-  if (th) {
-    th.classList.add(_oplSort.dir === 1 ? 'asc' : 'desc');
-    const si = th.querySelector('.si');
-    if (si) si.textContent = _oplSort.dir === 1 ? '↑' : '↓';
-  }
+  const th = document.getElementById('oplth-'+col);
+  const ch = document.getElementById('xlch-'+col);
+  const sa = document.getElementById('xlsa-'+col);
+  if(th) th.classList.add('xl-sorted');
+  if(ch) ch.classList.add('xl-col-active');
+  if(sa) sa.textContent = _oplSort.dir === 1 ? ' ▲' : ' ▼';
   oplFiltrar();
 }
 window.oplSort = oplSort;
