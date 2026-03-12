@@ -1333,20 +1333,7 @@ async function postoCarregar(){
   if(rb){rb.classList.add('busy');rb.textContent='⏳ Buscando...';}
   if(st){st.textContent='Carregando...';st.className='status-line';}
 
-  // 1. Carrega cache local imediatamente para mostrar algo rápido
-  const cache = lsGet('obras_base');
-  if(cache&&cache.data&&cache.data.length){
-    bancoDB = cache.data; bancoDBInfo = cache.info||null;
-    const iC=postoFromBanco('IRECE'), jC=postoFromBanco('JACOBINA');
-    if(iC||jC){
-      postoRender('posto-lstI','posto-tagI',iC||[]);
-      postoRender('posto-lstJ','posto-tagJ',jC||[]);
-      postoSummary(iC,jC);
-      if(st){st.textContent='⏳ Cache local — atualizando ao vivo...';st.className='status-line';}
-    }
-  }
-
-  // 2. Tenta planilha ao vivo (mesmo método do comp.html)
+  // 1. Tenta planilha ao vivo primeiro
   let usouPlanilha = false;
   try {
     await ensurePapa();
@@ -1359,7 +1346,6 @@ async function postoCarregar(){
     const dataJac = planilhaParseCSVText(textJac, 'JACOBINA');
     const dataIrc = planilhaParseCSVText(textIrc, 'IRECE');
     if ((dataJac&&dataJac.length)||(dataIrc&&dataIrc.length)) {
-      // guarda obras brutas para filtro de mês
       _dadosComMes = { irece: dataIrc||[], jac: dataJac||[] };
       _mesFiltro = 'TODOS';
       postoAtualizarMesBar(dataIrc, dataJac);
@@ -1377,10 +1363,9 @@ async function postoCarregar(){
     console.warn('[postoCarregar] planilha:', e.message);
   }
 
-  // 3. Se planilha falhou, atualiza do Supabase
+  // 2. Planilha falhou — busca do Supabase (fonte compartilhada entre usuários)
   if (!usouPlanilha) {
     await postoLoadObrasBase();
-    // filtra obras do banco por UTD e guarda brutas para filtro de mês
     const norm = s => (s||'').trim().toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
     const obrasBancoI = (bancoDB||[]).filter(o => { const u=norm(o['_UTD']); return u==='IRECE'||u.startsWith('IREC'); });
     const obrasBancoJ = (bancoDB||[]).filter(o => norm(o['_UTD'])==='JACOBINA');
@@ -1396,12 +1381,34 @@ async function postoCarregar(){
       const infoTxt=info?(' · '+info.count+' obras · atualizado '+info.updatedAt):'';
       if(st){st.textContent='✅ Banco de dados'+infoTxt;st.className='status-line ok';}
     } else {
-      if(st){st.textContent='⚠ Sem dados — sincronize a carteira no Comparador';st.className='status-line err';}
+      // último recurso: cache local
+      const cache = lsGet('obras_base');
+      if(cache&&cache.data&&cache.data.length){
+        bancoDB = cache.data; bancoDBInfo = cache.info||null;
+        const iC=postoFromBanco('IRECE'), jC=postoFromBanco('JACOBINA');
+        postoRender('posto-lstI','posto-tagI',iC||[]);
+        postoRender('posto-lstJ','posto-tagJ',jC||[]);
+        postoSummary(iC,jC);
+        if(st){st.textContent='⚠ Cache local (offline) — dados podem estar desatualizados';st.className='status-line err';}
+      } else {
+        if(st){st.textContent='⚠ Sem dados — sincronize a carteira no Comparador';st.className='status-line err';}
+      }
     }
   }
 
   if(rb){rb.classList.remove('busy');rb.innerHTML='🔄 Atualizar';}
   if(rb) rb.onclick=function(){postoCarregar();};
+}
+
+// Auto-refresh a cada 5 minutos
+let _autoRefreshTimer = null;
+function postoIniciarAutoRefresh(){
+  if(_autoRefreshTimer) clearInterval(_autoRefreshTimer);
+  _autoRefreshTimer = setInterval(()=>{
+    const st = document.getElementById('posto-st');
+    if(st) st.textContent = '🔄 Atualizando automaticamente...';
+    postoCarregar();
+  }, 5 * 60 * 1000);
 }
 function postoToggleObras(uid) {
   const panel = document.getElementById('panel_'+uid);
@@ -1671,6 +1678,7 @@ window.oplExportCSV = oplExportCSV;
     setDbBadge('offline','Sem dados');
   }
   await postoCarregar();
+  postoIniciarAutoRefresh();
 })();
 </script>
 
