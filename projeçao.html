@@ -64,7 +64,7 @@ body{font-family:'Barlow',sans-serif;background:var(--bg);min-height:100vh;paddi
 .page-header p{font-size:0.72rem;color:rgba(255,255,255,0.65);margin-top:4px;font-weight:600;letter-spacing:0.5px;}
 
 /* ── SUMMARY STRIP ── */
-.summary-strip{display:grid;grid-template-columns:repeat(3,1fr);gap:0;background:var(--surface);border-bottom:2px solid var(--border);}
+.summary-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:0;background:var(--surface);border-bottom:2px solid var(--border);}
 .sum-item{padding:14px 10px;text-align:center;border-right:1px solid var(--border);position:relative;}
 .sum-item:last-child{border-right:none;}
 .sum-item .sum-val{font-family:'Barlow Condensed',sans-serif;font-size:2rem;font-weight:900;color:var(--teal);line-height:1;}
@@ -161,6 +161,22 @@ body{font-family:'Barlow',sans-serif;background:var(--bg);min-height:100vh;paddi
 .rank-card.l::before{background:var(--teal);}
 .rank-card.n::before{background:var(--border);}
 
+/* ── OBRAS INLINE ── */
+.rank-obras-inline{grid-column:1/-1;margin-top:6px;border-top:1px solid var(--border);padding-top:6px;display:flex;flex-direction:column;gap:3px;}
+.obra-row{display:flex;align-items:center;gap:7px;padding:4px 6px;border-radius:6px;background:#fafbfc;border:1px solid #edf0f2;}
+.obra-row:hover{background:#f0f7ff;}
+.obra-tag-num{font-family:'Barlow Condensed',sans-serif;font-size:.75rem;font-weight:900;color:#fff;background:var(--teal);border-radius:4px;padding:1px 5px;flex-shrink:0;min-width:20px;text-align:center;}
+.obra-row-titulo{font-size:.72rem;font-weight:700;color:var(--text);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3;}
+.obra-row-mun{font-size:.62rem;color:var(--muted);white-space:nowrap;flex-shrink:0;}
+.obra-row-mes{font-size:.6rem;font-weight:800;color:#7b2d8b;white-space:nowrap;flex-shrink:0;}
+.obra-row-prev{font-family:'Barlow Condensed',sans-serif;font-size:.85rem;font-weight:900;color:var(--teal);flex-shrink:0;white-space:nowrap;}
+.obra-row-prev span{font-size:.55rem;font-weight:700;color:var(--muted);}
+.obra-row-status{font-size:.55rem;font-weight:800;padding:2px 6px;border-radius:5px;white-space:nowrap;flex-shrink:0;}
+.obra-row-status.exec{background:rgba(13,115,119,.1);color:var(--teal);}
+.obra-row-status.conc{background:rgba(45,184,100,.12);color:#276749;}
+.obra-row-status.parad{background:rgba(229,62,62,.1);color:var(--red);}
+.obra-row-status.other{background:#f0f4f5;color:var(--muted);}
+
 /* ── EMPTY STATE ── */
 .empty-card{padding:32px 20px;text-align:center;color:var(--muted);font-size:.8rem;line-height:1.8;font-weight:600;background:var(--surface);}
 .empty-card .ei{font-size:2rem;margin-bottom:8px;}
@@ -242,9 +258,14 @@ body{font-family:'Barlow',sans-serif;background:var(--bg);min-height:100vh;paddi
       <div class="sum-lbl">Encarregados</div>
     </div>
     <div class="sum-item">
+      <span class="sum-icon">⚡</span>
+      <div class="sum-val" id="psCapac">—</div>
+      <div class="sum-lbl">Capacidade</div>
+    </div>
+    <div class="sum-item">
       <span class="sum-icon">🪵</span>
       <div class="sum-val" id="psPost">—</div>
-      <div class="sum-lbl">Postes</div>
+      <div class="sum-lbl">Previstos</div>
     </div>
     <div class="sum-item">
       <span class="sum-icon">🏗</span>
@@ -457,6 +478,21 @@ function getEncarregado(o) {
   return found ? o[found] : '';
 }
 
+function getTitulo(o) {
+  return (o['TÍTULO'] || o['TITULO'] || o['PEP OBRA'] || '').trim();
+}
+function getPostesReal(o) {
+  const keys = ['POSTES REALIZADO','POSTES  REALIZADO'];
+  for (const k of keys) if (o[k] !== undefined && o[k] !== '') return parseInt(o[k])||0;
+  return 0;
+}
+function getStatus(o) {
+  return (o['STATUS DA OBRA'] || '').trim();
+}
+function getMun(o) {
+  return (o['MUNICIPIO'] || o['MUNICÍPIO'] || '').trim();
+}
+
 function agruparPorEncarregado(obras) {
   const m = {};
   obras.forEach(o => {
@@ -467,8 +503,17 @@ function agruparPorEncarregado(obras) {
     const mat  = partes[1] ? partes[1].trim() : '';
     const p = getPostesPrevistos(o);
     if (!nome) return;
-    if (!m[nome]) m[nome] = { nome, mat, postes: 0, obras: 0 };
+    if (!m[nome]) m[nome] = { nome, mat, postes: 0, obras: 0, lista: [] };
     m[nome].postes += p; m[nome].obras += 1;
+    m[nome].lista.push({
+      titulo:  getTitulo(o),
+      pep:     (o['PEP OBRA'] || '').trim(),
+      prev:    p,
+      real:    getPostesReal(o),
+      status:  getStatus(o),
+      mun:     getMun(o),
+      mes:     mesFromObra(o) || ''
+    });
   });
   const arr = Object.values(m).sort((a, b) => b.postes - a.postes);
   return arr.length ? arr : null;
@@ -621,12 +666,30 @@ function postoRender(lstId,tagId,data){
 
   lst.innerHTML=data.map((d,i)=>{
     const cl=postoTier(d.postes,mx), pct=mx>0?(d.postes/mx*100).toFixed(1):0;
-    // posição do marcador de meta em % relativa ao máximo
     const metaMarkerPct = mx>0 ? Math.min((META/mx*100),100).toFixed(1) : 0;
     const mSt=metaStatus(d.postes);
-    const label=d.postes>0?`${d.postes} postes`:'0';
-    const showMarker = mx >= META; // só mostra linha de meta se alguém chega perto
-    return `<div class="rank-card ${cl}">
+    const label=d.postes>0?`${d.postes} postes`:'0 postes';
+    const showMarker = mx >= META;
+    const uid = lstId+'_'+i;
+
+    // obras inline rows
+    const lista = d.lista||[];
+    const obrasInline = lista.map((ob,oi)=>{
+      const stCl = /EXECU/i.test(ob.status)?'exec':/CONC/i.test(ob.status)?'conc':/PARAL|PARAD|SUSP/i.test(ob.status)?'parad':'other';
+      const tit = ob.titulo || ob.pep || '—';
+      const munStr = ob.mun ? `<span class="obra-row-mun">📍${ob.mun}</span>` : '';
+      const mesStr = ob.mes ? `<span class="obra-row-mes">${ob.mes}</span>` : '';
+      const stStr  = ob.status ? `<span class="obra-row-status ${stCl}">${ob.status}</span>` : '';
+      return `<div class="obra-row">
+        <span class="obra-tag-num">${oi+1}</span>
+        <span class="obra-row-titulo" title="${tit}">${tit}</span>
+        ${munStr}${mesStr}
+        <span class="obra-row-prev">${ob.prev}<span> postes</span></span>
+        ${stStr}
+      </div>`;
+    }).join('');
+
+    return `<div class="rank-card ${cl}" id="card_${uid}">
       <div class="rank-num ${cl}">${i+1}</div>
       <div class="rank-top">
         <span class="rank-nome">${d.nome}</span>
@@ -643,14 +706,19 @@ function postoRender(lstId,tagId,data){
         <span class="rank-mat">${d.mat||'—'}</span>
         <span class="rank-obras"><b>${d.obras}</b> obra${d.obras!==1?'s':''}</span>
       </div>
+      ${lista.length?`<div class="rank-obras-inline">${obrasInline}</div>`:''}
     </div>`;
   }).join('');
 }
 
 function postoSummary(i,j){
   const a=[...(i||[]),...(j||[])];
-  const eEl=document.getElementById('psEnc'), pEl=document.getElementById('psPost'), oEl=document.getElementById('psObr');
-  if(eEl) eEl.textContent=a.length;
+  const enc = a.length;
+  const capac = enc * META; // META = 50 postes por encarregado
+  const eEl=document.getElementById('psEnc'), cEl=document.getElementById('psCapac');
+  const pEl=document.getElementById('psPost'), oEl=document.getElementById('psObr');
+  if(eEl) eEl.textContent=enc;
+  if(cEl){ cEl.textContent=capac; }
   if(pEl) pEl.textContent=a.reduce((s,d)=>s+d.postes,0);
   if(oEl) oEl.textContent=a.reduce((s,d)=>s+d.obras,0);
   postoRenderChart(i,j);
@@ -902,6 +970,18 @@ async function postoCarregar(){
   if(rb){rb.classList.remove('busy');rb.innerHTML='🔄 Atualizar';}
   if(rb) rb.onclick=function(){postoCarregar();};
 }
+function postoToggleObras(uid) {
+  const panel = document.getElementById('panel_'+uid);
+  const tog   = document.getElementById('tog_'+uid);
+  if (!panel || !tog) return;
+  const isOpen = panel.classList.contains('open');
+  panel.classList.toggle('open', !isOpen);
+  tog.classList.toggle('open', !isOpen);
+  tog.querySelector('.rank-toggle-arrow').textContent = isOpen ? '▼' : '▲';
+  tog.childNodes[1].textContent = isOpen ? ' ver obras' : ' ocultar';
+}
+window.postoToggleObras = postoToggleObras;
+
 window.postoCarregar=postoCarregar;
 window.postoFiltro=postoFiltro;
 
