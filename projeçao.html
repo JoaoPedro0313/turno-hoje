@@ -186,6 +186,17 @@ body{font-family:'Barlow',sans-serif;background:var(--bg);min-height:100vh;paddi
 .rank-obras{font-size:.6rem;color:var(--muted);font-weight:700;}
 .rank-obras b{color:var(--teal);font-weight:900;}
 
+/* coluna de valores: previstos / meta */
+.rank-vals{display:flex;align-items:stretch;gap:0;margin-left:auto;flex-shrink:0;padding-right:10px;}
+.rank-val-item{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 10px;border-left:1px solid var(--border);}
+.rank-val-item:first-child{border-left:none;}
+.rank-val-num{font-family:'Barlow Condensed',sans-serif;font-size:1.15rem;font-weight:900;line-height:1;}
+.rank-val-num.h{color:var(--red);}
+.rank-val-num.m{color:var(--amber);}
+.rank-val-num.l{color:var(--teal);}
+.rank-val-num.meta{color:#aaa;}
+.rank-val-lbl{font-size:.5rem;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-top:1px;}
+
 /* Toggle obras button */
 .rank-toggle{
   display:inline-flex;align-items:center;gap:3px;margin-left:37px;margin-top:4px;
@@ -1116,7 +1127,16 @@ function postoRender(lstId,tagId,data){
       <div class="rank-top-row">
         <div class="rank-num ${cl}">${i+1}</div>
         <span class="rank-nome">${d.nome}</span>
-        <span class="rank-badge ${mSt}">${d.postes>=META?'✅ Meta':'Faltam '+(META-d.postes)}</span>
+        <div class="rank-vals">
+          <div class="rank-val-item">
+            <span class="rank-val-num ${cl}">${d.postes}</span>
+            <span class="rank-val-lbl">Previstos</span>
+          </div>
+          <div class="rank-val-item">
+            <span class="rank-val-num meta">${META}</span>
+            <span class="rank-val-lbl">Meta</span>
+          </div>
+        </div>
       </div>
       <div class="rank-bar-wrap">
         <div class="rank-bar-track">
@@ -1126,7 +1146,7 @@ function postoRender(lstId,tagId,data){
       </div>
       <div class="rank-sub-row">
         <span class="rank-mat">${d.mat||''}</span>
-        <span class="rank-obras"><b>${d.obras}</b> obra${d.obras!==1?'s':''} · <span style="font-family:'Barlow Condensed',sans-serif;font-size:.75rem;font-weight:900;color:${cl==='h'?'var(--red)':cl==='m'?'var(--amber)':'var(--teal)'}">${d.postes}</span> postes</span>
+        <span class="rank-obras"><b>${d.obras}</b> obra${d.obras!==1?'s':''} · <span class="rank-badge ${mSt}" style="font-size:.58rem">${d.postes>=META?'✅ Meta':'Faltam '+(META-d.postes)}</span></span>
       </div>
       ${lista.length?`
       <button class="rank-toggle" id="tog_${uid}" onclick="postoToggleObras('${uid}')">
