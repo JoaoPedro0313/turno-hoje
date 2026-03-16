@@ -4304,18 +4304,71 @@ setTimeout(presenceInit, 1500);
     text = text.replace(/^\uFEFF/, '');
     const lines = text.split(/\r?\n/).map(l => l.trim()).filter(l => l && !l.startsWith('#'));
 
+    if (!lines.length) return { date: '', ok: [], falta: [], justif: [] };
+
+    // Função auxiliar: divide uma linha CSV respeitando aspas
+    function splitLine(line) {
+      const result = [];
+      let cur = '', inQuote = false;
+      for (let i = 0; i < line.length; i++) {
+        const ch = line[i];
+        if (ch === '"') { inQuote = !inQuote; }
+        else if (ch === ';' && !inQuote) { result.push(cur.trim()); cur = ''; }
+        else { cur += ch; }
+      }
+      result.push(cur.trim());
+      return result;
+    }
+
+    const firstLineLower = lines[0].toLowerCase();
+
+    // ── FORMATO CONSULTA_TURNO (exportação do sistema de frotas) ──────────
+    // Detecta pelo cabeçalho contendo "responsável" e "situação"
+    if (firstLineLower.includes('responsável') || firstLineLower.includes('responsavel')) {
+      const headers = splitLine(lines[0]).map(h => h.replace(/^"|"$/g, '').trim().toLowerCase());
+      const iResp = headers.findIndex(h => h === 'responsável' || h === 'responsavel');
+      const iSit  = headers.findIndex(h => h === 'situação' || h === 'situacao');
+      const iData = headers.findIndex(h => h === 'data início' || h === 'data inicio');
+
+      const ok = [], falta = [], justif = [];
+      let date = '';
+
+      for (let i = 1; i < lines.length; i++) {
+        const cols = splitLine(lines[i]).map(c => c.replace(/^"|"$/g, '').trim());
+        if (!cols[iResp]) continue;
+
+        const nome    = cols[iResp];
+        const situacao = (cols[iSit] || '').toLowerCase();
+
+        // Extrai data da primeira linha de dados
+        if (!date && iData >= 0 && cols[iData]) {
+          date = cols[iData].split(' ')[0]; // "16/03/2026 08:02:32" → "16/03/2026"
+        }
+
+        // Mapeia situação do sistema de frotas para status do turno
+        if (situacao === 'aberto' || situacao === 'fechado/finalizado' || situacao === 'fechado') {
+          ok.push(nome);
+        } else if (situacao === 'cancelado' || situacao === 'ausente') {
+          falta.push(nome);
+        } else {
+          ok.push(nome); // demais situações tratadas como presente
+        }
+      }
+
+      return { date, ok, falta, justif };
+    }
+
+    // ── FORMATO NATIVO (nome;status;obs) ─────────────────────────────────
     let date = '';
     let dataLines = [];
     let headerIdx = -1;
 
     for (let i = 0; i < lines.length; i++) {
       const lower = lines[i].toLowerCase();
-      // Linha de data: "data;DD/MM/YYYY"
       if (lower.startsWith('data;')) {
         date = lines[i].split(';')[1]?.trim() || '';
         continue;
       }
-      // Linha de cabeçalho: "nome;status" ou "nome;status;obs"
       if (lower.startsWith('nome;status')) {
         headerIdx = i;
         dataLines = lines.slice(i + 1);
@@ -4324,7 +4377,6 @@ setTimeout(presenceInit, 1500);
     }
 
     if (headerIdx === -1) {
-      // Tenta sem cabeçalho: assume nome;status;obs
       dataLines = lines.filter(l => !l.toLowerCase().startsWith('data;'));
     }
 
