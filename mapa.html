@@ -2389,7 +2389,15 @@ if ((r.some(c=>c==='NOTA') && r.some(c=>c.includes('PEP'))) ||
 (r.some(c=>c==='PEP OBRA') && r.some(c=>c==='STATUS DA OBRA'))) { headerIdx=i; break; }
 }
 if (headerIdx===-1) return null;
-const headers = rows[headerIdx].map(c=>String(c).trim().replace(/\n/g,' ').toUpperCase());
+const headers = rows[headerIdx].map(c => {
+  let h = String(c).trim().toUpperCase();
+  // Normaliza headers com quebra de linha (ex: 'LATITUDE\nSUL' -> 'LATITUDE')
+  // Mantém só a primeira linha significativa
+  h = h.split('\n')[0].trim();
+  // Remove espaços duplos
+  h = h.replace(/\s+/g, ' ');
+  return h;
+});
 const data = [];
 for (let i=headerIdx+1; i<rows.length; i++) {
 const row = rows[i];
@@ -3031,7 +3039,12 @@ if (!bancoDB || !bancoDB.length) {
 }
 const ph2 = document.getElementById('mapa-placeholder'); if (ph2) ph2.style.display='none';
 mapaData = bancoDB.map(obj => {
-  const lat=mapaParseCoord(obj['LATITUDE']), lon=mapaParseCoord(obj['LONGITUDE']);
+  // Tenta todos os nomes possíveis de coluna de coordenadas
+  const _latKeys = ['LATITUDE','LATITUDE SUL','LATITUDE (SUL)','LAT','COORD LAT','COORDENADA LAT'];
+  const _lonKeys = ['LONGITUDE','LONGITUDE OESTE','LONGITUDE (OESTE)','LON','LNG','COORD LON','COORDENADA LON'];
+  const _latVal  = _latKeys.map(k=>obj[k]).find(v=>v!=null&&v!=='');
+  const _lonVal  = _lonKeys.map(k=>obj[k]).find(v=>v!=null&&v!=='');
+  const lat=mapaParseCoord(_latVal), lon=mapaParseCoord(_lonVal);
   return { pep:obj['PEP OBRA']||'', titulo:obj['TÍTULO']||obj['TITULO']||'', status:obj['STATUS DA OBRA']||'', mun:obj['MUNICIPIO']||obj['MUNICÍPIO']||'', utd:obj['_UTD']||'', lat, lon, cava:obj['CAVA REALIZADA']||'', postR:obj['POSTES  REALIZADO']||obj['POSTES REALIZADO']||'', postI:obj['POSTES  À IMPLANTA']||obj['POSTES À IMPLANTA']||'', enc:obj['ENCARREGADO']||'', mes:mesFromObra(obj)||'', temCoord:lat!==null&&lon!==null };
 });
 const comCoord = mapaData.filter(d=>d.temCoord).length;
@@ -3597,7 +3610,10 @@ alert('❌ Erro ao sincronizar:\n\n' + e.message + '\n\nVerifique se as planilha
 });
 }
 function compMinimizarDados(rows) {
-const campos = ['PEP OBRA','TÍTULO','TITULO','STATUS DA OBRA','LATITUDE','LONGITUDE',
+const campos = ['PEP OBRA','TÍTULO','TITULO','STATUS DA OBRA',
+'LATITUDE','LONGITUDE',
+'LATITUDE SUL','LONGITUDE OESTE','LATITUDE (SUL)','LONGITUDE (OESTE)',
+'LAT','LON','LNG','COORD LAT','COORD LON','COORDENADA LAT','COORDENADA LON',
 'MUNICIPIO','MUNICÍPIO','_UTD','CAVA REALIZADA','CAVA  REALIZADA',
 'POSTES REALIZADO','POSTES  REALIZADO','POSTES A IMPLANTA','POSTES  À IMPLANTA','POSTES À IMPLANTA',
 'POSTES PREVISTOS','ENCARREGADO','MÊS','MES','DATA DE LANÇAMENTO'];
