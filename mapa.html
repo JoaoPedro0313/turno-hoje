@@ -125,6 +125,10 @@ window.presenceOpenModal = function() { if(window._presenceOpenModal) window._pr
           <div class="_s18">
             <input type="text" id="mapa-search" placeholder="&#128269; Buscar PEP ou título..." oninput="mapaFiltrar()" style="padding:6px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-family:'Barlow',sans-serif;font-size:0.8rem;font-weight:600;color:#333;width:210px;outline:none;">
             <span style="font-size:0.78rem;font-weight:800;color:#38a169;white-space:nowrap;" id="mapa-count-label">0 obras</span>
+            <button id="btn-toggle-raio" onclick="mapaRaioToggle()"
+              style="padding:5px 13px;border-radius:8px;border:1.5px solid #d6bcfa;background:#faf5ff;font-family:'Barlow',sans-serif;font-size:0.72rem;font-weight:800;cursor:pointer;color:#6b46c1;transition:all 0.15s;white-space:nowrap;">
+              ⭕ Filtro de Raio
+            </button>
           </div>
         </div>
       </div>
@@ -150,6 +154,38 @@ window.presenceOpenModal = function() { if(window._presenceOpenModal) window._pr
             <button onclick="mapaLimparFiltrosExtras()" style="padding:5px 13px;border-radius:8px;border:1.5px solid #fde8e8;background:#fff5f5;font-family:'Barlow',sans-serif;font-size:0.72rem;font-weight:800;cursor:pointer;color:#c53030;transition:all 0.15s;margin-left:4px;">✕ Limpar</button>
           </div>
         </div>
+      </div>
+    </div>
+    <!-- FILTRO DE RAIO -->
+    <div id="mapa-raio-panel" style="display:none;background:#fff;border-radius:14px;box-shadow:0 2px 14px rgba(0,0,0,0.08);padding:16px 20px;margin-bottom:14px;border:2px solid #6b46c1;">
+      <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:0.68rem;font-weight:800;color:#6b46c1;letter-spacing:1.5px;text-transform:uppercase;white-space:nowrap;">⭕ RAIO (km):</span>
+          <input type="number" id="mapa-raio-km" min="1" max="500" value="50"
+            style="width:75px;padding:6px 10px;border:1.5px solid #d6bcfa;border-radius:8px;font-family:'Barlow',sans-serif;font-size:0.88rem;font-weight:800;color:#553c9a;outline:none;text-align:center;"
+            oninput="mapaRaioAtualizar()">
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:0.68rem;font-weight:800;color:#6b46c1;letter-spacing:1.5px;text-transform:uppercase;white-space:nowrap;">📍 CENTRO:</span>
+          <input type="text" id="mapa-raio-lat" placeholder="Lat" value=""
+            style="width:90px;padding:6px 10px;border:1.5px solid #d6bcfa;border-radius:8px;font-family:'Barlow',sans-serif;font-size:0.82rem;font-weight:700;color:#2d3748;outline:none;"
+            oninput="mapaRaioAtualizar()">
+          <input type="text" id="mapa-raio-lon" placeholder="Lon" value=""
+            style="width:90px;padding:6px 10px;border:1.5px solid #d6bcfa;border-radius:8px;font-family:'Barlow',sans-serif;font-size:0.82rem;font-weight:700;color:#2d3748;outline:none;"
+            oninput="mapaRaioAtualizar()">
+        </div>
+        <button onclick="mapaRaioModoClicar()" id="btn-raio-clicar"
+          style="padding:6px 14px;border-radius:8px;border:1.5px solid #d6bcfa;background:#faf5ff;font-family:'Barlow',sans-serif;font-size:0.72rem;font-weight:800;cursor:pointer;color:#6b46c1;transition:all 0.15s;white-space:nowrap;">
+          🖱️ Clicar no mapa
+        </button>
+        <span id="mapa-raio-count" style="font-size:0.78rem;font-weight:800;color:#553c9a;white-space:nowrap;"></span>
+        <button onclick="mapaRaioLimpar()"
+          style="padding:6px 14px;border-radius:8px;border:1.5px solid #fde8e8;background:#fff5f5;font-family:'Barlow',sans-serif;font-size:0.72rem;font-weight:800;cursor:pointer;color:#c53030;margin-left:auto;transition:all 0.15s;white-space:nowrap;">
+          ✕ Remover raio
+        </button>
+      </div>
+      <div id="mapa-raio-hint" style="margin-top:8px;font-size:0.7rem;font-weight:700;color:#6b46c1;display:none;">
+        🖱️ Clique no mapa para definir o centro do raio...
       </div>
     </div>
     <div style="background:#fff;border-radius:14px;box-shadow:0 2px 14px rgba(0,0,0,0.08);overflow:hidden;position:relative;margin-bottom:14px;">
@@ -1668,6 +1704,123 @@ window.compHistoricoRender  = compHistoricoRender;
 window.histLimparFiltro     = histLimparFiltro;
 
 // ── Funções do mapa ──
+// ═══════════════════════════════════════════════════════════
+//  FILTRO DE RAIO
+// ═══════════════════════════════════════════════════════════
+let mapaRaioAtivo = false;
+let mapaRaioCircle = null;
+let mapaRaioMarker = null;
+let mapaRaioModoClick = false;
+let mapaRaioCentro = null; // {lat, lon}
+let mapaRaioKm = 50;
+
+function mapaRaioToggle() {
+  const panel = document.getElementById('mapa-raio-panel');
+  mapaRaioAtivo = !mapaRaioAtivo;
+  if (panel) panel.style.display = mapaRaioAtivo ? '' : 'none';
+  const btn = document.getElementById('btn-toggle-raio');
+  if (btn) {
+    btn.style.background = mapaRaioAtivo ? '#6b46c1' : '#faf5ff';
+    btn.style.color = mapaRaioAtivo ? '#fff' : '#6b46c1';
+    btn.style.borderColor = mapaRaioAtivo ? '#6b46c1' : '#d6bcfa';
+  }
+  if (!mapaRaioAtivo) {
+    // Remove circle when hiding panel
+    mapaRaioLimpar();
+  }
+}
+
+function mapaRaioModoClicar() {
+  if (!mapaMap) return;
+  mapaRaioModoClick = true;
+  const hint = document.getElementById('mapa-raio-hint');
+  if (hint) hint.style.display = '';
+  const btn = document.getElementById('btn-raio-clicar');
+  if (btn) { btn.style.background = '#6b46c1'; btn.style.color = '#fff'; btn.textContent = '⏳ Aguardando clique...'; }
+  mapaMap.once('click', function(e) {
+    mapaRaioModoClick = false;
+    mapaRaioCentro = { lat: e.latlng.lat, lon: e.latlng.lng };
+    const latEl = document.getElementById('mapa-raio-lat');
+    const lonEl = document.getElementById('mapa-raio-lon');
+    if (latEl) latEl.value = e.latlng.lat.toFixed(5);
+    if (lonEl) lonEl.value = e.latlng.lng.toFixed(5);
+    if (hint) hint.style.display = 'none';
+    if (btn) { btn.style.background = '#faf5ff'; btn.style.color = '#6b46c1'; btn.textContent = '🖱️ Clicar no mapa'; }
+    mapaRaioDesenhar();
+    mapaFiltrar();
+  });
+}
+
+function mapaRaioAtualizar() {
+  const latEl = document.getElementById('mapa-raio-lat');
+  const lonEl = document.getElementById('mapa-raio-lon');
+  const kmEl  = document.getElementById('mapa-raio-km');
+  const lat = parseFloat(latEl ? latEl.value : '');
+  const lon = parseFloat(lonEl ? lonEl.value : '');
+  const km  = parseFloat(kmEl  ? kmEl.value  : '50') || 50;
+  mapaRaioKm = km;
+  if (!isNaN(lat) && !isNaN(lon)) {
+    mapaRaioCentro = { lat, lon };
+    mapaRaioDesenhar();
+    mapaFiltrar();
+  }
+}
+
+function mapaRaioDesenhar() {
+  if (!mapaMap || !mapaRaioCentro) return;
+  // Remove old layers
+  if (mapaRaioCircle) { mapaRaioCircle.remove(); mapaRaioCircle = null; }
+  if (mapaRaioMarker) { mapaRaioMarker.remove(); mapaRaioMarker = null; }
+  const radiusM = mapaRaioKm * 1000;
+  mapaRaioCircle = L.circle([mapaRaioCentro.lat, mapaRaioCentro.lon], {
+    radius: radiusM,
+    color: '#6b46c1',
+    fillColor: '#6b46c1',
+    fillOpacity: 0.08,
+    weight: 2.5,
+    dashArray: '6 4'
+  }).addTo(mapaMap);
+  mapaRaioMarker = L.marker([mapaRaioCentro.lat, mapaRaioCentro.lon], {
+    icon: L.divIcon({
+      className: '',
+      html: '<div style="width:16px;height:16px;border-radius:50%;background:#6b46c1;border:3px solid #fff;box-shadow:0 2px 8px rgba(107,70,193,0.6);"></div>',
+      iconSize: [16,16], iconAnchor: [8,8]
+    }),
+    zIndexOffset: 1000
+  }).addTo(mapaMap).bindPopup('<div style="font-family:Barlow,sans-serif;font-weight:800;color:#553c9a;">Centro do raio<br><span style="font-weight:600;font-size:0.8rem;">'+mapaRaioKm+'km</span></div>');
+  mapaMap.fitBounds(mapaRaioCircle.getBounds(), { padding: [20, 20] });
+}
+
+function mapaRaioLimpar() {
+  if (mapaRaioCircle) { mapaRaioCircle.remove(); mapaRaioCircle = null; }
+  if (mapaRaioMarker) { mapaRaioMarker.remove(); mapaRaioMarker = null; }
+  mapaRaioCentro = null;
+  const panel = document.getElementById('mapa-raio-panel');
+  const btn   = document.getElementById('btn-toggle-raio');
+  if (panel) panel.style.display = 'none';
+  if (btn)   { btn.style.background='#faf5ff'; btn.style.color='#6b46c1'; btn.style.borderColor='#d6bcfa'; }
+  mapaRaioAtivo = false;
+  const countEl = document.getElementById('mapa-raio-count');
+  if (countEl) countEl.textContent = '';
+  mapaFiltrar();
+}
+
+// Haversine distance in km
+function mapaRaioDistKm(lat1, lon1, lat2, lon2) {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dLat/2)*Math.sin(dLat/2) +
+            Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*
+            Math.sin(dLon/2)*Math.sin(dLon/2);
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+window.mapaRaioToggle   = mapaRaioToggle;
+window.mapaRaioModoClicar = mapaRaioModoClicar;
+window.mapaRaioAtualizar  = mapaRaioAtualizar;
+window.mapaRaioLimpar     = mapaRaioLimpar;
+
 window.mapaFiltrar       = mapaFiltrar;
 window.mapaSetMes        = mapaSetMes;
 window.mapaSetUTD        = mapaSetUTD;
@@ -2837,6 +2990,11 @@ if (mapaFiltroAtivo!=='TODOS' && d.status.trim()!==mapaFiltroAtivo) return false
 if (mapaMunFiltro && d.mun!==mapaMunFiltro) return false;
 if (mapaEncFiltro && d.enc!==mapaEncFiltro) return false;
 if (search && !d.pep.toLowerCase().includes(search) && !d.titulo.toLowerCase().includes(search) && !d.mun.toLowerCase().includes(search)) return false;
+// Filtro de raio
+if (mapaRaioCentro && d.temCoord) {
+  const dist = mapaRaioDistKm(mapaRaioCentro.lat, mapaRaioCentro.lon, d.lat, d.lon);
+  if (dist > mapaRaioKm) return false;
+}
 return true;
 });
 document.querySelectorAll('[id^="mfbtn-"]').forEach(b => {
@@ -2845,6 +3003,9 @@ b.style.background=active?'#38a169':'#fff'; b.style.color=active?'#fff':'#555'; 
 });
 const cl = document.getElementById('mapa-count-label');
 if (cl) cl.textContent = filtered.length+' obra'+(filtered.length!==1?'s':'');
+const raioCount = document.getElementById('mapa-raio-count');
+if (raioCount && mapaRaioCentro) raioCount.textContent = filtered.length+' obra'+(filtered.length!==1?'s':'')+' no raio';
+else if (raioCount) raioCount.textContent = '';
 const bounds = [];
 filtered.forEach(d => {
 const cor = mapaGetCor(d.status);
