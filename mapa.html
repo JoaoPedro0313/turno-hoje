@@ -228,7 +228,7 @@ window.presenceOpenModal = function() { if(window._presenceOpenModal) window._pr
         </div>
         <div style="display:flex;gap:8px;align-items:center;">
           <button onclick="mapaObrasExportar()" style="padding:6px 14px;border-radius:8px;background:rgba(255,255,255,0.15);border:1.5px solid rgba(255,255,255,0.3);color:#fff;font-family:'Barlow',sans-serif;font-size:0.72rem;font-weight:800;cursor:pointer;transition:all 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.25)'" onmouseout="this.style.background='rgba(255,255,255,0.15)'">⬇️ Exportar CSV</button>
-          <button onclick="document.getElementById('mapa-obras-section').style.display='none';document.getElementById('btn-toggle-lista').style.background='';document.getElementById('btn-toggle-lista').style.color=''" style="padding:6px 12px;border-radius:8px;background:rgba(0,0,0,0.15);border:1px solid rgba(255,255,255,0.2);color:rgba(255,255,255,0.7);font-family:'Barlow',sans-serif;font-size:0.72rem;font-weight:800;cursor:pointer;">✕ Fechar</button>
+          <button onclick="mapaObrasFechar()" style="padding:6px 12px;border-radius:8px;background:rgba(0,0,0,0.15);border:1px solid rgba(255,255,255,0.2);color:rgba(255,255,255,0.7);font-family:'Barlow',sans-serif;font-size:0.72rem;font-weight:800;cursor:pointer;">✕ Fechar</button>
         </div>
       </div>
       <div style="overflow-x:auto;">
@@ -1880,6 +1880,13 @@ function mapaObrasToggleLista() {
   }
   if (mapaObrasListaAtiva) mapaRenderObrasList(mapaObrasListaFiltrados);
 }
+function mapaObrasFechar() {
+  mapaObrasListaAtiva = false;
+  const section = document.getElementById('mapa-obras-section');
+  const btn = document.getElementById('btn-toggle-lista');
+  if (section) section.style.display = 'none';
+  if (btn) { btn.style.background='#f0fafa'; btn.style.color='#0d7377'; btn.style.borderColor='#c0e8e5'; }
+}
 
 function mapaRenderObrasList(filtered) {
   const tbody = document.getElementById('mapa-obras-tbody');
@@ -1941,6 +1948,7 @@ function mapaObrasExportar() {
 }
 
 window.mapaObrasToggleLista = mapaObrasToggleLista;
+window.mapaObrasFechar      = mapaObrasFechar;
 window.mapaObrasExportar    = mapaObrasExportar;
 
 window.mapaRaioModoClicar = mapaRaioModoClicar;
@@ -3015,7 +3023,7 @@ function mapaEnsureLeaflet(cb) {
       mapaMap = L.map('mapa-container', {zoomControl:true});
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {attribution:'\u00a9 OpenStreetMap', maxZoom:18}).addTo(mapaMap);
       mapaLayerGroup = L.layerGroup().addTo(mapaMap);
-      mapaMap.setView([-11.5, -41.0], 8);
+      mapaMap.setView([-11.3, -41.2], 9);
     }
     mapaMap.invalidateSize();
     setTimeout(() => { mapaMap.invalidateSize(); if (cb) cb(); }, 100);
