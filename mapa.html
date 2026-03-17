@@ -664,7 +664,7 @@ console.warn('[dbLoadProgDiaria] Erro:', e.message);
 async function dbLoadObrasBase() {
 try {
 const controller = new AbortController();
-const tid = setTimeout(() => controller.abort(), 30000);
+const tid = setTimeout(() => controller.abort(), 60000);
 const res = await fetch(SUPA_URL + '/rest/v1/turno_data?select=key,value&key=eq.obras_base', {
 headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY },
 signal: controller.signal
@@ -1684,7 +1684,7 @@ try {
     sf('/rest/v1/turno_data?select=key,value&key=in.(turno,producao,apr_data,comp_historico)',8000),
     sf('/rest/v1/turno_data?select=key,updated_at',5000),
     sf('/rest/v1/turno_data?select=key,value,updated_at&key=eq.prog_diaria&order=updated_at.desc&limit=1',8000),
-    sf('/rest/v1/turno_data?select=key,value&key=eq.obras_base',30000)
+    sf('/rest/v1/turno_data?select=key,value&key=eq.obras_base',60000)
   ]);
   if (r1.status==='fulfilled'&&r1.value.ok) {
     const d=await r1.value.json();
@@ -1702,8 +1702,40 @@ try {
   if (r4.status==='fulfilled'&&r4.value.ok) {
     const d=await r4.value.json();
     if (Array.isArray(d)&&d.length>0&&d[0].value&&d[0].value.data){applyRowData(d[0]);lsSet(d[0].key,d[0].value);}
+  } else {
+    // r4 falhou ou demorou: tenta novamente em background com timeout maior
+    console.warn('[startup] obras_base não carregou na primeira tentativa, retentando...');
+    (async () => {
+      try {
+        const ctrl2 = new AbortController();
+        const t2 = setTimeout(() => ctrl2.abort(), 60000);
+        const res2 = await fetch(SUPA_URL+'/rest/v1/turno_data?select=key,value&key=eq.obras_base', {
+          headers: {'apikey': SUPA_KEY, 'Authorization': 'Bearer '+SUPA_KEY},
+          signal: ctrl2.signal
+        });
+        clearTimeout(t2);
+        if (res2.ok) {
+          const d2 = await res2.json();
+          if (Array.isArray(d2)&&d2.length>0&&d2[0].value&&d2[0].value.data) {
+            applyRowData(d2[0]); lsSet(d2[0].key, d2[0].value);
+            console.log('[startup] obras_base carregado na retentativa:', d2[0].value.data.length, 'obras');
+            setTimeout(() => { try { mapaCarregarDoBanco(); } catch(e) {} }, 200);
+          }
+        }
+      } catch(e2) { console.warn('[startup] retentativa obras_base falhou:', e2.message); }
+    })();
   }
-  setTimeout(() => { if (bancoDB && bancoDB.length) { try { mapaCarregarDoBanco(); } catch(e) {} } }, 300);
+  setTimeout(() => {
+    if (bancoDB && bancoDB.length) {
+      try { mapaCarregarDoBanco(); } catch(e) {}
+    } else {
+      // Mostra placeholder com botão de carregar se ainda sem obras
+      const ph = document.getElementById('mapa-placeholder');
+      const mc = document.getElementById('mapa-container');
+      if (ph) ph.style.display = 'flex';
+      if (mc) mc.style.display = 'none';
+    }
+  }, 300);
 } catch(e) { console.error('[startup]',e); }
 startAutoRefresh();
 // Expose inner functions to window so onclick handlers can reach them
@@ -3006,10 +3038,14 @@ const ms = document.getElementById('mapa-stats-bar'); if (ms) ms.style.display='
 const ml = document.getElementById('mapa-legenda'); if (ml) ml.style.display='flex';
 const pageMapa = document.getElementById('page-mapa');
 if (pageMapa && pageMapa.style.display!=='none') {
-  mapaEnsureLeaflet(() => { mapaRenderFiltros(); mapaFiltrar(); });
+  mapaEnsureLeaflet(() => { mapaRenderFiltros(); mapaFiltrar(); setTimeout(()=>{if(mapaMap)mapaMap.invalidateSize();},300); });
 } else {
   // Pre-processa mesmo sem aba visível para estar pronto quando abrir
   mapaRenderFiltros && mapaRenderFiltros();
+}
+// Sempre tenta inicializar o mapa (página mapa.html sempre está visível)
+if (!pageMapa || pageMapa.style.display === '') {
+  mapaEnsureLeaflet(() => { mapaRenderFiltros(); mapaFiltrar(); setTimeout(()=>{if(mapaMap)mapaMap.invalidateSize();},300); });
 }
 mapaRotaObrasFiltradas = mapaData.filter(d=>d.temCoord);
 mapaRotaFiltrarLista();
