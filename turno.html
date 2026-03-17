@@ -606,7 +606,11 @@ const modoEl = document.getElementById('turno-hist-modo');
 turnoModoHistorico = true;
 const okTemp = payload.ok || [];
 const justifTemp = payload.justif || [];
-const faltaTemp = payload.falta || [];
+const faltaRaw = payload.falta || [];
+// Deduplicar histórico também
+const okDispH     = new Set(okTemp.map(n => toDisplayName(n)));
+const justifDispH = new Set(justifTemp.map(t => toDisplayName(t.name)));
+const faltaTemp   = faltaRaw.filter(n => { const d=toDisplayName(n); return !okDispH.has(d)&&!justifDispH.has(d); });
 buildGridOk('abriu-grid', [...okTemp].sort());
 buildGridJustif('justif-grid', [...justifTemp].sort((a,b)=>a.name.localeCompare(b.name)));
 buildGridFalta('falta-grid', [...faltaTemp].sort());
@@ -679,13 +683,20 @@ setTimeout(() => setDbStatus('local', 'Dados locais'), 2000);
 
 function render() {
 if (turnoModoHistorico) return;
+// Deduplicar: remove de falta qualquer nome cujo display já exista em ok ou justif
+const okDisplay     = new Set(teams.ok.map(n => toDisplayName(n)));
+const justifDisplay = new Set(teams.justif.map(t => toDisplayName(t.name)));
+const faltaFiltrada = teams.falta.filter(n => {
+  const d = toDisplayName(n);
+  return !okDisplay.has(d) && !justifDisplay.has(d);
+});
 buildGridOk('abriu-grid', [...teams.ok].sort());
 buildGridJustif('justif-grid', [...teams.justif].sort((a,b)=>a.name.localeCompare(b.name)));
-buildGridFalta('falta-grid', [...teams.falta].sort());
+buildGridFalta('falta-grid', [...faltaFiltrada].sort());
 document.getElementById('ok-count').textContent    = teams.ok.length;
 document.getElementById('justif-count').textContent = teams.justif.length;
-document.getElementById('falta-count').textContent  = teams.falta.length;
-const total = teams.ok.length + teams.justif.length + teams.falta.length;
+document.getElementById('falta-count').textContent  = faltaFiltrada.length;
+const total = teams.ok.length + teams.justif.length + faltaFiltrada.length;
 // título fixo SISTEMA DE OBRAS
 document.getElementById('page-sub').textContent   = 'Relatorio: ' + currentDate;
 document.getElementById('date-input').value       = currentDate;
