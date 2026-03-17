@@ -170,6 +170,7 @@ window.presenceOpenModal = function() { if(window._presenceOpenModal) window._pr
       </div>
       <div id="mapa-diag-content" style="white-space:pre-wrap;line-height:1.8;"></div>
       <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap;">
+        <button onclick="mapaEnsureLeaflet(()=>{mapaRenderFiltros();mapaFiltrar();})" style="padding:6px 14px;background:#38a169;color:#fff;border:none;border-radius:8px;font-family:'Barlow',sans-serif;font-size:0.72rem;font-weight:800;cursor:pointer;">📍 Renderizar marcadores</button>
         <button onclick="mapaDiagnosticarForcarReler()" style="padding:6px 14px;background:#2b6cb0;color:#fff;border:none;border-radius:8px;font-family:'Barlow',sans-serif;font-size:0.72rem;font-weight:800;cursor:pointer;">🔄 Reler banco agora</button>
         <button onclick="mapaDiagnosticarLimparCache()" style="padding:6px 14px;background:#e53e3e;color:#fff;border:none;border-radius:8px;font-family:'Barlow',sans-serif;font-size:0.72rem;font-weight:800;cursor:pointer;">🗑️ Limpar cache local</button>
       </div>
@@ -3193,15 +3194,12 @@ if (mt) {
 const ms = document.getElementById('mapa-stats-bar'); if (ms) ms.style.display='';
 const ml = document.getElementById('mapa-legenda'); if (ml) ml.style.display='flex';
 const pageMapa = document.getElementById('page-mapa');
-if (pageMapa && pageMapa.style.display!=='none') {
+// page-mapa is always visible on mapa.html (no display:none set)
+// pageMapa.style.display is '' when visible (CSS or no inline style)
+if (pageMapa) {
   mapaEnsureLeaflet(() => { mapaRenderFiltros(); mapaFiltrar(); setTimeout(()=>{if(mapaMap)mapaMap.invalidateSize();},300); });
 } else {
-  // Pre-processa mesmo sem aba visível para estar pronto quando abrir
   mapaRenderFiltros && mapaRenderFiltros();
-}
-// Sempre tenta inicializar o mapa (página mapa.html sempre está visível)
-if (!pageMapa || pageMapa.style.display === '') {
-  mapaEnsureLeaflet(() => { mapaRenderFiltros(); mapaFiltrar(); setTimeout(()=>{if(mapaMap)mapaMap.invalidateSize();},300); });
 }
 mapaRotaObrasFiltradas = mapaData.filter(d=>d.temCoord);
 mapaRotaFiltrarLista();
