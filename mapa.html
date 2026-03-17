@@ -2358,7 +2358,20 @@ window.applyFontSize  = applyFontSize;
 })();
 // bancoDB e bancoDBInfo ja declarados no inicio do script
 let compMesFiltro = 'TODOS';
-function mapaParseCoord(s) { if(!s)return null; const v=String(s).trim().split('\n')[0].trim().replace(',','.'); const n=parseFloat(v); return isNaN(n)?null:n; }
+function mapaParseCoord(s) {
+  if (!s) return null;
+  let v = String(s).trim().split('\n')[0].trim();
+  // Remove invisible chars
+  v = v.replace(/[\u00a0\u200b\u200c\u200d\ufeff]/g, '');
+  // Replace comma decimal separator
+  v = v.replace(',', '.');
+  // Handle "S -11.3" or "W -41.5" prefixes (sometimes exported this way)
+  v = v.replace(/^[NSWEnswe]\s*/, '');
+  // Handle degree symbol: "11.30°" -> "11.30"
+  v = v.replace(/°.*$/, '');
+  const n = parseFloat(v);
+  return isNaN(n) ? null : n;
+}
 function compNorm(s) { return (s||'').toUpperCase().replace(/\s+/g,'').normalize('NFD').replace(/[\u0300-\u036f]/g,''); }
 function compParseNum(v) { if (v===''||v===null||v===undefined) return null; const n=parseFloat(String(v).replace(',','.')); return isNaN(n)?null:n; }
 function compWithPapa(cb) {
@@ -3027,8 +3040,30 @@ const info = bancoDBInfo||{};
 const mt = document.getElementById('mapa-titulo');
 if (mt) {
   if (comCoord === 0) {
-    mt.textContent = '⚠️ '+mapaData.length+' obras carregadas — nenhuma com coordenadas. Verifique se as colunas LATITUDE/LONGITUDE estão preenchidas na planilha.';
-    mt.style.color = '#c05621';
+    // Tenta nomes alternativos de colunas de coordenadas
+    const aliasLat = ['LATITUDE','Latitude','latitude','LAT','lat','Lat'];
+    const aliasLon = ['LONGITUDE','Longitude','longitude','LON','lon','Lon','LNG','lng','Lng'];
+    mapaData = bancoDB.map(obj => {
+      const latVal = aliasLat.map(k=>obj[k]).find(v=>v!=null&&v!=='');
+      const lonVal = aliasLon.map(k=>obj[k]).find(v=>v!=null&&v!=='');
+      const lat2 = mapaParseCoord(latVal), lon2 = mapaParseCoord(lonVal);
+      return { pep:obj['PEP OBRA']||'', titulo:obj['TÍTULO']||obj['TITULO']||'', status:obj['STATUS DA OBRA']||'',
+        mun:obj['MUNICIPIO']||obj['MUNICÍPIO']||'', utd:obj['_UTD']||'', lat:lat2, lon:lon2,
+        cava:obj['CAVA REALIZADA']||'', postR:obj['POSTES  REALIZADO']||obj['POSTES REALIZADO']||'',
+        postI:obj['POSTES  À IMPLANTA']||obj['POSTES À IMPLANTA']||'', enc:obj['ENCARREGADO']||'',
+        mes:mesFromObra(obj)||'', temCoord:lat2!==null&&lon2!==null };
+    });
+    const comCoord2 = mapaData.filter(d=>d.temCoord).length;
+    const colsFound = bancoDB.length > 0 ? Object.keys(bancoDB[0]).join(', ') : '—';
+    const sampleLat = bancoDB.length > 0 ? (aliasLat.map(k=>bancoDB[0][k]).find(v=>v!=null&&v!=='')||'—') : '—';
+    console.warn('[MAPA] Colunas:', colsFound, '| Amostra lat:', sampleLat, '| Com coord após fallback:', comCoord2);
+    if (comCoord2 > 0) {
+      mt.textContent = '🗄️ '+mapaData.length+' obras ('+comCoord2+' com coord)';
+      mt.style.color = '#b97400';
+    } else {
+      mt.innerHTML = '⚠️ '+mapaData.length+' obras sem coordenadas · Colunas: <span style="font-size:0.7rem;font-weight:600;">'+colsFound+'</span>';
+      mt.style.color = '#c05621';
+    }
   } else {
     mt.textContent = '🗄️ '+mapaData.length+' obras ('+comCoord+' com coord · '+semCoord+' sem coord)'+(info.updatedAt?' · '+info.updatedAt:'');
     mt.style.color = '#1a365d';
