@@ -334,14 +334,16 @@ window.presenceOpenModal = function() { if(window._presenceOpenModal) window._pr
         <!-- Resumo da rota calculada -->
         <div id="mapa-rota-resumo" style="display:none;background:linear-gradient(135deg,#fff8f0,#fff3e0);border:1.5px solid #fbd38d;border-radius:10px;padding:14px 16px;margin-top:4px;">
           <div style="font-size:0.68rem;font-weight:800;color:#c05621;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:10px;">📊 RESUMO DA ROTA</div>
-          <div style="display:flex;gap:20px;flex-wrap:wrap;">
+          <div style="display:flex;gap:20px;flex-wrap:wrap;margin-bottom:10px;">
             <div><span id="mapa-rota-res-dist" style="font-size:1.4rem;font-weight:800;color:#1a365d;">—</span><div style="font-size:0.62rem;font-weight:700;color:#888;text-transform:uppercase;">Distância total</div></div>
             <div><span id="mapa-rota-res-tempo" style="font-size:1.4rem;font-weight:800;color:#1a365d;">—</span><div style="font-size:0.62rem;font-weight:700;color:#888;text-transform:uppercase;">Tempo estimado</div></div>
             <div><span id="mapa-rota-res-paradas" style="font-size:1.4rem;font-weight:800;color:#1a365d;">—</span><div style="font-size:0.62rem;font-weight:700;color:#888;text-transform:uppercase;">Paradas</div></div>
+            <div><span id="mapa-rota-res-vel" style="font-size:1.4rem;font-weight:800;color:#1a365d;">—</span><div style="font-size:0.62rem;font-weight:700;color:#888;text-transform:uppercase;">Vel. média</div></div>
           </div>
-          <div style="margin-top:10px;display:flex;gap:8px;">
-            <button onclick="mapaRotaAbrirGoogleMaps()" style="padding:7px 16px;background:#4285f4;color:#fff;border:none;border-radius:8px;font-family:'Barlow',sans-serif;font-size:0.72rem;font-weight:800;cursor:pointer;">🗺️ Abrir no Google Maps</button>
-            <button onclick="mapaRotaAbrirWaze()" style="padding:7px 16px;background:#33ccff;color:#fff;border:none;border-radius:8px;font-family:'Barlow',sans-serif;font-size:0.72rem;font-weight:800;cursor:pointer;">🚗 Abrir no Waze</button>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <button onclick="mapaRotaAbrirGoogleMaps()" style="padding:7px 14px;background:#4285f4;color:#fff;border:none;border-radius:8px;font-family:'Barlow',sans-serif;font-size:0.72rem;font-weight:800;cursor:pointer;">🗺️ Google Maps</button>
+            <button onclick="mapaRotaAbrirWaze()" style="padding:7px 14px;background:#33ccff;color:#fff;border:none;border-radius:8px;font-family:'Barlow',sans-serif;font-size:0.72rem;font-weight:800;cursor:pointer;">🚗 Waze</button>
+            <button onclick="mapaRotaExportarCSV()" style="padding:7px 14px;background:#276749;color:#fff;border:none;border-radius:8px;font-family:'Barlow',sans-serif;font-size:0.72rem;font-weight:800;cursor:pointer;">⬇️ Exportar CSV</button>
           </div>
         </div>
       </div>
@@ -1961,14 +1963,20 @@ function mapaRaioDesenhar() {
     weight: 2.5,
     dashArray: '6 4'
   }).addTo(mapaMap);
+  const distLabel = mapaRaioKm >= 1 ? mapaRaioKm + ' km' : (mapaRaioKm * 1000).toFixed(0) + ' m';
+  const centerPopupHtml = `<div style="font-family:'Barlow',sans-serif;text-align:center;min-width:130px;">
+    <div style="font-weight:800;color:#553c9a;font-size:0.85rem;">🎯 Centro do raio</div>
+    <div style="font-size:1.2rem;font-weight:800;color:#6b46c1;margin:4px 0;">${distLabel}</div>
+    <div style="font-size:0.65rem;color:#888;font-weight:600;">${mapaRaioCentro.lat.toFixed(5)}, ${mapaRaioCentro.lon.toFixed(5)}</div>
+  </div>`;
   mapaRaioMarker = L.marker([mapaRaioCentro.lat, mapaRaioCentro.lon], {
     icon: L.divIcon({
       className: '',
-      html: '<div style="width:16px;height:16px;border-radius:50%;background:#6b46c1;border:3px solid #fff;box-shadow:0 2px 8px rgba(107,70,193,0.6);"></div>',
-      iconSize: [16,16], iconAnchor: [8,8]
+      html: `<div style="width:18px;height:18px;border-radius:50%;background:#6b46c1;border:3px solid #fff;box-shadow:0 2px 8px rgba(107,70,193,0.6);cursor:pointer;"></div>`,
+      iconSize: [18,18], iconAnchor: [9,9]
     }),
     zIndexOffset: 1000
-  }).addTo(mapaMap).bindPopup('<div style="font-family:Barlow,sans-serif;font-weight:800;color:#553c9a;">Centro do raio<br><span style="font-weight:600;font-size:0.8rem;">'+mapaRaioKm+'km</span></div>');
+  }).addTo(mapaMap).bindPopup(centerPopupHtml);
   mapaMap.fitBounds(mapaRaioCircle.getBounds(), { padding: [20, 20] });
 }
 
@@ -1976,6 +1984,11 @@ function mapaRaioLimpar() {
   if (mapaRaioCircle) { mapaRaioCircle.remove(); mapaRaioCircle = null; }
   if (mapaRaioMarker) { mapaRaioMarker.remove(); mapaRaioMarker = null; }
   mapaRaioCentro = null;
+  // Reset campos de lat/lon
+  const latEl = document.getElementById('mapa-raio-lat');
+  const lonEl = document.getElementById('mapa-raio-lon');
+  if (latEl) latEl.value = '';
+  if (lonEl) lonEl.value = '';
   const panel = document.getElementById('mapa-raio-panel');
   const btn   = document.getElementById('btn-toggle-raio');
   if (panel) panel.style.display = 'none';
@@ -1983,6 +1996,12 @@ function mapaRaioLimpar() {
   mapaRaioAtivo = false;
   const countEl = document.getElementById('mapa-raio-count');
   if (countEl) countEl.textContent = '';
+  // Resetar hint e botão de clicar caso esteja aguardando
+  mapaRaioModoClick = false;
+  const hint = document.getElementById('mapa-raio-hint');
+  if (hint) hint.style.display = 'none';
+  const btnClicar = document.getElementById('btn-raio-clicar');
+  if (btnClicar) { btnClicar.style.background = '#faf5ff'; btnClicar.style.color = '#6b46c1'; btnClicar.textContent = '🖱️ Clicar no mapa'; }
   mapaFiltrar();
 }
 
@@ -2138,7 +2157,13 @@ function mapaRotaLimpar() {
   const baseSel = document.getElementById('mapa-rota-base-sel');
   if (baseSel) baseSel.value = '';
   if (mapaRotaLayerGroup) { mapaRotaLayerGroup.clearLayers(); }
+  // Resetar resumo completamente
   const res = document.getElementById('mapa-rota-resumo'); if (res) res.style.display='none';
+  const elDist = document.getElementById('mapa-rota-res-dist'); if (elDist) elDist.textContent='—';
+  const elTempo = document.getElementById('mapa-rota-res-tempo'); if (elTempo) elTempo.textContent='—';
+  const elPar = document.getElementById('mapa-rota-res-paradas'); if (elPar) elPar.textContent='—';
+  // Resetar campo de busca
+  const busca = document.getElementById('mapa-rota-busca'); if (busca) busca.value='';
   const sub = document.getElementById('mapa-rota-sub'); if (sub) sub.textContent='Selecione os pontos da rota';
   mapaRotaAtualizarLista();
 }
@@ -2158,17 +2183,39 @@ function mapaRotaBaseSelect() {
   if (ori) ori.value = lat + ', ' + lon;
 }
 function mapaRotaUsarLocalizacao() {
-  if (!navigator.geolocation) { alert('Geolocalização não disponível no seu dispositivo.'); return; }
-  navigator.geolocation.getCurrentPosition(pos => {
-    const lat = pos.coords.latitude, lon = pos.coords.longitude;
-    mapaRotaOrigemLatLon = {lat, lon};
-    const ori = document.getElementById('mapa-rota-origem-txt');
-    if (ori) ori.value = lat.toFixed(5) + ', ' + lon.toFixed(5);
-  }, () => alert('Não foi possível obter a localização.'));
+  if (!navigator.geolocation) { alert('Geolocalização não suportada neste navegador.'); return; }
+  const btnLoc = document.querySelector('[onclick="mapaRotaUsarLocalizacao()"]');
+  if (btnLoc) { btnLoc.textContent = '⏳ Buscando...'; btnLoc.disabled = true; }
+  navigator.geolocation.getCurrentPosition(
+    pos => {
+      const lat = pos.coords.latitude, lon = pos.coords.longitude;
+      mapaRotaOrigemLatLon = {lat, lon};
+      const ori = document.getElementById('mapa-rota-origem-txt');
+      if (ori) ori.value = lat.toFixed(5) + ', ' + lon.toFixed(5);
+      if (btnLoc) { btnLoc.textContent = '📍 Minha localização'; btnLoc.disabled = false; }
+    },
+    err => {
+      const msgs = {1:'Permissão de localização negada.', 2:'Localização indisponível.', 3:'Tempo esgotado ao buscar localização.'};
+      alert(msgs[err.code] || 'Não foi possível obter a localização.');
+      if (btnLoc) { btnLoc.textContent = '📍 Minha localização'; btnLoc.disabled = false; }
+    },
+    {timeout: 10000, maximumAge: 60000}
+  );
 }
 function mapaRotaAtualizarLista() {
-  // obras com coordenadas que estão visíveis no mapa
-  mapaRotaObrasFiltradas = (mapaData||[]).filter(d => d.temCoord);
+  // Respeitar filtros ativos do mapa (status, município, encarregado, UTD)
+  const search = (document.getElementById('mapa-search') ? document.getElementById('mapa-search').value || '' : '').toLowerCase();
+  const munF = document.getElementById('mapa-mun-filter') ? document.getElementById('mapa-mun-filter').value || '' : '';
+  const encF = document.getElementById('mapa-enc-filter') ? document.getElementById('mapa-enc-filter').value || '' : '';
+  mapaRotaObrasFiltradas = (mapaData || []).filter(d => {
+    if (!d.temCoord) return false;
+    if (mapaFiltroAtivo && mapaFiltroAtivo !== 'TODOS' && d.status.trim() !== mapaFiltroAtivo) return false;
+    if (munF && d.mun !== munF) return false;
+    if (encF && d.enc !== encF) return false;
+    if (mapaUTDFiltro && mapaUTDFiltro !== 'TODAS' && d.utd !== mapaUTDFiltro) return false;
+    if (search && !d.pep.toLowerCase().includes(search) && !d.titulo.toLowerCase().includes(search) && !(d.mun||'').toLowerCase().includes(search)) return false;
+    return true;
+  });
   mapaRotaFiltrarLista();
   mapaRotaAtualizarSelecionadas();
 }
@@ -2326,7 +2373,15 @@ async function mapaRotaCalcular() {
         L.marker([d.lat, d.lon], {
           icon: L.divIcon({className:'',html:`<div style="width:26px;height:26px;border-radius:50%;background:${bg};border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:900;color:#fff;">${i+1}</div>`,iconSize:[26,26],iconAnchor:[13,13]})
         }).addTo(mapaRotaLayerGroup)
-          .bindPopup(`<div style="font-family:'Barlow',sans-serif;min-width:190px;"><div style="font-size:0.68rem;font-weight:800;color:${bg};margin-bottom:4px;">PARADA ${i+1}${isLast?' · ÚLTIMA':''}${retornar&&isLast?' · RETORNO':''}  </div><div style="font-size:0.9rem;font-weight:800;color:#1a365d;line-height:1.3;">${d.titulo||d.pep}</div><div style="font-size:0.68rem;color:#888;margin-top:3px;">${d.pep}${d.mun?' · '+d.mun:''}</div></div>`, {maxWidth:280});
+        .bindPopup(`<div style="font-family:'Barlow',sans-serif;min-width:200px;">
+          <div style="display:flex;align-items:center;gap:5px;margin-bottom:5px;flex-wrap:wrap;">
+            <span style="font-size:0.65rem;font-weight:800;color:${bg};background:${bg}22;padding:2px 8px;border-radius:4px;">PARADA ${i+1}${isLast?' · ÚLTIMA':''}</span>
+            ${d.status?`<span style="font-size:0.62rem;font-weight:800;color:${mapaGetCor(d.status)};background:${mapaGetCor(d.status)}22;padding:2px 7px;border-radius:4px;">${d.status}</span>`:''}
+          </div>
+          <div style="font-size:0.9rem;font-weight:800;color:#1a365d;line-height:1.3;margin-bottom:4px;">${d.titulo||d.pep}</div>
+          <div style="font-size:0.68rem;color:#888;margin-bottom:6px;">${d.pep}${d.mun?` · 📍 ${d.mun}`:''}</div>
+          <a href="https://www.google.com/maps?q=${d.lat},${d.lon}" target="_blank" rel="noopener" style="display:block;text-align:center;padding:5px;background:#ebf4ff;color:#2b6cb0;border-radius:6px;font-size:0.65rem;font-weight:800;text-decoration:none;">🗺️ Ver no Maps</a>
+        </div>`, {maxWidth:280});
       });
 
       // Fit bounds
@@ -2340,7 +2395,11 @@ async function mapaRotaCalcular() {
     const el_dist = document.getElementById('mapa-rota-res-dist'); if (el_dist) el_dist.textContent = distKm + ' km';
     const el_tempo = document.getElementById('mapa-rota-res-tempo'); if (el_tempo) el_tempo.textContent = durStr;
     const el_par = document.getElementById('mapa-rota-res-paradas'); if (el_par) el_par.textContent = mapaRotaSelecionadas.length;
-    if (sub) sub.textContent = `${mapaRotaSelecionadas.length} paradas · ${distKm} km · ${durStr}${retornar?' · com retorno':''}`;
+    // Velocidade média estimada
+    const velMedia = totalDur > 0 ? ((totalDist / 1000) / (totalDur / 3600)).toFixed(0) : '—';
+    const velEl = document.getElementById('mapa-rota-res-vel');
+    if (velEl) velEl.textContent = velMedia !== '—' ? velMedia + ' km/h' : '—';
+    if (sub) sub.textContent = `${mapaRotaSelecionadas.length} parada${mapaRotaSelecionadas.length!==1?'s':''} · ${distKm} km · ${durStr} · ~${velMedia} km/h${retornar?' · retorno':''}`;
     if (btn) { btn.textContent = '🧭 CALCULAR ROTA'; btn.disabled = false; }
   } catch(e) {
     if (sub) sub.textContent = '⚠️ Erro ao calcular rota. Verifique a conexão.';
@@ -2357,11 +2416,26 @@ function mapaRotaAbrirGoogleMaps() {
 }
 function mapaRotaAbrirWaze() {
   if (!mapaRotaSelecionadas.length) return;
-  // Waze supports only single destination; open first unvisited
-  const dest = mapaRotaSelecionadas[0];
+  // Waze suporta apenas destino único — abre o destino final da rota
+  const dest = mapaRotaSelecionadas[mapaRotaSelecionadas.length - 1];
   const url = `https://waze.com/ul?ll=${dest.lat},${dest.lon}&navigate=yes`;
   window.open(url, '_blank');
 }
+function mapaRotaExportarCSV() {
+  if (!mapaRotaSelecionadas.length) { alert('Nenhuma parada selecionada para exportar.'); return; }
+  const linhas = [['Sequência','PEP','Título','Município','Status','Latitude','Longitude']];
+  if (mapaRotaOrigemLatLon) linhas.push(['0','—','Ponto de Partida','—','—', mapaRotaOrigemLatLon.lat, mapaRotaOrigemLatLon.lon]);
+  mapaRotaSelecionadas.forEach((d, i) => {
+    linhas.push([i+1, d.pep, d.titulo||d.pep, d.mun||'—', d.status||'—', d.lat, d.lon]);
+  });
+  const csv = linhas.map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob = new Blob(['\uFEFF' + csv], {type:'text/csv;charset=utf-8;'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'rota_obras.csv';
+  a.click();
+}
+window.mapaRotaExportarCSV = mapaRotaExportarCSV;
 function mapaRotaAdicionarDoPopup(pep, titulo, lat, lon, mun, status) {
   if (mapaRotaSelecionadas.find(s=>s.pep===pep)) return;
   mapaRotaSelecionadas.push({pep, titulo, lat, lon, mun, status});
@@ -3324,8 +3398,11 @@ b.style.background=active?'#38a169':'#fff'; b.style.color=active?'#fff':'#555'; 
 const cl = document.getElementById('mapa-count-label');
 if (cl) cl.textContent = filtered.length+' obra'+(filtered.length!==1?'s':'');
 const raioCount = document.getElementById('mapa-raio-count');
-if (raioCount && mapaRaioCentro) raioCount.textContent = filtered.length+' obra'+(filtered.length!==1?'s':'')+' no raio';
-else if (raioCount) raioCount.textContent = '';
+if (raioCount && mapaRaioCentro) {
+  const totalComCoord = mapaData.filter(d => d.temCoord).length;
+  const fora = totalComCoord - filtered.length;
+  raioCount.innerHTML = `<span style="color:#276749;">✓ ${filtered.length} dentro</span>${fora>0?` <span style="color:#888;font-weight:600;">· ${fora} fora</span>`:''}`;
+} else if (raioCount) raioCount.textContent = '';
 const bounds = [];
 filtered.forEach(d => {
 const cor = mapaGetCor(d.status);
@@ -3333,7 +3410,36 @@ const jaSel = mapaRotaSelecionadas.find(s=>s.pep===d.pep);
 const pepAttr = (d.pep||'').replace(/"/g,'&quot;');
 const rotaBtnHtml = d.temCoord ? `<button class="mapa-rota-add-btn" data-pep="${pepAttr}" style="margin-top:10px;width:100%;padding:7px 0;background:${jaSel?'#38a169':'#c05621'};color:#fff;border:none;border-radius:8px;font-family:'Barlow',sans-serif;font-size:0.72rem;font-weight:800;cursor:${jaSel?'default':'pointer'};letter-spacing:0.5px;"${jaSel?' disabled':''}>🛣️ ${jaSel?'✓ Na rota':'+ Adicionar à rota'}</button>` : '';
 const utdTag = d.utd?`<span style="background:#ebf4ff;color:#2b6cb0;padding:1px 7px;border-radius:4px;font-size:0.65rem;font-weight:800;margin-left:4px;">${d.utd}</span>`:'';
-const popup = `<div style="font-family:'Barlow',sans-serif;min-width:230px;max-width:290px;"><div style="display:flex;align-items:center;gap:6px;margin-bottom:5px;"><span style="background:${cor}22;color:${cor};padding:2px 10px;border-radius:4px;font-size:0.68rem;font-weight:800;">${d.status||'–'}</span>${utdTag}</div><div style="font-size:0.9rem;font-weight:800;color:#1a365d;margin-bottom:6px;line-height:1.3;">${d.titulo||d.pep}</div><div style="font-size:0.7rem;color:#718096;font-weight:700;margin-bottom:10px;"><code class="_s21">${d.pep}</code>${d.mun?' · '+d.mun:''}</div><div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px;"><div style="background:#f0fff4;border-radius:6px;padding:7px 4px;text-align:center;"><div style="font-size:1.1rem;font-weight:800;color:#38a169;">${d.cava||'—'}</div><div class="_s22">Cava</div></div><div style="background:#ebf4ff;border-radius:6px;padding:7px 4px;text-align:center;"><div style="font-size:1.1rem;font-weight:800;color:#2b6cb0;">${d.postR||'—'}</div><div class="_s22">Postes Real.</div></div><div style="background:#fffbf0;border-radius:6px;padding:7px 4px;text-align:center;"><div style="font-size:1.1rem;font-weight:800;color:#d69e2e;">${d.postI||'—'}</div><div class="_s22">À Implantar</div></div></div>${d.enc?`<div style="font-size:0.7rem;color:#555;font-weight:700;margin-top:8px;">👷 ${d.enc}</div>`:''}${rotaBtnHtml}</div>`;
+const distTag = (mapaRaioCentro && d.temCoord) ? (()=>{const km=mapaRaioDistKm(mapaRaioCentro.lat,mapaRaioCentro.lon,d.lat,d.lon);return `<span style="background:#f5f3ff;color:#6b46c1;padding:1px 7px;border-radius:4px;font-size:0.65rem;font-weight:800;margin-left:4px;">📏 ${km<1?(km*1000).toFixed(0)+'m':km.toFixed(1)+'km'}</span>`;})() : '';
+const gmapsUrl = `https://www.google.com/maps?q=${d.lat},${d.lon}`;
+const popup = `<div style="font-family:'Barlow',sans-serif;min-width:240px;max-width:310px;">
+<div style="display:flex;align-items:center;gap:5px;margin-bottom:5px;flex-wrap:wrap;">
+  <span style="background:${cor}22;color:${cor};padding:2px 10px;border-radius:4px;font-size:0.68rem;font-weight:800;">${d.status||'–'}</span>${utdTag}${distTag}
+</div>
+<div style="font-size:0.92rem;font-weight:800;color:#1a365d;margin-bottom:4px;line-height:1.3;">${d.titulo||d.pep}</div>
+<div style="font-size:0.7rem;color:#718096;font-weight:700;margin-bottom:8px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+  <code class="_s21">${d.pep}</code>${d.mun?`<span>📍 ${d.mun}</span>`:''}
+</div>
+${d.enc?`<div style="font-size:0.72rem;color:#2d3748;font-weight:700;margin-bottom:8px;padding:5px 8px;background:#f0fafa;border-radius:6px;">👷 <b>${d.enc}</b></div>`:''}
+<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px;margin-bottom:8px;">
+  <div style="background:#f0fff4;border-radius:6px;padding:7px 4px;text-align:center;">
+    <div style="font-size:1.05rem;font-weight:800;color:#38a169;">${d.cava||'—'}</div>
+    <div class="_s22">Cava</div>
+  </div>
+  <div style="background:#ebf4ff;border-radius:6px;padding:7px 4px;text-align:center;">
+    <div style="font-size:1.05rem;font-weight:800;color:#2b6cb0;">${d.postR||'—'}</div>
+    <div class="_s22">Postes Real.</div>
+  </div>
+  <div style="background:#fffbf0;border-radius:6px;padding:7px 4px;text-align:center;">
+    <div style="font-size:1.05rem;font-weight:800;color:#d69e2e;">${d.postI||'—'}</div>
+    <div class="_s22">À Implantar</div>
+  </div>
+</div>
+<div style="display:flex;gap:6px;margin-bottom:2px;">
+  <a href="${gmapsUrl}" target="_blank" rel="noopener" style="flex:1;text-align:center;padding:5px 0;background:#ebf4ff;color:#2b6cb0;border-radius:6px;font-size:0.65rem;font-weight:800;text-decoration:none;font-family:'Barlow',sans-serif;">🗺️ Ver no Maps</a>
+  <button onclick="navigator.clipboard&&navigator.clipboard.writeText('${d.lat},${d.lon}')" style="flex:1;padding:5px 0;background:#f0f4f8;color:#555;border:none;border-radius:6px;font-size:0.65rem;font-weight:800;cursor:pointer;font-family:'Barlow',sans-serif;">📋 Copiar coords</button>
+</div>
+${rotaBtnHtml}</div>`;
 const icon = L.divIcon({className:'',html:`<div style="width:13px;height:13px;border-radius:50%;background:${cor};border:2.5px solid #fff;box-shadow:0 1px 5px rgba(0,0,0,0.45);cursor:pointer;"></div>`,iconSize:[13,13],iconAnchor:[6,6]});
 L.marker([d.lat,d.lon],{icon}).addTo(mapaLayerGroup).bindPopup(popup,{maxWidth:310});
 bounds.push([d.lat,d.lon]);
@@ -3527,17 +3633,26 @@ const coord = mapaProgGetCoord(r);
 if (!coord) return;
 const encInfo = (PROG_ENCARREGADOS || {})[r.encarregado] || {};
 const sup = encInfo.supervisor || r.supervisor || '—';
-const popup = `<div style="font-family:'Barlow',sans-serif;min-width:220px;max-width:280px;">
-<div style="background:#6b46c122;color:#6b46c1;padding:2px 10px;border-radius:4px;font-size:0.65rem;font-weight:800;display:inline-block;margin-bottom:6px;">📅 PROGRAMADA HOJE</div>
-<div style="font-size:0.9rem;font-weight:800;color:#1a365d;margin-bottom:4px;line-height:1.3;">${r.nome_obra||r.pep}</div>
-<div style="font-size:0.7rem;color:#718096;font-weight:700;margin-bottom:8px;"><code class="_s21">${r.pep}</code>${r.municipio?' · '+r.municipio:''}</div>
-<div style="font-size:0.72rem;color:#333;font-weight:600;margin-bottom:4px;">👷 <b>${r.encarregado||'—'}</b></div>
-<div style="font-size:0.7rem;color:#555;margin-bottom:4px;">🏢 ${sup}</div>
-${r.atividade?`<div style="font-size:0.7rem;color:#555;margin-bottom:4px;">🔧 ${r.atividade}</div>`:''}
-<div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-top:8px;">
-<div style="background:#f0fafa;border-radius:6px;padding:6px;text-align:center;"><div style="font-size:1rem;font-weight:800;color:#0d7377;">${r.qtd_prevista||'—'}</div><div class="_s14">Previsto</div></div>
-<div style="background:#f0fff4;border-radius:6px;padding:6px;text-align:center;"><div style="font-size:1rem;font-weight:800;color:#276749;">${r.qtd_realizada||'—'}</div><div class="_s14">Realizado</div></div>
+const statusProgCor = {'EXECUTADO':'#14a085','NÃO EXECUTADO':'#e53e3e','NAO EXECUTADO':'#e53e3e','EM EXECUÇÃO':'#2b6cb0','SEM ACESSO':'#c05621','TEMPO CHUVOSO':'#2c5282'}[((r.status||'').toUpperCase())] || '#a0aec0';
+const dataFmt = r.data ? r.data.split('-').reverse().join('/') : '';
+const gmapsProg = `https://www.google.com/maps?q=${coord.lat},${coord.lon}`;
+const popup = `<div style="font-family:'Barlow',sans-serif;min-width:230px;max-width:295px;">
+<div style="display:flex;align-items:center;gap:5px;margin-bottom:6px;flex-wrap:wrap;">
+  <span style="background:#6b46c122;color:#6b46c1;padding:2px 8px;border-radius:4px;font-size:0.65rem;font-weight:800;">📅 PROGRAMADA${dataFmt?' — '+dataFmt:' HOJE'}</span>
+  ${r.status?`<span style="background:${statusProgCor}22;color:${statusProgCor};padding:2px 8px;border-radius:4px;font-size:0.65rem;font-weight:800;">${r.status}</span>`:''}
 </div>
+<div style="font-size:0.92rem;font-weight:800;color:#1a365d;margin-bottom:4px;line-height:1.3;">${r.nome_obra||r.pep}</div>
+<div style="font-size:0.7rem;color:#718096;font-weight:700;margin-bottom:8px;display:flex;align-items:center;gap:5px;flex-wrap:wrap;">
+  <code class="_s21">${r.pep}</code>${r.municipio?`<span>📍 ${r.municipio}</span>`:''}
+</div>
+<div style="font-size:0.72rem;color:#2d3748;font-weight:700;margin-bottom:3px;padding:5px 8px;background:#f0fafa;border-radius:6px;">👷 <b>${r.encarregado||'—'}</b></div>
+<div style="font-size:0.7rem;color:#555;margin-bottom:4px;padding:3px 8px;">🏢 ${sup}</div>
+${r.atividade?`<div style="font-size:0.7rem;color:#444;margin-bottom:6px;padding:3px 8px;background:#fffbf0;border-radius:6px;">🔧 ${r.atividade}</div>`:''}
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:8px;">
+  <div style="background:#f0fafa;border-radius:6px;padding:6px;text-align:center;"><div style="font-size:1rem;font-weight:800;color:#0d7377;">${r.qtd_prevista||'—'}</div><div class="_s14">Previsto</div></div>
+  <div style="background:#f0fff4;border-radius:6px;padding:6px;text-align:center;"><div style="font-size:1rem;font-weight:800;color:#276749;">${r.qtd_realizada||'—'}</div><div class="_s14">Realizado</div></div>
+</div>
+<a href="${gmapsProg}" target="_blank" rel="noopener" style="display:block;text-align:center;padding:6px 0;background:#ebf4ff;color:#2b6cb0;border-radius:6px;font-size:0.65rem;font-weight:800;text-decoration:none;font-family:'Barlow',sans-serif;">🗺️ Ver no Google Maps</a>
 </div>`;
 const icon = L.divIcon({
 className: '',
