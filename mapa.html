@@ -129,6 +129,10 @@ window.presenceOpenModal = function() { if(window._presenceOpenModal) window._pr
               style="padding:5px 13px;border-radius:8px;border:1.5px solid #d6bcfa;background:#faf5ff;font-family:'Barlow',sans-serif;font-size:0.72rem;font-weight:800;cursor:pointer;color:#6b46c1;transition:all 0.15s;white-space:nowrap;">
               ⭕ Filtro de Raio
             </button>
+            <button id="btn-toggle-lista" onclick="mapaObrasToggleLista()"
+              style="padding:5px 13px;border-radius:8px;border:1.5px solid #c0e8e5;background:#f0fafa;font-family:'Barlow',sans-serif;font-size:0.72rem;font-weight:800;cursor:pointer;color:#0d7377;transition:all 0.15s;white-space:nowrap;">
+              📋 Lista de obras
+            </button>
           </div>
         </div>
       </div>
@@ -212,6 +216,46 @@ window.presenceOpenModal = function() { if(window._presenceOpenModal) window._pr
     </div>
 
     <!-- PAINEL TRAÇAR ROTA -->
+    <!-- LISTA DE OBRAS FILTRADAS -->
+    <div id="mapa-obras-section" style="display:none;background:#fff;border-radius:14px;box-shadow:0 2px 14px rgba(0,0,0,0.08);overflow:hidden;margin-bottom:14px;">
+      <div style="background:linear-gradient(135deg,#0b5e62,#14a085);padding:14px 20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+        <div style="display:flex;align-items:center;gap:12px;">
+          <div style="width:34px;height:34px;background:rgba(255,255,255,0.15);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1rem;">📋</div>
+          <div>
+            <div style="color:#fff;font-size:0.92rem;font-weight:800;letter-spacing:0.5px;">LISTA DE OBRAS</div>
+            <div style="color:rgba(255,255,255,0.7);font-size:0.68rem;font-weight:600;margin-top:1px;" id="mapa-obras-sub">0 obras</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <button onclick="mapaObrasExportar()" style="padding:6px 14px;border-radius:8px;background:rgba(255,255,255,0.15);border:1.5px solid rgba(255,255,255,0.3);color:#fff;font-family:'Barlow',sans-serif;font-size:0.72rem;font-weight:800;cursor:pointer;transition:all 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.25)'" onmouseout="this.style.background='rgba(255,255,255,0.15)'">⬇️ Exportar CSV</button>
+          <button onclick="document.getElementById('mapa-obras-section').style.display='none';document.getElementById('btn-toggle-lista').style.background='';document.getElementById('btn-toggle-lista').style.color=''" style="padding:6px 12px;border-radius:8px;background:rgba(0,0,0,0.15);border:1px solid rgba(255,255,255,0.2);color:rgba(255,255,255,0.7);font-family:'Barlow',sans-serif;font-size:0.72rem;font-weight:800;cursor:pointer;">✕ Fechar</button>
+        </div>
+      </div>
+      <div style="overflow-x:auto;">
+        <table style="width:100%;border-collapse:collapse;font-family:'Barlow',sans-serif;font-size:0.78rem;">
+          <thead>
+            <tr style="background:#f0fafa;border-bottom:2px solid #c0e8e5;">
+              <th style="padding:9px 14px;text-align:left;font-size:0.63rem;font-weight:800;color:#0d7377;letter-spacing:1.5px;text-transform:uppercase;white-space:nowrap;">PEP</th>
+              <th style="padding:9px 14px;text-align:left;font-size:0.63rem;font-weight:800;color:#0d7377;letter-spacing:1.5px;text-transform:uppercase;min-width:200px;">TÍTULO</th>
+              <th style="padding:9px 14px;text-align:left;font-size:0.63rem;font-weight:800;color:#0d7377;letter-spacing:1.5px;text-transform:uppercase;white-space:nowrap;">MUNICÍPIO</th>
+              <th style="padding:9px 14px;text-align:left;font-size:0.63rem;font-weight:800;color:#0d7377;letter-spacing:1.5px;text-transform:uppercase;white-space:nowrap;">UTD</th>
+              <th style="padding:9px 14px;text-align:left;font-size:0.63rem;font-weight:800;color:#0d7377;letter-spacing:1.5px;text-transform:uppercase;white-space:nowrap;">ENCARREGADO</th>
+              <th style="padding:9px 14px;text-align:center;font-size:0.63rem;font-weight:800;color:#0d7377;letter-spacing:1.5px;text-transform:uppercase;white-space:nowrap;">CAVA</th>
+              <th style="padding:9px 14px;text-align:center;font-size:0.63rem;font-weight:800;color:#0d7377;letter-spacing:1.5px;text-transform:uppercase;white-space:nowrap;">POSTES R.</th>
+              <th style="padding:9px 14px;text-align:center;font-size:0.63rem;font-weight:800;color:#0d7377;letter-spacing:1.5px;text-transform:uppercase;white-space:nowrap;">À IMPLANTAR</th>
+              <th style="padding:9px 14px;text-align:left;font-size:0.63rem;font-weight:800;color:#0d7377;letter-spacing:1.5px;text-transform:uppercase;white-space:nowrap;">STATUS</th>
+              <th style="padding:9px 14px;text-align:center;font-size:0.63rem;font-weight:800;color:#0d7377;letter-spacing:1.5px;text-transform:uppercase;white-space:nowrap;">📍</th>
+            </tr>
+          </thead>
+          <tbody id="mapa-obras-tbody"></tbody>
+        </table>
+        <div id="mapa-obras-empty" style="display:none;text-align:center;padding:36px;color:#aaa;">
+          <div style="font-size:2.5rem;margin-bottom:10px;">🔍</div>
+          <div style="font-size:0.88rem;font-weight:700;color:#888;">Nenhuma obra encontrada com os filtros atuais.</div>
+        </div>
+      </div>
+    </div>
+
     <div id="mapa-rota-section" style="display:none;background:#fff;border-radius:14px;box-shadow:0 2px 14px rgba(0,0,0,0.08);overflow:hidden;margin-bottom:14px;">
       <div style="background:linear-gradient(135deg,#c05621,#dd6b20);padding:14px 20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
         <div style="display:flex;align-items:center;gap:12px;">
@@ -1817,6 +1861,88 @@ function mapaRaioDistKm(lat1, lon1, lat2, lon2) {
 }
 
 window.mapaRaioToggle   = mapaRaioToggle;
+
+// ═══════════════════════════════════════════════════════════
+//  LISTA DE OBRAS FILTRADAS
+// ═══════════════════════════════════════════════════════════
+let mapaObrasListaAtiva = false;
+let mapaObrasListaFiltrados = [];
+
+function mapaObrasToggleLista() {
+  mapaObrasListaAtiva = !mapaObrasListaAtiva;
+  const section = document.getElementById('mapa-obras-section');
+  const btn = document.getElementById('btn-toggle-lista');
+  if (section) section.style.display = mapaObrasListaAtiva ? '' : 'none';
+  if (btn) {
+    btn.style.background = mapaObrasListaAtiva ? '#0d7377' : '#f0fafa';
+    btn.style.color = mapaObrasListaAtiva ? '#fff' : '#0d7377';
+    btn.style.borderColor = mapaObrasListaAtiva ? '#0d7377' : '#c0e8e5';
+  }
+  if (mapaObrasListaAtiva) mapaRenderObrasList(mapaObrasListaFiltrados);
+}
+
+function mapaRenderObrasList(filtered) {
+  const tbody = document.getElementById('mapa-obras-tbody');
+  const empty = document.getElementById('mapa-obras-empty');
+  const sub   = document.getElementById('mapa-obras-sub');
+  if (!tbody) return;
+
+  if (sub) sub.textContent = filtered.length + ' obra' + (filtered.length !== 1 ? 's' : '') + ' filtrada' + (filtered.length !== 1 ? 's' : '');
+
+  if (!filtered.length) {
+    tbody.innerHTML = '';
+    if (empty) empty.style.display = '';
+    return;
+  }
+  if (empty) empty.style.display = 'none';
+
+  const corStatus = s => {
+    s = (s||'').trim();
+    if (s.includes('Energizada') || s.includes('ENERGI')) return '#38a169';
+    if (s.includes('Execu') || s.includes('EXECU')) return '#2b6cb0';
+    if (s.includes('Programada') || s.includes('PROGRAM')) return '#d69e2e';
+    if (s.includes('Paralisada') || s.includes('PARALI')) return '#e53e3e';
+    if (s.includes('Cancelada') || s.includes('Retirada') || s.includes('CANCEL')) return '#718096';
+    return '#888';
+  };
+
+  tbody.innerHTML = filtered.map((d, i) => {
+    const cor = corStatus(d.status);
+    const bg = i % 2 === 0 ? '#fff' : '#f9fbff';
+    const coordBtn = d.temCoord
+      ? `<button onclick="if(mapaMap){mapaMap.setView([${d.lat},${d.lon}],14);document.getElementById('mapa-container').scrollIntoView({behavior:'smooth',block:'center'});}" style="padding:3px 10px;border-radius:6px;background:#0d7377;color:#fff;border:none;font-family:'Barlow',sans-serif;font-size:0.65rem;font-weight:800;cursor:pointer;">ver</button>`
+      : `<span style="color:#ccc;font-size:0.7rem;">sem coord</span>`;
+    return `<tr style="border-bottom:1px solid #edf2f7;background:${bg};" onmouseover="this.style.background='#f0fafa'" onmouseout="this.style.background='${bg}'">
+      <td style="padding:9px 14px;"><code style="background:#f0fafa;color:#0d7377;padding:2px 7px;border-radius:4px;font-size:0.7rem;font-weight:800;white-space:nowrap;">${esc(d.pep)}</code></td>
+      <td style="padding:9px 14px;font-size:0.78rem;font-weight:700;color:#1a365d;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${esc(d.titulo)}">${esc(d.titulo||'—')}</td>
+      <td style="padding:9px 14px;font-size:0.75rem;font-weight:700;color:#555;white-space:nowrap;">${esc(d.mun||'—')}</td>
+      <td style="padding:9px 14px;"><span style="background:${d.utd==='IRECÊ'?'#ebf4ff':'#fff8f0'};color:${d.utd==='IRECÊ'?'#2b6cb0':'#c05621'};padding:2px 8px;border-radius:4px;font-size:0.65rem;font-weight:800;">${esc(d.utd||'—')}</span></td>
+      <td style="padding:9px 14px;font-size:0.75rem;font-weight:700;color:#555;white-space:nowrap;">${esc(d.enc||'—')}</td>
+      <td style="padding:9px 14px;text-align:center;font-size:0.82rem;font-weight:800;color:#38a169;">${esc(d.cava||'—')}</td>
+      <td style="padding:9px 14px;text-align:center;font-size:0.82rem;font-weight:800;color:#2b6cb0;">${esc(d.postR||'—')}</td>
+      <td style="padding:9px 14px;text-align:center;font-size:0.82rem;font-weight:800;color:#d69e2e;">${esc(d.postI||'—')}</td>
+      <td style="padding:9px 14px;white-space:nowrap;"><span style="background:${cor}22;color:${cor};padding:2px 9px;border-radius:4px;font-size:0.68rem;font-weight:800;">${esc(d.status||'—')}</span></td>
+      <td style="padding:9px 14px;text-align:center;">${coordBtn}</td>
+    </tr>`;
+  }).join('');
+}
+
+function mapaObrasExportar() {
+  if (!mapaObrasListaFiltrados.length) return;
+  const header = 'PEP;TÍTULO;MUNICÍPIO;UTD;ENCARREGADO;CAVA;POSTES_R;À_IMPLANTAR;STATUS;LAT;LON';
+  const rows = mapaObrasListaFiltrados.map(d =>
+    [d.pep, d.titulo, d.mun, d.utd, d.enc, d.cava, d.postR, d.postI, d.status, d.lat||'', d.lon||'']
+    .map(v => '"'+(String(v||'').replace(/"/g,'""'))+'"').join(';')
+  );
+  const blob = new Blob([header + '\n' + rows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = 'obras_filtradas.csv'; a.click();
+  URL.revokeObjectURL(url);
+}
+
+window.mapaObrasToggleLista = mapaObrasToggleLista;
+window.mapaObrasExportar    = mapaObrasExportar;
+
 window.mapaRaioModoClicar = mapaRaioModoClicar;
 window.mapaRaioAtualizar  = mapaRaioAtualizar;
 window.mapaRaioLimpar     = mapaRaioLimpar;
@@ -3021,6 +3147,11 @@ bounds.push([d.lat,d.lon]);
 if (bounds.length) mapaMap.fitBounds(bounds,{padding:[28,28]});
 const mc = document.getElementById('mapa-container');
 if (mc) mc.scrollIntoView({behavior:'smooth',block:'center'});
+// Atualiza lista de obras
+mapaObrasListaFiltrados = filtered;
+if (mapaObrasListaAtiva) mapaRenderObrasList(filtered);
+const sub = document.getElementById('mapa-obras-sub');
+if (sub) sub.textContent = filtered.length + ' obra' + (filtered.length !== 1 ? 's' : '') + ' filtrada' + (filtered.length !== 1 ? 's' : '');
 }function mapaProgGetFiltrados() {
 const dateInput = document.getElementById('mapa-prog-date');
 const encInput = document.getElementById('mapa-prog-enc');
