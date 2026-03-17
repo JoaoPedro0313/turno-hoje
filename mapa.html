@@ -547,6 +547,7 @@ let progRegistros = [], progEditIdx = null;
 let aprData = [];
 let mapaMap=null, mapaLayerGroup=null, mapaData=[], mapaFiltroAtivo='TODOS', mapaUTDFiltro='TODAS', mapaMesFiltro='TODOS';
 let mapaMunFiltro='', mapaEncFiltro='', mapaCoordFiltro='TODAS';
+let mapaRaioAtivo=false, mapaRaioCircle=null, mapaRaioMarker=null, mapaRaioModoClick=false, mapaRaioCentro=null, mapaRaioKm=50;
 let mapaRotaLayerGroup = null;
 let mapaRotaSelecionadas = [];
 let mapaRotaOrigemLatLon = null;
@@ -1892,12 +1893,7 @@ window.mapaDiagnosticarLimparCache  = mapaDiagnosticarLimparCache;
 // ═══════════════════════════════════════════════════════════
 //  FILTRO DE RAIO
 // ═══════════════════════════════════════════════════════════
-let mapaRaioAtivo = false;
-let mapaRaioCircle = null;
-let mapaRaioMarker = null;
-let mapaRaioModoClick = false;
-let mapaRaioCentro = null; // {lat, lon}
-let mapaRaioKm = 50;
+// raio vars declared at top of script
 
 function mapaRaioToggle() {
   const panel = document.getElementById('mapa-raio-panel');
