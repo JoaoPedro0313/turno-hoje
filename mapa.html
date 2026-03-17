@@ -23,6 +23,7 @@
   img-src 'self' data: https: blob:;
   connect-src 'self'
     https://eqxejfoibebcbtsqymji.supabase.co
+    wss://eqxejfoibebcbtsqymji.supabase.co
     https://docs.google.com
     https://*.googleusercontent.com
     https://sheets.googleapis.com
@@ -125,6 +126,7 @@ window.presenceOpenModal = function() { if(window._presenceOpenModal) window._pr
           <div class="_s18">
             <input type="text" id="mapa-search" placeholder="&#128269; Buscar PEP ou título..." oninput="mapaFiltrar()" style="padding:6px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-family:'Barlow',sans-serif;font-size:0.8rem;font-weight:600;color:#333;width:210px;outline:none;">
             <span style="font-size:0.78rem;font-weight:800;color:#38a169;white-space:nowrap;" id="mapa-count-label">0 obras</span>
+            <button onclick="mapaDiagnosticar()" style="padding:5px 11px;border-radius:8px;border:1.5px solid #fbd38d;background:#fffbf0;font-family:'Barlow',sans-serif;font-size:0.72rem;font-weight:800;cursor:pointer;color:#b97400;white-space:nowrap;">🔍 Diagnóstico</button>
             <button id="btn-toggle-raio" onclick="mapaRaioToggle()"
               style="padding:5px 13px;border-radius:8px;border:1.5px solid #d6bcfa;background:#faf5ff;font-family:'Barlow',sans-serif;font-size:0.72rem;font-weight:800;cursor:pointer;color:#6b46c1;transition:all 0.15s;white-space:nowrap;">
               ⭕ Filtro de Raio
@@ -160,6 +162,19 @@ window.presenceOpenModal = function() { if(window._presenceOpenModal) window._pr
         </div>
       </div>
     </div>
+    <!-- PAINEL DIAGNÓSTICO -->
+    <div id="mapa-diag-panel" style="display:none;background:#1a202c;border-radius:14px;padding:20px 24px;margin-bottom:14px;font-family:monospace;font-size:0.78rem;color:#e2e8f0;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+        <span style="font-size:0.85rem;font-weight:800;color:#68d391;">🔍 DIAGNÓSTICO DO BANCO</span>
+        <button onclick="document.getElementById('mapa-diag-panel').style.display='none'" style="background:#e53e3e;color:#fff;border:none;border-radius:6px;padding:3px 12px;cursor:pointer;font-size:0.72rem;font-weight:800;">✕ Fechar</button>
+      </div>
+      <div id="mapa-diag-content" style="white-space:pre-wrap;line-height:1.8;"></div>
+      <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap;">
+        <button onclick="mapaDiagnosticarForcarReler()" style="padding:6px 14px;background:#2b6cb0;color:#fff;border:none;border-radius:8px;font-family:'Barlow',sans-serif;font-size:0.72rem;font-weight:800;cursor:pointer;">🔄 Reler banco agora</button>
+        <button onclick="mapaDiagnosticarLimparCache()" style="padding:6px 14px;background:#e53e3e;color:#fff;border:none;border-radius:8px;font-family:'Barlow',sans-serif;font-size:0.72rem;font-weight:800;cursor:pointer;">🗑️ Limpar cache local</button>
+      </div>
+    </div>
+
     <!-- FILTRO DE RAIO -->
     <div id="mapa-raio-panel" style="display:none;background:#fff;border-radius:14px;box-shadow:0 2px 14px rgba(0,0,0,0.08);padding:16px 20px;margin-bottom:14px;border:2px solid #6b46c1;">
       <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
@@ -1780,6 +1795,99 @@ window.compHistoricoRender  = compHistoricoRender;
 window.histLimparFiltro     = histLimparFiltro;
 
 // ── Funções do mapa ──
+
+// ═══════════════════════════════════════════════════════════
+//  DIAGNÓSTICO DO BANCO
+// ═══════════════════════════════════════════════════════════
+function mapaDiagnosticar() {
+  const panel = document.getElementById('mapa-diag-panel');
+  const out   = document.getElementById('mapa-diag-content');
+  if (!panel || !out) return;
+  panel.style.display = panel.style.display === 'none' ? '' : 'none';
+  if (panel.style.display === 'none') return;
+
+  let txt = '';
+
+  // 1. Estado do bancoDB
+  if (!bancoDB || !bancoDB.length) {
+    txt += '❌ bancoDB está VAZIO ou não carregou ainda.\n';
+    txt += '   → Clique em "Reler banco agora" ou vá ao COMPARADOR e sincronize.\n\n';
+  } else {
+    txt += '✅ bancoDB: ' + bancoDB.length + ' obras\n\n';
+
+    // 2. Colunas do primeiro registro
+    const cols = Object.keys(bancoDB[0]);
+    txt += '📋 COLUNAS ENCONTRADAS (' + cols.length + '):\n';
+    txt += cols.map(c => '   • ' + JSON.stringify(c)).join('\n') + '\n\n';
+
+    // 3. Amostra dos valores de coord (primeiras 3 obras)
+    txt += '📍 AMOSTRA DE COORDENADAS (3 primeiras):\n';
+    const latKeys = cols.filter(c => /lat/i.test(c));
+    const lonKeys = cols.filter(c => /lon|lng/i.test(c));
+    txt += '   Colunas com "lat": ' + (latKeys.join(', ')||'NENHUMA') + '\n';
+    txt += '   Colunas com "lon/lng": ' + (lonKeys.join(', ')||'NENHUMA') + '\n\n';
+
+    bancoDB.slice(0,3).forEach((o,i) => {
+      const pep = o['PEP OBRA'] || '?';
+      const latVal = latKeys.map(k=>o[k]).find(v=>v!=null&&v!=='') || '—';
+      const lonVal = lonKeys.map(k=>o[k]).find(v=>v!=null&&v!=='') || '—';
+      txt += '   Obra '+(i+1)+' ('+pep+'): lat='+JSON.stringify(latVal)+' lon='+JSON.stringify(lonVal)+'\n';
+    });
+
+    // 4. Quantas com coord
+    const comCoord = mapaData.filter(d=>d.temCoord).length;
+    txt += '\n📊 RESULTADO: ' + comCoord + ' de ' + mapaData.length + ' obras com coordenadas válidas\n';
+
+    if (comCoord === 0) {
+      txt += '\n⚠️  PROBLEMA IDENTIFICADO:\n';
+      if (!latKeys.length) {
+        txt += '   → Nenhuma coluna de LATITUDE encontrada no banco.\n';
+        txt += '   → Vá ao COMPARADOR, sincronize os CSVs e salve o banco novamente.\n';
+      } else {
+        txt += '   → Coluna(s) de lat encontrada(s): ' + latKeys.join(', ') + '\n';
+        txt += '   → Mas os valores estão vazios ou em formato inválido.\n';
+        txt += '   → Verifique se a planilha tem coordenadas preenchidas.\n';
+      }
+    }
+  }
+
+  // 5. Cache local
+  try {
+    const cached = localStorage.getItem('mariua_obras_base');
+    txt += '\n💾 CACHE LOCAL: ' + (cached ? (JSON.parse(cached).data||[]).length + ' obras' : 'vazio') + '\n';
+  } catch(e) { txt += '\n💾 CACHE LOCAL: erro ao ler\n'; }
+
+  out.textContent = txt;
+}
+
+async function mapaDiagnosticarForcarReler() {
+  const out = document.getElementById('mapa-diag-content');
+  if (out) out.textContent = '⏳ Relendo banco do Supabase...';
+  try {
+    await dbLoadObrasBase();
+    if (bancoDB && bancoDB.length) {
+      mapaCarregarDoBanco();
+      setTimeout(mapaDiagnosticar, 500);
+    } else {
+      if (out) out.textContent += '\n❌ Banco ainda vazio após releitura.';
+    }
+  } catch(e) {
+    if (out) out.textContent += '\n❌ Erro: ' + e.message;
+  }
+}
+
+function mapaDiagnosticarLimparCache() {
+  try {
+    localStorage.removeItem('mariua_obras_base');
+    const out = document.getElementById('mapa-diag-content');
+    if (out) out.textContent = '✅ Cache limpo! Clique em "Reler banco agora".';
+  } catch(e) {}
+}
+
+window.mapaDiagnosticar             = mapaDiagnosticar;
+window.mapaDiagnosticarForcarReler  = mapaDiagnosticarForcarReler;
+window.mapaDiagnosticarLimparCache  = mapaDiagnosticarLimparCache;
+
 // ═══════════════════════════════════════════════════════════
 //  FILTRO DE RAIO
 // ═══════════════════════════════════════════════════════════
@@ -4545,13 +4653,13 @@ function presenceCloseModal() {
 {const _el=document.getElementById('presence-modal');if(_el)_el.classList.remove('open');}
 }
 async function presenceCheckTableExists() {
-  // Verifica se a tabela existe consultando o endpoint de schema (não gera erro 400)
   try {
     const res = await fetch(
       SUPA_URL + '/rest/v1/' + PRESENCE_TABLE + '?limit=0',
       { headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY } }
     );
-    // 200 = tabela existe e acessível | 404/400/401 = não existe ou sem permissão
+    // Silencia o erro 400 no console — tabela simplesmente não existe
+    if (res.status === 400 || res.status === 404 || res.status === 401) return false;
     return res.ok;
   } catch(e) {
     return false;
