@@ -701,7 +701,7 @@ const g = document.getElementById(id); g.innerHTML = '';
 if (!list.length) { emptyMsg(id); return; }
 list.forEach(name => {
 const d = document.createElement('div'); d.className = 'card';
-d.innerHTML = '<span class="card-name">' + esc(name) + '</span><span class="badge ok">OK</span>'; // XSS fix
+d.innerHTML = '<span class="card-name">' + esc(toDisplayName(name)) + '</span><span class="badge ok">OK</span>'; // XSS fix
 g.appendChild(d);
 });
 }
@@ -711,7 +711,7 @@ if (!list.length) { emptyMsg(id); return; }
 list.forEach(function(t) {
 const d = document.createElement('div'); d.className = 'card justif';
 d.innerHTML = (t.obs ? '<div class="justif-obs">' + esc(t.obs) + '</div>' : '') +
-'<span class="card-name">' + esc(t.name) + '</span><span class="badge justif">JUSTIF.</span>'; // XSS fix
+'<span class="card-name">' + esc(toDisplayName(t.name)) + '</span><span class="badge justif">JUSTIF.</span>'; // XSS fix
 g.appendChild(d);
 });
 }
@@ -720,7 +720,7 @@ const g = document.getElementById(id); g.innerHTML = '';
 if (!list.length) { emptyMsg(id); return; }
 list.forEach(name => {
 const d = document.createElement('div'); d.className = 'card absent';
-d.innerHTML = '<span class="card-name">' + esc(name) + '</span><span class="badge falta">FALTA</span>'; // XSS fix
+d.innerHTML = '<span class="card-name">' + esc(toDisplayName(name)) + '</span><span class="badge falta">FALTA</span>'; // XSS fix
 g.appendChild(d);
 });
 }
@@ -971,12 +971,42 @@ const CADASTRO_EQUIPES = {
   'LUCIANO NUNES DA SILVA':'JAC','PATRICIO DA SILVA BARBOSA':'JAC','TIAGO BARBOZA DE SOUZA':'JAC',
   'VALMIR ALVES DA SILVA':'JAC','VANDERLEI DE MENEZES SEVERO':'JAC'
 };
-function getUTD(name) { return name ? (CADASTRO_EQUIPES[name.trim().toUpperCase()] || '') : ''; }
-function utdBadge(name) {
-  const u = getUTD(name); if (!u) return '';
-  const irc = u==='IRC';
-  return '<span style="flex-shrink:0;font-size:0.6rem;font-weight:800;padding:2px 6px;border-radius:4px;letter-spacing:0.5px;background:'+(irc?'#ebf4ff':'#fff8f0')+';color:'+(irc?'#2b6cb0':'#c05621')+';border:1px solid '+(irc?'#bee3f8':'#fbd38d')+';">'+u+'</span>';
+// Mapa reverso: nome completo -> formato CURTO-UTD para exibição
+const NOME_CURTO = {};
+(function() {
+  const manual = {
+    'ALAN NUNES BARRETO':'ALAN','ALEX SANDRO SANTOS BISPO':'ALEX',
+    'EDMILSON RIBEIRO DO NASCIMENTO':'EDMILSON','EDILSON DE SOUZA SANTOS':'EDILSON',
+    'ELIEZER BATISTA':'ELIEZER','ENES RAMOS DA SILVA':'ENES',
+    'ESMERALDO DOS SANTOS OLIVEIRA':'ESMERALDO','FELIPE PEREIRA ALVES':'FELIPE',
+    'GABRIEL DOS SANTOS SILVA':'GABRIEL','GIORLAN EVANGELISTA SOUZA':'GIORLAN',
+    'IRISMAR MARQUES SILVA':'IRISMAR','JAILSON SANTOS SILVA':'JAILSON',
+    'JARBAS SOUZA AMORIM':'JARBAS','LUIZ CARLOS DA FONSECA':'LUIZ',
+    'MARCOS PAULO CARDOSO':'MARCOS','REVERTON BASTOS ROCHA NOVAIS':'REVERTON',
+    'RIAN LUCAS FERREIRA OLIVEIRA':'RIAN','ROMERO DIAS SILVA':'ROMERO',
+    'UBERDAN CERQUEIRA DA SILVA':'UBERDAN','VANILSON LUCIO DOS SANTOS SILVA':'VANILSON',
+    'WASHINGTON ALVES OLIVEIRA':'WASHINGTON','WESLEY REIS DE OLIVEIRA':'WESLEY',
+    'WILIAN DA SILVA SENA':'WILIAN',
+    'CAIQUE SILVA LIMA':'CAIQUE','CARLOS ANDRE SANTOS DA SILVA':'ANDRE',
+    'CLEBSON REIS NETO':'CLEBSON','DANILO NUNES DE OLIVEIRA':'DANILO',
+    'DIOGO CRUZ DOS SANTOS':'DIOGO','DOUGLAS BARBOSA DA CRUZ OLIVEIRA':'DOUGLAS',
+    'FABIANO LOPES DE MORAES':'FABIANO','JAIR DE JESUS':'JAIR',
+    'JOAO PEREIRA DA SILVA':'JOAO','LUCIANO NUNES DA SILVA':'LUCIANO',
+    'PATRICIO DA SILVA BARBOSA':'PATRICIO','TIAGO BARBOZA DE SOUZA':'TIAGO',
+    'VALMIR ALVES DA SILVA':'VALMIR','VANDERLEI DE MENEZES SEVERO':'VANDERLEI'
+  };
+  Object.keys(manual).forEach(function(full) {
+    const utd = CADASTRO_EQUIPES[full] || '';
+    NOME_CURTO[full] = utd ? manual[full] + '-' + utd : full;
+  });
+})();
+// Converte nome completo -> CURTO-UTD se mapeado, caso contrário retorna original
+function toDisplayName(name) {
+  if (!name) return name;
+  return NOME_CURTO[name.trim().toUpperCase()] || name;
 }
+function getUTD(name) { return name ? (CADASTRO_EQUIPES[name.trim().toUpperCase()] || '') : ''; }
+function utdBadge(name) { return ''; }
 function receberAbertura(file) {
 if (!file) return;
 const r = new FileReader();
