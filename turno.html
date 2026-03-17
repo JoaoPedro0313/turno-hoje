@@ -369,9 +369,9 @@ let mapaMunFiltro='', mapaEncFiltro='', mapaCoordFiltro='TODAS';
 function applyRowData(row) {
 if (row.key==='turno') {
 const v = row.value;
-teams.ok     = v.ok     || DEFAULTS.ok;
+teams.ok     = (v.ok     && v.ok.length)     ? v.ok     : DEFAULTS.ok;
 teams.justif = v.justif || [];
-teams.falta  = v.falta  || DEFAULTS.falta;
+teams.falta  = (v.falta  && v.falta.length)  ? v.falta  : DEFAULTS.falta;
 currentDate  = v.date   || DEFAULTS.date;
 }
 if (row.key==='producao') { producao = row.value || {}; }
@@ -973,8 +973,16 @@ const eq = (cols[iEq]||'').trim().toUpperCase();
 if (eq && !abriram.includes(eq)) abriram.push(eq);
 }
 const justifNames = teams.justif.map(t=>t.name);
+// Usa TODOS os nomes já conhecidos no sistema como lista mestre (ok + justif + falta anteriores + novos do CSV)
+// Isso garante que o cálculo funcione independente do formato de nome (código ou nome completo)
+const todosConhecidos = [...new Set([
+  ...teams.ok,
+  ...justifNames,
+  ...teams.falta,
+  ...abriram
+])];
 teams.ok    = abriram.filter(n=>!justifNames.includes(n));
-teams.falta = EQUIPES_ATIVAS.filter(n=>!abriram.includes(n)&&!justifNames.includes(n));
+teams.falta = todosConhecidos.filter(n=>!abriram.includes(n)&&!justifNames.includes(n));
 render();
 await dbSaveTurno();
 document.getElementById('lbl-abertura').textContent = '✅ '+abriram.length+' abriram turno';
