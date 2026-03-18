@@ -1047,7 +1047,9 @@ if (iEq < 0) { showImportMsg('Coluna "Equipe" nao encontrada.','error'); return;
 const abriram = [];
 for (let i=1; i<lines.length; i++) {
 const cols = lines[i].split(';').map(c=>c.trim().replace(/^"|"$/g,''));
-const eq = (cols[iEq]||'').trim().toUpperCase();
+let eq = (cols[iEq]||'').trim().toUpperCase();
+// Converte nome completo (ex: "ALAN NUNES BARRETO") para codigo curto (ex: "ALAN-IRC")
+eq = toDisplayName(eq);
 if (eq && !abriram.includes(eq)) abriram.push(eq);
 }
 const justifNames = teams.justif.map(t=>t.name);
