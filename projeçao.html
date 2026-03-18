@@ -432,54 +432,145 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);min-height:100vh;padd
 /* ── SPACING ── */
 .section-gap{height:14px;background:var(--bg);}
 
-/* ── GRÁFICO — novo design ── */
+/* ── RANKING TABLE — novo layout ── */
 .chart-section{
-  background:linear-gradient(160deg,#0a3d40 0%,#0d5c60 50%,#0a4a4d 100%);
-  border-radius:14px;margin:0 14px 18px;
+  background:var(--surface);
+  border-radius:12px;margin:0 14px 18px;
   padding:0;
-  box-shadow:0 8px 32px rgba(0,0,0,0.22);
-  border:1px solid rgba(255,255,255,0.08);
+  box-shadow:0 2px 16px rgba(0,0,0,0.08);
+  border:1px solid var(--border);
   overflow:hidden;
   position:relative;
 }
-.chart-section::before{
-  content:'';position:absolute;top:-60px;right:-60px;width:220px;height:220px;
-  border-radius:50%;background:rgba(255,255,255,0.03);pointer-events:none;
-}
 .chart-header{
   display:flex;align-items:center;justify-content:space-between;
-  padding:18px 22px 14px;flex-wrap:wrap;gap:8px;
-  border-bottom:1px solid rgba(255,255,255,0.08);
-  position:relative;z-index:1;
+  padding:14px 18px 12px;flex-wrap:wrap;gap:8px;
+  background:linear-gradient(135deg,#0a4a4d 0%,#0d7377 100%);
+  border-bottom:1px solid rgba(255,255,255,0.1);
 }
 .chart-title{
-  font-family:'Bebas Neue',sans-serif;font-size:1.1rem;font-weight:400;
+  font-family:'Bebas Neue',sans-serif;font-size:1.05rem;font-weight:400;
   color:#fff;letter-spacing:3px;text-transform:uppercase;
   display:flex;align-items:center;gap:8px;
 }
 .chart-title-icon{
-  width:28px;height:28px;border-radius:7px;
+  width:26px;height:26px;border-radius:6px;
   background:rgba(255,255,255,0.12);
   display:flex;align-items:center;justify-content:center;
-  font-size:0.9rem;flex-shrink:0;
+  font-size:0.85rem;flex-shrink:0;
 }
-.chart-legend{display:flex;gap:12px;align-items:center;flex-wrap:wrap;}
+.chart-legend{display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
 .chart-legend-item{
   display:flex;align-items:center;gap:5px;
-  font-size:0.62rem;font-weight:700;
-  color:rgba(255,255,255,0.65);
-  background:rgba(255,255,255,0.07);
-  padding:4px 9px;border-radius:20px;
-  border:1px solid rgba(255,255,255,0.1);
+  font-size:0.6rem;font-weight:700;
+  color:rgba(255,255,255,0.7);
+  background:rgba(255,255,255,0.08);
+  padding:3px 9px;border-radius:20px;
+  border:1px solid rgba(255,255,255,0.12);
 }
 .chart-legend-dot{width:8px;height:8px;border-radius:2px;flex-shrink:0;}
-.chart-wrap{
-  position:relative;width:100%;
-  padding:16px 18px 18px;
-  background:rgba(255,255,255,0.03);
+.chart-wrap{position:relative;width:100%;padding:0;}
+
+/* ── Ranking rows ── */
+.rnk-table{width:100%;border-collapse:collapse;}
+.rnk-head{
+  display:grid;
+  grid-template-columns:36px 22px 1fr 120px 64px 72px;
+  align-items:center;gap:0 10px;
+  padding:7px 14px;
+  background:var(--bg2);
+  border-bottom:2px solid var(--border);
+  font-size:0.55rem;font-weight:800;
+  color:var(--muted);letter-spacing:1.5px;text-transform:uppercase;
 }
-/* Canvas custom: barras lidas via Chart.js, mas visual ajustado */
-#posto-chart{border-radius:4px;}
+.rnk-row{
+  display:grid;
+  grid-template-columns:36px 22px 1fr 120px 64px 72px;
+  align-items:center;gap:0 10px;
+  padding:9px 14px;
+  border-bottom:1px solid var(--border);
+  transition:background .12s;
+  position:relative;
+}
+.rnk-row:last-child{border-bottom:none;}
+.rnk-row:hover{background:#f5fafa;}
+
+/* posição */
+.rnk-pos{
+  font-family:'Bebas Neue',sans-serif;font-size:1.3rem;line-height:1;
+  text-align:center;
+}
+.rnk-pos-1{color:#f0a500;}
+.rnk-pos-2{color:#94a3b8;}
+.rnk-pos-3{color:#c07a3b;}
+.rnk-pos-n{color:#cbd5e1;}
+
+/* UTD pill */
+.rnk-utd{
+  font-size:0.5rem;font-weight:800;letter-spacing:.5px;
+  padding:2px 5px;border-radius:3px;text-align:center;white-space:nowrap;
+}
+.rnk-utd.irc{background:rgba(8,80,65,.12);color:#085041;border:1px solid rgba(8,80,65,.2);}
+.rnk-utd.jac{background:rgba(12,68,124,.1);color:#0C447C;border:1px solid rgba(12,68,124,.18);}
+
+/* Nome + obras */
+.rnk-info{min-width:0;}
+.rnk-nome{
+  font-size:.8rem;font-weight:800;color:var(--text);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.2;
+}
+.rnk-sub{font-size:.58rem;color:var(--muted);margin-top:1px;font-weight:600;}
+
+/* Barra de progresso vs meta */
+.rnk-bar-wrap{position:relative;}
+.rnk-bar-track{
+  height:8px;background:#e8edf0;border-radius:4px;overflow:visible;position:relative;
+}
+.rnk-bar-fill{
+  height:100%;border-radius:4px;
+  transition:width .7s cubic-bezier(.4,0,.2,1);min-width:3px;position:relative;
+}
+.rnk-row.tier-h .rnk-bar-fill{background:linear-gradient(90deg,#feb2b2,#e53e3e);}
+.rnk-row.tier-m .rnk-bar-fill{background:linear-gradient(90deg,#fcd073,#f0a500);}
+.rnk-row.tier-l .rnk-bar-fill{background:linear-gradient(90deg,#81e6d9,#0d7377);}
+.rnk-row.tier-ok .rnk-bar-fill{background:linear-gradient(90deg,#9ae6b4,#276749);}
+.rnk-bar-meta{
+  position:absolute;top:-3px;bottom:-3px;width:2px;
+  background:rgba(229,62,62,0.55);border-radius:1px;
+}
+.rnk-bar-pct{
+  font-size:.55rem;font-weight:700;color:var(--muted);margin-top:3px;
+}
+
+/* Valor numérico */
+.rnk-val{
+  text-align:right;
+}
+.rnk-val-big{
+  font-family:'Bebas Neue',sans-serif;font-size:1.6rem;line-height:1;
+  display:block;
+}
+.rnk-row.tier-ok .rnk-val-big{color:#276749;}
+.rnk-row.tier-h  .rnk-val-big{color:#e53e3e;}
+.rnk-row.tier-m  .rnk-val-big{color:#9a6800;}
+.rnk-row.tier-l  .rnk-val-big{color:var(--teal);}
+.rnk-val-lbl{font-size:.48rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;}
+
+/* Badge meta */
+.rnk-badge{
+  font-size:.55rem;font-weight:800;
+  padding:3px 8px;border-radius:20px;
+  white-space:nowrap;text-align:center;
+}
+.rnk-badge.ok{background:rgba(39,103,73,.1);color:#276749;border:1px solid rgba(39,103,73,.2);}
+.rnk-badge.warn{background:rgba(240,165,0,.1);color:#9a6800;border:1px solid rgba(240,165,0,.2);}
+.rnk-badge.over{background:rgba(229,62,62,.08);color:#e53e3e;border:1px solid rgba(229,62,62,.18);}
+
+@media(max-width:520px){
+  .rnk-head,.rnk-row{grid-template-columns:30px 18px 1fr 0 50px 0;}
+  .rnk-head > :nth-child(4),.rnk-row > :nth-child(4),
+  .rnk-head > :nth-child(6),.rnk-row > :nth-child(6){display:none;}
+}
 
 /* ══════════════════════════════════════════
    PLANILHA — VISUAL EXCEL FIEL
@@ -829,24 +920,32 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);min-height:100vh;padd
   </div>
 
 
-  <!-- GRÁFICO -->
+  <!-- RANKING TABLE -->
   <div class="chart-section" id="chart-section" style="display:none;">
     <div class="chart-header">
       <div style="display:flex;align-items:center;gap:10px;">
-        <div class="chart-title-icon">📊</div>
+        <div class="chart-title-icon">🏆</div>
         <div>
           <div class="chart-title">Postes Previstos por Encarregado</div>
-          <div style="font-size:0.58rem;color:rgba(255,255,255,0.45);letter-spacing:1px;margin-top:2px;">RANKING · META 50 POSTES</div>
+          <div style="font-size:0.57rem;color:rgba(255,255,255,0.45);letter-spacing:1px;margin-top:2px;">RANKING · META 50 POSTES</div>
         </div>
       </div>
       <div class="chart-legend">
-        <span class="chart-legend-item"><span class="chart-legend-dot" style="background:#4ecdc4"></span>UTD IRECÊ</span>
-        <span class="chart-legend-item"><span class="chart-legend-dot" style="background:#74b0f4"></span>UTD JACOBINA</span>
-        <span class="chart-legend-item"><span class="chart-legend-dot" style="background:#ff6b6b;border-radius:50%"></span>Meta 50</span>
+        <span class="chart-legend-item"><span class="chart-legend-dot" style="background:#0d7377"></span>UTD IRECÊ</span>
+        <span class="chart-legend-item"><span class="chart-legend-dot" style="background:#2b6cb0"></span>UTD JACOBINA</span>
+        <span class="chart-legend-item"><span class="chart-legend-dot" style="background:#e53e3e;border-radius:50%"></span>Meta 50</span>
       </div>
     </div>
     <div class="chart-wrap">
-      <canvas id="posto-chart"></canvas>
+      <div class="rnk-head">
+        <span>#</span>
+        <span>UTD</span>
+        <span>Encarregado</span>
+        <span>Progresso vs Meta</span>
+        <span style="text-align:right">Postes</span>
+        <span style="text-align:center">Status</span>
+      </div>
+      <div id="posto-chart-rows"></div>
     </div>
   </div>
 
@@ -1429,12 +1528,11 @@ function postoSummary(i,j){
   if(_oplOpen) oplRebuild();
 }
 
-// ── GRÁFICO ──
-let _chart = null;
+// ── RANKING TABLE ──
 function postoRenderChart(irece, jac) {
-  const sec = document.getElementById('chart-section');
-  const canvas = document.getElementById('posto-chart');
-  if (!sec || !canvas) return;
+  const sec  = document.getElementById('chart-section');
+  const rows = document.getElementById('posto-chart-rows');
+  if (!sec || !rows) return;
 
   const iArr = irece || [];
   const jArr = jac   || [];
@@ -1446,154 +1544,51 @@ function postoRenderChart(irece, jac) {
   if (!all.length) { sec.style.display = 'none'; return; }
   sec.style.display = 'block';
 
-  const labels  = all.map(d => d.nome.split(' ').slice(0,2).join(' '));
-  const values  = all.map(d => d.postes);
+  const mx = Math.max(...all.map(d => d.postes), META);
 
-  // altura dinâmica: 40px por barra, mínimo 200
-  const h = Math.max(200, all.length * 40);
-  canvas.style.height = h + 'px';
+  // tier: ok = atingiu meta, h = top sem meta, m = médio, l = baixo
+  const tier = (p, idx) => {
+    if (p >= META)  return 'tier-ok';
+    if (idx === 0)  return 'tier-h';
+    const pct = p / mx;
+    return pct > 0.45 ? 'tier-h' : pct > 0.2 ? 'tier-m' : 'tier-l';
+  };
 
-  if (_chart) { _chart.destroy(); _chart = null; }
+  const posCls = i => i === 0 ? 'rnk-pos-1' : i === 1 ? 'rnk-pos-2' : i === 2 ? 'rnk-pos-3' : 'rnk-pos-n';
+  const posEmoji = i => i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : String(i + 1);
 
-  // Gradientes por UTD
-  const ctx2d = canvas.getContext('2d');
-  const gradColors = all.map(d => {
-    const g = ctx2d.createLinearGradient(0, 0, canvas.offsetWidth || 600, 0);
-    if (d.utd === 'I') {
-      g.addColorStop(0, 'rgba(78,205,196,0.55)');
-      g.addColorStop(1, 'rgba(78,205,196,0.95)');
-    } else {
-      g.addColorStop(0, 'rgba(116,176,244,0.55)');
-      g.addColorStop(1, 'rgba(116,176,244,0.95)');
-    }
-    return g;
-  });
-  const hoverColors = all.map(d => d.utd === 'I' ? 'rgba(78,205,196,1)' : 'rgba(116,176,244,1)');
+  rows.innerHTML = all.map((d, i) => {
+    const t       = tier(d.postes, i);
+    const barPct  = (d.postes / mx * 100).toFixed(1);
+    const metaPct = Math.min(META / mx * 100, 100).toFixed(1);
+    const diff    = d.postes - META;
+    const badgeCl = diff >= 0 ? 'ok' : d.postes >= META * 0.6 ? 'warn' : 'over';
+    const badgeTx = diff >= 0 ? `✅ +${diff}` : `⚠ −${Math.abs(diff)}`;
+    const utdCl   = d.utd === 'I' ? 'irc' : 'jac';
+    const utdLbl  = d.utd === 'I' ? 'IRC' : 'JAC';
+    const nomeShort = d.nome.split(' ').slice(0,3).join(' ');
 
-  _chart = new Chart(canvas, {
-    type: 'bar',
-    data: {
-      labels,
-      datasets: [{
-        label: 'Postes previstos',
-        data: values,
-        backgroundColor: gradColors,
-        hoverBackgroundColor: hoverColors,
-        borderColor: all.map(d => d.utd === 'I' ? 'rgba(78,205,196,0.4)' : 'rgba(116,176,244,0.4)'),
-        borderWidth: 0,
-        borderRadius: 6,
-        borderSkipped: false,
-        barPercentage: 0.72,
-        categoryPercentage: 0.88,
-      }]
-    },
-    options: {
-      indexAxis: 'y',
-      responsive: true,
-      maintainAspectRatio: false,
-      animation: { duration: 700, easing: 'easeOutQuart' },
-      plugins: {
-        legend: { display: false },
-        tooltip: {
-          callbacks: {
-            label: ctx => '  ' + ctx.parsed.x + ' postes  ·  ' + all[ctx.dataIndex].obras + ' obra(s)',
-            title: ctx => '  ' + all[ctx.dataIndex].nome,
-            afterLabel: ctx => {
-              const v = ctx.parsed.x;
-              const diff = v - 50;
-              return diff >= 0 ? '  ✅ Meta atingida (+' + diff + ')' : '  ⚠ Faltam ' + Math.abs(diff) + ' para meta';
-            }
-          },
-          backgroundColor: 'rgba(10,40,50,0.95)',
-          titleColor: '#fff',
-          bodyColor: 'rgba(255,255,255,0.75)',
-          titleFont: { weight: '800', size: 12, family: 'DM Sans' },
-          bodyFont: { size: 11, family: 'DM Sans' },
-          padding: 12,
-          cornerRadius: 10,
-          borderColor: 'rgba(78,205,196,0.25)',
-          borderWidth: 1,
-          displayColors: false,
-        },
-        annotation: undefined
-      },
-      scales: {
-        x: {
-          beginAtZero: true,
-          grid: { color: 'rgba(255,255,255,0.06)', lineWidth: 1 },
-          border: { color: 'rgba(255,255,255,0.1)' },
-          ticks: {
-            font: { family: 'DM Mono', size: 10, weight: '500' },
-            color: 'rgba(255,255,255,0.4)',
-            maxTicksLimit: 8,
-          },
-          afterDataLimits(scale) {
-            scale.max = Math.max(scale.max, 55);
-          }
-        },
-        y: {
-          grid: { display: false },
-          border: { display: false },
-          ticks: {
-            font: { family: 'DM Sans', size: 11, weight: '700' },
-            color: 'rgba(255,255,255,0.82)',
-            padding: 6,
-          }
-        }
-      }
-    },
-    plugins: [{
-      id: 'metaLine',
-      afterDraw(chart) {
-        const { ctx: c, chartArea: { top, bottom }, scales: { x } } = chart;
-        const xPos = x.getPixelForValue(50);
-        c.save();
-        // glow effect
-        c.shadowColor = 'rgba(255,107,107,0.5)';
-        c.shadowBlur = 6;
-        c.beginPath();
-        c.moveTo(xPos, top);
-        c.lineTo(xPos, bottom);
-        c.strokeStyle = 'rgba(255,107,107,0.85)';
-        c.lineWidth = 1.5;
-        c.setLineDash([4, 4]);
-        c.stroke();
-        c.setLineDash([]);
-        c.shadowBlur = 0;
-        // badge META
-        const bw = 38, bh = 16, br = 4;
-        const bx = xPos - bw/2, by = top - bh - 4;
-        c.fillStyle = 'rgba(255,107,107,0.9)';
-        c.beginPath();
-        c.roundRect(bx, by, bw, bh, br);
-        c.fill();
-        c.fillStyle = '#fff';
-        c.font = '700 9px DM Sans, sans-serif';
-        c.textAlign = 'center';
-        c.textBaseline = 'middle';
-        c.fillText('META', xPos, by + bh/2);
-        c.restore();
-      }
-    }, {
-      id: 'valueLabels',
-      afterDraw(chart) {
-        const { ctx: c, scales: { x, y } } = chart;
-        const meta = chart.getDatasetMeta(0);
-        c.save();
-        meta.data.forEach((bar, i) => {
-          const val = values[i];
-          const xVal = x.getPixelForValue(val);
-          const yVal = bar.y;
-          c.font = '700 10px DM Mono, monospace';
-          c.fillStyle = val >= 50 ? 'rgba(78,205,196,0.95)' : 'rgba(255,255,255,0.55)';
-          c.textAlign = 'left';
-          c.textBaseline = 'middle';
-          c.fillText(val, xVal + 5, yVal);
-        });
-        c.restore();
-      }
-    }]
-  });
+    return `<div class="rnk-row ${t}">
+      <span class="rnk-pos ${posCls(i)}">${posEmoji(i)}</span>
+      <span class="rnk-utd ${utdCl}">${utdLbl}</span>
+      <div class="rnk-info">
+        <div class="rnk-nome">${nomeShort}</div>
+        <div class="rnk-sub">${d.obras} obra${d.obras !== 1 ? 's' : ''}${d.mat ? ' · ' + d.mat : ''}</div>
+      </div>
+      <div class="rnk-bar-wrap">
+        <div class="rnk-bar-track">
+          <div class="rnk-bar-fill" style="width:${barPct}%"></div>
+          <div class="rnk-bar-meta" style="left:${metaPct}%"></div>
+        </div>
+        <div class="rnk-bar-pct">${barPct}% do máximo · meta em ${metaPct}%</div>
+      </div>
+      <div class="rnk-val">
+        <span class="rnk-val-big">${d.postes}</span>
+        <span class="rnk-val-lbl">postes</span>
+      </div>
+      <span class="rnk-badge ${badgeCl}">${badgeTx}</span>
+    </div>`;
+  }).join('');
 }
 
 function postoFiltro(f,btn){
