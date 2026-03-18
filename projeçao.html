@@ -143,6 +143,120 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);min-height:100vh;padd
 /* ── FILTERS (legacy — kept for compatibility) ── */
 .filter-bar{display:none;}
 
+/* ── FILTROS PRINCIPAIS ── */
+.main-filters{
+  background:var(--surface);
+  border-bottom:2px solid var(--border);
+  padding:16px 20px;
+  display:flex;
+  align-items:center;
+  gap:14px;
+  flex-wrap:wrap;
+}
+.main-filters-label{
+  font-size:0.65rem;
+  font-weight:800;
+  color:var(--muted);
+  letter-spacing:1.5px;
+  text-transform:uppercase;
+  white-space:nowrap;
+  display:flex;
+  align-items:center;
+  gap:6px;
+}
+.main-filters-label::before{
+  content:'⚙';
+  font-size:0.9rem;
+  opacity:0.6;
+}
+.filter-group{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  flex:1;
+  min-width:160px;
+}
+.filter-group-label{
+  font-size:0.62rem;
+  font-weight:700;
+  color:var(--text2);
+  white-space:nowrap;
+  letter-spacing:0.5px;
+}
+.filter-select{
+  flex:1;
+  padding:9px 12px;
+  border:2px solid var(--border);
+  border-radius:6px;
+  background:var(--bg);
+  font-family:'DM Sans',sans-serif;
+  font-size:0.75rem;
+  font-weight:600;
+  color:var(--text);
+  cursor:pointer;
+  transition:all .2s;
+  min-width:120px;
+}
+.filter-select:hover{
+  border-color:var(--teal);
+  background:#f0f7f7;
+}
+.filter-select:focus{
+  outline:none;
+  border-color:var(--teal);
+  box-shadow:0 0 0 3px rgba(13,115,119,0.1);
+}
+.filter-input{
+  flex:1;
+  padding:9px 12px;
+  border:2px solid var(--border);
+  border-radius:6px;
+  background:var(--bg);
+  font-family:'DM Sans',sans-serif;
+  font-size:0.75rem;
+  font-weight:500;
+  color:var(--text);
+  transition:all .2s;
+  min-width:180px;
+}
+.filter-input::placeholder{
+  color:var(--muted);
+  font-weight:400;
+}
+.filter-input:hover{
+  border-color:var(--teal);
+  background:#f0f7f7;
+}
+.filter-input:focus{
+  outline:none;
+  border-color:var(--teal);
+  box-shadow:0 0 0 3px rgba(13,115,119,0.1);
+}
+.filter-reset-btn{
+  padding:9px 16px;
+  border:2px solid var(--border);
+  border-radius:6px;
+  background:var(--bg);
+  font-family:'DM Sans',sans-serif;
+  font-size:0.72rem;
+  font-weight:700;
+  color:var(--text2);
+  cursor:pointer;
+  transition:all .2s;
+  white-space:nowrap;
+  letter-spacing:0.3px;
+}
+.filter-reset-btn:hover{
+  background:var(--orange);
+  border-color:var(--orange);
+  color:#fff;
+}
+@media(max-width:768px){
+  .main-filters{flex-direction:column;align-items:stretch;gap:12px;}
+  .filter-group{min-width:auto;}
+  .main-filters-label{margin-bottom:4px;}
+}
+
 /* ── UTD SELECTOR — principal ── */
 .utd-selector{
   display:flex;align-items:center;gap:12px;
@@ -809,6 +923,46 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);min-height:100vh;padd
     </div>
   </div>
 
+  <!-- FILTROS PRINCIPAIS -->
+  <div class="main-filters">
+    <span class="main-filters-label">Filtros</span>
+    
+    <div class="filter-group">
+      <span class="filter-group-label">UTD:</span>
+      <select class="filter-select" id="main-filter-utd" onchange="applyMainFilters()">
+        <option value="">Todas UTDs</option>
+        <option value="IRECE">UTD Irecê</option>
+        <option value="JACOBINA">UTD Jacobina</option>
+      </select>
+    </div>
+    
+    <div class="filter-group">
+      <span class="filter-group-label">Status:</span>
+      <select class="filter-select" id="main-filter-status" onchange="applyMainFilters()">
+        <option value="">Todos Status</option>
+        <option value="EXECUCAO">Em Execução</option>
+        <option value="CONCLUIDO">Concluído</option>
+        <option value="PARALIZADO">Paralizado</option>
+      </select>
+    </div>
+    
+    <div class="filter-group">
+      <span class="filter-group-label">Mês:</span>
+      <select class="filter-select" id="main-filter-mes" onchange="applyMainFilters()">
+        <option value="">Todos Meses</option>
+      </select>
+    </div>
+    
+    <div class="filter-group" style="flex:1.5;">
+      <span class="filter-group-label">Buscar:</span>
+      <input type="text" class="filter-input" id="main-filter-search" 
+             placeholder="Pesquisar por nome, obra, PEP..." 
+             oninput="applyMainFilters()">
+    </div>
+    
+    <button class="filter-reset-btn" onclick="resetMainFilters()">🔄 Limpar</button>
+  </div>
+
   <!-- SUMMARY STRIP -->
   <div class="summary-strip">
     <div class="sum-item">
@@ -1060,6 +1214,115 @@ function updateClock(){
 }
 updateClock(); setInterval(updateClock,1000);
 
+// ── FILTROS PRINCIPAIS ──
+let _mainFiltersActive = false;
+
+function applyMainFilters() {
+  const utd = document.getElementById('main-filter-utd').value;
+  const status = document.getElementById('main-filter-status').value;
+  const mes = document.getElementById('main-filter-mes').value;
+  const search = document.getElementById('main-filter-search').value.toLowerCase();
+  
+  _mainFiltersActive = !!(utd || status || mes || search);
+  
+  // Se houver filtros ativos, aplicar ao UTD selector
+  if (_mainFiltersActive) {
+    const utdSelector = document.querySelector('.utd-selector');
+    if (utdSelector) {
+      utdSelector.style.opacity = '0.5';
+      utdSelector.style.pointerEvents = 'none';
+    }
+  } else {
+    const utdSelector = document.querySelector('.utd-selector');
+    if (utdSelector) {
+      utdSelector.style.opacity = '1';
+      utdSelector.style.pointerEvents = 'auto';
+    }
+  }
+  
+  // Aplicar filtros ao carregamento dos dados
+  postoCarregar();
+}
+
+function resetMainFilters() {
+  document.getElementById('main-filter-utd').value = '';
+  document.getElementById('main-filter-status').value = '';
+  document.getElementById('main-filter-mes').value = '';
+  document.getElementById('main-filter-search').value = '';
+  _mainFiltersActive = false;
+  
+  const utdSelector = document.querySelector('.utd-selector');
+  if (utdSelector) {
+    utdSelector.style.opacity = '1';
+    utdSelector.style.pointerEvents = 'auto';
+  }
+  
+  postoCarregar();
+}
+
+function populateMainFilterMeses() {
+  const mesesSet = new Set();
+  
+  if (bancoDB && bancoDB.length) {
+    bancoDB.forEach(obra => {
+      const mes = mesFromObra(obra);
+      if (mes && mes !== '—') mesesSet.add(mes);
+    });
+  }
+  
+  const mesesArray = sortMeses([...mesesSet]);
+  const selectMes = document.getElementById('main-filter-mes');
+  
+  if (selectMes && mesesArray.length) {
+    selectMes.innerHTML = '<option value="">Todos Meses</option>' +
+      mesesArray.map(m => `<option value="${m}">${m}</option>`).join('');
+  }
+}
+
+function filterBancoDB() {
+  if (!_mainFiltersActive || !bancoDB) return bancoDB;
+  
+  const utd = document.getElementById('main-filter-utd').value;
+  const status = document.getElementById('main-filter-status').value;
+  const mes = document.getElementById('main-filter-mes').value;
+  const search = document.getElementById('main-filter-search').value.toLowerCase();
+  
+  return bancoDB.filter(obra => {
+    // Filtro UTD
+    if (utd) {
+      const obraUtd = String(obra['_UTD'] || '').trim().toUpperCase();
+      if (!obraUtd.includes(utd)) return false;
+    }
+    
+    // Filtro Status
+    if (status) {
+      const obraStatus = getStatus(obra).toUpperCase();
+      if (!obraStatus.includes(status)) return false;
+    }
+    
+    // Filtro Mês
+    if (mes) {
+      const obraMes = mesFromObra(obra);
+      if (obraMes !== mes) return false;
+    }
+    
+    // Filtro Busca
+    if (search) {
+      const enc = String(getEncarregado(obra) || '').toLowerCase();
+      const titulo = String(getTitulo(obra) || '').toLowerCase();
+      const pep = String(obra['PEP OBRA'] || '').toLowerCase();
+      const mun = String(getMun(obra) || '').toLowerCase();
+      
+      if (!enc.includes(search) && !titulo.includes(search) && 
+          !pep.includes(search) && !mun.includes(search)) {
+        return false;
+      }
+    }
+    
+    return true;
+  });
+}
+
 // ── PLANILHAS — idêntico ao comp.html ──
 const GSHEETS_BASE = {
   JACOBINA: 'https://docs.google.com/spreadsheets/d/142gvn8pNgJGTGDkidCfuOWMHJ2OCKpJd_FQU8zeo0x8/export?format=csv&gid=',
@@ -1219,10 +1482,11 @@ function agruparPorEncarregado(obras) {
   return arr.length ? arr : null;
 }
 
-function postoFromBanco(utdLabel){
-  if(!bancoDB||!bancoDB.length) return null;
+function postoFromBanco(utdLabel, dadosOpcionais){
+  const dados = dadosOpcionais || bancoDB;
+  if(!dados||!dados.length) return null;
   const norm = s => s.trim().toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-  const obras = bancoDB.filter(o => {
+  const obras = dados.filter(o => {
     const u = norm(o['_UTD'] || '');
     return utdLabel === 'JACOBINA' ? u === 'JACOBINA' : u === 'IRECE' || u.startsWith('IREC');
   });
@@ -1597,14 +1861,22 @@ async function postoCarregar(){
     const dataJac = planilhaParseCSVText(textJac, 'JACOBINA');
     const dataIrc = planilhaParseCSVText(textIrc, 'IRECE');
     if ((dataJac&&dataJac.length)||(dataIrc&&dataIrc.length)) {
-      _dadosComMes = { irece: dataIrc||[], jac: dataJac||[] };
+      // Aplicar filtros principais se ativos
+      const dataJacFiltrado = _mainFiltersActive ? filterBancoDB() : dataJac;
+      const dataIrcFiltrado = _mainFiltersActive ? filterBancoDB() : dataIrc;
+      
+      _dadosComMes = { irece: dataIrcFiltrado||[], jac: dataJacFiltrado||[] };
       _mesFiltro = 'TODOS';
-      postoAtualizarMesBar(dataIrc, dataJac);
-      const irece = postoFromPlanilha(dataIrc);
-      const jac   = postoFromPlanilha(dataJac);
+      postoAtualizarMesBar(dataIrcFiltrado, dataJacFiltrado);
+      const irece = postoFromPlanilha(dataIrcFiltrado);
+      const jac   = postoFromPlanilha(dataJacFiltrado);
       postoRender('posto-lstI','posto-tagI',irece||[]);
       postoRender('posto-lstJ','posto-tagJ',jac||[]);
       postoSummary(irece,jac);
+      
+      // Preencher opções de mês no filtro principal
+      populateMainFilterMeses();
+      
       const now=new Date(), pad=n=>String(n).padStart(2,'0');
       const hora=pad(now.getDate())+'/'+pad(now.getMonth()+1)+'/'+now.getFullYear()+' '+pad(now.getHours())+':'+pad(now.getMinutes());
       if(st){st.textContent='✅ Planilha ao vivo — '+hora;st.className='status-line ok';}
@@ -1618,15 +1890,23 @@ async function postoCarregar(){
   if (!usouPlanilha) {
     await postoLoadObrasBase();
     const norm = s => (s||'').trim().toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
-    const obrasBancoI = (bancoDB||[]).filter(o => { const u=norm(o['_UTD']); return u==='IRECE'||u.startsWith('IREC'); });
-    const obrasBancoJ = (bancoDB||[]).filter(o => norm(o['_UTD'])==='JACOBINA');
+    
+    // Aplicar filtros principais se ativos
+    const dadosFiltrados = _mainFiltersActive ? filterBancoDB() : bancoDB;
+    
+    const obrasBancoI = (dadosFiltrados||[]).filter(o => { const u=norm(o['_UTD']); return u==='IRECE'||u.startsWith('IREC'); });
+    const obrasBancoJ = (dadosFiltrados||[]).filter(o => norm(o['_UTD'])==='JACOBINA');
     _dadosComMes = { irece: obrasBancoI, jac: obrasBancoJ };
     _mesFiltro = 'TODOS';
     postoAtualizarMesBar(obrasBancoI, obrasBancoJ);
-    const irece=postoFromBanco('IRECE'), jac=postoFromBanco('JACOBINA');
+    const irece=postoFromBanco('IRECE', dadosFiltrados), jac=postoFromBanco('JACOBINA', dadosFiltrados);
     postoRender('posto-lstI','posto-tagI',irece||[]);
     postoRender('posto-lstJ','posto-tagJ',jac||[]);
     postoSummary(irece,jac);
+    
+    // Preencher opções de mês no filtro principal
+    populateMainFilterMeses();
+    
     if(irece||jac){
       const info=bancoDBInfo;
       const infoTxt=info?(' · '+info.count+' obras · atualizado '+info.updatedAt):'';
@@ -1636,7 +1916,8 @@ async function postoCarregar(){
       const cache = lsGet('obras_base');
       if(cache&&cache.data&&cache.data.length){
         bancoDB = cache.data; bancoDBInfo = cache.info||null;
-        const iC=postoFromBanco('IRECE'), jC=postoFromBanco('JACOBINA');
+        const dadosCacheFiltrados = _mainFiltersActive ? filterBancoDB() : bancoDB;
+        const iC=postoFromBanco('IRECE', dadosCacheFiltrados), jC=postoFromBanco('JACOBINA', dadosCacheFiltrados);
         postoRender('posto-lstI','posto-tagI',iC||[]);
         postoRender('posto-lstJ','posto-tagJ',jC||[]);
         postoSummary(iC,jC);
