@@ -466,30 +466,26 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);min-height:100vh;padd
 .vz-badge.ok{background:rgba(39,103,73,.1);color:#276749;border:1px solid rgba(39,103,73,.2);}
 .vz-badge.ng{background:rgba(192,57,43,.08);color:#c0392b;border:1px solid rgba(192,57,43,.18);}
 
-/* ── Cards ── */
-.vz-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:7px;padding:10px 12px;}
-.enc-card{border-radius:9px;padding:9px 9px 7px;border:2px solid transparent;position:relative;overflow:hidden;transition:transform .15s,box-shadow .15s;}
-.enc-card:hover{transform:translateY(-2px);box-shadow:0 6px 18px rgba(0,0,0,.12);}
-.enc-card.above{background:linear-gradient(160deg,#f0faf5,#e6f5ed);border-color:#a7d9be;}
-.enc-card.below{background:linear-gradient(160deg,#fff7f7,#fde8e8);border-color:#f5b7b1;}
-.enc-card-utd{position:absolute;top:6px;right:6px;font-size:.44rem;font-weight:800;padding:1px 4px;border-radius:3px;}
-.enc-card.above .enc-card-utd.irc{background:rgba(8,80,65,.15);color:#085041;}
-.enc-card.above .enc-card-utd.jac{background:rgba(12,68,124,.12);color:#0C447C;}
-.enc-card.below .enc-card-utd.irc{background:rgba(8,80,65,.1);color:#085041;}
-.enc-card.below .enc-card-utd.jac{background:rgba(12,68,124,.08);color:#0C447C;}
-.enc-card-ico{font-size:.9rem;margin-bottom:2px;}
-.enc-card-val{font-family:'Bebas Neue',sans-serif;font-size:1.9rem;line-height:1;}
-.enc-card.above .enc-card-val{color:#276749;}
-.enc-card.below .enc-card-val{color:#c0392b;}
-.enc-card-nome{font-size:.6rem;font-weight:800;color:var(--text);line-height:1.2;margin:2px 0;}
-.enc-card-info{font-size:.5rem;color:var(--muted);font-weight:600;}
-.enc-card-bar{height:3px;border-radius:2px;margin-top:5px;background:#e0e7ea;}
-.enc-card-bar-fill{height:100%;border-radius:2px;}
-.enc-card.above .enc-card-bar-fill{background:#38a169;}
-.enc-card.below  .enc-card-bar-fill{background:#e53e3e;}
-.enc-card-diff{display:inline-block;font-size:.52rem;font-weight:800;padding:2px 5px;border-radius:10px;margin-top:3px;}
-.enc-card.above .enc-card-diff{background:rgba(39,103,73,.12);color:#276749;}
-.enc-card.below .enc-card-diff{background:rgba(192,57,43,.1);color:#c0392b;}
+/* ── Barras Verticais ── */
+.bv-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;padding:12px 12px 0;}
+.bv-chart{display:flex;align-items:flex-end;gap:5px;min-width:max-content;position:relative;}
+.bv-axis{position:absolute;left:0;right:0;border-top:2px dashed rgba(192,57,43,.55);pointer-events:none;}
+.bv-axis-lbl{position:absolute;right:3px;font-size:.5rem;font-weight:800;color:#c0392b;background:var(--surface);padding:1px 4px;border-radius:3px;transform:translateY(-100%);}
+.bv-col{display:flex;flex-direction:column;align-items:center;gap:2px;width:32px;}
+.bv-bar-area{display:flex;align-items:flex-end;width:100%;}
+.bv-bar{width:100%;border-radius:4px 4px 0 0;min-height:4px;transition:filter .15s;}
+.bv-bar:hover{filter:brightness(1.1);}
+.bv-bar.above.irc{background:linear-gradient(180deg,#81e6d9,#085041);}
+.bv-bar.above.jac{background:linear-gradient(180deg,#90cdf4,#0C447C);}
+.bv-bar.below{background:linear-gradient(180deg,#feb2b2,#c0392b);}
+.bv-num{font-family:'Bebas Neue',sans-serif;font-size:.8rem;color:var(--text2);}
+.bv-nome{font-size:.46rem;font-weight:800;color:var(--muted);text-align:center;line-height:1.2;word-break:break-word;}
+.bv-dot{width:5px;height:5px;border-radius:50%;margin-top:1px;}
+.bv-dot.irc{background:#085041;}
+.bv-dot.jac{background:#0C447C;}
+.bv-legend{display:flex;gap:10px;padding:8px 12px;flex-wrap:wrap;border-top:1px solid var(--border);}
+.bv-leg-item{display:flex;align-items:center;gap:4px;font-size:.58rem;font-weight:700;color:var(--muted);}
+.bv-leg-dot{width:9px;height:9px;border-radius:2px;flex-shrink:0;}
 
 
 /* ══════════════════════════════════════════
@@ -844,10 +840,10 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);min-height:100vh;padd
   <div class="chart-section" id="chart-section" style="display:none;">
     <div class="chart-header">
       <div style="display:flex;align-items:center;gap:10px;">
-        <div class="chart-title-icon">🃏</div>
+        <div class="chart-title-icon">📊</div>
         <div>
           <div class="chart-title">Postes Previstos por Encarregado</div>
-          <div style="font-size:.57rem;color:rgba(255,255,255,.45);letter-spacing:1px;margin-top:1px;">CARDS · META 50 POSTES</div>
+          <div style="font-size:.57rem;color:rgba(255,255,255,.45);letter-spacing:1px;margin-top:1px;">BARRAS VERTICAIS · META 50 POSTES</div>
         </div>
       </div>
       <div class="chart-legend">
@@ -1466,24 +1462,37 @@ function postoRenderChart(irece, jac) {
   const band = (arr, lbl, icon) =>
     `<div class="vz-band ${arr===above?'above':'below'}"><span class="vz-count">${arr.length}</span>${icon} ${lbl}</div>`;
   
-  const cards = arr => arr.map(d => {
-    const pct = Math.min(d.postes/mx*100,100).toFixed(0);
-    const v   = df(d);
-    return `<div class="enc-card ${d.postes>=META?'above':'below'}">
-      <span class="enc-card-utd ${utdCl(d)}">${utdLb(d)}</span>
-      <div class="enc-card-ico">${d.postes>=META?'✅':'⚠️'}</div>
-      <div class="enc-card-val">${d.postes}</div>
-      <div class="enc-card-nome">${nm(d)}</div>
-      <div class="enc-card-info">${d.obras} obra${d.obras!==1?'s':''}</div>
-      <div class="enc-card-bar"><div class="enc-card-bar-fill" style="width:${pct}%"></div></div>
-      <span class="enc-card-diff">${v>=0?'+'+v:v}</span>
+  const chartH = 180;
+  const metaBottom = (META / mx * chartH);
+  const metaFromBottom = metaBottom;
+
+  const bars = all.map(d => {
+    const h   = Math.max(3, Math.round(d.postes / mx * chartH));
+    const abv = d.postes >= META;
+    return `<div class="bv-col">
+      <div class="bv-num">${d.postes}</div>
+      <div class="bv-bar-area" style="height:${chartH}px">
+        <div class="bv-bar ${abv?'above':'below'} ${utdCl(d)}" style="height:${h}px"></div>
+      </div>
+      <div class="bv-nome">${nm(d)}</div>
+      <div class="bv-dot ${utdCl(d)}"></div>
     </div>`;
   }).join('');
-  cont.innerHTML =
-    band(above,'Acima da meta (≥50)','✅') +
-    '<div class="vz-cards">' + cards(above) + '</div>' +
-    band(below,'Abaixo da meta (<50)','⚠') +
-    '<div class="vz-cards">' + cards(below) + '</div>';
+
+  cont.innerHTML = `
+    <div class="bv-scroll">
+      <div class="bv-chart" style="height:${chartH + 36}px;padding-bottom:36px;align-items:flex-end;">
+        <div class="bv-axis" style="bottom:36px;transform:translateY(-${metaFromBottom}px)">
+          <span class="bv-axis-lbl">META 50</span>
+        </div>
+        ${bars}
+      </div>
+    </div>
+    <div class="bv-legend">
+      <div class="bv-leg-item"><span class="bv-leg-dot" style="background:#085041"></span>IRECÊ acima</div>
+      <div class="bv-leg-item"><span class="bv-leg-dot" style="background:#0C447C"></span>JACOBINA acima</div>
+      <div class="bv-leg-item"><span class="bv-leg-dot" style="background:#c0392b"></span>Abaixo da meta</div>
+    </div>`;
 
 }
 
