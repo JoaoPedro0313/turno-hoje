@@ -1046,9 +1046,9 @@ const eq = (cols[iEq]||'').trim().toUpperCase();
 if (eq && !abriram.includes(eq)) abriram.push(eq);
 }
 const justifNames = teams.justif.map(t=>t.name);
-// Usa TODOS os nomes já conhecidos no sistema como lista mestre (ok + justif + falta anteriores + novos do CSV)
-// Isso garante que o cálculo funcione independente do formato de nome (código ou nome completo)
+// EQUIPES_ATIVAS é a lista mestre — garante que equipes novas apareçam mesmo com estado antigo no Supabase
 const todosConhecidos = [...new Set([
+  ...EQUIPES_ATIVAS,
   ...teams.ok,
   ...justifNames,
   ...teams.falta,
