@@ -373,6 +373,11 @@ teams.ok     = (v.ok     && v.ok.length)     ? v.ok     : DEFAULTS.ok;
 teams.justif = v.justif || [];
 teams.falta  = (v.falta  && v.falta.length)  ? v.falta  : DEFAULTS.falta;
 currentDate  = v.date   || DEFAULTS.date;
+// Garante que todas as equipes ativas estejam representadas (ok, justif ou falta)
+const justifNms = teams.justif.map(t=>t.name);
+const allKnown = [...teams.ok, ...justifNms, ...teams.falta];
+const missing = EQUIPES_ATIVAS.filter(e => !allKnown.includes(e));
+if (missing.length) teams.falta = [...teams.falta, ...missing];
 }
 if (row.key==='producao') { producao = row.value || {}; }
 if (row.key==='obras_base') {
@@ -1785,7 +1790,7 @@ function mapaRotaUsarLocalizacao() {
 function mapaRotaAtualizarLista() {
   // obras com coordenadas que estão visíveis no mapa
   mapaRotaObrasFiltradas = (mapaData||[]).filter(d => d.temCoord);
-  mapaRotaFiltrarLista();
+  mapaRotaFiltrarLista && mapaRotaFiltrarLista();
   mapaRotaAtualizarSelecionadas();
 }
 function mapaRotaFiltrarLista() {
@@ -1811,12 +1816,12 @@ function mapaRotaAdicionar(pep) {
   const d = mapaRotaObrasFiltradas.find(x=>x.pep===pep);
   if (!d || mapaRotaSelecionadas.find(s=>s.pep===pep)) return;
   mapaRotaSelecionadas.push({pep:d.pep, titulo:d.titulo, lat:d.lat, lon:d.lon, mun:d.mun, status:d.status});
-  mapaRotaFiltrarLista();
+  mapaRotaFiltrarLista && mapaRotaFiltrarLista();
   mapaRotaAtualizarSelecionadas();
 }
 function mapaRotaRemover(pep) {
   mapaRotaSelecionadas = mapaRotaSelecionadas.filter(s=>s.pep!==pep);
-  mapaRotaFiltrarLista();
+  mapaRotaFiltrarLista && mapaRotaFiltrarLista();
   mapaRotaAtualizarSelecionadas();
 }
 function mapaRotaMoverCima(idx) {
@@ -1836,7 +1841,7 @@ function mapaRotaAdicionarTodos() {
     if (q && !d.pep.toLowerCase().includes(q) && !d.titulo.toLowerCase().includes(q) && !(d.mun||'').toLowerCase().includes(q)) return false;
     return true;
   }).forEach(d => mapaRotaSelecionadas.push({pep:d.pep, titulo:d.titulo, lat:d.lat, lon:d.lon, mun:d.mun, status:d.status}));
-  mapaRotaFiltrarLista();
+  mapaRotaFiltrarLista && mapaRotaFiltrarLista();
   mapaRotaAtualizarSelecionadas();
 }
 function mapaRotaAtualizarSelecionadas() {
@@ -1986,7 +1991,7 @@ window.mapaRotaAdicionarDoPopup = function(pep, titulo, lat, lon, mun, status) {
   if (sec) sec.style.display='';
   const cnt = document.getElementById('mapa-rota-sel-count');
   if (cnt) cnt.textContent = mapaRotaSelecionadas.length;
-  mapaRotaFiltrarLista();
+  mapaRotaFiltrarLista && mapaRotaFiltrarLista();
   const t = document.createElement('div');
   t.textContent = `✓ "${titulo}" adicionada à rota (${mapaRotaSelecionadas.length} parada${mapaRotaSelecionadas.length>1?'s':''})`;
   t.style.cssText='position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:#c05621;color:#fff;padding:10px 22px;border-radius:10px;font-family:Barlow,sans-serif;font-size:0.82rem;font-weight:800;z-index:9999;box-shadow:0 6px 20px rgba(192,86,33,0.45);letter-spacing:0.3px;white-space:nowrap;';
@@ -2782,7 +2787,7 @@ if (pageMapa && pageMapa.style.display!=='none') {
   mapaRenderFiltros && mapaRenderFiltros();
 }
 mapaRotaObrasFiltradas = mapaData.filter(d=>d.temCoord);
-mapaRotaFiltrarLista();
+mapaRotaFiltrarLista && mapaRotaFiltrarLista();
 }
 function mapaEnsureLeaflet(cb) {
   const ph = document.getElementById('mapa-placeholder'); if (ph) ph.style.display='none';
