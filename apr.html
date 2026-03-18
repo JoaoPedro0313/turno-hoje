@@ -2105,5 +2105,178 @@ setTimeout(presenceInit, 1500);
 })();
 </script>
 
+<!-- Engrenagem APR -->
+<button id="apr-gear-btn" title="Importar CSV APR" onclick="document.getElementById('apr-gear-modal').style.display='flex'" style="position:fixed;bottom:18px;left:18px;z-index:200;background:rgba(13,115,119,0.82);color:#fff;border:none;border-radius:50%;width:44px;height:44px;font-size:1.2rem;cursor:pointer;box-shadow:0 2px 10px rgba(13,115,119,0.35);display:flex;align-items:center;justify-content:center;transition:all 0.2s;backdrop-filter:blur(4px);" onmouseover="this.style.background='rgba(8,80,84,0.95)';this.style.transform='scale(1.1) rotate(30deg)'" onmouseout="this.style.background='rgba(13,115,119,0.82)';this.style.transform='scale(1) rotate(0deg)'">
+  <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="12" r="3"></circle>
+    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+  </svg>
+</button>
+
+<!-- Modal Engrenagem APR -->
+<div id="apr-gear-modal" style="display:none;position:fixed;inset:0;background:rgba(10,20,30,0.65);z-index:500;align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(4px);">
+  <div style="background:#fff;border-radius:20px;width:100%;max-width:440px;box-shadow:0 32px 80px rgba(0,0,0,0.25);overflow:hidden;max-height:92vh;display:flex;flex-direction:column;">
+    <div style="background:linear-gradient(135deg,#0b5e62,#14a085);padding:18px 24px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <div style="width:36px;height:36px;border-radius:10px;background:rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;font-size:1.1rem;">⚙️</div>
+        <div>
+          <div style="color:#fff;font-size:1rem;font-weight:800;letter-spacing:0.5px;">Importar APR</div>
+          <div style="color:rgba(255,255,255,0.65);font-size:0.72rem;font-weight:600;">Sistema OBRAS BA</div>
+        </div>
+      </div>
+      <button onclick="document.getElementById('apr-gear-modal').style.display='none'" style="background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.2);color:#fff;width:34px;height:34px;border-radius:10px;cursor:pointer;font-size:1rem;font-weight:800;display:flex;align-items:center;justify-content:center;">✕</button>
+    </div>
+    <div style="padding:24px;overflow-y:auto;">
+
+      <!-- Título seção -->
+      <div style="font-size:0.68rem;font-weight:800;color:#0d7377;letter-spacing:2px;text-transform:uppercase;margin-bottom:14px;padding-bottom:8px;border-bottom:2px solid #c0e8e5;">📋 Arquivo de APR</div>
+
+      <!-- Formato esperado -->
+      <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:0.72rem;color:#555;">
+        <div style="font-weight:800;color:#0d7377;margin-bottom:5px;">Formato esperado (.csv separador <code>;</code>)</div>
+        <div style="color:#888;margin-top:4px;">Colunas necessárias: <strong>Código APR</strong>, <strong>Equipe</strong>, <strong>Tipo</strong>, <strong>Ordem de Serviço</strong>, <strong>Data de Cadastro</strong>, <strong>Qtd. Horas Preenchimento</strong></div>
+      </div>
+
+      <!-- Drop zone -->
+      <div id="apr-gear-dropzone"
+        style="border:2px dashed #c0e8e5;border-radius:12px;padding:20px 16px;text-align:center;cursor:pointer;background:linear-gradient(135deg,#f0fafa,#e8f6f5);margin-bottom:12px;transition:all 0.2s;"
+        onclick="document.getElementById('apr-gear-file-input').click()"
+        ondragover="event.preventDefault();this.style.borderColor='#0d7377';this.style.background='#d0efed';"
+        ondragleave="this.style.borderColor='#c0e8e5';this.style.background='linear-gradient(135deg,#f0fafa,#e8f6f5)';"
+        ondrop="event.preventDefault();this.style.borderColor='#c0e8e5';this.style.background='linear-gradient(135deg,#f0fafa,#e8f6f5)';aprGearImportar(event.dataTransfer.files[0]);">
+        <div style="font-size:1.8rem;margin-bottom:6px;">📂</div>
+        <div style="font-size:0.85rem;font-weight:800;color:#0d7377;">Clique ou arraste o arquivo</div>
+        <div style="font-size:0.72rem;color:#888;margin-top:3px;">Formato aceito: <strong>.csv</strong></div>
+      </div>
+      <input type="file" id="apr-gear-file-input" accept=".csv" style="display:none;" onchange="aprGearImportar(this.files[0]);this.value='';">
+
+      <!-- Feedback -->
+      <div id="apr-gear-import-msg" style="display:none;font-size:0.78rem;font-weight:700;padding:10px 14px;border-radius:9px;margin-bottom:12px;"></div>
+
+      <!-- Preview -->
+      <div id="apr-gear-preview" style="display:none;background:#f0fafa;border:1px solid #c0e8e5;border-radius:10px;padding:14px 16px;margin-bottom:12px;">
+        <div style="font-size:0.68rem;font-weight:800;color:#0d7377;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:10px;">📊 Preview do Arquivo</div>
+        <div style="display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:10px;">
+          <div style="background:#fff;border-radius:8px;padding:10px 20px;border:1px solid #c0e8e5;text-align:center;">
+            <div id="apr-gear-prev-count" style="font-size:1.8rem;font-weight:800;color:#0d7377;">0</div>
+            <div style="font-size:0.62rem;font-weight:700;color:#888;text-transform:uppercase;">Registros</div>
+          </div>
+          <div style="background:#fff;border-radius:8px;padding:10px 20px;border:1px solid #bee3f8;text-align:center;">
+            <div id="apr-gear-prev-equipes" style="font-size:1.8rem;font-weight:800;color:#2b6cb0;">0</div>
+            <div style="font-size:0.62rem;font-weight:700;color:#888;text-transform:uppercase;">Equipes</div>
+          </div>
+        </div>
+        <button id="apr-gear-confirm-btn" onclick="aprGearConfirmar()" style="width:100%;padding:11px;background:linear-gradient(135deg,#0d7377,#14a085);color:#fff;border:none;border-radius:10px;font-family:'Barlow',sans-serif;font-size:0.88rem;font-weight:800;cursor:pointer;" onmouseover="this.style.opacity='0.88'" onmouseout="this.style.opacity='1'">✅ Confirmar e Aplicar</button>
+      </div>
+
+      <!-- Reconectar -->
+      <div style="font-size:0.68rem;font-weight:800;color:#aaa;letter-spacing:2px;text-transform:uppercase;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid #f0f2f5;margin-top:8px;">🗄️ Banco de Dados</div>
+      <button onclick="if(window.dbReconectar)window.dbReconectar();document.getElementById('apr-gear-modal').style.display='none';" style="width:100%;padding:11px;background:linear-gradient(135deg,#0d7377,#14a085);color:#fff;border:none;border-radius:10px;font-family:'Barlow',sans-serif;font-size:0.88rem;font-weight:800;cursor:pointer;transition:all 0.15s;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">🔄 Reconectar ao Banco</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  let _aprGearPendente = null;
+
+  function _aprGearShowMsg(txt, tipo) {
+    const el = document.getElementById('apr-gear-import-msg');
+    if (!el) return;
+    el.textContent = txt;
+    el.style.display = 'block';
+    el.style.background = tipo === 'success' ? '#d0f0ee' : '#fde8e8';
+    el.style.color      = tipo === 'success' ? '#0d7377' : '#c53030';
+    el.style.borderLeft = '3px solid ' + (tipo === 'success' ? '#0d7377' : '#c53030');
+  }
+
+  window.aprGearImportar = function(file) {
+    const prevEl = document.getElementById('apr-gear-preview');
+    _aprGearPendente = null;
+    prevEl.style.display = 'none';
+    const msgEl = document.getElementById('apr-gear-import-msg');
+    if (msgEl) msgEl.style.display = 'none';
+
+    if (!file) return;
+    if (!file.name.toLowerCase().endsWith('.csv')) {
+      _aprGearShowMsg('❌ Formato inválido. Envie um arquivo .csv', 'error');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      try {
+        const text = e.target.result.replace(/^\uFEFF/, '');
+        const lines = text.split(/\r?\n/).filter(l => l.trim());
+        if (lines.length < 2) { _aprGearShowMsg('❌ Arquivo vazio ou sem dados.', 'error'); return; }
+
+        const parseLine = typeof parseCsvLine === 'function' ? parseCsvLine : function(line) {
+          return line.split(';').map(c => c.trim().replace(/^"|"$/g,''));
+        };
+
+        const headers = parseLine(lines[0]);
+        const idx = col => headers.findIndex(h => h.trim().replace(/^"|"$/g,'').toLowerCase() === col.toLowerCase());
+        const iCod  = idx('Código APR');
+        const iEq   = idx('Equipe');
+        const iTipo = idx('Tipo');
+        const iOS   = idx('Ordem de Serviço');
+        const iData = idx('Data de Cadastro');
+        const iDur  = idx('Qtd. Horas Preenchimento');
+
+        if (iEq < 0) { _aprGearShowMsg('❌ Coluna "Equipe" não encontrada.', 'error'); return; }
+
+        const dados = [];
+        for (let i = 1; i < lines.length; i++) {
+          const cols = parseLine(lines[i]);
+          if (cols.length < 3) continue;
+          dados.push({
+            codigo: (cols[iCod]  || '').trim(),
+            equipe: (cols[iEq]   || '').trim().toUpperCase(),
+            tipo:   (cols[iTipo] || '').trim(),
+            os:     (cols[iOS]   || '').trim(),
+            data:   (cols[iData] || '').trim(),
+            dur:    (cols[iDur]  || '').trim(),
+          });
+        }
+
+        if (!dados.length) { _aprGearShowMsg('❌ Nenhum dado encontrado no arquivo.', 'error'); return; }
+
+        _aprGearPendente = dados;
+        const equipes = new Set(dados.map(d => d.equipe)).size;
+        document.getElementById('apr-gear-prev-count').textContent   = dados.length;
+        document.getElementById('apr-gear-prev-equipes').textContent = equipes;
+        prevEl.style.display = 'block';
+        _aprGearShowMsg('✅ Arquivo lido. Confira o preview e confirme.', 'success');
+      } catch(err) {
+        _aprGearShowMsg('❌ Erro ao ler arquivo: ' + err.message, 'error');
+      }
+    };
+    reader.readAsText(file, 'utf-8');
+  };
+
+  window.aprGearConfirmar = function() {
+    if (!_aprGearPendente) return;
+    if (typeof aprData !== 'undefined') {
+      // aprData é var global do arquivo
+      window.aprData = _aprGearPendente;
+      // Sincroniza com a variável local do módulo APR
+      try { aprData.length = 0; _aprGearPendente.forEach(d => aprData.push(d)); } catch(e) {}
+    }
+    try { renderApr(); } catch(e) {}
+    const lbl = document.getElementById('lbl-apr');
+    if (lbl) lbl.textContent = '✅ ' + _aprGearPendente.length + ' registros carregados';
+    try { if (typeof dbSaveApr === 'function') dbSaveApr(); } catch(e) {}
+    document.getElementById('apr-gear-modal').style.display = 'none';
+    document.getElementById('apr-gear-preview').style.display = 'none';
+    _aprGearPendente = null;
+  };
+
+  // Fechar ao clicar fora
+  document.getElementById('apr-gear-modal').addEventListener('click', function(e) {
+    if (e.target === this) this.style.display = 'none';
+  });
+})();
+</script>
+
 </body>
 </html>
