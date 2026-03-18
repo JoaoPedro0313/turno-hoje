@@ -471,15 +471,23 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);min-height:100vh;padd
 .bv-chart{display:flex;align-items:flex-end;gap:5px;min-width:max-content;position:relative;}
 .bv-axis{position:absolute;left:0;right:0;border-top:2px dashed rgba(192,57,43,.55);pointer-events:none;}
 .bv-axis-lbl{position:absolute;right:3px;font-size:.5rem;font-weight:800;color:#c0392b;background:var(--surface);padding:1px 4px;border-radius:3px;transform:translateY(-100%);}
-.bv-col{display:flex;flex-direction:column;align-items:center;gap:2px;width:32px;}
-.bv-bar-area{display:flex;align-items:flex-end;width:100%;}
-.bv-bar{width:100%;border-radius:4px 4px 0 0;min-height:4px;transition:filter .15s;}
+.bv-col{display:flex;flex-direction:column;align-items:center;gap:2px;width:44px;}
+.bv-bar-area{display:flex;align-items:flex-end;width:100%;position:relative;}
+.bv-bar{width:100%;border-radius:4px 4px 0 0;min-height:18px;transition:filter .15s;position:relative;}
 .bv-bar:hover{filter:brightness(1.1);}
 .bv-bar.above.irc{background:linear-gradient(180deg,#81e6d9,#085041);}
 .bv-bar.above.jac{background:linear-gradient(180deg,#90cdf4,#0C447C);}
 .bv-bar.below{background:linear-gradient(180deg,#feb2b2,#c0392b);}
-.bv-num{font-family:'Bebas Neue',sans-serif;font-size:.8rem;color:var(--text2);}
-.bv-nome{font-size:.46rem;font-weight:800;color:var(--muted);text-align:center;line-height:1.2;word-break:break-word;}
+/* valor flutuando no topo da barra */
+.bv-num{
+  position:absolute;top:-18px;left:50%;transform:translateX(-50%);
+  font-family:'Bebas Neue',sans-serif;font-size:.85rem;line-height:1;
+  white-space:nowrap;
+}
+.bv-bar.above.irc .bv-num{color:#085041;}
+.bv-bar.above.jac .bv-num{color:#0C447C;}
+.bv-bar.below      .bv-num{color:#c0392b;}
+.bv-nome{font-size:.46rem;font-weight:800;color:var(--muted);text-align:center;line-height:1.2;word-break:break-word;max-width:44px;}
 .bv-dot{width:5px;height:5px;border-radius:50%;margin-top:1px;}
 .bv-dot.irc{background:#085041;}
 .bv-dot.jac{background:#0C447C;}
@@ -1462,17 +1470,18 @@ function postoRenderChart(irece, jac) {
   const band = (arr, lbl, icon) =>
     `<div class="vz-band ${arr===above?'above':'below'}"><span class="vz-count">${arr.length}</span>${icon} ${lbl}</div>`;
   
-  const chartH = 180;
+  const chartH = 200;
   const metaBottom = (META / mx * chartH);
   const metaFromBottom = metaBottom;
 
   const bars = all.map(d => {
-    const h   = Math.max(3, Math.round(d.postes / mx * chartH));
+    const h   = Math.max(18, Math.round(d.postes / mx * chartH));
     const abv = d.postes >= META;
     return `<div class="bv-col">
-      <div class="bv-num">${d.postes}</div>
       <div class="bv-bar-area" style="height:${chartH}px">
-        <div class="bv-bar ${abv?'above':'below'} ${utdCl(d)}" style="height:${h}px"></div>
+        <div class="bv-bar ${abv?'above':'below'} ${utdCl(d)}" style="height:${h}px">
+          <span class="bv-num">${d.postes}</span>
+        </div>
       </div>
       <div class="bv-nome">${nm(d)}</div>
       <div class="bv-dot ${utdCl(d)}"></div>
@@ -1481,7 +1490,7 @@ function postoRenderChart(irece, jac) {
 
   cont.innerHTML = `
     <div class="bv-scroll">
-      <div class="bv-chart" style="height:${chartH + 36}px;padding-bottom:36px;align-items:flex-end;">
+      <div class="bv-chart" style="height:${chartH + 54}px;padding-bottom:36px;padding-top:20px;align-items:flex-end;">
         <div class="bv-axis" style="bottom:36px;transform:translateY(-${metaFromBottom}px)">
           <span class="bv-axis-lbl">META 50</span>
         </div>
