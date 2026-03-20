@@ -373,15 +373,23 @@ const v = row.value;
 const norm = arr => (arr||[]).map(n => toDisplayName(typeof n==='string'?n:(n.name||''))).filter(Boolean);
 teams.ok    = (v.ok    && v.ok.length)    ? [...new Set(norm(v.ok))]    : DEFAULTS.ok;
 teams.justif= (v.justif && v.justif.length) ? v.justif : [];
-teams.falta = (v.falta  && v.falta.length)  ? [...new Set(norm(v.falta))] : DEFAULTS.falta;
 currentDate = v.date || DEFAULTS.date;
-// Remove de falta qualquer equipe que ja esta em ok ou justif
 const justifNms = teams.justif.map(t=>t.name);
-teams.falta = teams.falta.filter(n=>!teams.ok.includes(n)&&!justifNms.includes(n));
-// Garante que todas as equipes ativas estejam representadas
-const allKnown = [...teams.ok, ...justifNms, ...teams.falta];
-const missing = EQUIPES_ATIVAS.filter(e => !allKnown.includes(e));
-if (missing.length) teams.falta = [...teams.falta, ...missing];
+// CORRIGIDO: normaliza AMBOS os lados para evitar bug nome completo vs codigo curto
+const okNorm     = new Set(teams.ok.map(n => toDisplayName(n)));
+const justifNorm = new Set(justifNms.map(n => toDisplayName(n)));
+// Falta salva (normalizada), se existir
+const faltaSalva = (v.falta && v.falta.length) ? [...new Set(norm(v.falta))] : DEFAULTS.falta;
+// Garante que todos do EQUIPES_ATIVAS que nao abriram tambem aparecem
+const faltaSet = new Set([
+  ...faltaSalva,
+  ...EQUIPES_ATIVAS.filter(e => !okNorm.has(e) && !justifNorm.has(e))
+]);
+// Remove qualquer um que por algum motivo esteja tambem em ok ou justif
+teams.falta = [...faltaSet].filter(n => {
+  const d = toDisplayName(n);
+  return !okNorm.has(d) && !justifNorm.has(d);
+});
 }
 if (row.key==='producao') { producao = row.value || {}; }
 if (row.key==='obras_base') {
@@ -616,10 +624,15 @@ turnoModoHistorico = true;
 const okTemp = payload.ok || [];
 const justifTemp = payload.justif || [];
 const faltaRaw = payload.falta || [];
-// Deduplicar histórico também
+// CORRIGIDO: normaliza ambos os lados para evitar bug nome completo vs codigo curto
 const okDispH     = new Set(okTemp.map(n => toDisplayName(n)));
 const justifDispH = new Set(justifTemp.map(t => toDisplayName(t.name)));
-const faltaTemp   = faltaRaw.filter(n => { const d=toDisplayName(n); return !okDispH.has(d)&&!justifDispH.has(d); });
+// Garante que todos do EQUIPES_ATIVAS que nao estao em ok/justif aparecem em falta
+const faltaSetH = new Set([
+  ...faltaRaw,
+  ...EQUIPES_ATIVAS.filter(e => !okDispH.has(e) && !justifDispH.has(e))
+]);
+const faltaTemp = [...faltaSetH].filter(n => { const d=toDisplayName(n); return !okDispH.has(d)&&!justifDispH.has(d); });
 buildGridOk('abriu-grid', [...okTemp].sort());
 buildGridJustif('justif-grid', [...justifTemp].sort((a,b)=>a.name.localeCompare(b.name)));
 buildGridFalta('falta-grid', [...faltaTemp].sort());
@@ -1214,7 +1227,10 @@ const now = new Date();
 const hora = pad(now.getHours())+':'+pad(now.getMinutes());
 const ok     = [...teams.ok].sort();
 const justif = [...teams.justif].sort((a,b)=>a.name.localeCompare(b.name));
-const falta  = [...teams.falta].sort();
+// CORRIGIDO: usa mesma dedup do render() para garantir que falta seja correto no print
+const _okD  = new Set(ok.map(n => toDisplayName(n)));
+const _jD   = new Set(justif.map(t => toDisplayName(t.name)));
+const falta = teams.falta.filter(n => { const d=toDisplayName(n); return !_okD.has(d)&&!_jD.has(d); }).sort();
 function buildGrid(list, type) {
 if (!list || list.length===0) return '<div style="padding:12px 16px;color:#aaa;font-size:13px;">Nenhum</div>';
 let bg='#f0fafa', border='#e0f5f3', namecol='#1a3a3a', badgeBg='#14a085', badgeTxt='OK';
