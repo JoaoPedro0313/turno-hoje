@@ -3286,6 +3286,31 @@ function mapaCarregarMes(ano, mes) {
   });
 }
 window.mapaCarregarMes = mapaCarregarMes;
+
+// ── Renderiza botões de mês IMEDIATAMENTE, sem esperar dados ──────────────
+function mapaInitMesBar() {
+  const mesBar = document.getElementById('mapa-mes-bar');
+  const mesWrapper = document.getElementById('mapa-mes-bar-wrapper');
+  if (!mesBar || !GSHEETS_MESES || !GSHEETS_MESES.length) return;
+  mesWrapper.style.display = 'flex';
+  mesBar.innerHTML = GSHEETS_MESES.map(entry => {
+    const label = (MESES_PT[entry.mes]||'?') + '/' + String(entry.ano).slice(-2);
+    const now = new Date();
+    const isCurrent = entry.ano === now.getFullYear() && entry.mes === now.getMonth() + 1;
+    const isActive = mapaMesAtivo ? (mapaMesAtivo.ano===entry.ano && mapaMesAtivo.mes===entry.mes) : isCurrent;
+    return `<button class="mapa-mes-btn" data-ano="${entry.ano}" data-mesnum="${entry.mes}"
+      onclick="mapaCarregarMes(${entry.ano},${entry.mes})"
+      style="padding:6px 18px;border-radius:20px;border:2px solid ${isActive?'#6b46c1':'#e2e8f0'};background:${isActive?'#6b46c1':'#fff'};font-family:'Barlow',sans-serif;font-size:0.78rem;font-weight:800;cursor:pointer;color:${isActive?'#fff':'#555'};transition:all 0.15s;white-space:nowrap;box-shadow:${isActive?'0 2px 8px rgba(107,70,193,0.25)':'none'};">
+      📅 ${label}</button>`;
+  }).join('');
+}
+// Roda no DOMContentLoaded E depois (garante que o elemento existe)
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', mapaInitMesBar);
+} else {
+  mapaInitMesBar();
+}
+window.addEventListener('load', mapaInitMesBar);
 function compSetMes(mes) {
 compMesFiltro = mes;
 document.querySelectorAll('.comp-mes-btn').forEach(b => {
