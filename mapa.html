@@ -116,7 +116,7 @@ window.presenceOpenModal = function() { if(window._presenceOpenModal) window._pr
         <span style="font-size:0.68rem;font-weight:800;color:#888;letter-spacing:1.5px;text-transform:uppercase;white-space:nowrap;">&#127959; UTD:</span>
         <div id="mapa-utd-bar" style="display:flex;gap:8px;flex-wrap:wrap;"></div>
       </div>
-      <div id="mapa-mes-bar-wrapper" style="display:none;background:#fff;border-radius:14px;box-shadow:0 2px 14px rgba(0,0,0,0.08);padding:12px 20px;margin-bottom:10px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+      <div id="mapa-mes-bar-wrapper" style="display:none;background:#fff;border-radius:14px;box-shadow:0 2px 14px rgba(0,0,0,0.08);padding:12px 20px;margin-bottom:10px;align-items:center;gap:10px;flex-wrap:wrap;">
         <span style="font-size:0.68rem;font-weight:800;color:#6b46c1;letter-spacing:1.5px;text-transform:uppercase;white-space:nowrap;">&#128197; MÊS:</span>
         <div id="mapa-mes-bar" style="display:flex;gap:6px;flex-wrap:wrap;"></div>
       </div>
@@ -3147,24 +3147,78 @@ const MESES_ORDER = {'JAN':1,'FEV':2,'MAR':3,'ABR':4,'MAI':5,'JUN':6,'JUL':7,'AG
 function parseMesObra(dateStr) {
 if (!dateStr) return null;
 const s = String(dateStr).trim().split(/[\s\n]/)[0].trim();
-const parts = s.split('/');
-if (parts.length < 2) return null;
-const m = parseInt(parts[1], 10);
-if (m < 1 || m > 12) return null;
-if (parts.length < 3) return null;
-let y = parseInt(parts[2], 10);
-if (isNaN(y)) return null;
-if (y < 100) y += 2000;
-return (MESES_PT[m] || '?') + '/' + String(y).slice(-2);
+// Formato DD/MM/AAAA ou DD/MM/AA
+const slashParts = s.split('/');
+if (slashParts.length >= 3) {
+  const m = parseInt(slashParts[1], 10);
+  if (m >= 1 && m <= 12) {
+    let y = parseInt(slashParts[2], 10);
+    if (!isNaN(y)) { if (y < 100) y += 2000; return (MESES_PT[m]||'?')+'/'+String(y).slice(-2); }
+  }
+}
+// Formato MM/AAAA (sem dia)
+if (slashParts.length === 2) {
+  const m = parseInt(slashParts[0], 10);
+  if (m >= 1 && m <= 12) {
+    let y = parseInt(slashParts[1], 10);
+    if (!isNaN(y) && y >= 2000) { return (MESES_PT[m]||'?')+'/'+String(y).slice(-2); }
+  }
+}
+// Formato AAAA-MM-DD (ISO)
+const dashParts = s.split('-');
+if (dashParts.length >= 3) {
+  const y = parseInt(dashParts[0], 10);
+  const m = parseInt(dashParts[1], 10);
+  if (y >= 2000 && m >= 1 && m <= 12) { return (MESES_PT[m]||'?')+'/'+String(y).slice(-2); }
+}
+// Formato por extenso: "JAN/26", "MARÇO/2026", "mar/26", etc.
+const extMatch = s.match(/^([A-ZÇa-zç]{3,})\/?[\s\-]?(\d{2,4})$/);
+if (extMatch) {
+  const mn = extMatch[1].toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').slice(0,3);
+  const mesNum = {JAN:1,FEV:2,MAR:3,ABR:4,MAI:5,JUN:6,JUL:7,AGO:8,SET:9,OUT:10,NOV:11,DEZ:12}[mn];
+  if (mesNum) { let y=parseInt(extMatch[2],10); if(y<100)y+=2000; return (MESES_PT[mesNum]||'?')+'/'+String(y).slice(-2); }
+}
+return null;
 }
 function mesFromObra(obj) {
 if (!obj) return null;
-const candidates = [
-obj['REPROGRAMAÇÃO FIM'] || obj['REPROGRAMACAO FIM'] || '',
-obj['FIM PREVISTO']  || obj['FIM  PREVISTO'] || '',
-obj['INCIO PREVISTO'] || obj['INÍCIO PREVISTO'] || obj['INICIO PREVISTO'] || '',
+// Tenta colunas específicas conhecidas primeiro (prioridade: fim/conclusão > início)
+const candidateKeys = [
+  'REPROGRAMAÇÃO FIM','REPROGRAMACAO FIM','REPROG FIM','REPROGRAMAÇÃO DE FIM','REPROGRAMACAO DE FIM',
+  'FIM PREVISTO','FIM  PREVISTO','DATA FIM PREVISTO','DATA DE FIM PREVISTO','PREVISÃO FIM','PREVISAO FIM',
+  'TÉRMINO PREVISTO','TERMINO PREVISTO','DATA TÉRMINO','DATA TERMINO','DATA DE TÉRMINO','DATA DE TERMINO',
+  'CONCLUSÃO PREVISTA','CONCLUSAO PREVISTA','PREVISÃO DE CONCLUSÃO','PREVISAO DE CONCLUSAO',
+  'DATA CONCLUSÃO','DATA CONCLUSAO','DATA DE CONCLUSÃO','DATA DE CONCLUSAO',
+  'MÊS PREVISTO','MES PREVISTO','MÊS','MES','MÊS DE CONCLUSÃO','MES DE CONCLUSAO',
+  'MÊS FIM','MES FIM','MÊS TÉRMINO','MES TERMINO',
+  'PRAZO PREVISTO','PRAZO','DATA PRAZO',
+  'PREVISÃO','PREVISAO','DATA PREVISÃO','DATA PREVISAO',
+  'INCIO PREVISTO','INÍCIO PREVISTO','INICIO PREVISTO','DATA INÍCIO','DATA INICIO',
+  'DATA DE INÍCIO','DATA DE INICIO','INÍCIO','INICIO',
+  'FIM','DATA FIM','DATA DE FIM',
 ];
-for (const c of candidates) { const m = parseMesObra(c); if (m) return m; }
+for (const k of candidateKeys) {
+  const v = obj[k] || obj[k.toUpperCase()] || '';
+  if (v) { const m = parseMesObra(v); if (m) return m; }
+}
+// Fallback: tenta qualquer coluna cujo nome sugira data de fim/mês/conclusão
+const keys = Object.keys(obj);
+const prioPatterns = [/fim/i,/conclus/i,/termin/i,/prazo/i,/previs/i,/m[eê]s/i];
+for (const pat of prioPatterns) {
+  for (const k of keys) {
+    if (pat.test(k)) {
+      const v = obj[k] || '';
+      if (v) { const m = parseMesObra(v); if (m) return m; }
+    }
+  }
+}
+// Último recurso: qualquer coluna com data válida no formato dd/mm/aaaa
+for (const k of keys) {
+  if (/data|inicio|começo|comeco|start/i.test(k)) {
+    const v = obj[k] || '';
+    if (v) { const m = parseMesObra(v); if (m) return m; }
+  }
+}
 return null;
 }
 function sortMeses(meses) {
@@ -3316,7 +3370,7 @@ const baseUTD = mapaUTDFiltro==='TODAS' ? mapaData : mapaData.filter(d=>d.utd===
 const mesesSet = new Set(baseUTD.map(d=>d.mes).filter(Boolean));
 const meses = sortMeses(['TODOS', ...mesesSet]);
 const mesWrapper = document.getElementById('mapa-mes-bar-wrapper');
-if (mesWrapper) mesWrapper.style.display = mesesSet.size ? '' : 'none';
+if (mesWrapper) mesWrapper.style.display = mesesSet.size ? 'flex' : 'none';
 const mesCount = m => m==='TODOS' ? baseUTD.length : baseUTD.filter(d=>d.mes===m).length;
 mesBar.innerHTML = meses.map(m => {
 const on = mapaMesFiltro===m;
