@@ -549,6 +549,8 @@ let progRegistros = [], progEditIdx = null;
 let aprData = [];
 let mapaMap=null, mapaLayerGroup=null, mapaData=[], mapaFiltroAtivo='TODOS', mapaUTDFiltro='TODAS', mapaMesFiltro='TODOS';
 let mapaMunFiltro='', mapaEncFiltro='', mapaCoordFiltro='TODAS';
+// Mês ativo na barra de meses (baseado em GSHEETS_MESES); null = usa o bancoDB já carregado
+let mapaMesAtivo = null;
 let mapaRaioAtivo=false, mapaRaioCircle=null, mapaRaioMarker=null, mapaRaioModoClick=false, mapaRaioCentro=null, mapaRaioKm=50;
 let mapaRotaLayerGroup = null;
 let mapaRotaSelecionadas = [];
@@ -3240,6 +3242,50 @@ b.style.borderColor = on ? '#6b46c1' : '#e2e8f0';
 });
 mapaFiltrar();
 }
+// Carrega dados de um mês específico diretamente das abas do Google Sheets
+function mapaCarregarMes(ano, mes) {
+  const entry = GSHEETS_MESES.find(e => e.ano===ano && e.mes===mes);
+  if (!entry) return;
+  mapaMesAtivo = { ano, mes };
+  // Atualiza visual dos botões imediatamente
+  document.querySelectorAll('.mapa-mes-btn').forEach(b => {
+    const on = parseInt(b.dataset.ano)===ano && parseInt(b.dataset.mesnum)===mes;
+    b.style.background = on ? '#6b46c1' : '#fff';
+    b.style.color = on ? '#fff' : '#555';
+    b.style.borderColor = on ? '#6b46c1' : '#e2e8f0';
+    b.style.boxShadow = on ? '0 2px 8px rgba(107,70,193,0.25)' : 'none';
+  });
+  const label = (MESES_PT[mes]||'?')+'/'+String(ano).slice(-2);
+  const mt = document.getElementById('mapa-titulo');
+  if (mt) { mt.textContent = '⏳ Carregando '+label+'...'; mt.style.color='#888'; }
+  const urlJac = GSHEETS_BASE.JACOBINA + entry.gidJacobina;
+  const urlIrc = GSHEETS_BASE.IRECE + entry.gidIrece;
+  compWithPapa(async () => {
+    try {
+      const [resJac, resIrc] = await Promise.all([fetch(urlJac), fetch(urlIrc)]);
+      if (!resJac.ok) throw new Error('HTTP '+resJac.status+' (Jacobina)');
+      if (!resIrc.ok) throw new Error('HTTP '+resIrc.status+' (Irecê)');
+      const [textJac, textIrc] = await Promise.all([resJac.text(), resIrc.text()]);
+      const dataJac = compParseCSVText(textJac, 'JACOBINA') || [];
+      const dataIrc = compParseCSVText(textIrc, 'IRECÊ') || [];
+      if (!dataJac.length && !dataIrc.length) throw new Error('Nenhum dado reconhecido nas planilhas');
+      // Substitui bancoDB temporariamente com dados deste mês
+      bancoDB = [...dataJac, ...dataIrc];
+      const pad = n => String(n).padStart(2,'0');
+      const now = new Date();
+      bancoDBInfo = { count: bancoDB.length, updatedAt: label, utds: ['IRECÊ ('+dataIrc.length+')', 'JACOBINA ('+dataJac.length+')'] };
+      // Reseta filtros de UTD/status mas mantém mês selecionado
+      mapaFiltroAtivo='TODOS'; mapaUTDFiltro='TODAS'; mapaMunFiltro=''; mapaEncFiltro='';
+      const ms = document.getElementById('mapa-mun-filter'); if (ms) ms.value='';
+      const es = document.getElementById('mapa-enc-filter'); if (es) es.value='';
+      mapaCarregarDoBanco();
+    } catch(e) {
+      if (mt) { mt.textContent = '❌ Erro ao carregar '+label+': '+e.message; mt.style.color='#c53030'; }
+      console.error('[mapaCarregarMes]', e);
+    }
+  });
+}
+window.mapaCarregarMes = mapaCarregarMes;
 function compSetMes(mes) {
 compMesFiltro = mes;
 document.querySelectorAll('.comp-mes-btn').forEach(b => {
@@ -3269,6 +3315,12 @@ if (!bancoDB || !bancoDB.length) {
   const ph = document.getElementById('mapa-placeholder'); if (ph) ph.style.display='flex';
   const mc = document.getElementById('mapa-container'); if (mc) mc.style.display='none';
   return;
+}
+// Determina qual mês está ativo (usa o mês atual do GSHEETS_MESES se nenhum foi selecionado)
+if (!mapaMesAtivo && GSHEETS_MESES && GSHEETS_MESES.length) {
+  const now = new Date();
+  const entry = GSHEETS_MESES.find(e=>e.ano===now.getFullYear()&&e.mes===now.getMonth()+1) || GSHEETS_MESES[GSHEETS_MESES.length-1];
+  mapaMesAtivo = { ano: entry.ano, mes: entry.mes };
 }
 const ph2 = document.getElementById('mapa-placeholder'); if (ph2) ph2.style.display='none';
 mapaData = bancoDB.map(obj => {
@@ -3364,21 +3416,20 @@ return `<button id="mapa-utd-btn-${idSuffix}" onclick="mapaSetUTD('${key}')" sty
 };
 utdBar.innerHTML = mkUTD('🗺️ Todas','TODAS',withCoord.length,'TODAS') + mkUTD('📍 Irecê','IRECÊ',withCoord.filter(d=>d.utd==='IRECÊ').length,'IRECE') + mkUTD('📍 Jacobina','JACOBINA',withCoord.filter(d=>d.utd==='JACOBINA').length,'JACOBINA');
 }
+// --- Barra de meses baseada em GSHEETS_MESES (carrega aba da planilha por mês) ---
 const mesBar = document.getElementById('mapa-mes-bar');
-if (mesBar) {
-const baseUTD = mapaUTDFiltro==='TODAS' ? mapaData : mapaData.filter(d=>d.utd===mapaUTDFiltro);
-const mesesSet = new Set(baseUTD.map(d=>d.mes).filter(Boolean));
-const meses = sortMeses(['TODOS', ...mesesSet]);
 const mesWrapper = document.getElementById('mapa-mes-bar-wrapper');
-if (mesWrapper) mesWrapper.style.display = mesesSet.size ? 'flex' : 'none';
-const mesCount = m => m==='TODOS' ? baseUTD.length : baseUTD.filter(d=>d.mes===m).length;
-mesBar.innerHTML = meses.map(m => {
-const on = mapaMesFiltro===m;
-return `<button class="mapa-mes-btn" data-mes="${m}" onclick="mapaSetMes('${m}')"
-style="padding:5px 14px;border-radius:20px;border:2px solid ${on?'#6b46c1':'#e2e8f0'};background:${on?'#6b46c1':'#fff'};font-family:'Barlow',sans-serif;font-size:0.7rem;font-weight:800;cursor:pointer;color:${on?'#fff':'#555'};transition:all 0.15s;white-space:nowrap;">
-${m==='TODOS' ? 'Todos os meses' : m} <span style="opacity:0.75;font-size:0.65rem;">(${mesCount(m)})</span></button>`;
-}).join('');
-}
+if (mesBar && GSHEETS_MESES && GSHEETS_MESES.length > 0) {
+  if (mesWrapper) mesWrapper.style.display = 'flex';
+  mesBar.innerHTML = GSHEETS_MESES.map(entry => {
+    const label = MESES_PT[entry.mes] + '/' + String(entry.ano).slice(-2);
+    const isActive = mapaMesAtivo && mapaMesAtivo.ano===entry.ano && mapaMesAtivo.mes===entry.mes;
+    return `<button class="mapa-mes-btn" data-ano="${entry.ano}" data-mesnum="${entry.mes}"
+      onclick="mapaCarregarMes(${entry.ano},${entry.mes})"
+      style="padding:5px 16px;border-radius:20px;border:2px solid ${isActive?'#6b46c1':'#e2e8f0'};background:${isActive?'#6b46c1':'#fff'};font-family:'Barlow',sans-serif;font-size:0.78rem;font-weight:800;cursor:pointer;color:${isActive?'#fff':'#555'};transition:all 0.15s;white-space:nowrap;box-shadow:${isActive?'0 2px 8px rgba(107,70,193,0.25)':'none'};">
+      📅 ${label}</button>`;
+  }).join('');
+} else if (mesWrapper) { mesWrapper.style.display = 'none'; }
 const base = mapaUTDFiltro==='TODAS' ? withCoord : withCoord.filter(d=>d.utd===mapaUTDFiltro);
 // Show extra filters bar
 const extraBar = document.getElementById('mapa-extra-filtros');
