@@ -101,13 +101,27 @@ window.presenceOpenModal = function() { if(window._presenceOpenModal) window._pr
           <div style="font-size:0.68rem;font-weight:800;color:#38a169;letter-spacing:2px;text-transform:uppercase;margin-bottom:4px;">&#128205; MAPA DE OBRAS</div>
           <div style="font-size:0.95rem;font-weight:800;color:#1a365d;" id="mapa-titulo">Aguardando banco de dados...</div>
         </div>
-        <div id="mapa-legenda" style="display:none;flex-wrap:wrap;gap:8px;align-items:center;">
-          <span style="font-size:0.65rem;font-weight:800;color:#888;text-transform:uppercase;letter-spacing:1px;">Legenda:</span>
-          <span class="_s10"><span style="width:11px;height:11px;border-radius:50%;background:#38a169;display:inline-block;"></span>Energizada</span>
-          <span class="_s10"><span style="width:11px;height:11px;border-radius:50%;background:#2b6cb0;display:inline-block;"></span>Em Execução</span>
-          <span class="_s10"><span style="width:11px;height:11px;border-radius:50%;background:#d69e2e;display:inline-block;"></span>Programada</span>
-          <span class="_s10"><span style="width:11px;height:11px;border-radius:50%;background:#e53e3e;display:inline-block;"></span>Paralisada</span>
-          <span class="_s10"><span style="width:11px;height:11px;border-radius:50%;background:#718096;display:inline-block;"></span>Cancelada/Retirada</span>
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+          <div id="mapa-legenda" style="display:none;flex-wrap:wrap;gap:8px;align-items:center;">
+            <span style="font-size:0.65rem;font-weight:800;color:#888;text-transform:uppercase;letter-spacing:1px;">Legenda:</span>
+            <span class="_s10"><span style="width:11px;height:11px;border-radius:50%;background:#38a169;display:inline-block;"></span>Energizada</span>
+            <span class="_s10"><span style="width:11px;height:11px;border-radius:50%;background:#2b6cb0;display:inline-block;"></span>Em Execução</span>
+            <span class="_s10"><span style="width:11px;height:11px;border-radius:50%;background:#d69e2e;display:inline-block;"></span>Programada</span>
+            <span class="_s10"><span style="width:11px;height:11px;border-radius:50%;background:#e53e3e;display:inline-block;"></span>Paralisada</span>
+            <span class="_s10"><span style="width:11px;height:11px;border-radius:50%;background:#718096;display:inline-block;"></span>Cancelada/Retirada</span>
+          </div>
+          <button
+            onclick="mapaAbrirModalMes()"
+            title="Gerenciar meses das planilhas"
+            style="display:flex;align-items:center;gap:6px;padding:7px 14px;border-radius:10px;border:1.5px solid #d6bcfa;background:#faf5ff;font-family:'Barlow',sans-serif;font-size:0.78rem;font-weight:800;cursor:pointer;color:#6b46c1;transition:all 0.18s;white-space:nowrap;box-shadow:0 1px 4px rgba(107,70,193,0.08);"
+            onmouseover="this.style.background='#ede9fe';this.style.borderColor='#9f7aea';"
+            onmouseout="this.style.background='#faf5ff';this.style.borderColor='#d6bcfa';">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;">
+              <circle cx="12" cy="12" r="3"></circle>
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+            </svg>
+            Meses das Planilhas
+          </button>
         </div>
       </div>
     </div>
