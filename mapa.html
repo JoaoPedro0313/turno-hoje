@@ -570,32 +570,35 @@ async function mapaMMCarregarSupabase() {
     const data = await res.json();
     if (!data || !data.length || !data[0].value) return;
     const extras = Array.isArray(data[0].value) ? data[0].value : [];
-    let changed = false;
+    if (!extras.length) return;
+    // Substitui completamente os extras do Supabase (fonte de verdade)
+    const fixos = [{ano:2026,mes:1},{ano:2026,mes:2},{ano:2026,mes:3}];
+    // Mantém só os fixos e adiciona tudo que veio do Supabase
+    GSHEETS_MESES = GSHEETS_MESES.filter(e => fixos.some(f=>f.ano===e.ano&&f.mes===e.mes));
     extras.forEach(e => {
       if (!GSHEETS_MESES.find(m => m.ano===e.ano && m.mes===e.mes)) {
         GSHEETS_MESES.push(e);
-        changed = true;
       }
     });
-    if (changed) {
-      GSHEETS_MESES.sort((a,b) => a.ano!==b.ano ? a.ano-b.ano : a.mes-b.mes);
-      // Atualiza localStorage local com o que veio do servidor
-      const fixos = [{ano:2026,mes:1},{ano:2026,mes:2},{ano:2026,mes:3}];
-      const novasExtras = GSHEETS_MESES.filter(e => !fixos.some(f=>f.ano===e.ano&&f.mes===e.mes));
-      try { localStorage.setItem('mariua_meses_extras', JSON.stringify(novasExtras)); } catch(ex) {}
-      // Se o mês atual agora existe, atualiza mês ativo automaticamente
-      const now2 = new Date();
-      const mesAtualDisp = GSHEETS_MESES.find(e => e.ano===now2.getFullYear() && e.mes===now2.getMonth()+1);
-      if (mesAtualDisp && typeof mapaCarregarMes === 'function' && (!window.mapaMesAtivo || window.mapaMesAtivo.mes !== mesAtualDisp.mes)) {
-        mapaCarregarMes(mesAtualDisp.ano, mesAtualDisp.mes);
-      } else {
-        if (typeof mapaInitMesBar === 'function') mapaInitMesBar();
-        if (typeof mapaMMRenderLista === 'function' && document.getElementById('modal-meses-overlay')?.style.display==='flex') mapaMMRenderLista();
-      }
+    GSHEETS_MESES.sort((a,b) => a.ano!==b.ano ? a.ano-b.ano : a.mes-b.mes);
+    // Atualiza localStorage com o que veio do Supabase
+    try { localStorage.setItem('mariua_meses_extras', JSON.stringify(extras)); } catch(ex) {}
+    // Sempre atualiza a barra de meses
+    if (typeof mapaInitMesBar === 'function') mapaInitMesBar();
+    if (typeof mapaMMRenderLista === 'function' && document.getElementById('modal-meses-overlay')?.style.display==='flex') mapaMMRenderLista();
+    // Se o mês atual agora existe, carrega automaticamente
+    const now2 = new Date();
+    const mesAtualDisp = GSHEETS_MESES.find(e => e.ano===now2.getFullYear() && e.mes===now2.getMonth()+1);
+    if (mesAtualDisp && typeof mapaCarregarMes === 'function' && (!window.mapaMesAtivo || window.mapaMesAtivo.mes !== mesAtualDisp.mes)) {
+      mapaCarregarMes(mesAtualDisp.ano, mesAtualDisp.mes);
     }
   } catch(e) {}
 }
-window.addEventListener('load', function() { setTimeout(mapaMMCarregarSupabase, 2000); });
+window.addEventListener('load', function() {
+  setTimeout(mapaMMCarregarSupabase, 2000);
+  // Recarrega do Supabase a cada 60 segundos para sincronizar com outros usuários
+  setInterval(mapaMMCarregarSupabase, 60000);
+});
 function gsheetsGetURL(utd) {
   const now = new Date();
   const ano = now.getFullYear();
