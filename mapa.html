@@ -3,6 +3,43 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<script>
+// Auto-atualização: verifica se há nova versão no GitHub a cada 5 minutos
+(function() {
+  var CHECK_INTERVAL = 5 * 60 * 1000; // 5 minutos
+  var SELF_URL = location.href.split('?')[0].split('#')[0];
+  var VERSION_KEY = 'mariua_html_etag';
+
+  function checkVersion() {
+    fetch(SELF_URL + '?_cb=' + Date.now(), { method: 'HEAD', cache: 'no-store' })
+      .then(function(r) {
+        var etag = r.headers.get('etag') || r.headers.get('last-modified') || '';
+        if (!etag) return;
+        var stored = localStorage.getItem(VERSION_KEY);
+        if (stored && stored !== etag) {
+          localStorage.setItem(VERSION_KEY, etag);
+          // Nova versão detectada — recarrega silenciosamente
+          location.reload(true);
+        } else if (!stored) {
+          localStorage.setItem(VERSION_KEY, etag);
+        }
+      })
+      .catch(function() {});
+  }
+
+  // Primeira verificação após 10s (página já carregou)
+  setTimeout(checkVersion, 10000);
+  // Verifica a cada 5 minutos
+  setInterval(checkVersion, CHECK_INTERVAL);
+  // Verifica ao voltar para a aba
+  document.addEventListener('visibilitychange', function() {
+    if (!document.hidden) setTimeout(checkVersion, 1500);
+  });
+})();
+</script>
 <!-- SEGURANÇA: Content Security Policy — limita fontes de scripts, estilos e conexões -->
 <meta http-equiv="Content-Security-Policy"
   content="default-src 'self'
