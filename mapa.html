@@ -3541,11 +3541,22 @@ function mapaMMRemover(ano, mes) {
   // Salva no localStorage
   try { localStorage.setItem('mariua_meses_extras', JSON.stringify(extrasAtuais)); } catch(e) {}
   // Salva no Supabase (compartilhado)
-  fetch(SUPA_URL + '/rest/v1/turno_data', {
-    method: 'POST',
-    headers: { ...SUPA_HEADERS, 'Prefer': 'resolution=merge-duplicates' },
-    body: JSON.stringify({ key: 'meses_extras', value: extrasAtuais, updated_at: new Date().toISOString() })
-  }).catch(() => {});
+  (async function() {
+    try {
+      let r = await fetch(SUPA_URL + '/rest/v1/turno_data?key=eq.meses_extras', {
+        method: 'PATCH',
+        headers: { ...SUPA_HEADERS, 'Prefer': 'return=minimal' },
+        body: JSON.stringify({ value: extrasAtuais, updated_at: new Date().toISOString() })
+      });
+      if (r.status !== 200 && r.status !== 204) {
+        await fetch(SUPA_URL + '/rest/v1/turno_data', {
+          method: 'POST',
+          headers: { ...SUPA_HEADERS, 'Prefer': 'return=minimal' },
+          body: JSON.stringify({ key: 'meses_extras', value: extrasAtuais, updated_at: new Date().toISOString() })
+        });
+      }
+    } catch(e) {}
+  })();
   mapaMMRenderLista();
   mapaInitMesBar();
 }
@@ -3576,18 +3587,32 @@ function mapaMMSalvar() {
   // Salva no Supabase (compartilhado com todos os usuários)
   const btn = document.querySelector('#modal-meses-overlay button[onclick="mapaMMSalvar()"]');
   if (btn) btn.textContent = '⏳ Salvando...';
-  fetch(SUPA_URL + '/rest/v1/turno_data', {
-    method: 'POST',
-    headers: { ...SUPA_HEADERS, 'Prefer': 'resolution=merge-duplicates' },
-    body: JSON.stringify({ key: 'meses_extras', value: extrasAtuais, updated_at: new Date().toISOString() })
-  }).then(r => {
-    if (btn) {
-      btn.textContent = r.ok ? '✅ Salvo para todos!' : '⚠️ Salvo só localmente';
-      setTimeout(() => { btn.textContent = '💾 Salvar e adicionar mês'; }, 2500);
+  (async function() {
+    try {
+      // Tenta PATCH (atualizar registro existente)
+      let r = await fetch(SUPA_URL + '/rest/v1/turno_data?key=eq.meses_extras', {
+        method: 'PATCH',
+        headers: { ...SUPA_HEADERS, 'Prefer': 'return=minimal' },
+        body: JSON.stringify({ value: extrasAtuais, updated_at: new Date().toISOString() })
+      });
+      // Se não existia registro (0 rows updated), faz POST para criar
+      if (r.status === 200 || r.status === 204) {
+        // ok, atualizado
+      } else {
+        r = await fetch(SUPA_URL + '/rest/v1/turno_data', {
+          method: 'POST',
+          headers: { ...SUPA_HEADERS, 'Prefer': 'return=minimal' },
+          body: JSON.stringify({ key: 'meses_extras', value: extrasAtuais, updated_at: new Date().toISOString() })
+        });
+      }
+      if (btn) {
+        btn.textContent = r.ok ? '✅ Salvo para todos!' : '⚠️ Salvo só localmente';
+        setTimeout(() => { btn.textContent = '💾 Salvar e adicionar mês'; }, 2500);
+      }
+    } catch(e) {
+      if (btn) { btn.textContent = '⚠️ Salvo só localmente'; setTimeout(() => { btn.textContent = '💾 Salvar e adicionar mês'; }, 2500); }
     }
-  }).catch(() => {
-    if (btn) { btn.textContent = '⚠️ Salvo só localmente'; setTimeout(() => { btn.textContent = '💾 Salvar e adicionar mês'; }, 2500); }
-  });
+  })();
   // Limpa campos
   document.getElementById('mm-url-jac').value = '';
   document.getElementById('mm-url-irc').value = '';
