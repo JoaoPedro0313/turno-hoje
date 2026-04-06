@@ -511,7 +511,7 @@ let GSHEETS_MESES = [
   { ano: 2026, mes: 2,  gidJacobina: 1111886256, gidIrece: 420931092  },
   { ano: 2026, mes: 3,  gidJacobina: 624598081,  gidIrece: 534264140  }
 ];
-// Carrega meses extras salvos pelo usuário via localStorage
+// Carrega meses extras: primeiro do localStorage (imediato), depois sincroniza com Supabase
 (function() {
   try {
     const extras = JSON.parse(localStorage.getItem('mariua_meses_extras') || '[]');
@@ -523,6 +523,35 @@ let GSHEETS_MESES = [
     GSHEETS_MESES.sort((a,b) => a.ano!==b.ano ? a.ano-b.ano : a.mes-b.mes);
   } catch(e) {}
 })();
+// Carrega meses extras do Supabase (compartilhado entre todos os usuários)
+async function mapaMMCarregarSupabase() {
+  try {
+    const res = await fetch(SUPA_URL + '/rest/v1/turno_data?select=value&key=eq.meses_extras&limit=1', {
+      headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY }
+    });
+    if (!res.ok) return;
+    const data = await res.json();
+    if (!data || !data.length || !data[0].value) return;
+    const extras = Array.isArray(data[0].value) ? data[0].value : [];
+    let changed = false;
+    extras.forEach(e => {
+      if (!GSHEETS_MESES.find(m => m.ano===e.ano && m.mes===e.mes)) {
+        GSHEETS_MESES.push(e);
+        changed = true;
+      }
+    });
+    if (changed) {
+      GSHEETS_MESES.sort((a,b) => a.ano!==b.ano ? a.ano-b.ano : a.mes-b.mes);
+      // Atualiza localStorage local com o que veio do servidor
+      const fixos = [{ano:2026,mes:1},{ano:2026,mes:2},{ano:2026,mes:3}];
+      const novasExtras = GSHEETS_MESES.filter(e => !fixos.some(f=>f.ano===e.ano&&f.mes===e.mes));
+      try { localStorage.setItem('mariua_meses_extras', JSON.stringify(novasExtras)); } catch(ex) {}
+      if (typeof mapaInitMesBar === 'function') mapaInitMesBar();
+      if (typeof mapaMMRenderLista === 'function' && document.getElementById('modal-meses-overlay')?.style.display==='flex') mapaMMRenderLista();
+    }
+  } catch(e) {}
+}
+window.addEventListener('load', function() { setTimeout(mapaMMCarregarSupabase, 2000); });
 function gsheetsGetURL(utd) {
   const now = new Date();
   const ano = now.getFullYear();
@@ -3460,18 +3489,19 @@ function mapaMMRenderLista() {
   if (!GSHEETS_MESES.length) lista.innerHTML = '<div style="text-align:center;color:#aaa;font-size:0.82rem;padding:16px;">Nenhum mês cadastrado.</div>';
 }
 function mapaMMRemover(ano, mes) {
-  let extras = [];
-  try { extras = JSON.parse(localStorage.getItem('mariua_meses_extras') || '[]'); } catch(e) {}
-  extras = extras.filter(e => !(e.ano===ano && e.mes===mes));
-  localStorage.setItem('mariua_meses_extras', JSON.stringify(extras));
   // Remove do array em memória
-  const fixos = [
-    { ano: 2026, mes: 1 }, { ano: 2026, mes: 2 }, { ano: 2026, mes: 3 }
-  ];
-  GSHEETS_MESES = GSHEETS_MESES.filter(e => {
-    if (e.ano===ano && e.mes===mes) return false;
-    return true;
-  });
+  GSHEETS_MESES = GSHEETS_MESES.filter(e => !(e.ano===ano && e.mes===mes));
+  // Calcula extras atuais (sem os fixos)
+  const fixos = [{ano:2026,mes:1},{ano:2026,mes:2},{ano:2026,mes:3}];
+  const extrasAtuais = GSHEETS_MESES.filter(e => !fixos.some(f=>f.ano===e.ano&&f.mes===e.mes));
+  // Salva no localStorage
+  try { localStorage.setItem('mariua_meses_extras', JSON.stringify(extrasAtuais)); } catch(e) {}
+  // Salva no Supabase (compartilhado)
+  fetch(SUPA_URL + '/rest/v1/turno_data', {
+    method: 'POST',
+    headers: { ...SUPA_HEADERS, 'Prefer': 'resolution=merge-duplicates' },
+    body: JSON.stringify({ key: 'meses_extras', value: extrasAtuais, updated_at: new Date().toISOString() })
+  }).catch(() => {});
   mapaMMRenderLista();
   mapaInitMesBar();
 }
@@ -3491,14 +3521,29 @@ function mapaMMSalvar() {
   }
   erro.style.display = 'none';
   const nova = { ano, mes, gidJacobina: gJac, gidIrece: gIrc };
-  // Salva no localStorage
-  let extras = [];
-  try { extras = JSON.parse(localStorage.getItem('mariua_meses_extras') || '[]'); } catch(e) {}
-  extras.push(nova);
-  localStorage.setItem('mariua_meses_extras', JSON.stringify(extras));
   // Adiciona em memória e reordena
   GSHEETS_MESES.push(nova);
   GSHEETS_MESES.sort((a,b) => a.ano!==b.ano ? a.ano-b.ano : a.mes-b.mes);
+  // Calcula lista de extras (sem os fixos)
+  const fixos = [{ano:2026,mes:1},{ano:2026,mes:2},{ano:2026,mes:3}];
+  const extrasAtuais = GSHEETS_MESES.filter(e => !fixos.some(f=>f.ano===e.ano&&f.mes===e.mes));
+  // Salva no localStorage (imediato)
+  try { localStorage.setItem('mariua_meses_extras', JSON.stringify(extrasAtuais)); } catch(e) {}
+  // Salva no Supabase (compartilhado com todos os usuários)
+  const btn = document.querySelector('#modal-meses-overlay button[onclick="mapaMMSalvar()"]');
+  if (btn) btn.textContent = '⏳ Salvando...';
+  fetch(SUPA_URL + '/rest/v1/turno_data', {
+    method: 'POST',
+    headers: { ...SUPA_HEADERS, 'Prefer': 'resolution=merge-duplicates' },
+    body: JSON.stringify({ key: 'meses_extras', value: extrasAtuais, updated_at: new Date().toISOString() })
+  }).then(r => {
+    if (btn) {
+      btn.textContent = r.ok ? '✅ Salvo para todos!' : '⚠️ Salvo só localmente';
+      setTimeout(() => { btn.textContent = '💾 Salvar e adicionar mês'; }, 2500);
+    }
+  }).catch(() => {
+    if (btn) { btn.textContent = '⚠️ Salvo só localmente'; setTimeout(() => { btn.textContent = '💾 Salvar e adicionar mês'; }, 2500); }
+  });
   // Limpa campos
   document.getElementById('mm-url-jac').value = '';
   document.getElementById('mm-url-irc').value = '';
@@ -3506,9 +3551,6 @@ function mapaMMSalvar() {
   document.getElementById('mm-preview-irc').innerHTML = '';
   mapaMMRenderLista();
   mapaInitMesBar();
-  // Feedback visual
-  const btn = document.querySelector('#modal-meses-overlay button[onclick="mapaMMSalvar()"]');
-  if (btn) { btn.textContent = '✅ Salvo!'; setTimeout(() => { btn.textContent = '💾 Salvar e adicionar mês'; }, 2000); }
 }
 function mapaAbrirModalMes() {
   const ov = document.getElementById('modal-meses-overlay');
