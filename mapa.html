@@ -546,8 +546,15 @@ async function mapaMMCarregarSupabase() {
       const fixos = [{ano:2026,mes:1},{ano:2026,mes:2},{ano:2026,mes:3}];
       const novasExtras = GSHEETS_MESES.filter(e => !fixos.some(f=>f.ano===e.ano&&f.mes===e.mes));
       try { localStorage.setItem('mariua_meses_extras', JSON.stringify(novasExtras)); } catch(ex) {}
-      if (typeof mapaInitMesBar === 'function') mapaInitMesBar();
-      if (typeof mapaMMRenderLista === 'function' && document.getElementById('modal-meses-overlay')?.style.display==='flex') mapaMMRenderLista();
+      // Se o mês atual agora existe, atualiza mês ativo automaticamente
+      const now2 = new Date();
+      const mesAtualDisp = GSHEETS_MESES.find(e => e.ano===now2.getFullYear() && e.mes===now2.getMonth()+1);
+      if (mesAtualDisp && typeof mapaCarregarMes === 'function' && (!window.mapaMesAtivo || window.mapaMesAtivo.mes !== mesAtualDisp.mes)) {
+        mapaCarregarMes(mesAtualDisp.ano, mesAtualDisp.mes);
+      } else {
+        if (typeof mapaInitMesBar === 'function') mapaInitMesBar();
+        if (typeof mapaMMRenderLista === 'function' && document.getElementById('modal-meses-overlay')?.style.display==='flex') mapaMMRenderLista();
+      }
     }
   } catch(e) {}
 }
