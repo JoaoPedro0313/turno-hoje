@@ -3509,14 +3509,13 @@ function mapaMMRenderLista() {
   const lista = document.getElementById('modal-meses-lista');
   if (!lista) return;
   const MESES_NOME = ['','Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
-  // Meses fixos (built-in)
+  // Meses fixos (built-in) — fonte de verdade para distinguir fixo vs adicionado
   const fixos = [
     { ano: 2026, mes: 1,  gidJacobina: 310661297,  gidIrece: 1816810936 },
     { ano: 2026, mes: 2,  gidJacobina: 1111886256, gidIrece: 420931092  },
     { ano: 2026, mes: 3,  gidJacobina: 624598081,  gidIrece: 534264140  }
   ];
-  let extras = [];
-  try { extras = JSON.parse(localStorage.getItem('mariua_meses_extras') || '[]'); } catch(e) {}
+  // Usa GSHEETS_MESES como fonte de verdade (já sincronizado com Supabase)
   lista.innerHTML = '';
   GSHEETS_MESES.forEach(e => {
     const isFixo = fixos.some(f => f.ano===e.ano && f.mes===e.mes);
@@ -3536,32 +3535,41 @@ function mapaMMRenderLista() {
   if (!GSHEETS_MESES.length) lista.innerHTML = '<div style="text-align:center;color:#aaa;font-size:0.82rem;padding:16px;">Nenhum mês cadastrado.</div>';
 }
 function mapaMMRemover(ano, mes) {
-  // Remove do array em memória
-  GSHEETS_MESES = GSHEETS_MESES.filter(e => !(e.ano===ano && e.mes===mes));
-  // Calcula extras atuais (sem os fixos)
   const fixos = [{ano:2026,mes:1},{ano:2026,mes:2},{ano:2026,mes:3}];
-  const extrasAtuais = GSHEETS_MESES.filter(e => !fixos.some(f=>f.ano===e.ano&&f.mes===e.mes));
-  // Salva no localStorage
-  try { localStorage.setItem('mariua_meses_extras', JSON.stringify(extrasAtuais)); } catch(e) {}
-  // Salva no Supabase (compartilhado)
+  // Remove do Supabase PRIMEIRO — fonte de verdade
   (async function() {
     try {
+      const novosMeses = GSHEETS_MESES.filter(e => !(e.ano===ano && e.mes===mes));
+      const extrasAtuais = novosMeses.filter(e => !fixos.some(f=>f.ano===e.ano&&f.mes===e.mes));
       let r = await fetch(SUPA_URL + '/rest/v1/turno_data?key=eq.meses_extras', {
         method: 'PATCH',
         headers: { ...SUPA_HEADERS, 'Prefer': 'return=minimal' },
         body: JSON.stringify({ value: extrasAtuais, updated_at: new Date().toISOString() })
       });
       if (r.status !== 200 && r.status !== 204) {
-        await fetch(SUPA_URL + '/rest/v1/turno_data', {
+        r = await fetch(SUPA_URL + '/rest/v1/turno_data', {
           method: 'POST',
           headers: { ...SUPA_HEADERS, 'Prefer': 'return=minimal' },
           body: JSON.stringify({ key: 'meses_extras', value: extrasAtuais, updated_at: new Date().toISOString() })
         });
       }
-    } catch(e) {}
+      // Supabase confirmou — atualiza memória e cache local
+      GSHEETS_MESES = novosMeses;
+      try { localStorage.setItem('mariua_meses_extras', JSON.stringify(extrasAtuais)); } catch(ex) {}
+      mapaMMRenderLista();
+      mapaInitMesBar();
+    } catch(e) {
+      // Falha silenciosa — mostra erro na lista
+      const lista = document.getElementById('modal-meses-lista');
+      if (lista) {
+        const msg = document.createElement('div');
+        msg.style.cssText = 'color:#c53030;font-size:0.78rem;font-weight:700;padding:8px 14px;background:#fde8e8;border-radius:8px;margin-top:8px;';
+        msg.textContent = '⚠️ Erro ao remover do banco. Verifique sua conexão.';
+        lista.appendChild(msg);
+        setTimeout(() => msg.remove(), 4000);
+      }
+    }
   })();
-  mapaMMRenderLista();
-  mapaInitMesBar();
 }
 function mapaMMSalvar() {
   const erro = document.getElementById('mm-erro');
@@ -3579,20 +3587,17 @@ function mapaMMSalvar() {
   }
   erro.style.display = 'none';
   const nova = { ano, mes, gidJacobina: gJac, gidIrece: gIrc };
-  // Adiciona em memória e reordena
-  GSHEETS_MESES.push(nova);
-  GSHEETS_MESES.sort((a,b) => a.ano!==b.ano ? a.ano-b.ano : a.mes-b.mes);
-  // Calcula lista de extras (sem os fixos)
   const fixos = [{ano:2026,mes:1},{ano:2026,mes:2},{ano:2026,mes:3}];
-  const extrasAtuais = GSHEETS_MESES.filter(e => !fixos.some(f=>f.ano===e.ano&&f.mes===e.mes));
-  // Salva no localStorage (imediato)
-  try { localStorage.setItem('mariua_meses_extras', JSON.stringify(extrasAtuais)); } catch(e) {}
-  // Salva no Supabase (compartilhado com todos os usuários)
+  // Desabilita botão e mostra progresso
   const btn = document.querySelector('#modal-meses-overlay button[onclick="mapaMMSalvar()"]');
-  if (btn) btn.textContent = '⏳ Salvando...';
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Salvando no banco...'; }
+  // Salva no Supabase PRIMEIRO — fonte de verdade
   (async function() {
+    const erroEl = document.getElementById('mm-erro');
     try {
-      const erroEl = document.getElementById('mm-erro');
+      // Calcula extras com o novo mês incluído (temporariamente)
+      const tempMeses = [...GSHEETS_MESES, nova].sort((a,b) => a.ano!==b.ano ? a.ano-b.ano : a.mes-b.mes);
+      const extrasAtuais = tempMeses.filter(e => !fixos.some(f=>f.ano===e.ano&&f.mes===e.mes));
       // Tenta PATCH (atualizar registro existente)
       let r = await fetch(SUPA_URL + '/rest/v1/turno_data?key=eq.meses_extras', {
         method: 'PATCH',
@@ -3610,25 +3615,28 @@ function mapaMMSalvar() {
         respText = await r.text();
       }
       if (r.ok) {
-        if (btn) { btn.textContent = '✅ Salvo para todos!'; setTimeout(() => { btn.textContent = '💾 Salvar e adicionar mês'; }, 2500); }
+        // Supabase confirmou — agora atualiza memória e cache local
+        GSHEETS_MESES.push(nova);
+        GSHEETS_MESES.sort((a,b) => a.ano!==b.ano ? a.ano-b.ano : a.mes-b.mes);
+        try { localStorage.setItem('mariua_meses_extras', JSON.stringify(extrasAtuais)); } catch(ex) {}
+        if (btn) { btn.disabled = false; btn.textContent = '✅ Salvo no banco!'; setTimeout(() => { btn.textContent = '💾 Salvar e adicionar mês'; }, 2500); }
         if (erroEl) erroEl.style.display = 'none';
+        // Limpa campos e atualiza UI
+        document.getElementById('mm-url-jac').value = '';
+        document.getElementById('mm-url-irc').value = '';
+        document.getElementById('mm-preview-jac').innerHTML = '';
+        document.getElementById('mm-preview-irc').innerHTML = '';
+        mapaMMRenderLista();
+        mapaInitMesBar();
       } else {
-        if (btn) { btn.textContent = '⚠️ Erro ao salvar'; setTimeout(() => { btn.textContent = '💾 Salvar e adicionar mês'; }, 4000); }
-        if (erroEl) { erroEl.textContent = 'Erro Supabase (status ' + r.status + '): ' + respText; erroEl.style.display = 'block'; }
+        if (btn) { btn.disabled = false; btn.textContent = '⚠️ Erro ao salvar'; setTimeout(() => { btn.textContent = '💾 Salvar e adicionar mês'; }, 4000); }
+        if (erroEl) { erroEl.textContent = 'Erro ao salvar no banco (status ' + r.status + '). Tente novamente.'; erroEl.style.display = 'block'; }
       }
     } catch(e) {
-      const erroEl = document.getElementById('mm-erro');
-      if (btn) { btn.textContent = '⚠️ Salvo só localmente'; setTimeout(() => { btn.textContent = '💾 Salvar e adicionar mês'; }, 2500); }
-      if (erroEl) { erroEl.textContent = 'Erro de rede: ' + e.message; erroEl.style.display = 'block'; }
+      if (btn) { btn.disabled = false; btn.textContent = '⚠️ Sem conexão com banco'; setTimeout(() => { btn.textContent = '💾 Salvar e adicionar mês'; }, 4000); }
+      if (erroEl) { erroEl.textContent = 'Sem conexão com o banco de dados. Verifique sua internet e tente novamente.'; erroEl.style.display = 'block'; }
     }
   })();
-  // Limpa campos
-  document.getElementById('mm-url-jac').value = '';
-  document.getElementById('mm-url-irc').value = '';
-  document.getElementById('mm-preview-jac').innerHTML = '';
-  document.getElementById('mm-preview-irc').innerHTML = '';
-  mapaMMRenderLista();
-  mapaInitMesBar();
 }
 function mapaAbrirModalMes() {
   const ov = document.getElementById('modal-meses-overlay');
