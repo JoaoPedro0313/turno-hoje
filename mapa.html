@@ -3536,35 +3536,30 @@ function mapaMMRenderLista() {
 }
 function mapaMMRemover(ano, mes) {
   const fixos = [{ano:2026,mes:1},{ano:2026,mes:2},{ano:2026,mes:3}];
-  // Remove do Supabase PRIMEIRO — fonte de verdade
   (async function() {
     try {
       const novosMeses = GSHEETS_MESES.filter(e => !(e.ano===ano && e.mes===mes));
       const extrasAtuais = novosMeses.filter(e => !fixos.some(f=>f.ano===e.ano&&f.mes===e.mes));
-      let r = await fetch(SUPA_URL + '/rest/v1/turno_data?key=eq.meses_extras', {
-        method: 'PATCH',
-        headers: { ...SUPA_HEADERS, 'Prefer': 'return=minimal' },
-        body: JSON.stringify({ value: extrasAtuais, updated_at: new Date().toISOString() })
+      // Upsert — cria ou atualiza em uma só chamada
+      const r = await fetch(SUPA_URL + '/rest/v1/turno_data', {
+        method: 'POST',
+        headers: { ...SUPA_HEADERS, 'Prefer': 'resolution=merge-duplicates,return=minimal' },
+        body: JSON.stringify({ key: 'meses_extras', value: extrasAtuais, updated_at: new Date().toISOString() })
       });
-      if (r.status !== 200 && r.status !== 204) {
-        r = await fetch(SUPA_URL + '/rest/v1/turno_data', {
-          method: 'POST',
-          headers: { ...SUPA_HEADERS, 'Prefer': 'return=minimal' },
-          body: JSON.stringify({ key: 'meses_extras', value: extrasAtuais, updated_at: new Date().toISOString() })
-        });
+      if (r.ok) {
+        GSHEETS_MESES = novosMeses;
+        try { localStorage.setItem('mariua_meses_extras', JSON.stringify(extrasAtuais)); } catch(ex) {}
+        mapaMMRenderLista();
+        mapaInitMesBar();
+      } else {
+        throw new Error('HTTP ' + r.status);
       }
-      // Supabase confirmou — atualiza memória e cache local
-      GSHEETS_MESES = novosMeses;
-      try { localStorage.setItem('mariua_meses_extras', JSON.stringify(extrasAtuais)); } catch(ex) {}
-      mapaMMRenderLista();
-      mapaInitMesBar();
     } catch(e) {
-      // Falha silenciosa — mostra erro na lista
       const lista = document.getElementById('modal-meses-lista');
       if (lista) {
         const msg = document.createElement('div');
         msg.style.cssText = 'color:#c53030;font-size:0.78rem;font-weight:700;padding:8px 14px;background:#fde8e8;border-radius:8px;margin-top:8px;';
-        msg.textContent = '⚠️ Erro ao remover do banco. Verifique sua conexão.';
+        msg.textContent = '⚠️ Erro ao remover do banco (' + e.message + '). Verifique sua conexão.';
         lista.appendChild(msg);
         setTimeout(() => msg.remove(), 4000);
       }
@@ -3588,40 +3583,25 @@ function mapaMMSalvar() {
   erro.style.display = 'none';
   const nova = { ano, mes, gidJacobina: gJac, gidIrece: gIrc };
   const fixos = [{ano:2026,mes:1},{ano:2026,mes:2},{ano:2026,mes:3}];
-  // Desabilita botão e mostra progresso
   const btn = document.querySelector('#modal-meses-overlay button[onclick="mapaMMSalvar()"]');
   if (btn) { btn.disabled = true; btn.textContent = '⏳ Salvando no banco...'; }
-  // Salva no Supabase PRIMEIRO — fonte de verdade
   (async function() {
     const erroEl = document.getElementById('mm-erro');
     try {
-      // Calcula extras com o novo mês incluído (temporariamente)
       const tempMeses = [...GSHEETS_MESES, nova].sort((a,b) => a.ano!==b.ano ? a.ano-b.ano : a.mes-b.mes);
       const extrasAtuais = tempMeses.filter(e => !fixos.some(f=>f.ano===e.ano&&f.mes===e.mes));
-      // Tenta PATCH (atualizar registro existente)
-      let r = await fetch(SUPA_URL + '/rest/v1/turno_data?key=eq.meses_extras', {
-        method: 'PATCH',
-        headers: { ...SUPA_HEADERS, 'Prefer': 'return=representation' },
-        body: JSON.stringify({ value: extrasAtuais, updated_at: new Date().toISOString() })
+      // Usa upsert (POST com Prefer: resolution=merge-duplicates) — cria ou atualiza em 1 chamada
+      const r = await fetch(SUPA_URL + '/rest/v1/turno_data', {
+        method: 'POST',
+        headers: { ...SUPA_HEADERS, 'Prefer': 'resolution=merge-duplicates,return=minimal' },
+        body: JSON.stringify({ key: 'meses_extras', value: extrasAtuais, updated_at: new Date().toISOString() })
       });
-      let respText = await r.text();
-      // PATCH retorna array vazio [] se não encontrou o registro — então faz POST
-      if (respText === '[]' || respText === '' || r.status === 404) {
-        r = await fetch(SUPA_URL + '/rest/v1/turno_data', {
-          method: 'POST',
-          headers: { ...SUPA_HEADERS, 'Prefer': 'return=minimal' },
-          body: JSON.stringify({ key: 'meses_extras', value: extrasAtuais, updated_at: new Date().toISOString() })
-        });
-        respText = await r.text();
-      }
       if (r.ok) {
-        // Supabase confirmou — agora atualiza memória e cache local
         GSHEETS_MESES.push(nova);
         GSHEETS_MESES.sort((a,b) => a.ano!==b.ano ? a.ano-b.ano : a.mes-b.mes);
         try { localStorage.setItem('mariua_meses_extras', JSON.stringify(extrasAtuais)); } catch(ex) {}
-        if (btn) { btn.disabled = false; btn.textContent = '✅ Salvo no banco!'; setTimeout(() => { btn.textContent = '💾 Salvar e adicionar mês'; }, 2500); }
+        if (btn) { btn.disabled = false; btn.textContent = '✅ Salvo! Todos os usuários verão este mês.'; setTimeout(() => { btn.textContent = '💾 Salvar e adicionar mês'; }, 3000); }
         if (erroEl) erroEl.style.display = 'none';
-        // Limpa campos e atualiza UI
         document.getElementById('mm-url-jac').value = '';
         document.getElementById('mm-url-irc').value = '';
         document.getElementById('mm-preview-jac').innerHTML = '';
@@ -3629,12 +3609,13 @@ function mapaMMSalvar() {
         mapaMMRenderLista();
         mapaInitMesBar();
       } else {
+        const txt = await r.text().catch(()=>'');
         if (btn) { btn.disabled = false; btn.textContent = '⚠️ Erro ao salvar'; setTimeout(() => { btn.textContent = '💾 Salvar e adicionar mês'; }, 4000); }
-        if (erroEl) { erroEl.textContent = 'Erro ao salvar no banco (status ' + r.status + '). Tente novamente.'; erroEl.style.display = 'block'; }
+        if (erroEl) { erroEl.textContent = 'Erro ao salvar no banco (HTTP ' + r.status + '). ' + (txt||'Tente novamente.'); erroEl.style.display = 'block'; }
       }
     } catch(e) {
       if (btn) { btn.disabled = false; btn.textContent = '⚠️ Sem conexão com banco'; setTimeout(() => { btn.textContent = '💾 Salvar e adicionar mês'; }, 4000); }
-      if (erroEl) { erroEl.textContent = 'Sem conexão com o banco de dados. Verifique sua internet e tente novamente.'; erroEl.style.display = 'block'; }
+      if (erroEl) { erroEl.textContent = 'Sem conexão com o banco de dados (' + e.message + '). Verifique sua internet.'; erroEl.style.display = 'block'; }
     }
   })();
 }
