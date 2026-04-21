@@ -471,6 +471,9 @@ window.presenceOpenModal = function() { if(window._presenceOpenModal) window._pr
     <!-- Body scrollável -->
     <div style="overflow-y:auto;flex:1;padding:24px;">
 
+      <!-- Status sincronização -->
+      <div id="mm-sync-status" style="display:none;"></div>
+
       <!-- Meses cadastrados -->
       <div style="font-size:0.68rem;font-weight:800;color:#aaa;letter-spacing:2px;text-transform:uppercase;margin-bottom:12px;">Meses cadastrados</div>
       <div id="modal-meses-lista" style="display:flex;flex-direction:column;gap:8px;margin-bottom:24px;"></div>
@@ -561,43 +564,66 @@ let GSHEETS_MESES = [
   } catch(e) {}
 })();
 // Carrega meses extras do Supabase (compartilhado entre todos os usuários)
+// Status da última sincronização (visível no modal)
+window._mapaMMSyncStatus = { ok: null, msg: '', ts: null };
+
 async function mapaMMCarregarSupabase() {
   try {
     const res = await fetch(SUPA_URL + '/rest/v1/turno_data?select=value&key=eq.meses_extras&limit=1', {
       headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY }
     });
-    if (!res.ok) return;
+    if (!res.ok) {
+      window._mapaMMSyncStatus = { ok: false, msg: 'Erro HTTP ' + res.status + ' ao ler banco.', ts: new Date() };
+      _mapaMMSyncAtualizarUI();
+      return;
+    }
     const data = await res.json();
-    if (!data || !data.length || !data[0].value) return;
-    const extras = Array.isArray(data[0].value) ? data[0].value : [];
-    if (!extras.length) return;
-    // Substitui completamente os extras do Supabase (fonte de verdade)
     const fixos = [{ano:2026,mes:1},{ano:2026,mes:2},{ano:2026,mes:3}];
-    // Mantém só os fixos e adiciona tudo que veio do Supabase
-    GSHEETS_MESES = GSHEETS_MESES.filter(e => fixos.some(f=>f.ano===e.ano&&f.mes===e.mes));
+    // Se não há registro ainda no banco, mantém só os fixos
+    const extras = (data && data.length && Array.isArray(data[0].value)) ? data[0].value : [];
+    // Reconstrói GSHEETS_MESES: fixos + extras do Supabase (fonte de verdade)
+    GSHEETS_MESES = fixos.filter(f => { const orig = [{ano:2026,mes:1,gidJacobina:310661297,gidIrece:1816810936},{ano:2026,mes:2,gidJacobina:1111886256,gidIrece:420931092},{ano:2026,mes:3,gidJacobina:624598081,gidIrece:534264140}]; return orig.some(o=>o.ano===f.ano&&o.mes===f.mes); }).map(f => { const orig = [{ano:2026,mes:1,gidJacobina:310661297,gidIrece:1816810936},{ano:2026,mes:2,gidJacobina:1111886256,gidIrece:420931092},{ano:2026,mes:3,gidJacobina:624598081,gidIrece:534264140}]; return orig.find(o=>o.ano===f.ano&&o.mes===f.mes); });
     extras.forEach(e => {
-      if (!GSHEETS_MESES.find(m => m.ano===e.ano && m.mes===e.mes)) {
+      if (e && e.ano && e.mes && !GSHEETS_MESES.find(m => m.ano===e.ano && m.mes===e.mes)) {
         GSHEETS_MESES.push(e);
       }
     });
     GSHEETS_MESES.sort((a,b) => a.ano!==b.ano ? a.ano-b.ano : a.mes-b.mes);
-    // Atualiza localStorage com o que veio do Supabase
+    // Atualiza localStorage
     try { localStorage.setItem('mariua_meses_extras', JSON.stringify(extras)); } catch(ex) {}
-    // Sempre atualiza a barra de meses
+    // Atualiza UI
     if (typeof mapaInitMesBar === 'function') mapaInitMesBar();
     if (typeof mapaMMRenderLista === 'function' && document.getElementById('modal-meses-overlay')?.style.display==='flex') mapaMMRenderLista();
-    // Se o mês atual agora existe, carrega automaticamente
+    // Carrega mês atual automaticamente se disponível
     const now2 = new Date();
     const mesAtualDisp = GSHEETS_MESES.find(e => e.ano===now2.getFullYear() && e.mes===now2.getMonth()+1);
     if (mesAtualDisp && typeof mapaCarregarMes === 'function' && (!window.mapaMesAtivo || window.mapaMesAtivo.mes !== mesAtualDisp.mes)) {
       mapaCarregarMes(mesAtualDisp.ano, mesAtualDisp.mes);
     }
-  } catch(e) {}
+    window._mapaMMSyncStatus = { ok: true, msg: extras.length + ' mês(es) extra(s) carregado(s) do banco.', ts: new Date() };
+    _mapaMMSyncAtualizarUI();
+  } catch(e) {
+    window._mapaMMSyncStatus = { ok: false, msg: 'Falha de conexão: ' + e.message, ts: new Date() };
+    _mapaMMSyncAtualizarUI();
+  }
 }
+
+function _mapaMMSyncAtualizarUI() {
+  const el = document.getElementById('mm-sync-status');
+  if (!el) return;
+  const s = window._mapaMMSyncStatus;
+  if (!s || s.ok === null) { el.style.display='none'; return; }
+  const hora = s.ts ? s.ts.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',second:'2-digit'}) : '';
+  el.style.display = 'block';
+  el.style.cssText = 'display:block;font-size:0.72rem;font-weight:700;padding:7px 12px;border-radius:8px;margin-bottom:10px;' +
+    (s.ok ? 'background:#d0f0ee;color:#0d7377;border-left:3px solid #0d7377;' : 'background:#fde8e8;color:#c53030;border-left:3px solid #c53030;');
+  el.textContent = (s.ok ? '✅ ' : '⚠️ ') + s.msg + (hora ? ' (' + hora + ')' : '');
+}
+
 window.addEventListener('load', function() {
-  setTimeout(mapaMMCarregarSupabase, 2000);
-  // Recarrega do Supabase a cada 60 segundos para sincronizar com outros usuários
-  setInterval(mapaMMCarregarSupabase, 60000);
+  setTimeout(mapaMMCarregarSupabase, 1500);
+  // Recarrega do Supabase a cada 30 segundos
+  setInterval(mapaMMCarregarSupabase, 30000);
 });
 function gsheetsGetURL(utd) {
   const now = new Date();
