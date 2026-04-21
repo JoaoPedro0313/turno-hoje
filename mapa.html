@@ -3750,7 +3750,7 @@ if (pageMapa) {
   mapaRenderFiltros && mapaRenderFiltros();
 }
 mapaRotaObrasFiltradas = mapaData.filter(d=>d.temCoord);
-mapaRotaFiltrarLista();
+if (typeof mapaRotaFiltrarLista === 'function') mapaRotaFiltrarLista();
 }
 function mapaEnsureLeaflet(cb) {
   const ph = document.getElementById('mapa-placeholder'); if (ph) ph.style.display='none'; // already hidden by default
@@ -3926,7 +3926,7 @@ const mc = document.getElementById('mapa-container');
 if (mc) mc.scrollIntoView({behavior:'smooth',block:'center'});
 // Atualiza lista de obras
 mapaObrasListaFiltrados = filtered;
-if (mapaObrasListaAtiva) mapaRenderObrasList(filtered);
+if (typeof mapaObrasListaAtiva !== 'undefined' && mapaObrasListaAtiva) mapaRenderObrasList(filtered);
 const sub = document.getElementById('mapa-obras-sub');
 if (sub) sub.textContent = filtered.length + ' obra' + (filtered.length !== 1 ? 's' : '') + ' filtrada' + (filtered.length !== 1 ? 's' : '');
 }function mapaProgGetFiltrados() {
@@ -5241,12 +5241,14 @@ function presenceCloseModal() {
 async function presenceCheckTableExists() {
   try {
     const res = await fetch(
-      SUPA_URL + '/rest/v1/' + PRESENCE_TABLE + '?limit=0',
+      SUPA_URL + '/rest/v1/',
       { headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY } }
     );
-    // Silencia o erro 400 no console — tabela simplesmente não existe
-    if (res.status === 400 || res.status === 404 || res.status === 401) return false;
-    return res.ok;
+    if (!res.ok) return false;
+    const schema = await res.json();
+    return schema.paths
+      ? Object.keys(schema.paths).some(p => p.includes(PRESENCE_TABLE))
+      : false;
   } catch(e) {
     return false;
   }
