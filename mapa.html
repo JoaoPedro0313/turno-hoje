@@ -5240,15 +5240,16 @@ function presenceCloseModal() {
 }
 async function presenceCheckTableExists() {
   try {
+    // Usa o endpoint raiz do Supabase REST (/rest/v1/) que retorna o schema OpenAPI com todas as tabelas.
+    // Isso evita fazer um GET direto na tabela user_presence que geraria erro 400 no console caso ela não exista.
     const res = await fetch(
       SUPA_URL + '/rest/v1/',
       { headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY } }
     );
     if (!res.ok) return false;
     const schema = await res.json();
-    return schema.paths
-      ? Object.keys(schema.paths).some(p => p.includes(PRESENCE_TABLE))
-      : false;
+    // O schema OpenAPI lista as tabelas em schema.paths como '/<table_name>'
+    return !!(schema && schema.paths && schema.paths['/' + PRESENCE_TABLE]);
   } catch(e) {
     return false;
   }
