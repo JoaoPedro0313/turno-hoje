@@ -212,16 +212,16 @@ window.presenceOpenModal = function() { if(window._presenceOpenModal) window._pr
             <button onclick="mapaLimparFiltrosExtras()" style="padding:5px 13px;border-radius:8px;border:1.5px solid #fde8e8;background:#fff5f5;font-family:'Barlow',sans-serif;font-size:0.72rem;font-weight:800;cursor:pointer;color:#c53030;transition:all 0.15s;margin-left:4px;">✕ Limpar</button>
           </div>
         </div>
-        <!-- Linha exclusiva para o botão Rota por Distância -->
-        <div style="margin-top:10px;padding-top:10px;border-top:1px solid #f0f2f5;display:flex;align-items:center;gap:8px;">
-          <span style="font-size:0.68rem;font-weight:800;color:#888;letter-spacing:1.5px;text-transform:uppercase;white-space:nowrap;">🗺️ ROTA:</span>
-          <button id="btn-toggle-rota-dist" onclick="mapaRotaDistToggle()"
-            style="padding:5px 16px;border-radius:8px;border:1.5px solid #fbd38d;background:#fffbf0;font-family:'Barlow',sans-serif;font-size:0.75rem;font-weight:800;cursor:pointer;color:#c05621;transition:all 0.15s;white-space:nowrap;">
-            📐 Rota por Distância
-          </button>
-          <span style="font-size:0.7rem;color:#aaa;font-weight:600;">Ordena e traça a rota das obras filtradas da mais próxima à mais distante</span>
-        </div>
       </div>
+    </div>
+    <!-- BOTÃO ROTA POR DISTÂNCIA -->
+    <div style="background:#fff;border-radius:14px;box-shadow:0 2px 14px rgba(0,0,0,0.08);padding:11px 18px;margin-bottom:10px;display:flex;align-items:center;gap:10px;">
+      <span style="font-size:0.68rem;font-weight:800;color:#888;letter-spacing:1.5px;text-transform:uppercase;white-space:nowrap;">🗺️ ROTA:</span>
+      <button id="btn-toggle-rota-dist" onclick="mapaRotaDistToggle()"
+        style="padding:6px 18px;border-radius:8px;border:1.5px solid #fbd38d;background:#fffbf0;font-family:'Barlow',sans-serif;font-size:0.75rem;font-weight:800;cursor:pointer;color:#c05621;transition:all 0.15s;white-space:nowrap;">
+        📐 Rota por Distância
+      </button>
+      <span style="font-size:0.7rem;color:#aaa;font-weight:600;">Ordena e traça a rota das obras filtradas da mais próxima à mais distante</span>
     </div>
     <!-- PAINEL DIAGNÓSTICO -->
     <div id="mapa-diag-panel" style="display:none;background:#1a202c;border-radius:14px;padding:20px 24px;margin-bottom:14px;font-family:monospace;font-size:0.78rem;color:#e2e8f0;">
