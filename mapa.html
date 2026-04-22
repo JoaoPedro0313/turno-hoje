@@ -3992,7 +3992,8 @@ if (mesBar && GSHEETS_MESES && GSHEETS_MESES.length > 0) {
       📅 ${label}</button>`;
   }).join('');
 } else if (mesWrapper) { mesWrapper.style.display = 'none'; }
-const base = mapaUTDFiltro==='TODAS' ? withCoord : withCoord.filter(d=>d.utd===mapaUTDFiltro);
+const allFiltered = mapaUTDFiltro==='TODAS' ? mapaData : mapaData.filter(d=>d.utd===mapaUTDFiltro);
+const base = mapaCoordFiltro==='COM' ? allFiltered.filter(d=>d.temCoord) : mapaCoordFiltro==='SEM' ? allFiltered.filter(d=>!d.temCoord) : allFiltered;
 // Show extra filters bar
 const extraBar = document.getElementById('mapa-extra-filtros');
 if (extraBar) extraBar.style.display = '';
