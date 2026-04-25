@@ -3791,16 +3791,15 @@ function mapaMMSalvar() {
     try {
       const tempMeses = [...GSHEETS_MESES, nova].sort((a,b) => a.ano!==b.ano ? a.ano-b.ano : a.mes-b.mes);
       const extrasAtuais = tempMeses.filter(e => !fixos.some(f=>f.ano===e.ano&&f.mes===e.mes));
-      // Tenta PATCH (atualizar se ja existe), senao POST (inserir)
-      let rPatch = await fetch(SUPA_URL + '/rest/v1/turno_data?key=eq.meses_extras', {
+      // PATCH (atualiza se já existe) → POST (insere se não existe)
+      let r = await fetch(SUPA_URL + '/rest/v1/turno_data?key=eq.meses_extras', {
         method: 'PATCH',
         headers: { ...SUPA_HEADERS, 'Prefer': 'return=representation' },
         body: JSON.stringify({ value: extrasAtuais, updated_at: new Date().toISOString() })
       });
-      let patchData = null;
-      try { patchData = await rPatch.json(); } catch(ex) {}
-      let r = rPatch;
-      if (!rPatch.ok || !patchData || !patchData.length) {
+      let patchRows = null;
+      try { patchRows = await r.clone().json(); } catch(ex) {}
+      if (!r.ok || !Array.isArray(patchRows) || !patchRows.length) {
         r = await fetch(SUPA_URL + '/rest/v1/turno_data', {
           method: 'POST',
           headers: { ...SUPA_HEADERS, 'Prefer': 'return=minimal' },
