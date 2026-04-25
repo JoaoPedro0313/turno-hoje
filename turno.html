@@ -4308,7 +4308,7 @@ setTimeout(presenceInit, 1500);
 <button onclick="if(window.tirarPrint)window.tirarPrint();else window.print()" title="Imprimir" style="position:fixed;bottom:18px;right:18px;z-index:200;background:rgba(43,108,176,0.82);color:#fff;border:none;border-radius:50%;width:44px;height:44px;font-size:1.15rem;cursor:pointer;box-shadow:0 2px 10px rgba(43,108,176,0.35);display:flex;align-items:center;justify-content:center;transition:all 0.2s;backdrop-filter:blur(4px);" onmouseover="this.style.background='rgba(26,74,128,0.95)';this.style.transform='scale(1.1)'" onmouseout="this.style.background='rgba(43,108,176,0.82)';this.style.transform='scale(1)'">&#128247;</button>
 
 <!-- Engrenagem de Configurações -->
-<button id="gear-btn" title="Configurações" onclick="document.getElementById('gear-modal').style.display='flex'" style="position:fixed;bottom:18px;left:18px;z-index:200;background:rgba(13,115,119,0.82);color:#fff;border:none;border-radius:50%;width:44px;height:44px;font-size:1.2rem;cursor:pointer;box-shadow:0 2px 10px rgba(13,115,119,0.35);display:flex;align-items:center;justify-content:center;transition:all 0.2s;backdrop-filter:blur(4px);" onmouseover="this.style.background='rgba(8,80,84,0.95)';this.style.transform='scale(1.1) rotate(30deg)'" onmouseout="this.style.background='rgba(13,115,119,0.82)';this.style.transform='scale(1) rotate(0deg)'">
+<button id="gear-btn" title="Configurações" onclick="document.getElementById('gear-modal').style.display='flex';setTimeout(function(){if(typeof renderManageList==='function')renderManageList();},100);" style="position:fixed;bottom:18px;left:18px;z-index:200;background:rgba(13,115,119,0.82);color:#fff;border:none;border-radius:50%;width:44px;height:44px;font-size:1.2rem;cursor:pointer;box-shadow:0 2px 10px rgba(13,115,119,0.35);display:flex;align-items:center;justify-content:center;transition:all 0.2s;backdrop-filter:blur(4px);" onmouseover="this.style.background='rgba(8,80,84,0.95)';this.style.transform='scale(1.1) rotate(30deg)'" onmouseout="this.style.background='rgba(13,115,119,0.82)';this.style.transform='scale(1) rotate(0deg)'">
   <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
     <circle cx="12" cy="12" r="3"></circle>
     <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
@@ -4394,6 +4394,30 @@ setTimeout(presenceInit, 1500);
           <span id="dark-mode-knob" style="position:absolute;height:18px;width:18px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:0.3s;box-shadow:0 1px 4px rgba(0,0,0,0.2);"></span>
         </label>
       </div>
+
+      <!-- GERENCIAR EQUIPES -->
+      <div style="font-size:0.68rem;font-weight:800;color:#0d7377;letter-spacing:2px;text-transform:uppercase;margin-bottom:14px;padding-bottom:8px;border-bottom:2px solid #c0e8e5;">👥 Gerenciar Equipes</div>
+
+      <!-- Adicionar equipe -->
+      <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:14px;margin-bottom:12px;">
+        <div style="font-size:0.72rem;font-weight:800;color:#555;margin-bottom:8px;">Adicionar equipe</div>
+        <input id="new-name" type="text" placeholder="Nome (ex: JOAO-JAC)" style="width:100%;box-sizing:border-box;padding:8px 12px;border:1.5px solid #c0e8e5;border-radius:8px;font-family:'Barlow',sans-serif;font-size:0.82rem;font-weight:700;margin-bottom:8px;outline:none;">
+        <input id="new-obs" type="text" placeholder="Observação (opcional, para justificativa)" style="width:100%;box-sizing:border-box;padding:8px 12px;border:1.5px solid #c0e8e5;border-radius:8px;font-family:'Barlow',sans-serif;font-size:0.82rem;font-weight:700;margin-bottom:8px;outline:none;">
+        <div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap;">
+          <button class="btn-sm" id="sel-ok" onclick="selectedStatus='ok';document.getElementById('sel-ok').style.background='#14a085';document.getElementById('sel-ok').style.color='#fff';document.getElementById('sel-justif').style.background='#f0f4f5';document.getElementById('sel-justif').style.color='#555';document.getElementById('sel-falta').style.background='#f0f4f5';document.getElementById('sel-falta').style.color='#555';" style="background:#14a085;color:#fff;padding:6px 14px;">✅ OK</button>
+          <button class="btn-sm" id="sel-justif" onclick="selectedStatus='justif';document.getElementById('sel-justif').style.background='#f0a500';document.getElementById('sel-justif').style.color='#fff';document.getElementById('sel-ok').style.background='#f0f4f5';document.getElementById('sel-ok').style.color='#555';document.getElementById('sel-falta').style.background='#f0f4f5';document.getElementById('sel-falta').style.color='#555';" style="background:#f0f4f5;color:#555;padding:6px 14px;">⚠️ JUSTIF.</button>
+          <button class="btn-sm" id="sel-falta" onclick="selectedStatus='falta';document.getElementById('sel-falta').style.background='#e53e3e';document.getElementById('sel-falta').style.color='#fff';document.getElementById('sel-ok').style.background='#f0f4f5';document.getElementById('sel-ok').style.color='#555';document.getElementById('sel-justif').style.background='#f0f4f5';document.getElementById('sel-justif').style.color='#555';" style="background:#f0f4f5;color:#555;padding:6px 14px;">❌ FALTA</button>
+        </div>
+        <button onclick="addTeam()" style="width:100%;padding:10px;background:linear-gradient(135deg,#0d7377,#14a085);color:#fff;border:none;border-radius:9px;font-family:'Barlow',sans-serif;font-size:0.85rem;font-weight:800;cursor:pointer;">+ Adicionar</button>
+      </div>
+
+      <!-- Buscar e listar equipes -->
+      <div style="position:relative;margin-bottom:8px;">
+        <span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:0.9rem;">🔍</span>
+        <input id="search-input" type="text" placeholder="Buscar equipe..." oninput="renderManageList()" style="width:100%;box-sizing:border-box;padding:8px 12px 8px 32px;border:1.5px solid #e2e8f0;border-radius:8px;font-family:'Barlow',sans-serif;font-size:0.82rem;font-weight:700;outline:none;">
+      </div>
+      <div id="manage-list" class="team-list" style="margin-bottom:20px;"></div>
+      <script>setTimeout(function(){if(typeof renderManageList==='function')renderManageList();},200);</script>
 
       <!-- DADOS -->
       <div style="font-size:0.68rem;font-weight:800;color:#aaa;letter-spacing:2px;text-transform:uppercase;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid #f0f2f5;">🗄️ Dados</div>
