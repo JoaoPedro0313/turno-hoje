@@ -374,12 +374,44 @@ const GSHEETS_BASE = {
   JACOBINA: 'https://docs.google.com/spreadsheets/d/142gvn8pNgJGTGDkidCfuOWMHJ2OCKpJd_FQU8zeo0x8/export?format=csv&gid=',
   IRECE:    'https://docs.google.com/spreadsheets/d/14ImbZb8-OCBp78jDtd0QFkSLrMG5vXA7tzrM-x6KQVo/export?format=csv&gid='
 };
-// Para adicionar novo mês: inserir { ano: AAAA, mes: M, gidJacobina: XXXXXX, gidIrece: XXXXXX }
-const GSHEETS_MESES = [
+// ID da planilha de Jacobina (usada para ler a aba _meses dinamicamente)
+const GSHEETS_ID_JACOBINA = '1lbO_ZeQuvnhOlLYl88KY9H6cu_JDBDiIEQrbwAuA4-s';
+const GSHEETS_GID_MESES   = '0'; // GID da aba _meses na planilha de Jacobina
+
+// Fallback estático — usado se a aba _meses falhar
+// Para adicionar novo mês manualmente: inserir { ano: AAAA, mes: M, gidJacobina: XXXXXX, gidIrece: XXXXXX }
+let GSHEETS_MESES = [
   { ano: 2026, mes: 1,  gidJacobina: 310661297,  gidIrece: 1816810936 },
   { ano: 2026, mes: 2,  gidJacobina: 1111886256, gidIrece: 420931092  },
-  { ano: 2026, mes: 3,  gidJacobina: 624598081,  gidIrece: 534264140  }
+  { ano: 2026, mes: 3,  gidJacobina: 624598081,  gidIrece: 534264140  },
+  { ano: 2026, mes: 4,  gidJacobina: 257935593,  gidIrece: 1383759274 },
+  { ano: 2026, mes: 5,  gidJacobina: 1209313517, gidIrece: 663282613  }
 ];
+
+// Carrega a lista de meses dinamicamente da aba _meses no Google Sheets
+async function gsheetsCarregarMeses() {
+  try {
+    const url = 'https://docs.google.com/spreadsheets/d/' + GSHEETS_ID_JACOBINA + '/export?format=csv&gid=' + GSHEETS_GID_MESES;
+    const resp = await fetch(url);
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    const csv = await resp.text();
+    const linhas = csv.trim().split('\n').map(l => l.split(',').map(c => c.trim().replace(/^"|"$/g,'')));
+    // Primeira linha é cabeçalho: ano, mes, gidJacobina, gidIrece
+    const dados = linhas.slice(1).filter(l => l.length >= 4 && !isNaN(parseInt(l[0])));
+    if (dados.length > 0) {
+      GSHEETS_MESES = dados.map(l => ({
+        ano: parseInt(l[0]),
+        mes: parseInt(l[1]),
+        gidJacobina: parseInt(l[2]),
+        gidIrece: parseInt(l[3])
+      }));
+      console.log('[GSHEETS] Meses carregados dinamicamente:', GSHEETS_MESES.length, 'meses');
+    }
+  } catch(e) {
+    console.warn('[GSHEETS] Falha ao carregar aba _meses, usando fallback estático:', e.message);
+  }
+}
+
 function gsheetsGetURL(utd) {
   const now = new Date();
   const ano = now.getFullYear();
@@ -395,11 +427,15 @@ function gsheetsGetURL(utd) {
   const gid = utd === 'JACOBINA' ? entrada.gidJacobina : entrada.gidIrece;
   return GSHEETS_BASE[utd] + gid;
 }
+
+// Inicia carregamento dinâmico dos meses (não bloqueia)
+gsheetsCarregarMeses();
+
 const GSHEETS = {
   JACOBINA: gsheetsGetURL('JACOBINA'),
   IRECE:    gsheetsGetURL('IRECE')
 };
-// URLs do Sheets resolvidas estaticamente por gsheetsGetURL()
+// URLs do Sheets resolvidas — atualizadas após gsheetsCarregarMeses()
 function todayDate() { const d=new Date(); const p=n=>String(n).padStart(2,'0'); return p(d.getDate())+'/'+p(d.getMonth()+1)+'/'+d.getFullYear(); }
 const DEFAULTS = {
 date: todayDate(),
@@ -4301,12 +4337,44 @@ const GSHEETS_BASE = {
   JACOBINA: 'https://docs.google.com/spreadsheets/d/142gvn8pNgJGTGDkidCfuOWMHJ2OCKpJd_FQU8zeo0x8/export?format=csv&gid=',
   IRECE:    'https://docs.google.com/spreadsheets/d/14ImbZb8-OCBp78jDtd0QFkSLrMG5vXA7tzrM-x6KQVo/export?format=csv&gid='
 };
-// Para adicionar novo mês: inserir { ano: AAAA, mes: M, gidJacobina: XXXXXX, gidIrece: XXXXXX }
-const GSHEETS_MESES = [
+// ID da planilha de Jacobina (usada para ler a aba _meses dinamicamente)
+const GSHEETS_ID_JACOBINA = '1lbO_ZeQuvnhOlLYl88KY9H6cu_JDBDiIEQrbwAuA4-s';
+const GSHEETS_GID_MESES   = '0'; // GID da aba _meses na planilha de Jacobina
+
+// Fallback estático — usado se a aba _meses falhar
+// Para adicionar novo mês manualmente: inserir { ano: AAAA, mes: M, gidJacobina: XXXXXX, gidIrece: XXXXXX }
+let GSHEETS_MESES = [
   { ano: 2026, mes: 1,  gidJacobina: 310661297,  gidIrece: 1816810936 },
   { ano: 2026, mes: 2,  gidJacobina: 1111886256, gidIrece: 420931092  },
-  { ano: 2026, mes: 3,  gidJacobina: 624598081,  gidIrece: 534264140  }
+  { ano: 2026, mes: 3,  gidJacobina: 624598081,  gidIrece: 534264140  },
+  { ano: 2026, mes: 4,  gidJacobina: 257935593,  gidIrece: 1383759274 },
+  { ano: 2026, mes: 5,  gidJacobina: 1209313517, gidIrece: 663282613  }
 ];
+
+// Carrega a lista de meses dinamicamente da aba _meses no Google Sheets
+async function gsheetsCarregarMeses() {
+  try {
+    const url = 'https://docs.google.com/spreadsheets/d/' + GSHEETS_ID_JACOBINA + '/export?format=csv&gid=' + GSHEETS_GID_MESES;
+    const resp = await fetch(url);
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    const csv = await resp.text();
+    const linhas = csv.trim().split('\n').map(l => l.split(',').map(c => c.trim().replace(/^"|"$/g,'')));
+    // Primeira linha é cabeçalho: ano, mes, gidJacobina, gidIrece
+    const dados = linhas.slice(1).filter(l => l.length >= 4 && !isNaN(parseInt(l[0])));
+    if (dados.length > 0) {
+      GSHEETS_MESES = dados.map(l => ({
+        ano: parseInt(l[0]),
+        mes: parseInt(l[1]),
+        gidJacobina: parseInt(l[2]),
+        gidIrece: parseInt(l[3])
+      }));
+      console.log('[GSHEETS] Meses carregados dinamicamente:', GSHEETS_MESES.length, 'meses');
+    }
+  } catch(e) {
+    console.warn('[GSHEETS] Falha ao carregar aba _meses, usando fallback estático:', e.message);
+  }
+}
+
 function gsheetsGetURL(utd) {
   const now = new Date();
   const ano = now.getFullYear();
@@ -4322,11 +4390,15 @@ function gsheetsGetURL(utd) {
   const gid = utd === 'JACOBINA' ? entrada.gidJacobina : entrada.gidIrece;
   return GSHEETS_BASE[utd] + gid;
 }
+
+// Inicia carregamento dinâmico dos meses (não bloqueia)
+gsheetsCarregarMeses();
+
 const GSHEETS = {
   JACOBINA: gsheetsGetURL('JACOBINA'),
   IRECE:    gsheetsGetURL('IRECE')
 };
-// URLs do Sheets resolvidas estaticamente por gsheetsGetURL()
+// URLs do Sheets resolvidas — atualizadas após gsheetsCarregarMeses()
 function todayDate() { const d=new Date(); const p=n=>String(n).padStart(2,'0'); return p(d.getDate())+'/'+p(d.getMonth()+1)+'/'+d.getFullYear(); }
 const DEFAULTS = {
 date: todayDate(),
