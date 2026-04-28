@@ -4306,9 +4306,10 @@ setTimeout(presenceInit, 1500);
   </div>
 </div>
 <script>
-const SUPA_URL = 'https://eqxejfoibebcbtsqymji.supabase.co';
-const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVxeGVqZm9pYmViY2J0c3F5bWppIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE4NjUzMTEsImV4cCI6MjA4NzQ0MTMxMX0.lwf7_EJ6UchEOpzhW3cVKztxDGy78gaQblRvgiEwWh8';
-const SUPA_HEADERS = { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY, 'Content-Type': 'application/json' };
+// SUPA_URL já declarado acima — reutilizando
+// // DUPLICADO: const SUPA_URL = 'https://eqxejfoibebcbtsqymji.supabase.co';
+// DUPLICADO: const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVxeGVqZm9pYmViY2J0c3F5bWppIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE4NjUzMTEsImV4cCI6MjA4NzQ0MTMxMX0.lwf7_EJ6UchEOpzhW3cVKztxDGy78gaQblRvgiEwWh8';
+// DUPLICADO: const SUPA_HEADERS = { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY, 'Content-Type': 'application/json' };
 // AVISO DE SEGURANCA: SUPA_KEY e uma anon key exposta no front-end.
 // Acao necessaria: ativar Row Level Security (RLS) em TODAS as tabelas do Supabase
 // e revogar/regenerar a chave em: https://supabase.com/dashboard
@@ -4321,13 +4322,13 @@ function esc(s) {
 }
 
 
-const GSHEETS_BASE = {
+// DUPLICADO: const GSHEETS_BASE = {
   JACOBINA: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTIk40eMD79JaGtzkt5oaX-X63lqPny8h7S4VfYUrpzkvC3MzJIlicGjPjslHMwRJEcaR9M7Bad-KNJ/pub?gid=',
   IRECE:    'https://docs.google.com/spreadsheets/d/e/2PACX-1vTIk40eMD79JaGtzkt5oaX-X63lqPny8h7S4VfYUrpzkvC3MzJIlicGjPjslHMwRJEcaR9M7Bad-KNJ/pub?gid='
 };
 // ID da planilha de Jacobina (usada para ler a aba _meses dinamicamente)
-const GSHEETS_ID_JACOBINA = '1lbO_ZeQuvnhOlLYl88KY9H6cu_JDBDiIEQrbwAuA4-s';
-const GSHEETS_GID_MESES   = '0'; // GID da aba _meses na planilha de Jacobina
+// DUPLICADO: const GSHEETS_ID_JACOBINA = '1lbO_ZeQuvnhOlLYl88KY9H6cu_JDBDiIEQrbwAuA4-s';
+// DUPLICADO: const GSHEETS_GID_MESES   = '0'; // GID da aba _meses na planilha de Jacobina
 
 // Fallback estático — usado se a aba _meses falhar
 // Para adicionar novo mês manualmente: inserir { ano: AAAA, mes: M, gidJacobina: XXXXXX, gidIrece: XXXXXX }
@@ -4383,13 +4384,13 @@ function gsheetsGetURL(utd) {
 gsheetsCarregarMeses();
 
 // GSHEETS resolvido dinamicamente (não em cache) para garantir GID atualizado após gsheetsCarregarMeses()
-const GSHEETS = {
+// DUPLICADO: const GSHEETS = {
   get JACOBINA() { return gsheetsGetURL('JACOBINA'); },
   get IRECE()    { return gsheetsGetURL('IRECE'); }
 };
 // URLs do Sheets resolvidas — atualizadas após gsheetsCarregarMeses()
 function todayDate() { const d=new Date(); const p=n=>String(n).padStart(2,'0'); return p(d.getDate())+'/'+p(d.getMonth()+1)+'/'+d.getFullYear(); }
-const DEFAULTS = {
+// DUPLICADO: const DEFAULTS = {
 date: todayDate(),
 ok: ['ALAN-IRC','ALEX-IRC','ANDRE-JAC','CAIQUE-JAC','CLEBSON-JAC','DIOGO-JAC','DOUGLAS-JAC','EDILSON-IRC','EDMILSON-IRC','ELIEZER-IRC','EMERSON-JAC','ENES-IRC','ESMERALDO-IRC','FABIANO-JAC','FELIPE-IRC','GABRIEL-IRC','GIORLAN-IRC','IRISMAR-IRC','JAILSON-IRC','JARBAS-IRC','JOAO-JAC','MARCOS-IRC','PATRICIO-JAC','RIAN-IRC','ROMERO-IRC','TIAGO-JAC','UBERDAN-IRC','VALMIR-JAC','VANILSON-IRC','WILIAN-IRC'],
 justif: [],
@@ -5072,7 +5073,7 @@ const el=document.getElementById('import-msg');
 el.textContent=text; el.className='msg '+type;
 clearTimeout(el._t); el._t=setTimeout(()=>el.className='msg',5000);
 }
-const EQUIPES_ATIVAS = ['ESMERALDO-IRC','ENES-IRC','FELIPE-IRC','IRISMAR-IRC','JAILSON-IRC','JARBAS-IRC','VANILSON-IRC','WILIAN-IRC','EDILSON-IRC','ALEX-IRC','VAGNO-IRC','EDMILSON-IRC','DOUGLAS-JAC','RODRIGO-JAC','JAILTON-JAC','GERALDO-JAC','CLEBSON-JAC','DIOGO-JAC','LUCIANO-JAC','FABIANO-JAC','EMERSON-JAC','PATRICIO-JAC','MENEZES-IRC','WESLEY-IRC','MARCOS-IRC','GIORLAN-IRC','JULIO-JAC','VALMIR-JAC','CARLOS-JAC','JENILSON-JAC','JOAO-JAC','GABRIEL-IRC','WASHINGTON-IRC','ANDRE-JAC','ALAN-IRC','JAIR-JAC','TIAGO-JAC','REVERTON-IRC','ELIEZER-IRC','UBERDAN-IRC','ROMERO-IRC','CAIQUE-JAC','RIAN-IRC'];
+// DUPLICADO: const EQUIPES_ATIVAS = ['ESMERALDO-IRC','ENES-IRC','FELIPE-IRC','IRISMAR-IRC','JAILSON-IRC','JARBAS-IRC','VANILSON-IRC','WILIAN-IRC','EDILSON-IRC','ALEX-IRC','VAGNO-IRC','EDMILSON-IRC','DOUGLAS-JAC','RODRIGO-JAC','JAILTON-JAC','GERALDO-JAC','CLEBSON-JAC','DIOGO-JAC','LUCIANO-JAC','FABIANO-JAC','EMERSON-JAC','PATRICIO-JAC','MENEZES-IRC','WESLEY-IRC','MARCOS-IRC','GIORLAN-IRC','JULIO-JAC','VALMIR-JAC','CARLOS-JAC','JENILSON-JAC','JOAO-JAC','GABRIEL-IRC','WASHINGTON-IRC','ANDRE-JAC','ALAN-IRC','JAIR-JAC','TIAGO-JAC','REVERTON-IRC','ELIEZER-IRC','UBERDAN-IRC','ROMERO-IRC','CAIQUE-JAC','RIAN-IRC'];
 function receberAbertura(file) {
 if (!file) return;
 const r = new FileReader();
@@ -5116,7 +5117,7 @@ clearTimeout(el._t); el._t=setTimeout(()=>el.className='msg',4000);
 }
 // SEGURANCA: senha armazenada como hash SHA-256 (nunca texto puro)
 // Hash de 'mariua2026' -- para mudar a senha, recalcule o hash e substitua abaixo
-const HASH_ADM = 'a3f5c36b2e8f6d4a1b9c0e7f2d5a8b3c6e9f1d4a7b0c3e6f9a2d5b8c1e4f7a0'; // SHA-256 placeholder
+// DUPLICADO: const HASH_ADM = 'a3f5c36b2e8f6d4a1b9c0e7f2d5a8b3c6e9f1d4a7b0c3e6f9a2d5b8c1e4f7a0'; // SHA-256 placeholder
 let admUnlocked = false;
 async function _sha256(str) {
   const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
@@ -5153,7 +5154,7 @@ input.focus();
 }
 }
 // SEGURANCA: senha de producao - mesma logica de hash da senha ADM
-const HASH_PRODUCAO = 'a3f5c36b2e8f6d4a1b9c0e7f2d5a8b3c6e9f1d4a7b0c3e6f9a2d5b8c1e4f7a0'; // SHA-256 placeholder
+// DUPLICADO: const HASH_PRODUCAO = 'a3f5c36b2e8f6d4a1b9c0e7f2d5a8b3c6e9f1d4a7b0c3e6f9a2d5b8c1e4f7a0'; // SHA-256 placeholder
 let prodUnlocked = false;
 function switchPage(page) {
 const _sel = (id, val) => { const el = document.getElementById(id); if (el) el.style.display = val; };
@@ -5529,7 +5530,7 @@ el.style.pointerEvents = 'none';
 }
 } catch(e) {}
 }
-const AUTO_REFRESH_MS = 15000;
+// DUPLICADO: const AUTO_REFRESH_MS = 15000;
 let autoRefreshTimer = null;
 let lastUpdatedAt = null;
 async function checkForUpdates() {
@@ -5874,7 +5875,7 @@ async function mapaRotaCalcular() {
 
   try {
     // OSRM has ~100 waypoint limit — chunk if needed, then stitch
-    const CHUNK = 25; // safe chunk size keeping origin/dest overlap
+    // DUPLICADO: const CHUNK = 25; // safe chunk size keeping origin/dest overlap
     let allGeomCoords = [];
     let totalDist = 0, totalDur = 0;
 
@@ -6091,7 +6092,7 @@ window.applyFontSize  = applyFontSize;
 let mapaMap=null, mapaLayerGroup=null, mapaData=[], mapaFiltroAtivo='TODOS', mapaUTDFiltro='TODAS', mapaMesFiltro='TODOS';
 let mapaMunFiltro='', mapaEncFiltro='', mapaCoordFiltro='TODAS';
 let compMesFiltro = 'TODOS';
-const MAPA_CORES = {'ENERGIZADA':'#38a169','EM EXECUÇÃO':'#2b6cb0','EM EXECUCAO':'#2b6cb0','PROGRAMADA':'#d69e2e','PARALISADA':'#e53e3e','CANCELADA':'#718096','RETIRADA DA CARTEIRA':'#718096'};
+// DUPLICADO: const MAPA_CORES = {'ENERGIZADA':'#38a169','EM EXECUÇÃO':'#2b6cb0','EM EXECUCAO':'#2b6cb0','PROGRAMADA':'#d69e2e','PARALISADA':'#e53e3e','CANCELADA':'#718096','RETIRADA DA CARTEIRA':'#718096'};
 function mapaGetCor(s) { return MAPA_CORES[(s||'').toUpperCase().trim()]||'#a0aec0'; }
 function mapaParseCoord(s) { if(!s)return null; const v=String(s).trim().split('\n')[0].trim().replace(',','.'); const n=parseFloat(v); return isNaN(n)?null:n; }
 function compNorm(s) { return (s||'').toUpperCase().replace(/\s+/g,'').normalize('NFD').replace(/[\u0300-\u036f]/g,''); }
@@ -6561,7 +6562,7 @@ if (!confirm('Apagar todo o histórico de alterações?')) return;
 compHistorico = []; compHistoricoSave(); compHistoricoRender();
 }
 compHistoricoLoad();
-const COMP_SCHEDULE_HOURS = [8, 18];
+// DUPLICADO: const COMP_SCHEDULE_HOURS = [8, 18];
 let compAutoRefreshTimer = null;
 function compMsUntilNext() {
 const now = new Date();
@@ -6676,8 +6677,8 @@ if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
 if (icon) icon.textContent = '⚡';
 }
 }
-const MESES_PT = ['','JAN','FEV','MAR','ABR','MAI','JUN','JUL','AGO','SET','OUT','NOV','DEZ'];
-const MESES_ORDER = {'JAN':1,'FEV':2,'MAR':3,'ABR':4,'MAI':5,'JUN':6,'JUL':7,'AGO':8,'SET':9,'OUT':10,'NOV':11,'DEZ':12};
+// DUPLICADO: const MESES_PT = ['','JAN','FEV','MAR','ABR','MAI','JUN','JUL','AGO','SET','OUT','NOV','DEZ'];
+// DUPLICADO: const MESES_ORDER = {'JAN':1,'FEV':2,'MAR':3,'ABR':4,'MAI':5,'JUN':6,'JUL':7,'AGO':8,'SET':9,'OUT':10,'NOV':11,'DEZ':12};
 function parseMesObra(dateStr) {
 if (!dateStr) return null;
 const s = String(dateStr).trim().split(/[\s\n]/)[0].trim();
@@ -8049,10 +8050,10 @@ async function progInit() {
   }
 }
 window.addEventListener('load', () => setTimeout(progInit, 600));
-const PRESENCE_TABLE = 'user_presence';
-const PRESENCE_TTL_MS = 2 * 60 * 1000;
-const PRESENCE_INTERVAL_MS = 20000;
-const PRESENCE_POLL_MS = 15000;
+// DUPLICADO: const PRESENCE_TABLE = 'user_presence';
+// DUPLICADO: const PRESENCE_TTL_MS = 2 * 60 * 1000;
+// DUPLICADO: const PRESENCE_INTERVAL_MS = 20000;
+// DUPLICADO: const PRESENCE_POLL_MS = 15000;
 let presenceUID = null;
 let presenceMyName = '';
 let presenceTimer = null;
@@ -8061,7 +8062,7 @@ let presenceActive = [];
 // Controle de falhas: desabilita presence se tabela não existir (erro 400/404)
 let presenceEnabled = true;
 let presenceFailCount = 0;
-const PRESENCE_MAX_FAILS = 1;
+// DUPLICADO: const PRESENCE_MAX_FAILS = 1;
 
 function presenceGetUID() {
 let uid = localStorage.getItem('mariua_uid');
