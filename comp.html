@@ -371,7 +371,7 @@ function esc(s) {
 
 
 const GSHEETS_BASE = {
-  JACOBINA: 'https://docs.google.com/spreadsheets/d/142gvn8pNgJGTGDkidCfuOWMHJ2OCKpJd_FQU8zeo0x8/export?format=csv&gid=',
+  JACOBINA: 'https://docs.google.com/spreadsheets/d/1lbO_ZeQuvnhOlLYl88KY9H6cu_JDBDiIEQrbwAuA4-s/export?format=csv&gid=',
   IRECE:    'https://docs.google.com/spreadsheets/d/14ImbZb8-OCBp78jDtd0QFkSLrMG5vXA7tzrM-x6KQVo/export?format=csv&gid='
 };
 // ID da planilha de Jacobina (usada para ler a aba _meses dinamicamente)
@@ -431,9 +431,10 @@ function gsheetsGetURL(utd) {
 // Inicia carregamento dinâmico dos meses (não bloqueia)
 gsheetsCarregarMeses();
 
+// GSHEETS resolvido dinamicamente (não em cache) para garantir GID atualizado após gsheetsCarregarMeses()
 const GSHEETS = {
-  JACOBINA: gsheetsGetURL('JACOBINA'),
-  IRECE:    gsheetsGetURL('IRECE')
+  get JACOBINA() { return gsheetsGetURL('JACOBINA'); },
+  get IRECE()    { return gsheetsGetURL('IRECE'); }
 };
 // URLs do Sheets resolvidas — atualizadas após gsheetsCarregarMeses()
 function todayDate() { const d=new Date(); const p=n=>String(n).padStart(2,'0'); return p(d.getDate())+'/'+p(d.getMonth()+1)+'/'+d.getFullYear(); }
@@ -4334,7 +4335,7 @@ function esc(s) {
 
 
 const GSHEETS_BASE = {
-  JACOBINA: 'https://docs.google.com/spreadsheets/d/142gvn8pNgJGTGDkidCfuOWMHJ2OCKpJd_FQU8zeo0x8/export?format=csv&gid=',
+  JACOBINA: 'https://docs.google.com/spreadsheets/d/1lbO_ZeQuvnhOlLYl88KY9H6cu_JDBDiIEQrbwAuA4-s/export?format=csv&gid=',
   IRECE:    'https://docs.google.com/spreadsheets/d/14ImbZb8-OCBp78jDtd0QFkSLrMG5vXA7tzrM-x6KQVo/export?format=csv&gid='
 };
 // ID da planilha de Jacobina (usada para ler a aba _meses dinamicamente)
@@ -4394,9 +4395,10 @@ function gsheetsGetURL(utd) {
 // Inicia carregamento dinâmico dos meses (não bloqueia)
 gsheetsCarregarMeses();
 
+// GSHEETS resolvido dinamicamente (não em cache) para garantir GID atualizado após gsheetsCarregarMeses()
 const GSHEETS = {
-  JACOBINA: gsheetsGetURL('JACOBINA'),
-  IRECE:    gsheetsGetURL('IRECE')
+  get JACOBINA() { return gsheetsGetURL('JACOBINA'); },
+  get IRECE()    { return gsheetsGetURL('IRECE'); }
 };
 // URLs do Sheets resolvidas — atualizadas após gsheetsCarregarMeses()
 function todayDate() { const d=new Date(); const p=n=>String(n).padStart(2,'0'); return p(d.getDate())+'/'+p(d.getMonth()+1)+'/'+d.getFullYear(); }
