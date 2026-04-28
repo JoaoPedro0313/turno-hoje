@@ -4322,10 +4322,10 @@ function esc(s) {
 }
 
 
-// DUPLICADO: const GSHEETS_BASE = {
+/* DUPLICADO: const GSHEETS_BASE = {
   JACOBINA: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTIk40eMD79JaGtzkt5oaX-X63lqPny8h7S4VfYUrpzkvC3MzJIlicGjPjslHMwRJEcaR9M7Bad-KNJ/pub?gid=',
   IRECE:    'https://docs.google.com/spreadsheets/d/e/2PACX-1vTIk40eMD79JaGtzkt5oaX-X63lqPny8h7S4VfYUrpzkvC3MzJIlicGjPjslHMwRJEcaR9M7Bad-KNJ/pub?gid='
-};
+}; */
 // ID da planilha de Jacobina (usada para ler a aba _meses dinamicamente)
 // DUPLICADO: const GSHEETS_ID_JACOBINA = '1lbO_ZeQuvnhOlLYl88KY9H6cu_JDBDiIEQrbwAuA4-s';
 // DUPLICADO: const GSHEETS_GID_MESES   = '0'; // GID da aba _meses na planilha de Jacobina
@@ -4384,18 +4384,18 @@ function gsheetsGetURL(utd) {
 gsheetsCarregarMeses();
 
 // GSHEETS resolvido dinamicamente (não em cache) para garantir GID atualizado após gsheetsCarregarMeses()
-// DUPLICADO: const GSHEETS = {
+/* DUPLICADO: const GSHEETS = {
   get JACOBINA() { return gsheetsGetURL('JACOBINA'); },
   get IRECE()    { return gsheetsGetURL('IRECE'); }
-};
+}; */
 // URLs do Sheets resolvidas — atualizadas após gsheetsCarregarMeses()
 function todayDate() { const d=new Date(); const p=n=>String(n).padStart(2,'0'); return p(d.getDate())+'/'+p(d.getMonth()+1)+'/'+d.getFullYear(); }
-// DUPLICADO: const DEFAULTS = {
+/* DUPLICADO: const DEFAULTS = {
 date: todayDate(),
 ok: ['ALAN-IRC','ALEX-IRC','ANDRE-JAC','CAIQUE-JAC','CLEBSON-JAC','DIOGO-JAC','DOUGLAS-JAC','EDILSON-IRC','EDMILSON-IRC','ELIEZER-IRC','EMERSON-JAC','ENES-IRC','ESMERALDO-IRC','FABIANO-JAC','FELIPE-IRC','GABRIEL-IRC','GIORLAN-IRC','IRISMAR-IRC','JAILSON-IRC','JARBAS-IRC','JOAO-JAC','MARCOS-IRC','PATRICIO-JAC','RIAN-IRC','ROMERO-IRC','TIAGO-JAC','UBERDAN-IRC','VALMIR-JAC','VANILSON-IRC','WILIAN-IRC'],
 justif: [],
 falta: ['CARLOS-JAC','GERALDO-JAC','JAILTON-JAC','JAIR-JAC','JENILSON-JAC','JULIO-JAC','LUCIANO-JAC','MENEZES-IRC','REVERTON-IRC','RODRIGO-JAC','VAGNO-IRC','WASHINGTON-IRC','WESLEY-IRC']
-};
+}; */
 let teams = { ok: [...DEFAULTS.ok], justif: [], falta: [...DEFAULTS.falta] };
 let currentDate = DEFAULTS.date;
 let producao = {};
