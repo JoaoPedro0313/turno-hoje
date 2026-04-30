@@ -763,6 +763,7 @@ statusEl.style.color = '#fc8181';
 function turnoHistExibir(payload, dataFormatada, fonte) {
 const statusEl = document.getElementById('turno-hist-status');
 const modoEl = document.getElementById('turno-hist-modo');
+if (!statusEl || !modoEl) return; // elementos de turno ausentes neste arquivo
 turnoModoHistorico = true;
 const okTemp = payload.ok || [];
 const justifTemp = payload.justif || [];
@@ -792,6 +793,7 @@ function turnoHistHoje() {
 const statusEl = document.getElementById('turno-hist-status');
 const modoEl = document.getElementById('turno-hist-modo');
 const input = document.getElementById('turno-hist-date');
+if (!statusEl || !modoEl || !input) return; // elementos de turno ausentes neste arquivo
 turnoModoHistorico = false;
 input.value = '';
 statusEl.textContent = '';
@@ -839,6 +841,7 @@ setTimeout(() => setDbStatus('local', 'Dados locais'), 2000);
 
 function render() {
 if (turnoModoHistorico) return;
+if (!document.getElementById('abriu-grid')) return; // página turno não está neste arquivo
 buildGridOk('abriu-grid', [...teams.ok].sort());
 buildGridJustif('justif-grid', [...teams.justif].sort((a,b)=>a.name.localeCompare(b.name)));
 buildGridFalta('falta-grid', [...teams.falta].sort());
@@ -854,10 +857,10 @@ document.getElementById('footer-text').innerHTML  =
 renderProducao();
 }
 function emptyMsg(id) {
-document.getElementById(id).innerHTML = '<div class="_s9">Nenhuma equipe</div>';
+const _em = document.getElementById(id); if (_em) _em.innerHTML = '<div class="_s9">Nenhuma equipe</div>';
 }
 function buildGridOk(id, list) {
-const g = document.getElementById(id); g.innerHTML = '';
+const g = document.getElementById(id); if (!g) return; g.innerHTML = '';
 if (!list.length) { emptyMsg(id); return; }
 list.forEach(name => {
 const d = document.createElement('div'); d.className = 'card';
@@ -866,7 +869,7 @@ g.appendChild(d);
 });
 }
 function buildGridJustif(id, list) {
-const g = document.getElementById(id); g.innerHTML = '';
+const g = document.getElementById(id); if (!g) return; g.innerHTML = '';
 if (!list.length) { emptyMsg(id); return; }
 list.forEach(function(t) {
 const d = document.createElement('div'); d.className = 'card justif';
@@ -876,7 +879,7 @@ g.appendChild(d);
 });
 }
 function buildGridFalta(id, list) {
-const g = document.getElementById(id); g.innerHTML = '';
+const g = document.getElementById(id); if (!g) return; g.innerHTML = '';
 if (!list.length) { emptyMsg(id); return; }
 list.forEach(name => {
 const d = document.createElement('div'); d.className = 'card absent';
@@ -2821,7 +2824,7 @@ if (pageMapa && pageMapa.style.display!=='none') {
   mapaRenderFiltros && mapaRenderFiltros();
 }
 mapaRotaObrasFiltradas = mapaData.filter(d=>d.temCoord);
-mapaRotaFiltrarLista();
+if (typeof mapaRotaFiltrarLista === 'function') mapaRotaFiltrarLista();
 }
 function mapaEnsureLeaflet(cb) {
   const ph = document.getElementById('mapa-placeholder'); if (ph) ph.style.display='none';
