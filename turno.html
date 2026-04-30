@@ -1003,7 +1003,7 @@ const CADASTRO_EQUIPES = {
   'CAIQUE SILVA LIMA':'JAC','CARLOS ANDRE SANTOS DA SILVA':'JAC','CLEBSON REIS NETO':'JAC',
   'DIOGO CRUZ DOS SANTOS':'JAC','DOUGLAS DA SILVA MELO':'JAC',
   'FABIANO LOPES DE MORAES':'JAC','JAIR DE JESUS':'JAC','JOAO PEREIRA DA SILVA':'JAC',
-  'LUCIANO NUNES DA SILVA':'JAC','PATRICIO DA SILVA BARBOSA':'JAC','JADSON PINHO DA SILVA DO AMOR DIVINO':'JAC',
+  'LUCIANO NUNES DA SILVA':'JAC','PATRICIO DA SILVA BARBOSA':'JAC',
   'VALMIR ALVES DA SILVA':'JAC','RODRIGO SANTOS SILVA':'JAC',
   'JAILTON DA SILVA':'JAC','GERALDO DA COSTA GOMES':'JAC',
   'EMERSON DE CARVALHO SILVA':'JAC','JULIO SERAFIM DAMACENO DOS SANTOS':'JAC',
@@ -1015,7 +1015,7 @@ const NOME_CURTO = {};
   const manual = {
     'ALAN NUNES BARRETO':'ALAN','ALEX SANDRO SANTOS BISPO':'ALEX',
     'EDMILSON RIBEIRO DO NASCIMENTO':'EDMILSON','EDILSON DE SOUZA SANTOS':'EDILSON',
-    'ELIEZER BATISTA':'ELIEZER','ENES RAMOS DA SILVA':'ENES','ANDERSON SANTANA DE SOUZA':'ANDERSON','JADSON PINHO DA SILVA DO AMOR DIVINO':'JADSON',
+    'ELIEZER BATISTA':'ELIEZER','ENES RAMOS DA SILVA':'ENES',
     'ESMERALDO DOS SANTOS OLIVEIRA':'ESMERALDO','FELIPE PEREIRA ALVES':'FELIPE',
     'GABRIEL DOS SANTOS SILVA':'GABRIEL','GIORLAN EVANGELISTA SOUZA':'GIORLAN',
     'JAILSON SANTOS SILVA':'JAILSON',
@@ -4457,7 +4457,7 @@ setTimeout(presenceInit, 1500);
     // Detecta pelo cabeçalho contendo "responsável" e "situação"
     if (firstLineLower.includes('responsável') || firstLineLower.includes('responsavel')) {
       const headers = splitLine(lines[0]).map(h => h.replace(/^"|"$/g, '').trim().toLowerCase());
-      const iResp = headers.findIndex(h => h === 'responsável' || h === 'responsavel');
+      const iEqCol = headers.findIndex(h => h === 'equipe');
       const iSit  = headers.findIndex(h => h === 'situação' || h === 'situacao');
       const iData = headers.findIndex(h => h === 'data início' || h === 'data inicio');
 
@@ -4466,9 +4466,9 @@ setTimeout(presenceInit, 1500);
 
       for (let i = 1; i < lines.length; i++) {
         const cols = splitLine(lines[i]).map(c => c.replace(/^"|"$/g, '').trim());
-        if (!cols[iResp]) continue;
+        if (!cols[iEqCol]) continue;
 
-        const nome    = cols[iResp];
+        const nome    = cols[iEqCol].toUpperCase();
         const situacao = (cols[iSit] || '').toLowerCase();
 
         // Extrai data da primeira linha de dados
