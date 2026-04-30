@@ -384,7 +384,7 @@ let GSHEETS_MESES = [
 // Carrega a lista de meses dinamicamente da aba _meses no Google Sheets
 async function gsheetsCarregarMeses() {
   try {
-    const url = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTIk40eMD79JaGtzkt5oaX-X63lqPny8h7S4VfYUrpzkvC3MzJIlicGjPjslHMwRJEcaR9M7Bad-KNJ/pub?gid=' + GSHEETS_GID_MESES + '&single=true&output=csv';
+    const url = 'https://docs.google.com/spreadsheets/d/' + GSHEETS_ID_JACOBINA + '/export?format=csv&gid=' + GSHEETS_GID_MESES;
     const resp = await fetch(url);
     if (!resp.ok) throw new Error('HTTP ' + resp.status);
     const csv = await resp.text();
