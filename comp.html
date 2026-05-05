@@ -447,7 +447,9 @@ async function fetchCSV(url) {
   const proxyUrl = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(url);
   const r2 = await fetch(proxyUrl);
   if (!r2.ok) throw new Error('Proxy também falhou: HTTP ' + r2.status);
-  return await r2.text();
+  const proxyText = await r2.text();
+  console.log('[fetchCSV] Proxy OK, bytes:', proxyText.length);
+  return proxyText;
 }
 
 function todayDate() { const d=new Date(); const p=n=>String(n).padStart(2,'0'); return p(d.getDate())+'/'+p(d.getMonth()+1)+'/'+d.getFullYear(); }
@@ -2427,7 +2429,7 @@ if (v) compHistorico = JSON.parse(v);
 if (!Array.isArray(compHistorico)) compHistorico = [];
 } catch(e) { compHistorico = []; }
 compHistoricoRender();
-compDailyAutoSync();
+if (!_compDailyAutoSyncRunning) compDailyAutoSync();
 }
 async function compHistoricoSave() {
 if (compHistorico.length > 60) compHistorico = compHistorico.slice(-60);
@@ -2442,11 +2444,11 @@ body: JSON.stringify({ key: 'comp_historico', value: compHistorico, updated_at: 
 }
 let _compDailyAutoSyncRunning = false;
 async function compDailyAutoSync() {
-if (_compDailyAutoSyncRunning) { console.log('[Mariuá] AutoSync já em andamento, ignorando chamada duplicada.'); return; }
 const now = new Date(), pad = n => String(n).padStart(2,'0');
 const hoje = pad(now.getDate())+'/'+pad(now.getMonth()+1)+'/'+now.getFullYear();
 const jaTemHoje = compHistorico.some(s => s.dia===hoje);
 if (jaTemHoje) { console.log('[Mariuá] Já sincronizado hoje (' + hoje + '), pulando.'); return; }
+if (_compDailyAutoSyncRunning) { console.log('[Mariuá] AutoSync já em andamento, ignorando.'); return; }
 _compDailyAutoSyncRunning = true;
 await new Promise(r => setTimeout(r, 3000));
 console.log('[Mariuá] Sincronização diária automática — ' + hoje);
