@@ -386,9 +386,7 @@ async function gsheetsCarregarMeses() {
   try {
     const url = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTIk40eMD79JaGtzkt5oaX-X63lqPny8h7S4VfYUrpzkvC3MzJIlicGjPjslHMwRJEcaR9M7Bad-KNJ/pub?gid=' + GSHEETS_GID_MESES + '&single=true&output=csv';
     console.log('[GSHEETS] Carregando aba _meses:', url);
-    const resp = await fetch(url);
-    if (!resp.ok) throw new Error('HTTP ' + resp.status);
-    const csv = await resp.text();
+    const csv = await fetchCSV(url);
     const linhas = csv.trim().split('\n').map(l => l.split(',').map(c => c.trim().replace(/^"|"$/g,'')));
     // Primeira linha é cabeçalho: ano, mes, gidJacobina, gidIrece
     const dados = linhas.slice(1).filter(l => l.length >= 4 && !isNaN(parseInt(l[0])));
@@ -431,6 +429,27 @@ const GSHEETS = {
   get IRECE()    { return gsheetsGetURL('IRECE'); }
 };
 // URLs do Sheets resolvidas — atualizadas após gsheetsCarregarMeses()
+
+// fetchCSV: busca CSV do Google Sheets com fallback para proxy CORS se o fetch direto falhar
+async function fetchCSV(url) {
+  // Tentativa 1: fetch direto (funciona quando não há bloqueio de CORS/redirect)
+  try {
+    const r = await fetch(url, { redirect: 'follow' });
+    if (r.ok) {
+      const text = await r.text();
+      if (text && text.trim().length > 10) return text;
+    }
+    console.warn('[fetchCSV] Fetch direto falhou (' + r.status + '), tentando proxy...');
+  } catch(e) {
+    console.warn('[fetchCSV] Fetch direto erro:', e.message, '— tentando proxy...');
+  }
+  // Tentativa 2: proxy allorigins (contorna CORS/redirect do Google)
+  const proxyUrl = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(url);
+  const r2 = await fetch(proxyUrl);
+  if (!r2.ok) throw new Error('Proxy também falhou: HTTP ' + r2.status);
+  return await r2.text();
+}
+
 function todayDate() { const d=new Date(); const p=n=>String(n).padStart(2,'0'); return p(d.getDate())+'/'+p(d.getMonth()+1)+'/'+d.getFullYear(); }
 const DEFAULTS = {
 date: todayDate(),
@@ -2264,7 +2283,7 @@ s.src = 'https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js
 s.onload = res; s.onerror = rej; document.head.appendChild(s);
 });
 }
-const resJac = await fetch(GSHEETS.JACOBINA);
+const resJac = await fetchCSV(GSHEETS.JACOBINA).then(t=>({ok:true,text:()=>Promise.resolve(t)})).catch(e=>({ok:false,status:e.message}));
 if (!resJac.ok) throw new Error('Falha ao buscar planilha (HTTP ' + resJac.status + ')');
 const textJac = await resJac.text();
 const textIrc = '';
@@ -2645,12 +2664,8 @@ s.onload = resolve; document.head.appendChild(s);
 try {
 const urlJac = GSHEETS.JACOBINA;
 console.log('[compAutoSincronizar] URL JACOBINA:', urlJac);
-const resJac = await fetch(urlJac);
-if (!resJac.ok) {
-  console.error('[compAutoSincronizar] ERRO ' + resJac.status + ' ao buscar: ' + urlJac);
-  return;
-}
-const textJac = await resJac.text();
+let textJac;
+try { textJac = await fetchCSV(urlJac); } catch(e) { console.error('[compAutoSincronizar] ERRO ao buscar:', e.message); return; }
 const textIrc = '';
 const dataJac = compParseCSVText(textJac, 'JACOBINA');
 const dataIrc = [];
@@ -3305,7 +3320,7 @@ setBtn('<span class="spinning-icon">&#8635;</span> Sincronizando...', true);
 setDbStatus('syncing', 'Buscando planilhas...');
 compWithPapa(async () => {
 try {
-const resJac = await fetch(GSHEETS.JACOBINA);
+const resJac = await fetchCSV(GSHEETS.JACOBINA).then(t=>({ok:true,text:()=>Promise.resolve(t)})).catch(e=>({ok:false,status:e.message}));
 if (!resJac.ok) throw new Error('Erro HTTP ' + resJac.status + ' ao buscar Jacobina');
 const textJac = await resJac.text();
 const dataJac = compParseCSVText(textJac, 'JACOBINA');
