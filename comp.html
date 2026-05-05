@@ -363,12 +363,13 @@ function esc(s) {
 }
 
 
-const GSHEETS_BASE = {
-  JACOBINA: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTIk40eMD79JaGtzkt5oaX-X63lqPny8h7S4VfYUrpzkvC3MzJIlicGjPjslHMwRJEcaR9M7Bad-KNJ/pub?gid=',
-  IRECE:    'https://docs.google.com/spreadsheets/d/e/2PACX-1vTIk40eMD79JaGtzkt5oaX-X63lqPny8h7S4VfYUrpzkvC3MzJIlicGjPjslHMwRJEcaR9M7Bad-KNJ/pub?gid='
-};
-// ID da planilha de Jacobina (usada para ler a aba _meses dinamicamente)
+// GSHEETS_BASE: usa /export com ID interno — retorna CSV direto sem redirect para googleusercontent
+// Nota: requer que a planilha esteja compartilhada como "Qualquer pessoa com o link pode ver"
 const GSHEETS_ID_JACOBINA = '1lbO_ZeQuvnhOlLYl88KY9H6cu_JDBDiIEQrbwAuA4-s';
+const GSHEETS_BASE = {
+  JACOBINA: 'https://docs.google.com/spreadsheets/d/' + GSHEETS_ID_JACOBINA + '/export?format=csv&gid=',
+  IRECE:    'https://docs.google.com/spreadsheets/d/' + GSHEETS_ID_JACOBINA + '/export?format=csv&gid='
+};
 const GSHEETS_GID_MESES   = '0'; // GID da aba _meses na planilha de Jacobina
 
 // Fallback estático — usado se a aba _meses falhar
@@ -384,7 +385,7 @@ let GSHEETS_MESES = [
 // Carrega a lista de meses dinamicamente da aba _meses no Google Sheets
 async function gsheetsCarregarMeses() {
   try {
-    const url = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTIk40eMD79JaGtzkt5oaX-X63lqPny8h7S4VfYUrpzkvC3MzJIlicGjPjslHMwRJEcaR9M7Bad-KNJ/pub?gid=' + GSHEETS_GID_MESES + '&single=true&output=csv';
+    const url = 'https://docs.google.com/spreadsheets/d/' + GSHEETS_ID_JACOBINA + '/export?format=csv&gid=' + GSHEETS_GID_MESES;
     console.log('[GSHEETS] Carregando aba _meses:', url);
     const csv = await fetchCSV(url);
     const linhas = csv.trim().split('\n').map(l => l.split(',').map(c => c.trim().replace(/^"|"$/g,'')));
@@ -414,10 +415,10 @@ function gsheetsGetURL(utd) {
     const recente = GSHEETS_MESES[GSHEETS_MESES.length - 1];
     const gid = utd === 'JACOBINA' ? recente.gidJacobina : recente.gidIrece;
     console.warn('[GSHEETS] Mês ' + mes + '/' + ano + ' não cadastrado, usando fallback');
-    return GSHEETS_BASE[utd] + gid + '&single=true&output=csv';
+    return GSHEETS_BASE[utd] + gid;
   }
   const gid = utd === 'JACOBINA' ? entrada.gidJacobina : entrada.gidIrece;
-  return GSHEETS_BASE[utd] + gid + '&single=true&output=csv';
+  return GSHEETS_BASE[utd] + gid;
 }
 
 // Inicia carregamento dinâmico dos meses (não bloqueia)
@@ -430,26 +431,45 @@ const GSHEETS = {
 };
 // URLs do Sheets resolvidas — atualizadas após gsheetsCarregarMeses()
 
-// fetchCSV: busca CSV do Google Sheets com fallback para proxy CORS se o fetch direto falhar
+// fetchCSV: busca CSV do Google Sheets com múltiplos proxies de fallback
 async function fetchCSV(url) {
-  // Tentativa 1: fetch direto (funciona quando não há bloqueio de CORS/redirect)
+  // Tentativa 1: fetch direto
   try {
     const r = await fetch(url, { redirect: 'follow' });
     if (r.ok) {
       const text = await r.text();
-      if (text && text.trim().length > 10) return text;
+      if (text && text.trim().length > 10) { console.log('[fetchCSV] Direto OK'); return text; }
     }
-    console.warn('[fetchCSV] Fetch direto falhou (' + r.status + '), tentando proxy...');
+    console.warn('[fetchCSV] Direto falhou (' + r.status + '), tentando proxies...');
   } catch(e) {
-    console.warn('[fetchCSV] Fetch direto erro:', e.message, '— tentando proxy...');
+    console.warn('[fetchCSV] Direto erro:', e.message, '— tentando proxies...');
   }
-  // Tentativa 2: proxy allorigins (contorna CORS/redirect do Google)
-  const proxyUrl = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(url);
-  const r2 = await fetch(proxyUrl);
-  if (!r2.ok) throw new Error('Proxy também falhou: HTTP ' + r2.status);
-  const proxyText = await r2.text();
-  console.log('[fetchCSV] Proxy OK, bytes:', proxyText.length);
-  return proxyText;
+  // Proxies em ordem de preferência
+  const proxies = [
+    u => 'https://corsproxy.io/?' + encodeURIComponent(u),
+    u => 'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(u),
+    u => 'https://api.allorigins.win/raw?url=' + encodeURIComponent(u),
+  ];
+  for (let i = 0; i < proxies.length; i++) {
+    try {
+      const proxyUrl = proxies[i](url);
+      const ctrl = new AbortController();
+      const tid = setTimeout(() => ctrl.abort(), 8000); // 8s timeout por proxy
+      const r2 = await fetch(proxyUrl, { signal: ctrl.signal });
+      clearTimeout(tid);
+      if (r2.ok) {
+        const text = await r2.text();
+        if (text && text.trim().length > 10) {
+          console.log('[fetchCSV] Proxy ' + (i+1) + ' OK, bytes:', text.length);
+          return text;
+        }
+      }
+      console.warn('[fetchCSV] Proxy ' + (i+1) + ' falhou: HTTP ' + r2.status);
+    } catch(e2) {
+      console.warn('[fetchCSV] Proxy ' + (i+1) + ' erro:', e2.message);
+    }
+  }
+  throw new Error('[fetchCSV] Todos os proxies falharam para: ' + url);
 }
 
 function todayDate() { const d=new Date(); const p=n=>String(n).padStart(2,'0'); return p(d.getDate())+'/'+p(d.getMonth()+1)+'/'+d.getFullYear(); }
@@ -2418,18 +2438,18 @@ const data = await res.json();
 if (Array.isArray(data) && data.length && Array.isArray(data[0].value)) {
 compHistorico = data[0].value;
 compHistoricoRender();
-compDailyAutoSync();
-return;
 }
 }
 } catch(e) {}
+if (!Array.isArray(compHistorico) || !compHistorico.length) {
 try {
 const v = localStorage.getItem('mariua_comp_historico');
 if (v) compHistorico = JSON.parse(v);
 if (!Array.isArray(compHistorico)) compHistorico = [];
 } catch(e) { compHistorico = []; }
 compHistoricoRender();
-if (!_compDailyAutoSyncRunning) compDailyAutoSync();
+}
+compDailyAutoSync();
 }
 async function compHistoricoSave() {
 if (compHistorico.length > 60) compHistorico = compHistorico.slice(-60);
@@ -2442,17 +2462,24 @@ body: JSON.stringify({ key: 'comp_historico', value: compHistorico, updated_at: 
 });
 } catch(e) {}
 }
-let _compDailyAutoSyncRunning = false;
 async function compDailyAutoSync() {
 const now = new Date(), pad = n => String(n).padStart(2,'0');
 const hoje = pad(now.getDate())+'/'+pad(now.getMonth()+1)+'/'+now.getFullYear();
+// Mutex via localStorage: evita execução múltipla mesmo entre chamadas assíncronas
+const lockKey = 'mariua_autosync_lock';
+const lockVal = localStorage.getItem(lockKey);
+if (lockVal === hoje) { console.log('[Mariuá] AutoSync já executado hoje (' + hoje + '), pulando.'); return; }
 const jaTemHoje = compHistorico.some(s => s.dia===hoje);
-if (jaTemHoje) { console.log('[Mariuá] Já sincronizado hoje (' + hoje + '), pulando.'); return; }
-if (_compDailyAutoSyncRunning) { console.log('[Mariuá] AutoSync já em andamento, ignorando.'); return; }
-_compDailyAutoSyncRunning = true;
+if (jaTemHoje) { localStorage.setItem(lockKey, hoje); console.log('[Mariuá] Histórico já tem ' + hoje + ', pulando.'); return; }
+// Seta o lock IMEDIATAMENTE (síncrono) antes de qualquer await
+localStorage.setItem(lockKey, hoje);
 await new Promise(r => setTimeout(r, 3000));
 console.log('[Mariuá] Sincronização diária automática — ' + hoje);
-try { await compAutoSincronizar(); } finally { _compDailyAutoSyncRunning = false; }
+try { await compAutoSincronizar(); } catch(e) {
+  // Se falhou, remove o lock para permitir nova tentativa ao recarregar
+  localStorage.removeItem(lockKey);
+  console.warn('[Mariuá] AutoSync falhou, lock removido:', e.message);
+}
 }
 function compHistoricoAddSnapshot(data) {
 if (!data || !data.length) return;
