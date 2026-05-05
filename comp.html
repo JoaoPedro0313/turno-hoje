@@ -2316,9 +2316,7 @@ s.src = 'https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js
 s.onload = res; s.onerror = rej; document.head.appendChild(s);
 });
 }
-const resJac = await fetchCSV(GSHEETS.JACOBINA).then(t=>({ok:true,text:()=>Promise.resolve(t)})).catch(e=>({ok:false,status:e.message}));
-if (!resJac.ok) throw new Error('Falha ao buscar planilha (HTTP ' + resJac.status + ')');
-const textJac = await resJac.text();
+const textJac = await fetchCSV(GSHEETS.JACOBINA);
 const textIrc = '';
 const dataJac = compParseCSVText(textJac, 'JACOBINA');
 const dataIrc = [];
@@ -3360,9 +3358,7 @@ setBtn('<span class="spinning-icon">&#8635;</span> Sincronizando...', true);
 setDbStatus('syncing', 'Buscando planilhas...');
 compWithPapa(async () => {
 try {
-const resJac = await fetchCSV(GSHEETS.JACOBINA).then(t=>({ok:true,text:()=>Promise.resolve(t)})).catch(e=>({ok:false,status:e.message}));
-if (!resJac.ok) throw new Error('Erro HTTP ' + resJac.status + ' ao buscar Jacobina');
-const textJac = await resJac.text();
+const textJac = await fetchCSV(GSHEETS.JACOBINA);
 const dataJac = compParseCSVText(textJac, 'JACOBINA');
 const dataIrc = [];
 if (!dataJac || !dataJac.length) throw new Error('Planilha de Jacobina não reconhecida. Verifique se o compartilhamento está como "Qualquer pessoa com o link".');
