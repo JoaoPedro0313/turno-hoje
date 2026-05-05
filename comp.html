@@ -388,6 +388,25 @@ function esc(s) {
 // ▼▼▼ COLE AQUI A URL DO APPS SCRIPT (ex: https://script.google.com/macros/s/AKfy.../exec)
 const GSHEETS_GAS_URL = 'https://script.google.com/macros/s/AKfycbwxhW7yvre0CM1q0UTfQVt2RAwudsfet4yuGub9g8KBqXmOzD_MTi6lo643D7omOy5W_g/exec';
 // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
+// IMPORTANTE: Atualize o Apps Script para suportar busca por nome de aba:
+//
+//   function doGet(e) {
+//     const ss = SpreadsheetApp.getActiveSpreadsheet();
+//     const gid = e.parameter.gid;
+//     const sheetName = e.parameter.sheet;
+//     let sheet;
+//     if (sheetName) {
+//       sheet = ss.getSheetByName(sheetName);
+//     } else if (gid) {
+//       sheet = ss.getSheets().find(s => String(s.getSheetId()) === gid) || ss.getActiveSheet();
+//     } else {
+//       sheet = ss.getActiveSheet();
+//     }
+//     if (!sheet) return ContentService.createTextOutput('Aba não encontrada').setMimeType(ContentService.MimeType.TEXT);
+//     const csv = sheet.getDataRange().getValues()
+//       .map(r => r.map(c => '"' + String(c).replace(/"/g, '""') + '"').join(',')).join('\n');
+//     return ContentService.createTextOutput(csv).setMimeType(ContentService.MimeType.CSV);
+//   }
 
 const GSHEETS_ID_JACOBINA = '1lbO_ZeQuvnhOlLYl88KY9H6cu_JDBDiIEQrbwAuA4-s';
 const GSHEETS_GID_MESES   = '0';
@@ -400,18 +419,18 @@ let GSHEETS_MESES = [
   { ano: 2026, mes: 5,  gidJacobina: 1209313517, gidIrece: 663282613  }
 ];
 
-// Retorna URL para buscar o CSV de um GID específico
-function gsheetsGetURL(utd, gid) {
+// Retorna URL para buscar o CSV de uma aba pelo GID ou pelo nome
+function gsheetsGetURL(utd, gid, sheetName) {
   if (GSHEETS_GAS_URL) {
-    return GSHEETS_GAS_URL + '?gid=' + gid; // Via Apps Script: sem redirect, sem CORS
+    if (sheetName) return GSHEETS_GAS_URL + '?sheet=' + encodeURIComponent(sheetName);
+    return GSHEETS_GAS_URL + '?gid=' + gid;
   }
-  // Fallback /pub — pode falhar por redirect do Google em alguns ambientes
   return 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTIk40eMD79JaGtzkt5oaX-X63lqPny8h7S4VfYUrpzkvC3MzJIlicGjPjslHMwRJEcaR9M7Bad-KNJ/pub?gid=' + gid + '&single=true&output=csv';
 }
 
 async function gsheetsCarregarMeses() {
   try {
-    const url = gsheetsGetURL('JACOBINA', GSHEETS_GID_MESES);
+    const url = gsheetsGetURL('JACOBINA', GSHEETS_GID_MESES, '_meses');
     console.log('[GSHEETS] Carregando aba _meses:', url);
     const csv = await fetchCSV(url);
     const linhas = csv.trim().split('\n').map(l => l.split(',').map(c => c.trim().replace(/^"|"$/g,'')));
