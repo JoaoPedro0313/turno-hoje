@@ -578,7 +578,9 @@ const GSHEETS_BASE = {
 let GSHEETS_MESES = [
   { ano: 2026, mes: 1,  gidJacobina: 310661297,  gidIrece: 1816810936 },
   { ano: 2026, mes: 2,  gidJacobina: 1111886256, gidIrece: 420931092  },
-  { ano: 2026, mes: 3,  gidJacobina: 624598081,  gidIrece: 534264140  }
+  { ano: 2026, mes: 3,  gidJacobina: 624598081,  gidIrece: 534264140  },
+  { ano: 2026, mes: 4,  gidJacobina: 257935593,  gidIrece: 1837597274 },
+  { ano: 2026, mes: 5,  gidJacobina: 1209313517, gidIrece: 663282613  }
 ];
 // Carrega meses extras: primeiro do localStorage (imediato), depois sincroniza com Supabase
 (function() {
@@ -3708,7 +3710,9 @@ function mapaMMRenderLista() {
   const fixos = [
     { ano: 2026, mes: 1,  gidJacobina: 310661297,  gidIrece: 1816810936 },
     { ano: 2026, mes: 2,  gidJacobina: 1111886256, gidIrece: 420931092  },
-    { ano: 2026, mes: 3,  gidJacobina: 624598081,  gidIrece: 534264140  }
+    { ano: 2026, mes: 3,  gidJacobina: 624598081,  gidIrece: 534264140  },
+    { ano: 2026, mes: 4,  gidJacobina: 257935593,  gidIrece: 1837597274 },
+    { ano: 2026, mes: 5,  gidJacobina: 1209313517, gidIrece: 663282613  }
   ];
   // Usa GSHEETS_MESES como fonte de verdade (já sincronizado com Supabase)
   lista.innerHTML = '';
@@ -3730,7 +3734,7 @@ function mapaMMRenderLista() {
   if (!GSHEETS_MESES.length) lista.innerHTML = '<div style="text-align:center;color:#aaa;font-size:0.82rem;padding:16px;">Nenhum mês cadastrado.</div>';
 }
 function mapaMMRemover(ano, mes) {
-  const fixos = [{ano:2026,mes:1},{ano:2026,mes:2},{ano:2026,mes:3}];
+  const fixos = [{ano:2026,mes:1},{ano:2026,mes:2},{ano:2026,mes:3},{ano:2026,mes:4},{ano:2026,mes:5}];
   // Remove do Supabase PRIMEIRO — fonte de verdade
   (async function() {
     try {
@@ -3782,7 +3786,7 @@ function mapaMMSalvar() {
   }
   erro.style.display = 'none';
   const nova = { ano, mes, gidJacobina: gJac, gidIrece: gIrc };
-  const fixos = [{ano:2026,mes:1},{ano:2026,mes:2},{ano:2026,mes:3}];
+  const fixos = [{ano:2026,mes:1},{ano:2026,mes:2},{ano:2026,mes:3},{ano:2026,mes:4},{ano:2026,mes:5}];
   // Desabilita botão e mostra progresso
   const btn = document.querySelector('#modal-meses-overlay button[onclick="mapaMMSalvar()"]');
   if (btn) { btn.disabled = true; btn.textContent = '⏳ Salvando no banco...'; }
