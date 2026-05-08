@@ -7,9 +7,10 @@
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <script>
-// Auto-atualização: verifica se há nova versão no GitHub a cada 5 minutos
+// Auto-atualização: DESATIVADA — reload automático removido para evitar reset do mapa
+// (verificação de versão mantida apenas para log, sem reload)
 (function() {
-  var CHECK_INTERVAL = 5 * 60 * 1000; // 5 minutos
+  var CHECK_INTERVAL = 5 * 60 * 1000;
   var SELF_URL = location.href.split('?')[0].split('#')[0];
   var VERSION_KEY = 'mariua_html_etag';
 
@@ -19,25 +20,24 @@
         var etag = r.headers.get('etag') || r.headers.get('last-modified') || '';
         if (!etag) return;
         var stored = localStorage.getItem(VERSION_KEY);
-        if (stored && stored !== etag) {
+        if (!stored) {
           localStorage.setItem(VERSION_KEY, etag);
-          // Nova versão detectada — recarrega silenciosamente
-          location.reload(true);
-        } else if (!stored) {
+        } else if (stored !== etag) {
           localStorage.setItem(VERSION_KEY, etag);
+          // RELOAD REMOVIDO — era a causa do reset automático do mapa
+          // location.reload(true);
+          console.log('[Auto-update] Nova versão detectada, mas reload automático está desativado.');
         }
       })
       .catch(function() {});
   }
 
-  // Primeira verificação após 10s (página já carregou)
   setTimeout(checkVersion, 10000);
-  // Verifica a cada 5 minutos
   setInterval(checkVersion, CHECK_INTERVAL);
-  // Verifica ao voltar para a aba
-  document.addEventListener('visibilitychange', function() {
-    if (!document.hidden) setTimeout(checkVersion, 1500);
-  });
+  // Verificação ao voltar para a aba também desativada para evitar resets
+  // document.addEventListener('visibilitychange', function() {
+  //   if (!document.hidden) setTimeout(checkVersion, 1500);
+  // });
 })();
 </script>
 <!-- SEGURANÇA: Content Security Policy — limita fontes de scripts, estilos e conexões -->
@@ -627,7 +627,7 @@ async function mapaMMCarregarSupabase() {
 window.mapaMMCarregarSupabase = mapaMMCarregarSupabase;
 window.addEventListener('load', function() {
   setTimeout(mapaMMCarregarSupabase, 2000);
-  setInterval(mapaMMCarregarSupabase, 10000);
+  setInterval(mapaMMCarregarSupabase, 60000); // Aumentado de 10s para 60s para evitar resets frequentes
 });
 function gsheetsGetURL(utd) {
   const now = new Date();
