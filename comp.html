@@ -2421,8 +2421,7 @@ cavaAnt,cavaAt,cavaDiff, pRealAnt,pRealAt,pRealDiff, pImpAnt,pImpAt,pImpDiff, pP
 const cr = document.getElementById('comp-results');
 if (!cr) return;
 document.getElementById('comp-stat-total').textContent      = compAllChanges.length;
-document.getElementById('comp-stat-cava-inc').textContent   = compAllChanges.filter(r=>r.cavaDiff>0).length;
-document.getElementById('comp-stat-cava-dec').textContent   = compAllChanges.filter(r=>r.cavaDiff<0).length;
+
 document.getElementById('comp-stat-postes-inc').textContent = compAllChanges.filter(r=>r.pRealDiff>0).length;
 document.getElementById('comp-stat-postes-dec').textContent = compAllChanges.filter(r=>r.pRealDiff<0).length;
 cr.style.display = 'block';
@@ -6350,8 +6349,7 @@ cavaAnt,cavaAt,cavaDiff, pRealAnt,pRealAt,pRealDiff, pImpAnt,pImpAt,pImpDiff, pP
 const cr = document.getElementById('comp-results');
 if (!cr) return;
 document.getElementById('comp-stat-total').textContent      = compAllChanges.length;
-document.getElementById('comp-stat-cava-inc').textContent   = compAllChanges.filter(r=>r.cavaDiff>0).length;
-document.getElementById('comp-stat-cava-dec').textContent   = compAllChanges.filter(r=>r.cavaDiff<0).length;
+
 document.getElementById('comp-stat-postes-inc').textContent = compAllChanges.filter(r=>r.pRealDiff>0).length;
 document.getElementById('comp-stat-postes-dec').textContent = compAllChanges.filter(r=>r.pRealDiff<0).length;
 cr.style.display = 'block';
