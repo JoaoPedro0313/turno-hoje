@@ -250,6 +250,12 @@ window.presenceOpenModal = function() { if(window._presenceOpenModal) window._pr
             <div class="sidebar-label">APR CSV</div>
           </div>
         </button>
+        <button class="sidebar-item" id="tab-pstr-btn" onclick="if(window.switchTab)window.switchTab('pstr')">
+          <div class="sidebar-icon">&#128268;</div>
+          <div>
+            <div class="sidebar-label">PSTR CSV</div>
+          </div>
+        </button>
       </div>
 
       <div class="modal-content">
@@ -347,6 +353,24 @@ window.presenceOpenModal = function() { if(window._presenceOpenModal) window._pr
           </div>
           <input type="file" id="apr-csv-file" accept=".csv" style="display:none" onchange="handleAprCSV(this.files[0])">
           <div class="msg" id="apr-import-msg"></div>
+        </div>
+
+        <div id="tab-pstr" style="display:none">
+          <div class="section-title">&#128268; Importar CSV de Postes Realizados (PSTR)</div>
+          <div class="drop-zone" id="pstr-drop-zone" onclick="document.getElementById('pstr-csv-file').click()"
+            ondragover="event.preventDefault();this.classList.add('dragover')"
+            ondragleave="this.classList.remove('dragover')"
+            ondrop="event.preventDefault();this.classList.remove('dragover');handlePstrCSV(event.dataTransfer.files[0])">
+            <span class="drop-zone-icon">&#128268;</span>
+            <div class="drop-zone-text" id="lbl-pstr">Clique ou arraste o CSV de PSTR aqui</div>
+            <div class="drop-zone-sub">Colunas obrigatórias: PROCESSO e PSTR · sep. ponto-e-vírgula</div>
+          </div>
+          <input type="file" id="pstr-csv-file" accept=".csv" style="display:none" onchange="handlePstrCSV(this.files[0])">
+          <div id="pstr-summary" class="prod-summary" style="display:none">
+            <div class="prod-summary-title">&#128268; Resumo da Importação PSTR</div>
+            <div class="prod-summary-stats" id="pstr-summary-stats"></div>
+          </div>
+          <div class="msg" id="pstr-import-msg"></div>
         </div>
 
       </div>
@@ -1051,7 +1075,7 @@ document.getElementById('opt-falta').className ='radio-opt'+(s==='falta' ?' sel-
 document.getElementById('obs-group').style.display=s==='justif'?'block':'none';
 }
 function switchTab(tab) {
-['add','manage','import','prod','apr'].forEach(t=>{
+['add','manage','import','prod','apr','pstr'].forEach(t=>{
 document.getElementById('tab-'+t).style.display=t===tab?'block':'none';
 document.getElementById('tab-'+t+'-btn').className='sidebar-item'+(t===tab?' active':'');
 });
@@ -1375,6 +1399,125 @@ await dbSaveApr();
 };
 r.readAsText(file, 'utf-8');
 }
+
+// === IMPORTA��O PSTR (Postes Realizados via CSV do sistema) ==================
+function showPstrMsg(text, type) {
+  const el = document.getElementById('pstr-import-msg');
+  if (!el) return;
+  el.textContent = text; el.className = 'msg ' + type;
+  clearTimeout(el._t); el._t = setTimeout(() => el.className = 'msg', 7000);
+}
+
+async function handlePstrCSV(file) {
+  if (!file) return;
+
+  async function lerTexto(f, enc) {
+    return new Promise((res, rej) => {
+      const rd = new FileReader();
+      rd.onload = e => res(e.target.result);
+      rd.onerror = rej;
+      rd.readAsText(f, enc);
+    });
+  }
+
+  try {
+    let text = await lerTexto(file, 'utf-8');
+    if (text.includes('\uFFFD')) text = await lerTexto(file, 'latin-1');
+    text = text.replace(/^\uFEFF/, '');
+
+    const lines = text.split(/\r?\n/).filter(l => l.trim());
+    if (lines.length < 2) { showPstrMsg('Arquivo vazio ou sem dados.', 'error'); return; }
+
+    const sep = lines[0].includes(';') ? ';' : ',';
+    const headers = lines[0].split(sep).map(h => h.trim().replace(/^"|"$/g, '').toUpperCase());
+
+    const iProcesso = headers.findIndex(h => h === 'PROCESSO');
+    const iPSTR     = headers.findIndex(h => h === 'PSTR');
+
+    if (iProcesso < 0) { showPstrMsg('\u274c Coluna "PROCESSO" n\u00e3o encontrada no CSV.', 'error'); return; }
+    if (iPSTR < 0)     { showPstrMsg('\u274c Coluna "PSTR" n\u00e3o encontrada no CSV.', 'error'); return; }
+
+    const mapaPstr = {};
+    let linhasLidas = 0;
+    for (let i = 1; i < lines.length; i++) {
+      const cols = lines[i].split(sep).map(c => c.trim().replace(/^"|"$/g, ''));
+      const proc = (cols[iProcesso] || '').trim();
+      const pstr = (cols[iPSTR]     || '').trim();
+      if (!proc) continue;
+      mapaPstr[proc] = pstr;
+      linhasLidas++;
+    }
+
+    if (linhasLidas === 0) { showPstrMsg('Nenhuma linha v\u00e1lida encontrada.', 'error'); return; }
+
+    if (!bancoDB || bancoDB.length === 0) {
+      showPstrMsg('\u26a0\ufe0f Banco de obras n\u00e3o carregado. Sincronize pelo Comparador primeiro.', 'error');
+      return;
+    }
+
+    let atualizadas = 0, naoEncontradas = 0;
+    const bancoAtualizado = bancoDB.map(obra => {
+      const pep = obra['PEP OBRA'] || '';
+      if (Object.prototype.hasOwnProperty.call(mapaPstr, pep)) {
+        const novoVal = mapaPstr[pep];
+        const nova = Object.assign({}, obra);
+        nova['POSTES REALIZADO']   = novoVal;
+        nova['POSTES  REALIZADO']  = novoVal;
+        atualizadas++;
+        return nova;
+      }
+      return obra;
+    });
+
+    naoEncontradas = linhasLidas - atualizadas;
+    bancoDB = bancoAtualizado;
+
+    document.getElementById('pstr-summary').style.display = 'block';
+    document.getElementById('pstr-summary-stats').innerHTML =
+      '<div><span class="prod-stat-val">' + linhasLidas + '</span><span class="prod-stat-lbl">Obras no CSV</span></div>' +
+      '<div><span class="prod-stat-val" style="color:#0d7377">' + atualizadas + '</span><span class="prod-stat-lbl">Atualizadas</span></div>' +
+      '<div><span class="prod-stat-val" style="color:#888">' + naoEncontradas + '</span><span class="prod-stat-lbl">N\u00e3o encontradas</span></div>';
+
+    document.getElementById('lbl-pstr').textContent = '\u2705 ' + atualizadas + ' obras com PSTR atualizadas';
+    showPstrMsg('\u2705 ' + atualizadas + ' obras atualizadas! Salvando no banco...', 'success');
+
+    try {
+      setDbStatus('syncing', 'Salvando PSTR\u2026');
+      const now = new Date(), pad = n => String(n).padStart(2, '0');
+      const updatedAt = pad(now.getDate()) + '/' + pad(now.getMonth()+1) + '/' + now.getFullYear() +
+                        ' \u00e0s ' + pad(now.getHours()) + ':' + pad(now.getMinutes());
+      const info = bancoDBInfo
+        ? Object.assign({}, bancoDBInfo, { updatedAt: updatedAt, pstrAt: updatedAt })
+        : { count: bancoDB.length, updatedAt: updatedAt };
+      bancoDBInfo = info;
+      const mergedMin = compMinimizarDados(bancoAtualizado);
+      const payload = { data: mergedMin, info: info };
+      lsSet('obras_base', payload);
+      compUpdateBaseUI();
+      const res = await fetch(SUPA_URL + '/rest/v1/turno_data', {
+        method: 'POST',
+        headers: Object.assign({}, SUPA_HEADERS, { 'Prefer': 'resolution=merge-duplicates' }),
+        body: JSON.stringify({ key: 'obras_base', value: payload, updated_at: now.toISOString() })
+      });
+      if (!res.ok) {
+        const errBody = await res.text().catch(() => '');
+        throw new Error('HTTP ' + res.status + ': ' + errBody.substring(0, 150));
+      }
+      setDbStatus('online', '\u2705 PSTR salvo! ' + atualizadas + ' obras');
+      setTimeout(() => setDbStatus('online', 'Banco online'), 3000);
+      showPstrMsg('\u2705 ' + atualizadas + ' obras salvas no banco com sucesso!', 'success');
+    } catch(saveErr) {
+      console.warn('[PSTR] Supabase falhou, salvo s\u00f3 local:', saveErr.message);
+      setDbStatus('local', 'PSTR salvo local');
+      showPstrMsg('\u26a0\ufe0f ' + atualizadas + ' obras atualizadas localmente (Supabase falhou).', 'error');
+    }
+
+  } catch(err) {
+    showPstrMsg('\u274c Erro ao ler arquivo: ' + err.message, 'error');
+  }
+}
+// =============================================================================
+
 let aprBaseFilter = 'TODAS';
 let aprTipoFilter = 'TODOS';
 function setAprTipo(tipo, btn) {
@@ -4950,7 +5093,7 @@ document.getElementById('opt-falta').className ='radio-opt'+(s==='falta' ?' sel-
 document.getElementById('obs-group').style.display=s==='justif'?'block':'none';
 }
 function switchTab(tab) {
-['add','manage','import','prod','apr'].forEach(t=>{
+['add','manage','import','prod','apr','pstr'].forEach(t=>{
 document.getElementById('tab-'+t).style.display=t===tab?'block':'none';
 document.getElementById('tab-'+t+'-btn').className='sidebar-item'+(t===tab?' active':'');
 });
