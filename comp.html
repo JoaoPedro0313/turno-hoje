@@ -193,6 +193,8 @@ window.presenceOpenModal = function() { if(window._presenceOpenModal) window._pr
 <div class="bottom-bar" id="bottom-bar">
   <button class="btn-print"  onclick="if(window.tirarPrint)window.tirarPrint()">&#128248; SALVAR PRINT</button>
   <button class="btn-refresh" id="btn-refresh" onclick="if(window.atualizarRelatorio)window.atualizarRelatorio()">&#8635; ATUALIZAR</button>
+  <button class="fab" style="background:#276749;" onclick="document.getElementById('pstr-csv-file-direto').click()" title="Importar CSV de Postes Realizados (PSTR)">&#128268; PSTR</button>
+  <input type="file" id="pstr-csv-file-direto" accept=".csv" style="display:none" onchange="if(window.handlePstrCSV)window.handlePstrCSV(this.files[0]);this.value=''">
   <button class="fab"        onclick="if(window.openAdmModal)window.openAdmModal()">&#9881; GERENCIAR</button>
 </div>
 
