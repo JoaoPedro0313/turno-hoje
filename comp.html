@@ -171,6 +171,12 @@ window.presenceOpenModal = function() { if(window._presenceOpenModal) window._pr
           <button class="filter-btn" onclick="compSetFilter('implantados', this)">Postes à Implantar</button>
           <input class="comp-search" type="text" id="comp-search" placeholder="🔍 Buscar por obra, PEP..." oninput="compRenderTable()">
         </div>
+        <div class="toolbar" style="border-top:none;padding-top:0;">
+          <label>&#128205; BASE:</label>
+          <button class="filter-btn active" id="comp-base-btn-TODAS"   onclick="compSetBase('TODAS',this)">Todas</button>
+          <button class="filter-btn"        id="comp-base-btn-JACOBINA" onclick="compSetBase('JACOBINA',this)" style="border-color:#c05621;color:#c05621;">📍 Jacobina</button>
+          <button class="filter-btn"        id="comp-base-btn-IRECÊ"    onclick="compSetBase('IRECÊ',this)"    style="border-color:#2b6cb0;color:#2b6cb0;">📍 Irecê</button>
+        </div>
         <div class="toolbar" id="comp-mes-toolbar" style="border-top:none;padding-top:0;display:none;">
           <label style="color:#6b46c1;">&#128197; MÊS:</label>
           <div id="comp-mes-bar" style="display:flex;gap:6px;flex-wrap:wrap;"></div>
@@ -1829,6 +1835,7 @@ window.sincronizarSheets = typeof sincronizarSheets === 'function' ? sincronizar
 // ── CORREÇÃO: expor funções do comparador ao window (estavam inacessíveis pelo HTML) ──
 window.compCompareComSheets = compCompareComSheets;
 window.compManualSync       = compManualSync;
+window.compSetBase          = compSetBase;
 window.compSetFilter        = compSetFilter;
 window.compRenderTable      = compRenderTable;
 window.compLimparHistorico  = compLimparHistorico;
@@ -2257,7 +2264,7 @@ if (obj['PEP OBRA']) data.push(obj);
 }
 return data;
 }
-let compDataAtual = null, compAllChanges = [], compActiveFilter = 'todos';
+let compDataAtual = null, compAllChanges = [], compActiveFilter = 'todos', compBaseFilter = 'TODAS';
 let compBancoTemp = { 'IRECÊ': null, 'JACOBINA': null };
 function compUpdateBaseUI() {
 const el = document.getElementById('comp-base-info');
@@ -2440,6 +2447,20 @@ compExecutarComparacao(bancoDB, compDataAtual);
 compDataAtual = null;
 }
 function compHandleFileAtual() {  }
+function compSetBase(base, btn) {
+compBaseFilter = base;
+document.querySelectorAll('[id^="comp-base-btn-"]').forEach(b => {
+  b.classList.remove('active');
+  b.style.background=''; b.style.color=''; b.style.borderColor='';
+  if (b.id==='comp-base-btn-JACOBINA') { b.style.color='#c05621'; b.style.borderColor='#c05621'; }
+  if (b.id==='comp-base-btn-IRECÊ')    { b.style.color='#2b6cb0'; b.style.borderColor='#2b6cb0'; }
+});
+if (btn) {
+  btn.classList.add('active');
+  btn.style.color=''; btn.style.borderColor='';
+}
+compRenderTable();
+}
 function compSetFilter(f, btn) {
 compActiveFilter = f;
 document.querySelectorAll('#page-comp .filter-btn').forEach(b => b.classList.remove('active'));
@@ -2460,6 +2481,7 @@ if (compActiveFilter==='cava'&&r.cavaDiff===0) return false;
 if (compActiveFilter==='postes'&&r.pRealDiff===0) return false;
 if (compActiveFilter==='implantados'&&r.pImpDiff===0) return false;
 if (compMesFiltro!=='TODOS' && r.mes!==compMesFiltro) return false;
+if (compBaseFilter!=='TODAS' && (r.utd||'').toUpperCase()!==compBaseFilter) return false;
 return true;
 });
 const cl = document.getElementById('comp-count-label');
@@ -5730,6 +5752,7 @@ window.sincronizarSheets = typeof sincronizarSheets === 'function' ? sincronizar
 // ── CORREÇÃO: expor funções do comparador ao window (estavam inacessíveis pelo HTML) ──
 window.compCompareComSheets = compCompareComSheets;
 window.compManualSync       = compManualSync;
+window.compSetBase          = compSetBase;
 window.compSetFilter        = compSetFilter;
 window.compRenderTable      = compRenderTable;
 window.compLimparHistorico  = compLimparHistorico;
@@ -6158,7 +6181,7 @@ if (obj['PEP OBRA']) data.push(obj);
 }
 return data;
 }
-let compDataAtual = null, compAllChanges = [], compActiveFilter = 'todos';
+let compDataAtual = null, compAllChanges = [], compActiveFilter = 'todos', compBaseFilter = 'TODAS';
 let compBancoTemp = { 'IRECÊ': null, 'JACOBINA': null };
 function compUpdateBaseUI() {
 const el = document.getElementById('comp-base-info');
@@ -6361,6 +6384,7 @@ if (compActiveFilter==='cava'&&r.cavaDiff===0) return false;
 if (compActiveFilter==='postes'&&r.pRealDiff===0) return false;
 if (compActiveFilter==='implantados'&&r.pImpDiff===0) return false;
 if (compMesFiltro!=='TODOS' && r.mes!==compMesFiltro) return false;
+if (compBaseFilter!=='TODAS' && (r.utd||'').toUpperCase()!==compBaseFilter) return false;
 return true;
 });
 const cl = document.getElementById('comp-count-label');
