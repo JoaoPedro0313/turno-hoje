@@ -398,10 +398,10 @@ function esc(s) {
 
 // URLs diretas das planilhas — junho 2026
 // Jacobina: planilha 142gvn8pNgJGTGDkidCfuOWMHJ2OCKpJd_FQU8zeo0x8, gid 1209313517
-// Irecê:    planilha 14ImbZb8-OCBp78jDtd0QFkSLrMG5vXA7tzrM-x6KQVo,  gid 1842405101
+// Irecê:    planilha 14ImbZb8-OCBp78jDtd0QFkSLrMG5vXA7tzrM-x6KQVo,  gid 663282613
 const GSHEETS = {
   JACOBINA: 'https://docs.google.com/spreadsheets/d/142gvn8pNgJGTGDkidCfuOWMHJ2OCKpJd_FQU8zeo0x8/export?format=csv&gid=1209313517',
-  IRECE:    'https://docs.google.com/spreadsheets/d/14ImbZb8-OCBp78jDtd0QFkSLrMG5vXA7tzrM-x6KQVo/export?format=csv&gid=1842405101'
+  IRECE:    'https://docs.google.com/spreadsheets/d/14ImbZb8-OCBp78jDtd0QFkSLrMG5vXA7tzrM-x6KQVo/export?format=csv&gid=663282613'
 };
 // URLs do Sheets resolvidas — atualizadas após gsheetsCarregarMeses()
 function todayDate() { const d=new Date(); const p=n=>String(n).padStart(2,'0'); return p(d.getDate())+'/'+p(d.getMonth()+1)+'/'+d.getFullYear(); }
@@ -2356,11 +2356,11 @@ s.onload = res; s.onerror = rej; document.head.appendChild(s);
 const resJac = await fetch(GSHEETS.JACOBINA);
 if (!resJac.ok) throw new Error('Falha ao buscar planilha (HTTP ' + resJac.status + ')');
 const textJac = await resJac.text();
-const textIrc = '';
+const resIrc = await fetch(GSHEETS.IRECE); const textIrc = resIrc.ok ? await resIrc.text() : '';
 const dataJac = compParseCSVText(textJac, 'JACOBINA');
-const dataIrc = [];
+const dataIrc = textIrc ? (compParseCSVText(textIrc, 'IRECÊ')||[]) : [];
 if (!dataJac || !dataJac.length) throw new Error('Planilha JACOBINA não retornou dados válidos');
-// Irecê desativado — usando apenas Jacobina
+
 const dataAtual = [...dataJac, ...dataIrc];
 const now = new Date(), pad = n => String(n).padStart(2,'0');
 const horaAtual = pad(now.getDate())+'/'+pad(now.getMonth()+1)+'/'+now.getFullYear()+' '+pad(now.getHours())+':'+pad(now.getMinutes());
@@ -2732,9 +2732,9 @@ try {
 const resJac = await fetch(GSHEETS.JACOBINA);
 if (!resJac.ok) return;
 const textJac = await resJac.text();
-const textIrc = '';
+const resIrc = await fetch(GSHEETS.IRECE); const textIrc = resIrc.ok ? await resIrc.text() : '';
 const dataJac = compParseCSVText(textJac, 'JACOBINA');
-const dataIrc = [];
+const dataIrc = textIrc ? (compParseCSVText(textIrc, 'IRECÊ')||[]) : [];
 if (!dataJac || !dataJac.length) return;
 const merged = [...dataJac, ...dataIrc];
 const now = new Date(), pad = n => String(n).padStart(2,'0');
@@ -3389,10 +3389,12 @@ try {
 const resJac = await fetch(GSHEETS.JACOBINA);
 if (!resJac.ok) throw new Error('Erro HTTP ' + resJac.status + ' ao buscar Jacobina');
 const textJac = await resJac.text();
+const resIrc = await fetch(GSHEETS.IRECE);
+const textIrc = resIrc.ok ? await resIrc.text() : '';
 const dataJac = compParseCSVText(textJac, 'JACOBINA');
-const dataIrc = [];
+const dataIrc = textIrc ? (compParseCSVText(textIrc, 'IRECÊ')||[]) : [];
 if (!dataJac || !dataJac.length) throw new Error('Planilha de Jacobina não reconhecida. Verifique se o compartilhamento está como "Qualquer pessoa com o link".');
-const merged = [...dataJac];
+const merged = [...dataJac, ...dataIrc];
 try {
 await compSalvarBancoDirectly(merged, dataJac.length, dataIrc.length);
 setDbStatus('online', '✅ Planilhas sincronizadas!');
@@ -4416,10 +4418,10 @@ function esc(s) {
 
 // URLs diretas das planilhas — junho 2026
 // Jacobina: planilha 142gvn8pNgJGTGDkidCfuOWMHJ2OCKpJd_FQU8zeo0x8, gid 1209313517
-// Irecê:    planilha 14ImbZb8-OCBp78jDtd0QFkSLrMG5vXA7tzrM-x6KQVo,  gid 1842405101
+// Irecê:    planilha 14ImbZb8-OCBp78jDtd0QFkSLrMG5vXA7tzrM-x6KQVo,  gid 663282613
 const GSHEETS = {
   JACOBINA: 'https://docs.google.com/spreadsheets/d/142gvn8pNgJGTGDkidCfuOWMHJ2OCKpJd_FQU8zeo0x8/export?format=csv&gid=1209313517',
-  IRECE:    'https://docs.google.com/spreadsheets/d/14ImbZb8-OCBp78jDtd0QFkSLrMG5vXA7tzrM-x6KQVo/export?format=csv&gid=1842405101'
+  IRECE:    'https://docs.google.com/spreadsheets/d/14ImbZb8-OCBp78jDtd0QFkSLrMG5vXA7tzrM-x6KQVo/export?format=csv&gid=663282613'
 };
 // URLs do Sheets resolvidas — atualizadas após gsheetsCarregarMeses()
 function todayDate() { const d=new Date(); const p=n=>String(n).padStart(2,'0'); return p(d.getDate())+'/'+p(d.getMonth()+1)+'/'+d.getFullYear(); }
@@ -6255,11 +6257,11 @@ s.onload = res; s.onerror = rej; document.head.appendChild(s);
 const resJac = await fetch(GSHEETS.JACOBINA);
 if (!resJac.ok) throw new Error('Falha ao buscar planilha (HTTP ' + resJac.status + ')');
 const textJac = await resJac.text();
-const textIrc = '';
+const resIrc = await fetch(GSHEETS.IRECE); const textIrc = resIrc.ok ? await resIrc.text() : '';
 const dataJac = compParseCSVText(textJac, 'JACOBINA');
-const dataIrc = [];
+const dataIrc = textIrc ? (compParseCSVText(textIrc, 'IRECÊ')||[]) : [];
 if (!dataJac || !dataJac.length) throw new Error('Planilha JACOBINA não retornou dados válidos');
-// Irecê desativado — usando apenas Jacobina
+
 const dataAtual = [...dataJac, ...dataIrc];
 const now = new Date(), pad = n => String(n).padStart(2,'0');
 const horaAtual = pad(now.getDate())+'/'+pad(now.getMonth()+1)+'/'+now.getFullYear()+' '+pad(now.getHours())+':'+pad(now.getMinutes());
@@ -6631,9 +6633,9 @@ try {
 const resJac = await fetch(GSHEETS.JACOBINA);
 if (!resJac.ok) return;
 const textJac = await resJac.text();
-const textIrc = '';
+const resIrc = await fetch(GSHEETS.IRECE); const textIrc = resIrc.ok ? await resIrc.text() : '';
 const dataJac = compParseCSVText(textJac, 'JACOBINA');
-const dataIrc = [];
+const dataIrc = textIrc ? (compParseCSVText(textIrc, 'IRECÊ')||[]) : [];
 if (!dataJac || !dataJac.length) return;
 const merged = [...dataJac, ...dataIrc];
 const now = new Date(), pad = n => String(n).padStart(2,'0');
@@ -7288,10 +7290,12 @@ try {
 const resJac = await fetch(GSHEETS.JACOBINA);
 if (!resJac.ok) throw new Error('Erro HTTP ' + resJac.status + ' ao buscar Jacobina');
 const textJac = await resJac.text();
+const resIrc = await fetch(GSHEETS.IRECE);
+const textIrc = resIrc.ok ? await resIrc.text() : '';
 const dataJac = compParseCSVText(textJac, 'JACOBINA');
-const dataIrc = [];
+const dataIrc = textIrc ? (compParseCSVText(textIrc, 'IRECÊ')||[]) : [];
 if (!dataJac || !dataJac.length) throw new Error('Planilha de Jacobina não reconhecida. Verifique se o compartilhamento está como "Qualquer pessoa com o link".');
-const merged = [...dataJac];
+const merged = [...dataJac, ...dataIrc];
 try {
 await compSalvarBancoDirectly(merged, dataJac.length, dataIrc.length);
 setDbStatus('online', '✅ Planilhas sincronizadas!');
