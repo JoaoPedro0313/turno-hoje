@@ -2850,6 +2850,17 @@ return (MESES_PT[m] || '?') + '/' + String(y).slice(-2);
 }
 function mesFromObra(obj) {
 if (!obj) return null;
+// Tenta usar coluna MÊS direta primeiro (ex: "MAI/25" ou "05/2025")
+const mesDir = obj['MÊS'] || obj['MES'] || '';
+if (mesDir) {
+  const mUp = String(mesDir).trim().toUpperCase();
+  // Formato MAI/25 ou MAI/2025
+  const m1 = mUp.match(/^([A-Z]{3})\/(\d{2,4})$/);
+  if (m1 && MESES_ORDER[m1[1]]) { const y = m1[2].length===2?'20'+m1[2]:m1[2]; return m1[1]+'/'+String(y).slice(-2); }
+  // Formato 05/2025
+  const m2 = mUp.match(/^(\d{1,2})\/(\d{4})$/);
+  if (m2) { const mi=parseInt(m2[1]); if(mi>=1&&mi<=12){ return (MESES_PT[mi]||'?')+'/'+String(m2[2]).slice(-2); } }
+}
 const candidates = [
 obj['REPROGRAMAÇÃO FIM'] || obj['REPROGRAMACAO FIM'] || '',
 obj['FIM PREVISTO']  || obj['FIM  PREVISTO'] || '',
@@ -3437,7 +3448,8 @@ function compMinimizarDados(rows) {
 const campos = ['PEP OBRA','TÍTULO','TITULO','STATUS DA OBRA','LATITUDE','LONGITUDE',
 'MUNICIPIO','MUNICÍPIO','_UTD','CAVA REALIZADA','CAVA  REALIZADA',
 'POSTES REALIZADO','POSTES  REALIZADO','POSTES A IMPLANTA','POSTES  À IMPLANTA','POSTES À IMPLANTA',
-'POSTES PREVISTOS','ENCARREGADO','MÊS','MES','DATA DE LANÇAMENTO'];
+'POSTES PREVISTOS','ENCARREGADO','MÊS','MES','DATA DE LANÇAMENTO',
+'REPROGRAMAÇÃO FIM','REPROGRAMACAO FIM','FIM PREVISTO','FIM  PREVISTO','INÍCIO PREVISTO','INICIO PREVISTO','INCIO PREVISTO'];
 return rows.map(r => {
 const mini = { _UTD: r['_UTD']||'' };
 campos.forEach(c => { if (r[c]!==undefined) mini[c] = r[c]; });
@@ -6753,6 +6765,17 @@ return (MESES_PT[m] || '?') + '/' + String(y).slice(-2);
 }
 function mesFromObra(obj) {
 if (!obj) return null;
+// Tenta usar coluna MÊS direta primeiro (ex: "MAI/25" ou "05/2025")
+const mesDir = obj['MÊS'] || obj['MES'] || '';
+if (mesDir) {
+  const mUp = String(mesDir).trim().toUpperCase();
+  // Formato MAI/25 ou MAI/2025
+  const m1 = mUp.match(/^([A-Z]{3})\/(\d{2,4})$/);
+  if (m1 && MESES_ORDER[m1[1]]) { const y = m1[2].length===2?'20'+m1[2]:m1[2]; return m1[1]+'/'+String(y).slice(-2); }
+  // Formato 05/2025
+  const m2 = mUp.match(/^(\d{1,2})\/(\d{4})$/);
+  if (m2) { const mi=parseInt(m2[1]); if(mi>=1&&mi<=12){ return (MESES_PT[mi]||'?')+'/'+String(m2[2]).slice(-2); } }
+}
 const candidates = [
 obj['REPROGRAMAÇÃO FIM'] || obj['REPROGRAMACAO FIM'] || '',
 obj['FIM PREVISTO']  || obj['FIM  PREVISTO'] || '',
@@ -7340,7 +7363,8 @@ function compMinimizarDados(rows) {
 const campos = ['PEP OBRA','TÍTULO','TITULO','STATUS DA OBRA','LATITUDE','LONGITUDE',
 'MUNICIPIO','MUNICÍPIO','_UTD','CAVA REALIZADA','CAVA  REALIZADA',
 'POSTES REALIZADO','POSTES  REALIZADO','POSTES A IMPLANTA','POSTES  À IMPLANTA','POSTES À IMPLANTA',
-'POSTES PREVISTOS','ENCARREGADO','MÊS','MES','DATA DE LANÇAMENTO'];
+'POSTES PREVISTOS','ENCARREGADO','MÊS','MES','DATA DE LANÇAMENTO',
+'REPROGRAMAÇÃO FIM','REPROGRAMACAO FIM','FIM PREVISTO','FIM  PREVISTO','INÍCIO PREVISTO','INICIO PREVISTO','INCIO PREVISTO'];
 return rows.map(r => {
 const mini = { _UTD: r['_UTD']||'' };
 campos.forEach(c => { if (r[c]!==undefined) mini[c] = r[c]; });
