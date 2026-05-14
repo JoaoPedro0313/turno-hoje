@@ -321,7 +321,7 @@ return;
 }
 try {
 const t1 = Date.now();
-const res = await fetch(SUPA_URL + '/rest/v1/dados_de_turno?select=key&limit=1', {
+const res = await fetch(SUPA_URL + '/rest/v1/turno_data?select=key&limit=1', {
 headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY }
 });
 const ms = Date.now() - t1;
@@ -445,7 +445,7 @@ try {
 const controller = new AbortController();
 const tid = setTimeout(() => controller.abort(), 10000);
 // Busca apenas as chaves leves (exclui obras_base e prog_diaria que têm carga separada)
-const res = await fetch(SUPA_URL + '/rest/v1/dados_de_turno?select=key,value&key=in.(turno,producao,apr_data,comp_historico)', {
+const res = await fetch(SUPA_URL + '/rest/v1/turno_data?select=key,value&key=in.(turno,producao,apr_data,comp_historico)', {
 headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY },
 signal: controller.signal
 });
@@ -478,7 +478,7 @@ try {
 const controller = new AbortController();
 const tid = setTimeout(() => controller.abort(), 10000);
 const res = await fetch(
-  SUPA_URL + '/rest/v1/dados_de_turno?select=key,value,updated_at&key=eq.prog_diaria&order=updated_at.desc&limit=1',
+  SUPA_URL + '/rest/v1/turno_data?select=key,value,updated_at&key=eq.prog_diaria&order=updated_at.desc&limit=1',
   { headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY }, signal: controller.signal }
 );
 clearTimeout(tid);
@@ -504,7 +504,7 @@ async function dbLoadObrasBase() {
 try {
 const controller = new AbortController();
 const tid = setTimeout(() => controller.abort(), 30000);
-const res = await fetch(SUPA_URL + '/rest/v1/dados_de_turno?select=key,value&key=eq.obras_base', {
+const res = await fetch(SUPA_URL + '/rest/v1/turno_data?select=key,value&key=eq.obras_base', {
 headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY },
 signal: controller.signal
 });
@@ -565,7 +565,7 @@ setDbStatus('syncing', 'Salvando...');
 // Quando o cliente enviava o timestamp, o banco podia guardar um valor idêntico ao
 // anterior (por arredondamento ou conflito), fazendo o checkForUpdates dos outros
 // usuários não detectar mudança. Com updated_at gerado pelo servidor isso é garantido.
-const res = await fetch(SUPA_URL + '/rest/v1/dados_de_turno', {
+const res = await fetch(SUPA_URL + '/rest/v1/turno_data', {
 method: 'POST',
 headers: { ...SUPA_HEADERS, 'Prefer': 'resolution=merge-duplicates,return=representation' },
 body: JSON.stringify({ key: 'turno', value: payload })
@@ -580,7 +580,7 @@ try {
 } catch(e) {}
 if (currentDate) {
 const histKey = 'turno_hist_' + currentDate.replace(/\//g, '-');
-fetch(SUPA_URL + '/rest/v1/dados_de_turno', {
+fetch(SUPA_URL + '/rest/v1/turno_data', {
 method: 'POST',
 headers: { ...SUPA_HEADERS, 'Prefer': 'resolution=merge-duplicates' },
 body: JSON.stringify({ key: histKey, value: payload })
@@ -609,7 +609,7 @@ const histKey = 'turno_hist_' + d + '-' + m + '-' + y;
 statusEl.textContent = '⏳ Buscando ' + dataFormatada + '...';
 const controller = new AbortController();
 const tid = setTimeout(() => controller.abort(), 8000);
-fetch(SUPA_URL + '/rest/v1/dados_de_turno?select=key,value&key=eq.' + histKey, {
+fetch(SUPA_URL + '/rest/v1/turno_data?select=key,value&key=eq.' + histKey, {
 headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY },
 signal: controller.signal
 })
@@ -695,7 +695,7 @@ async function dbSaveProducao() {
 lsSet('producao', producao);
 try {
 setDbStatus('syncing', 'Salvando...');
-const res = await fetch(SUPA_URL + '/rest/v1/dados_de_turno', {
+const res = await fetch(SUPA_URL + '/rest/v1/turno_data', {
 method: 'POST',
 headers: { ...SUPA_HEADERS, 'Prefer': 'resolution=merge-duplicates' },
 body: JSON.stringify({ key: 'producao', value: producao, updated_at: new Date().toISOString() })
@@ -711,7 +711,7 @@ async function dbSaveApr() {
 lsSet('apr_data', aprData);
 try {
 setDbStatus('syncing', 'Salvando APR...');
-const res = await fetch(SUPA_URL + '/rest/v1/dados_de_turno', {
+const res = await fetch(SUPA_URL + '/rest/v1/turno_data', {
 method: 'POST',
 headers: { ...SUPA_HEADERS, 'Prefer': 'resolution=merge-duplicates' },
 body: JSON.stringify({ key: 'apr_data', value: aprData, updated_at: new Date().toISOString() })
@@ -1559,7 +1559,7 @@ isFetching = true;
 try {
 const controller = new AbortController();
 const tid = setTimeout(() => controller.abort(), 8000);
-const res = await fetch(SUPA_URL + '/rest/v1/dados_de_turno?select=key,updated_at', {
+const res = await fetch(SUPA_URL + '/rest/v1/turno_data?select=key,updated_at', {
 signal: controller.signal,
 headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY }
 });
@@ -1639,7 +1639,7 @@ if (badge && badge.classList.contains('offline')) {
 try {
 const controller = new AbortController();
 const tid = setTimeout(() => controller.abort(), 8000);
-const res = await fetch(SUPA_URL + '/rest/v1/dados_de_turno?select=key,value&key=neq.obras_base', {
+const res = await fetch(SUPA_URL + '/rest/v1/turno_data?select=key,value&key=neq.obras_base', {
 signal: controller.signal,
 headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY }
 });
@@ -1685,9 +1685,9 @@ const supaFetch = (path, timeout) => {
 try {
   // Dispara as 3 requisições principais ao mesmo tempo
   const [resPrincipal, resTimestamps, resProgDiaria] = await Promise.allSettled([
-    supaFetch('/rest/v1/dados_de_turno?select=key,value&key=in.(turno,producao,apr_data,comp_historico)', 8000),
-    supaFetch('/rest/v1/dados_de_turno?select=key,updated_at', 5000),
-    supaFetch('/rest/v1/dados_de_turno?select=key,value,updated_at&key=eq.prog_diaria&order=updated_at.desc&limit=1', 8000)
+    supaFetch('/rest/v1/turno_data?select=key,value&key=in.(turno,producao,apr_data,comp_historico)', 8000),
+    supaFetch('/rest/v1/turno_data?select=key,updated_at', 5000),
+    supaFetch('/rest/v1/turno_data?select=key,value,updated_at&key=eq.prog_diaria&order=updated_at.desc&limit=1', 8000)
   ]);
 
   // Processa dados principais
@@ -2227,7 +2227,7 @@ const info = { count: merged.length, updatedAt, utds: ['IRECÊ ('+irece.length+'
 try {
 setDbStatus('syncing', 'Salvando banco…');
 const mergedMin = compMinimizarDados(merged);
-const res = await fetch(SUPA_URL + '/rest/v1/dados_de_turno', {
+const res = await fetch(SUPA_URL + '/rest/v1/turno_data', {
 method: 'POST',
 headers: { ...SUPA_HEADERS, 'Prefer': 'resolution=merge-duplicates' },
 body: JSON.stringify({ key: 'obras_base', value: { data: mergedMin, info }, updated_at: now.toISOString() })
@@ -2417,7 +2417,7 @@ compHandleFileAtual();
 let compHistorico = [];
 async function compHistoricoLoad() {
 try {
-const res = await fetch(SUPA_URL + '/rest/v1/dados_de_turno?key=eq.comp_historico&select=value', {
+const res = await fetch(SUPA_URL + '/rest/v1/turno_data?key=eq.comp_historico&select=value', {
 headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY }
 });
 if (res.ok) {
@@ -2442,7 +2442,7 @@ async function compHistoricoSave() {
 if (compHistorico.length > 60) compHistorico = compHistorico.slice(-60);
 try { localStorage.setItem('mariua_comp_historico', JSON.stringify(compHistorico)); } catch(e) {}
 try {
-await fetch(SUPA_URL + '/rest/v1/dados_de_turno', {
+await fetch(SUPA_URL + '/rest/v1/turno_data', {
 method: 'POST',
 headers: { ...SUPA_HEADERS, 'Prefer': 'resolution=merge-duplicates' },
 body: JSON.stringify({ key: 'comp_historico', value: compHistorico, updated_at: new Date().toISOString() })
@@ -2682,7 +2682,7 @@ const mergedMin = compMinimizarDados(merged);
 bancoDB = merged; bancoDBInfo = info;
 lsSet('obras_base', { data: mergedMin, info });
 try {
-const saveRes = await fetch(SUPA_URL + '/rest/v1/dados_de_turno', {
+const saveRes = await fetch(SUPA_URL + '/rest/v1/turno_data', {
 method: 'POST',
 headers: { ...SUPA_HEADERS, 'Prefer': 'resolution=merge-duplicates' },
 body: JSON.stringify({ key: 'obras_base', value: { data: mergedMin, info }, updated_at: now.toISOString() })
@@ -3375,7 +3375,7 @@ const mergedMin = compMinimizarDados(merged);
 const payload = { data: mergedMin, info };
 lsSet('obras_base', payload);
 setDbStatus('syncing', 'Salvando banco…');
-const res = await fetch(SUPA_URL + '/rest/v1/dados_de_turno', {
+const res = await fetch(SUPA_URL + '/rest/v1/turno_data', {
 method: 'POST',
 headers: { ...SUPA_HEADERS, 'Prefer': 'resolution=merge-duplicates' },
 body: JSON.stringify({ key: 'obras_base', value: payload, updated_at: now.toISOString() })
@@ -3402,7 +3402,7 @@ setDbStatus('syncing', 'Salvando prog...');
 const now = new Date().toISOString();
 const payload = { key: 'prog_diaria', value: progRegistros, updated_at: now };
 // Usa upsert com on_conflict para garantir insert-or-update atômico
-const res = await fetch(SUPA_URL + '/rest/v1/dados_de_turno', {
+const res = await fetch(SUPA_URL + '/rest/v1/turno_data', {
 method: 'POST',
 headers: { ...SUPA_HEADERS, 'Prefer': 'resolution=merge-duplicates,return=minimal' },
 body: JSON.stringify(payload)
