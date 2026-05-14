@@ -666,7 +666,7 @@ document.getElementById('ok-count').textContent = okTemp.length;
 document.getElementById('justif-count').textContent = justifTemp.length;
 document.getElementById('falta-count').textContent = faltaTemp.length;
 // título fixo SISTEMA DE OBRAS
-document.getElementById('page-sub').textContent = 'Histórico: ' + dataFormatada;
+const _psHist = document.getElementById('page-sub'); if (_psHist) _psHist.textContent = 'Histórico: ' + dataFormatada;
 const total = okTemp.length + justifTemp.length + faltaTemp.length;
 document.getElementById('footer-text').innerHTML =
 'OBRAS - BA &nbsp;|&nbsp; HISTÓRICO &nbsp;|&nbsp; ' + total + ' equipes &nbsp;|&nbsp; ' + dataFormatada;
@@ -746,8 +746,8 @@ document.getElementById('justif-count').textContent = teams.justif.length;
 document.getElementById('falta-count').textContent  = faltaFiltrada.length;
 const total = teams.ok.length + teams.justif.length + faltaFiltrada.length;
 // título fixo SISTEMA DE OBRAS
-document.getElementById('page-sub').textContent   = 'Relatorio: ' + currentDate;
-document.getElementById('date-input').value       = currentDate;
+const _pageSub = document.getElementById('page-sub'); if (_pageSub) _pageSub.textContent = 'Relatorio: ' + currentDate;
+const _dateInput = document.getElementById('date-input'); if (_dateInput) _dateInput.value = currentDate;
 document.getElementById('footer-text').innerHTML  =
 'OBRAS - BA &nbsp;|&nbsp; BA_PROCESSO &nbsp;|&nbsp; ' + total + ' equipes ativas &nbsp;|&nbsp; ' + currentDate;
 renderProducao();
@@ -867,7 +867,8 @@ render(); renderManageList();
 await dbSaveTurno();
 }
 async function updateDate() {
-const val = document.getElementById('date-input').value.trim();
+const _di = document.getElementById('date-input');
+const val = _di ? _di.value.trim() : currentDate;
 // CORRECAO: validar formato DD/MM/AAAA antes de aceitar
 const reData = /^\d{2}\/\d{2}\/\d{4}$/;
 if (!val || !reData.test(val)) {
@@ -996,20 +997,21 @@ await dbSaveProducao();
 }
 function selectStatus(s) {
 selectedStatus=s;
-document.getElementById('opt-ok').className    ='radio-opt'+(s==='ok'    ?' sel-ok':'');
-document.getElementById('opt-justif').className='radio-opt'+(s==='justif'?' sel-justif':'');
-document.getElementById('opt-falta').className ='radio-opt'+(s==='falta' ?' sel-falta':'');
-document.getElementById('obs-group').style.display=s==='justif'?'block':'none';
+const _oo=document.getElementById('opt-ok'); if(_oo) _oo.className='radio-opt'+(s==='ok'?' sel-ok':'');
+const _oj=document.getElementById('opt-justif'); if(_oj) _oj.className='radio-opt'+(s==='justif'?' sel-justif':'');
+const _of=document.getElementById('opt-falta'); if(_of) _of.className='radio-opt'+(s==='falta'?' sel-falta':'');
+const _og=document.getElementById('obs-group'); if(_og) _og.style.display=s==='justif'?'block':'none';
 }
 function switchTab(tab) {
 ['add','manage','import','prod','apr'].forEach(t=>{
-document.getElementById('tab-'+t).style.display=t===tab?'block':'none';
-document.getElementById('tab-'+t+'-btn').className='sidebar-item'+(t===tab?' active':'');
+const _tt=document.getElementById('tab-'+t); if(_tt) _tt.style.display=t===tab?'block':'none';
+const _tb=document.getElementById('tab-'+t+'-btn'); if(_tb) _tb.className='sidebar-item'+(t===tab?' active':'');
 });
 if(tab==='manage')renderManageList();
 }
 function showImportMsg(text,type) {
 const el=document.getElementById('import-msg');
+if (!el) return;
 el.textContent=text; el.className='msg '+type;
 clearTimeout(el._t); el._t=setTimeout(()=>el.className='msg',5000);
 }
@@ -1107,22 +1109,24 @@ teams.ok    = abriram.filter(n=>!justifNames.includes(n));
 teams.falta = todosConhecidos.filter(n=>!abriram.includes(n)&&!justifNames.includes(n));
 render();
 await dbSaveTurno();
-document.getElementById('lbl-abertura').textContent = '✅ '+abriram.length+' abriram turno';
+document.getElementById('lbl-abertura') && (document.getElementById('lbl-abertura').textContent = '✅ '+abriram.length+' abriram turno');
 showImportMsg('✅ '+teams.ok.length+' abriram | ❌ '+teams.falta.length+' nao abriram. Salvo!','success');
 } catch(err) { showImportMsg('Erro: '+err.message,'error'); }
 };
 r.readAsText(file,'utf-8');
 }
-function openModal()  { document.getElementById('modal-overlay').classList.add('open'); }
-function closeModal() { document.getElementById('modal-overlay').classList.remove('open'); }
-document.getElementById('modal-overlay').addEventListener('click',e=>{if(e.target.id==='modal-overlay')closeModal();});
+function openModal()  { const _mo=document.getElementById('modal-overlay'); if(_mo) _mo.classList.add('open'); }
+function closeModal() { const _mo=document.getElementById('modal-overlay'); if(_mo) _mo.classList.remove('open'); }
+const _modalOverlay = document.getElementById('modal-overlay'); if (_modalOverlay) _modalOverlay.addEventListener('click',e=>{if(e.target.id==='modal-overlay')closeModal();});
 function showMsg(text,type) {
 const el=document.getElementById('add-msg');
+if (!el) return;
 el.textContent=text; el.className='msg '+type;
 clearTimeout(el._t); el._t=setTimeout(()=>el.className='msg',3500);
 }
 function showProdMsg(text,type) {
 const el=document.getElementById('prod-msg');
+if (!el) return;
 el.textContent=text; el.className='msg '+type;
 clearTimeout(el._t); el._t=setTimeout(()=>el.className='msg',4000);
 }
@@ -1136,17 +1140,19 @@ async function _sha256(str) {
 }
 function openAdmModal() {
 if (admUnlocked) { openModal(); return; }
-document.getElementById('adm-modal-overlay').classList.add('open');
-setTimeout(()=>{ document.getElementById('adm-pwd-input').focus(); }, 100);
+const _adm = document.getElementById('adm-modal-overlay');
+if (_adm) { _adm.classList.add('open'); setTimeout(()=>{ const i=document.getElementById('adm-pwd-input'); if(i) i.focus(); }, 100); }
+else openModal();
 }
 function closeAdmModal() {
-document.getElementById('adm-modal-overlay').classList.remove('open');
-document.getElementById('adm-pwd-input').value = '';
-document.getElementById('adm-pwd-err').textContent = '';
+const _adm = document.getElementById('adm-modal-overlay'); if (_adm) _adm.classList.remove('open');
+const _pi = document.getElementById('adm-pwd-input'); if (_pi) _pi.value = '';
+const _pe = document.getElementById('adm-pwd-err'); if (_pe) _pe.textContent = '';
 }
 async function checkAdmSenha() {
 const input = document.getElementById('adm-pwd-input');
 const err   = document.getElementById('adm-pwd-err');
+if (!input) { admUnlocked = true; openModal(); return; }
 // Comparacao via hash: nunca compara texto puro
 const inputHash = await _sha256(input.value);
 // NOTA: substitua HASH_ADM pelo SHA-256 real da sua senha antes de usar em producao
@@ -1157,7 +1163,7 @@ admUnlocked = true;
 closeAdmModal();
 openModal();
 } else {
-err.textContent = 'Senha incorreta. Tente novamente.';
+if (err) err.textContent = 'Senha incorreta. Tente novamente.';
 input.classList.add('error');
 input.value = '';
 setTimeout(() => input.classList.remove('error'), 400);
