@@ -617,17 +617,31 @@ async function mapaMMCarregarSupabase() {
     try { localStorage.setItem('mariua_meses_extras', JSON.stringify(extras)); } catch(ex) {}
     if (typeof mapaInitMesBar === 'function') mapaInitMesBar();
     if (typeof mapaMMRenderLista === 'function' && document.getElementById('modal-meses-overlay')?.style.display==='flex') mapaMMRenderLista();
-    const now2 = new Date();
-    const mesAtualDisp = GSHEETS_MESES.find(e => e.ano===now2.getFullYear() && e.mes===now2.getMonth()+1);
-    if (mesAtualDisp && typeof mapaCarregarMes === 'function' && (!window.mapaMesAtivo || window.mapaMesAtivo.mes !== mesAtualDisp.mes)) {
-      mapaCarregarMes(mesAtualDisp.ano, mesAtualDisp.mes);
+    // Só carrega o mês atual automaticamente se o mapa ainda não tiver nenhum mês ativo
+    if (!window.mapaMesAtivo) {
+      const now2 = new Date();
+      const mesAtualDisp = GSHEETS_MESES.find(e => e.ano===now2.getFullYear() && e.mes===now2.getMonth()+1);
+      if (mesAtualDisp && typeof mapaCarregarMes === 'function') {
+        mapaCarregarMes(mesAtualDisp.ano, mesAtualDisp.mes);
+      }
     }
   } catch(e) { console.error('[meses] Erro ao carregar do Supabase:', e); }
 }
 window.mapaMMCarregarSupabase = mapaMMCarregarSupabase;
+// Sinaliza para outros usuários que os meses foram atualizados
+async function mapaMMNotificarOutros() {
+  try {
+    await fetch(SUPA_URL + '/rest/v1/turno_data?key=eq.meses_sync_ping', {
+      method: 'PATCH',
+      headers: { ...SUPA_HEADERS, 'Prefer': 'return=minimal' },
+      body: JSON.stringify({ value: { ts: Date.now() }, updated_at: new Date().toISOString() })
+    }).catch(() => {});
+  } catch(e) {}
+}
+window.mapaMMNotificarOutros = mapaMMNotificarOutros;
 window.addEventListener('load', function() {
   setTimeout(mapaMMCarregarSupabase, 2000);
-  setInterval(mapaMMCarregarSupabase, 10000);
+  setInterval(mapaMMCarregarSupabase, 5000);
 });
 function gsheetsGetURL(utd) {
   const now = new Date();
@@ -3755,6 +3769,7 @@ function mapaMMRemover(ano, mes) {
       // Supabase confirmou — atualiza memória e cache local
       GSHEETS_MESES = novosMeses;
       try { localStorage.setItem('mariua_meses_extras', JSON.stringify(extrasAtuais)); } catch(ex) {}
+      mapaMMNotificarOutros(); // sinaliza outros usuários imediatamente
       mapaMMRenderLista();
       mapaInitMesBar();
     } catch(e) {
@@ -3815,6 +3830,7 @@ function mapaMMSalvar() {
         GSHEETS_MESES.push(nova);
         GSHEETS_MESES.sort((a,b) => a.ano!==b.ano ? a.ano-b.ano : a.mes-b.mes);
         try { localStorage.setItem('mariua_meses_extras', JSON.stringify(extrasAtuais)); } catch(ex) {}
+        mapaMMNotificarOutros(); // sinaliza outros usuários imediatamente
         if (btn) { btn.disabled = false; btn.textContent = '✅ Salvo no banco!'; setTimeout(() => { btn.textContent = '💾 Salvar e adicionar mês'; }, 2500); }
         if (erroEl) erroEl.style.display = 'none';
         // Limpa campos e atualiza UI
