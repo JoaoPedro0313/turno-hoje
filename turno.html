@@ -378,6 +378,10 @@ let aprData = [];
 let mapaMap=null, mapaLayerGroup=null, mapaData=[], mapaFiltroAtivo='TODOS', mapaUTDFiltro='TODAS', mapaMesFiltro='TODOS';
 let mapaMunFiltro='', mapaEncFiltro='', mapaCoordFiltro='TODAS';
 function applyRowData(row) {
+// Supabase retorna value como string (TEXT) — faz parse se necessário
+if (row.value && typeof row.value === 'string') {
+  try { row.value = JSON.parse(row.value); } catch(e) {}
+}
 if (row.key==='turno') {
 const v = row.value;
 // Normaliza nomes completos para codigos curtos (compatibilidade com estados antigos salvos)
