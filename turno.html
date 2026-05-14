@@ -1525,7 +1525,7 @@ el.style.pointerEvents = 'none';
 }
 } catch(e) {}
 }
-const AUTO_REFRESH_MS = 15000;
+const AUTO_REFRESH_MS = 8000; // CORRIGIDO: reduzido de 15s para 8s para sincronizar mais rapido
 let autoRefreshTimer = null;
 let lastUpdatedAt = null;
 async function checkForUpdates() {
@@ -1555,7 +1555,8 @@ if (lastUpdatedAt===null) {
 lastUpdatedAt = latestTs;
 } else if (latestTs && latestTs!==lastUpdatedAt) {
 lastUpdatedAt = latestTs;
-await dbLoad();
+// CORRIGIDO: skipLocalLoad=true para nao sobrescrever dados remotos com localStorage local
+await dbLoad(true);
 try { render(); } catch(e) {}
 if (aprData && aprData.length > 0) {
 try { renderApr(); } catch(e) {}
@@ -1573,6 +1574,20 @@ const pad = n => String(n).padStart(2,'0');
 document.getElementById('page-time').textContent =
 'Atualizado em: ' + pad(now.getDate()) + '/' + pad(now.getMonth()+1) + '/' + now.getFullYear() +
 ' as ' + pad(now.getHours()) + ':' + pad(now.getMinutes());
+// NOVO: toast para avisar outros usuarios que dados foram sincronizados
+try {
+let toast = document.getElementById('sync-toast');
+if (!toast) {
+toast = document.createElement('div');
+toast.id = 'sync-toast';
+toast.style.cssText = 'position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:#0d7377;color:#fff;font-family:Barlow,sans-serif;font-size:0.78rem;font-weight:800;padding:8px 18px;border-radius:20px;z-index:9999;box-shadow:0 4px 18px rgba(0,0,0,0.2);pointer-events:none;transition:opacity 0.4s;letter-spacing:0.5px;';
+document.body.appendChild(toast);
+}
+toast.textContent = '🔄 Dados sincronizados com o banco';
+toast.style.opacity = '1';
+clearTimeout(toast._hideTimer);
+toast._hideTimer = setTimeout(() => { toast.style.opacity = '0'; }, 2500);
+} catch(e) {}
 }
 } catch(e) {
 try {
