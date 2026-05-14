@@ -372,7 +372,7 @@ const v = row.value;
 // Normaliza nomes completos para codigos curtos (compatibilidade com estados antigos salvos)
 const norm = arr => (arr||[]).map(n => toDisplayName(typeof n==='string'?n:(n.name||''))).filter(Boolean);
 teams.ok    = (v.ok    && v.ok.length)    ? [...new Set(norm(v.ok))]    : DEFAULTS.ok;
-// CORRIGIDO: Array.isArray garante que mesmo justif=[] (vazio) seja aplicado corretamente
+// CORRIGIDO: Array.isArray garante que justif=[] (vazio) seja aplicado corretamente
 teams.justif = Array.isArray(v.justif) ? v.justif : [];
 currentDate = v.date || DEFAULTS.date;
 const justifNms = teams.justif.map(t=>t.name);
@@ -550,20 +550,29 @@ const payload = { date: currentDate, ok: teams.ok, justif: teams.justif, falta: 
 lsSet('turno', payload);
 try {
 setDbStatus('syncing', 'Salvando...');
-// CORRIGIDO: sufixo aleatorio garante updated_at sempre diferente entre clientes
-const now = new Date(Date.now() + Math.floor(Math.random()*999)).toISOString();
+// CORRIGIDO: NÃO enviamos updated_at — deixamos o Supabase gerar via DEFAULT NOW().
+// Quando o cliente enviava o timestamp, o banco podia guardar um valor idêntico ao
+// anterior (por arredondamento ou conflito), fazendo o checkForUpdates dos outros
+// usuários não detectar mudança. Com updated_at gerado pelo servidor isso é garantido.
 const res = await fetch(SUPA_URL + '/rest/v1/turno_data', {
 method: 'POST',
-headers: { ...SUPA_HEADERS, 'Prefer': 'resolution=merge-duplicates' },
-body: JSON.stringify({ key: 'turno', value: payload, updated_at: now })
+headers: { ...SUPA_HEADERS, 'Prefer': 'resolution=merge-duplicates,return=representation' },
+body: JSON.stringify({ key: 'turno', value: payload })
 });
 if (!res.ok) throw new Error('HTTP ' + res.status);
+// Após salvar, atualiza lastTsMap local com o timestamp retornado pelo servidor
+try {
+  const saved = await res.json();
+  if (Array.isArray(saved) && saved[0] && saved[0].updated_at) {
+    lastTsMap['turno'] = saved[0].updated_at;
+  }
+} catch(e) {}
 if (currentDate) {
 const histKey = 'turno_hist_' + currentDate.replace(/\//g, '-');
 fetch(SUPA_URL + '/rest/v1/turno_data', {
 method: 'POST',
 headers: { ...SUPA_HEADERS, 'Prefer': 'resolution=merge-duplicates' },
-body: JSON.stringify({ key: histKey, value: payload, updated_at: now })
+body: JSON.stringify({ key: histKey, value: payload })
 }).catch(() => {});
 lsSet(histKey, payload);
 }
@@ -1527,13 +1536,15 @@ el.style.pointerEvents = 'none';
 }
 } catch(e) {}
 }
-const AUTO_REFRESH_MS = 8000; // CORRIGIDO: reduzido de 15s para 8s para sincronizar mais rapido
+const AUTO_REFRESH_MS = 8000;
 let autoRefreshTimer = null;
-let lastUpdatedAt = null;
+// CORRIGIDO: rastrear updated_at por chave individualmente, nao apenas o maximo global.
+// O problema anterior: se outra linha (ex: obras_base) tivesse um updated_at mais recente,
+// o lastUpdatedAt ficava "na frente" e mudancas na chave 'turno' eram ignoradas.
+let lastTsMap = {}; // { key: updated_at }
 async function checkForUpdates() {
 if (isFetching) return; // anti race-condition
 isFetching = true;
-// CORRIGIDO: envolver em try/catch global para que erros nao bloqueiem o resto do app
 try {
 const controller = new AbortController();
 const tid = setTimeout(() => controller.abort(), 8000);
@@ -1549,14 +1560,19 @@ const badge = document.getElementById('db-badge');
 if (badge && badge.classList.contains('offline')) {
 setDbStatus('online', 'Banco online');
 }
-const latestTs = data.reduce((max, row) => {
+// Verifica se alguma chave relevante mudou comparando individualmente
+const CHAVES_MONITORADAS = ['turno','producao','apr_data','prog_diaria'];
+let houveAlteracao = false;
+const primeiraVez = Object.keys(lastTsMap).length === 0;
+data.forEach(row => {
+if (!CHAVES_MONITORADAS.includes(row.key)) return;
 const ts = row.updated_at || '';
-return ts > max ? ts : max;
-}, '');
-if (lastUpdatedAt===null) {
-lastUpdatedAt = latestTs;
-} else if (latestTs && latestTs!==lastUpdatedAt) {
-lastUpdatedAt = latestTs;
+if (!primeiraVez && lastTsMap[row.key] !== undefined && ts !== lastTsMap[row.key]) {
+houveAlteracao = true;
+}
+lastTsMap[row.key] = ts;
+});
+if (!primeiraVez && houveAlteracao) {
 // CORRIGIDO: skipLocalLoad=true para nao sobrescrever dados remotos com localStorage local
 await dbLoad(true);
 try { render(); } catch(e) {}
@@ -3372,8 +3388,7 @@ async function progSaveToStorage() {
 lsSet('prog_diaria', progRegistros);
 try {
 setDbStatus('syncing', 'Salvando prog...');
-// CORRIGIDO: sufixo aleatorio garante updated_at sempre diferente entre clientes
-const now = new Date(Date.now() + Math.floor(Math.random()*999)).toISOString();
+const now = new Date().toISOString();
 const payload = { key: 'prog_diaria', value: progRegistros, updated_at: now };
 // Usa upsert com on_conflict para garantir insert-or-update atômico
 const res = await fetch(SUPA_URL + '/rest/v1/turno_data', {
@@ -4152,8 +4167,7 @@ console.warn('[Presence] Desabilitado — tabela "user_presence" indisponível n
 }
 async function presenceHeartbeat() {
 if (!presenceEnabled || !presenceUID) return;
-// CORRIGIDO: sufixo aleatorio garante updated_at sempre diferente entre clientes
-const now = new Date(Date.now() + Math.floor(Math.random()*999)).toISOString();
+const now = new Date().toISOString();
 const page = (() => {
 const pages = ['turno','prod','apr','comp','mapa','prog'];
 for (const p of pages) {
