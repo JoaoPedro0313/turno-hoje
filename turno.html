@@ -131,10 +131,21 @@ window.presenceOpenModal = function() { if(window._presenceOpenModal) window._pr
       </button>
     </div>
   </div>
-  <div id="diag-panel" style="display:none;position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:#1a202c;color:#e2e8f0;padding:14px 20px;border-radius:12px;font-family:monospace;font-size:0.75rem;z-index:9999;max-width:480px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,0.5);">
-    <div style="font-weight:800;margin-bottom:8px;color:#68d391;">🔍 DIAGNÓSTICO SUPABASE</div>
+  <div id="diag-panel" style="display:none;position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:#1a202c;color:#e2e8f0;padding:16px 22px;border-radius:14px;font-family:monospace;font-size:0.75rem;z-index:9999;max-width:520px;width:92%;box-shadow:0 8px 40px rgba(0,0,0,0.6);">
+    <div style="font-weight:800;margin-bottom:10px;color:#68d391;font-size:0.85rem;">&#128269; DIAGNOSTICO SUPABASE</div>
     <div id="diag-text">Testando...</div>
-    <button onclick="document.getElementById('diag-panel').style.display='none'" style="margin-top:10px;background:#e53e3e;color:#fff;border:none;border-radius:6px;padding:4px 12px;cursor:pointer;font-size:0.72rem;">Fechar</button>
+    <div style="margin-top:12px;padding:10px 12px;background:#0d1117;border-radius:8px;border-left:3px solid #f6e05e;">
+      <div style="font-weight:800;color:#f6e05e;margin-bottom:6px;font-size:0.72rem;">&#9889; SETUP RAPIDO — se tabela nao existir:</div>
+      <div style="color:#a0aec0;font-size:0.7rem;line-height:1.6;">
+        1. Abra o <a href="https://supabase.com/dashboard/project/eqxejfoibebcbtsqymji/sql/new" target="_blank" style="color:#7ee8fa;font-weight:700;">SQL Editor do projeto</a><br>
+        2. Cole e execute o arquivo <b>supabase_setup.sql</b> (baixe abaixo)<br>
+        3. Volte aqui e clique em Testar Novamente
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:10px;">
+      <button onclick="if(window.diagSupabase)diagSupabase()" style="flex:1;background:#2d7d46;color:#fff;border:none;border-radius:6px;padding:6px 10px;cursor:pointer;font-size:0.72rem;font-weight:700;">&#128260; Testar Novamente</button>
+      <button onclick="document.getElementById('diag-panel').style.display='none'" style="background:#e53e3e;color:#fff;border:none;border-radius:6px;padding:6px 14px;cursor:pointer;font-size:0.72rem;">Fechar</button>
+    </div>
   </div>
 </div>
 
@@ -373,11 +384,7 @@ const v = row.value;
 const norm = arr => (arr||[]).map(n => toDisplayName(typeof n==='string'?n:(n.name||''))).filter(Boolean);
 teams.ok    = (v.ok    && v.ok.length)    ? [...new Set(norm(v.ok))]    : DEFAULTS.ok;
 // CORRIGIDO: Array.isArray garante que justif=[] (vazio) seja aplicado corretamente
-// CORRIGIDO 2: normaliza o .name de cada entrada justif para formato curto (mesmo que ok)
-teams.justif = Array.isArray(v.justif) ? v.justif.map(t => {
-  const nomeCurto = toDisplayName(typeof t === 'string' ? t : (t.name || ''));
-  return { name: nomeCurto, obs: (t && t.obs) || '' };
-}).filter(t => t.name) : [];
+teams.justif = Array.isArray(v.justif) ? v.justif : [];
 currentDate = v.date || DEFAULTS.date;
 const justifNms = teams.justif.map(t=>t.name);
 // CORRIGIDO: normaliza AMBOS os lados para evitar bug nome completo vs codigo curto
@@ -1540,7 +1547,7 @@ el.style.pointerEvents = 'none';
 }
 } catch(e) {}
 }
-const AUTO_REFRESH_MS = 8000;
+const AUTO_REFRESH_MS = 4000; // Atualiza a cada 4 segundos para sincronização mais rápida entre colaboradores
 let autoRefreshTimer = null;
 // CORRIGIDO: rastrear updated_at por chave individualmente, nao apenas o maximo global.
 // O problema anterior: se outra linha (ex: obras_base) tivesse um updated_at mais recente,
@@ -1605,7 +1612,7 @@ toast.id = 'sync-toast';
 toast.style.cssText = 'position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:#0d7377;color:#fff;font-family:Barlow,sans-serif;font-size:0.78rem;font-weight:800;padding:8px 18px;border-radius:20px;z-index:9999;box-shadow:0 4px 18px rgba(0,0,0,0.2);pointer-events:none;transition:opacity 0.4s;letter-spacing:0.5px;';
 document.body.appendChild(toast);
 }
-toast.textContent = '🔄 Dados sincronizados com o banco';
+toast.textContent = '🔄 Sincronizado — outro colaborador fez alterações';
 toast.style.opacity = '1';
 clearTimeout(toast._hideTimer);
 toast._hideTimer = setTimeout(() => { toast.style.opacity = '0'; }, 2500);
