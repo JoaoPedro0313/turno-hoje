@@ -372,7 +372,8 @@ const v = row.value;
 // Normaliza nomes completos para codigos curtos (compatibilidade com estados antigos salvos)
 const norm = arr => (arr||[]).map(n => toDisplayName(typeof n==='string'?n:(n.name||''))).filter(Boolean);
 teams.ok    = (v.ok    && v.ok.length)    ? [...new Set(norm(v.ok))]    : DEFAULTS.ok;
-teams.justif= (v.justif && v.justif.length) ? v.justif : [];
+// CORRIGIDO: Array.isArray garante que mesmo justif=[] (vazio) seja aplicado corretamente
+teams.justif = Array.isArray(v.justif) ? v.justif : [];
 currentDate = v.date || DEFAULTS.date;
 const justifNms = teams.justif.map(t=>t.name);
 // CORRIGIDO: normaliza AMBOS os lados para evitar bug nome completo vs codigo curto
@@ -549,7 +550,8 @@ const payload = { date: currentDate, ok: teams.ok, justif: teams.justif, falta: 
 lsSet('turno', payload);
 try {
 setDbStatus('syncing', 'Salvando...');
-const now = new Date().toISOString();
+// CORRIGIDO: sufixo aleatorio garante updated_at sempre diferente entre clientes
+const now = new Date(Date.now() + Math.floor(Math.random()*999)).toISOString();
 const res = await fetch(SUPA_URL + '/rest/v1/turno_data', {
 method: 'POST',
 headers: { ...SUPA_HEADERS, 'Prefer': 'resolution=merge-duplicates' },
@@ -3370,7 +3372,8 @@ async function progSaveToStorage() {
 lsSet('prog_diaria', progRegistros);
 try {
 setDbStatus('syncing', 'Salvando prog...');
-const now = new Date().toISOString();
+// CORRIGIDO: sufixo aleatorio garante updated_at sempre diferente entre clientes
+const now = new Date(Date.now() + Math.floor(Math.random()*999)).toISOString();
 const payload = { key: 'prog_diaria', value: progRegistros, updated_at: now };
 // Usa upsert com on_conflict para garantir insert-or-update atômico
 const res = await fetch(SUPA_URL + '/rest/v1/turno_data', {
@@ -4149,7 +4152,8 @@ console.warn('[Presence] Desabilitado — tabela "user_presence" indisponível n
 }
 async function presenceHeartbeat() {
 if (!presenceEnabled || !presenceUID) return;
-const now = new Date().toISOString();
+// CORRIGIDO: sufixo aleatorio garante updated_at sempre diferente entre clientes
+const now = new Date(Date.now() + Math.floor(Math.random()*999)).toISOString();
 const page = (() => {
 const pages = ['turno','prod','apr','comp','mapa','prog'];
 for (const p of pages) {
