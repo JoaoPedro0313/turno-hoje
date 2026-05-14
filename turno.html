@@ -373,7 +373,11 @@ const v = row.value;
 const norm = arr => (arr||[]).map(n => toDisplayName(typeof n==='string'?n:(n.name||''))).filter(Boolean);
 teams.ok    = (v.ok    && v.ok.length)    ? [...new Set(norm(v.ok))]    : DEFAULTS.ok;
 // CORRIGIDO: Array.isArray garante que justif=[] (vazio) seja aplicado corretamente
-teams.justif = Array.isArray(v.justif) ? v.justif : [];
+// CORRIGIDO 2: normaliza o .name de cada entrada justif para formato curto (mesmo que ok)
+teams.justif = Array.isArray(v.justif) ? v.justif.map(t => {
+  const nomeCurto = toDisplayName(typeof t === 'string' ? t : (t.name || ''));
+  return { name: nomeCurto, obs: (t && t.obs) || '' };
+}).filter(t => t.name) : [];
 currentDate = v.date || DEFAULTS.date;
 const justifNms = teams.justif.map(t=>t.name);
 // CORRIGIDO: normaliza AMBOS os lados para evitar bug nome completo vs codigo curto
