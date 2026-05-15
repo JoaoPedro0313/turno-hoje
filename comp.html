@@ -185,7 +185,7 @@ window.presenceOpenModal = function() { if(window._presenceOpenModal) window._pr
         </div>
         <div class="table-wrap">
           <table>
-            <thead><tr><th>PEP Obra</th><th>Título</th><th>UTD</th><th>Status</th><th class="diff-cell">Postes Realizados</th><th class="diff-cell">Postes à Implantar</th><th class="diff-cell">Postes Previstos</th></tr></thead>
+            <thead><tr><th>PEP Obra</th><th>Título</th><th>UTD</th><th>Status</th><th class="diff-cell">Postes Realizados</th><th class="diff-cell">Postes Coelba</th><th class="diff-cell">Saldo Final</th></tr></thead>
             <tbody id="comp-table-body"></tbody>
           </table>
         </div>
@@ -1467,6 +1467,7 @@ async function handlePstrCSV(file) {
     if (iPSTR < 0)     { showPstrMsg('\u274c Coluna "PSTR" n\u00e3o encontrada no CSV.', 'error'); return; }
 
     const mapaPstr = {};
+    window.mapaPstrGlobal = mapaPstr; // expõe globalmente para a tabela principal
     let linhasLidas = 0;
     for (let i = 1; i < lines.length; i++) {
       const cols = lines[i].split(sep).map(c => c.trim().replace(/^"|"$/g, ''));
@@ -2556,7 +2557,11 @@ tbody.innerHTML = rows.map(r => {
 const newTag = r.isNew ? `<span style="background:#d0f0ee;color:#0d7377;font-size:0.65rem;font-weight:800;padding:2px 7px;border-radius:4px;margin-left:6px;">NOVA</span>` : '';
 const utdTag = r.utd ? `<span style="background:#ebf4ff;color:#2b6cb0;font-size:0.65rem;font-weight:800;padding:1px 6px;border-radius:4px;">${r.utd}</span>` : '';
 const stCls = 'status-' + (r.status||'DEFAULT').replace(/\s+/g,'_');
-return `<tr><td><code style="color:#0d7377;font-size:0.78rem;font-weight:800;">${r.pep}</code></td><td><div class="td-main">${r.titulo}${newTag}</div></td><td>${utdTag}</td><td><span class="status-badge ${stCls}">${r.status||'–'}</span></td><td class="diff-cell">${compDiffCell(r.pRealAnt,r.pRealAt,r.pRealDiff)}</td><td class="diff-cell">${compDiffCell(r.pImpAnt,r.pImpAt,r.pImpDiff)}</td><td class="diff-cell"><span style="color:#5a6478">${r.pPrevAt!==null?r.pPrevAt:'—'}</span></td></tr>`;
+const pstrCoelba = (window.mapaPstrGlobal && window.mapaPstrGlobal[r.pep] !== undefined) ? parseFloat(String(window.mapaPstrGlobal[r.pep]).replace(',','.')) || 0 : null;
+const saldoFinal = (pstrCoelba !== null && r.pRealAt !== null) ? Math.max(0, r.pRealAt - pstrCoelba) : null;
+const coelbaCell = pstrCoelba !== null ? `<span style="font-weight:800;color:#6b46c1;">${pstrCoelba}</span>` : `<span style="color:#ccc;">—</span>`;
+const saldoCell = saldoFinal !== null ? `<span style="font-weight:800;color:#276749;">${saldoFinal}</span>` : `<span style="color:#ccc;">—</span>`;
+return `<tr><td><code style="color:#0d7377;font-size:0.78rem;font-weight:800;">${r.pep}</code></td><td><div class="td-main">${r.titulo}${newTag}</div></td><td>${utdTag}</td><td><span class="status-badge ${stCls}">${r.status||'–'}</span></td><td class="diff-cell">${compDiffCell(r.pRealAnt,r.pRealAt,r.pRealDiff)}</td><td class="diff-cell">${coelbaCell}</td><td class="diff-cell">${saldoCell}</td></tr>`;
 }).join('');
 }
 compHandleFileAtual();
@@ -6470,7 +6475,11 @@ tbody.innerHTML = rows.map(r => {
 const newTag = r.isNew ? `<span style="background:#d0f0ee;color:#0d7377;font-size:0.65rem;font-weight:800;padding:2px 7px;border-radius:4px;margin-left:6px;">NOVA</span>` : '';
 const utdTag = r.utd ? `<span style="background:#ebf4ff;color:#2b6cb0;font-size:0.65rem;font-weight:800;padding:1px 6px;border-radius:4px;">${r.utd}</span>` : '';
 const stCls = 'status-' + (r.status||'DEFAULT').replace(/\s+/g,'_');
-return `<tr><td><code style="color:#0d7377;font-size:0.78rem;font-weight:800;">${r.pep}</code></td><td><div class="td-main">${r.titulo}${newTag}</div></td><td>${utdTag}</td><td><span class="status-badge ${stCls}">${r.status||'–'}</span></td><td class="diff-cell">${compDiffCell(r.pRealAnt,r.pRealAt,r.pRealDiff)}</td><td class="diff-cell">${compDiffCell(r.pImpAnt,r.pImpAt,r.pImpDiff)}</td><td class="diff-cell"><span style="color:#5a6478">${r.pPrevAt!==null?r.pPrevAt:'—'}</span></td></tr>`;
+const pstrCoelba = (window.mapaPstrGlobal && window.mapaPstrGlobal[r.pep] !== undefined) ? parseFloat(String(window.mapaPstrGlobal[r.pep]).replace(',','.')) || 0 : null;
+const saldoFinal = (pstrCoelba !== null && r.pRealAt !== null) ? Math.max(0, r.pRealAt - pstrCoelba) : null;
+const coelbaCell = pstrCoelba !== null ? `<span style="font-weight:800;color:#6b46c1;">${pstrCoelba}</span>` : `<span style="color:#ccc;">—</span>`;
+const saldoCell = saldoFinal !== null ? `<span style="font-weight:800;color:#276749;">${saldoFinal}</span>` : `<span style="color:#ccc;">—</span>`;
+return `<tr><td><code style="color:#0d7377;font-size:0.78rem;font-weight:800;">${r.pep}</code></td><td><div class="td-main">${r.titulo}${newTag}</div></td><td>${utdTag}</td><td><span class="status-badge ${stCls}">${r.status||'–'}</span></td><td class="diff-cell">${compDiffCell(r.pRealAnt,r.pRealAt,r.pRealDiff)}</td><td class="diff-cell">${coelbaCell}</td><td class="diff-cell">${saldoCell}</td></tr>`;
 }).join('');
 }
 compHandleFileAtual();
