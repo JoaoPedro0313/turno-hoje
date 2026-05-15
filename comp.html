@@ -196,7 +196,7 @@ window.presenceOpenModal = function() { if(window._presenceOpenModal) window._pr
 <div class="bottom-bar" id="bottom-bar">
   <button class="btn-print"  onclick="if(window.tirarPrint)window.tirarPrint()">&#128248; SALVAR PRINT</button>
   <button class="btn-refresh" id="btn-refresh" onclick="if(window.atualizarRelatorio)window.atualizarRelatorio()">&#8635; ATUALIZAR</button>
-  <button class="fab" style="background:#276749;" onclick="document.getElementById('pstr-csv-file-direto').click()" title="Importar CSV - Comparador Coelba">&#128268; Comparador Coelba</button>
+  <button class="fab" style="background:#276749;" onclick="document.getElementById('pstr-csv-file-direto').click()" title="Importar CSV - COMPARADOR COELBA">&#128268; COMPARADOR COELBA</button>
   <input type="file" id="pstr-csv-file-direto" accept=".csv" style="display:none" onchange="if(window.handlePstrCSV)window.handlePstrCSV(this.files[0]);this.value=''">
   <button class="fab"        onclick="if(window.openAdmModal)window.openAdmModal()">&#9881; GERENCIAR</button>
 </div>
@@ -258,7 +258,7 @@ window.presenceOpenModal = function() { if(window._presenceOpenModal) window._pr
         <button class="sidebar-item" id="tab-pstr-btn" onclick="if(window.switchTab)window.switchTab('pstr')">
           <div class="sidebar-icon">&#128268;</div>
           <div>
-            <div class="sidebar-label">Comparador Coelba</div>
+            <div class="sidebar-label">COMPARADOR COELBA</div>
           </div>
         </button>
       </div>
@@ -361,18 +361,18 @@ window.presenceOpenModal = function() { if(window._presenceOpenModal) window._pr
         </div>
 
         <div id="tab-pstr" style="display:none">
-          <div class="section-title">&#128268; Importar CSV - Comparador Coelba</div>
+          <div class="section-title">&#128268; Importar CSV - COMPARADOR COELBA</div>
           <div class="drop-zone" id="pstr-drop-zone" onclick="document.getElementById('pstr-csv-file').click()"
             ondragover="event.preventDefault();this.classList.add('dragover')"
             ondragleave="this.classList.remove('dragover')"
             ondrop="event.preventDefault();this.classList.remove('dragover');handlePstrCSV(event.dataTransfer.files[0])">
             <span class="drop-zone-icon">&#128268;</span>
-            <div class="drop-zone-text" id="lbl-pstr">Clique ou arraste o CSV do Comparador Coelba aqui</div>
+            <div class="drop-zone-text" id="lbl-pstr">Clique ou arraste o CSV do COMPARADOR COELBA aqui</div>
             <div class="drop-zone-sub">Colunas obrigatórias: PROCESSO e PSTR · sep. ponto-e-vírgula</div>
           </div>
           <input type="file" id="pstr-csv-file" accept=".csv" style="display:none" onchange="handlePstrCSV(this.files[0])">
           <div id="pstr-summary" class="prod-summary" style="display:none">
-            <div class="prod-summary-title">&#128268; Resumo da Importação - Comparador Coelba</div>
+            <div class="prod-summary-title">&#128268; Resumo da Importação - COMPARADOR COELBA</div>
             <div class="prod-summary-stats" id="pstr-summary-stats"></div>
           </div>
           <div id="pstr-tabela-wrap" style="display:none;margin-top:14px;border-radius:10px;overflow:hidden;border:1.5px solid #e2e8f0;">
