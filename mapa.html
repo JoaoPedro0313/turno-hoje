@@ -2939,7 +2939,20 @@ function compWithPapa(cb) {
 if (window.Papa) { cb(); return; }
 const s = document.createElement('script');
 s.src = 'https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js';
-s.onload = cb; document.head.appendChild(s);
+s.onload = cb;
+// CORRIGIDO: trata falha ao carregar PapaParse (CDN lenta ou bloqueada)
+s.onerror = function() {
+  console.error('[compWithPapa] Falha ao carregar PapaParse do CDN');
+  if (window._mapaMesDoSheets) {
+    window._mapaMesDoSheets = false;
+    const mt = document.getElementById('mapa-titulo');
+    if (mt) { mt.textContent = '❌ Erro: biblioteca de leitura não carregou (verifique sua conexão)'; mt.style.color='#c53030'; }
+    if (window.bancoDB && window.bancoDB.length) {
+      setTimeout(() => { try { mapaCarregarDoBanco(); } catch(e) {} }, 300);
+    }
+  }
+};
+document.head.appendChild(s);
 }
 function compParseCSVText(text, utdLabel) {
 const rows = Papa.parse(text.replace(/^\uFEFF/,''), { skipEmptyLines: true }).data;
@@ -3641,15 +3654,38 @@ function mapaCarregarMes(ano, mes) {
   if (mt) { mt.textContent = '⏳ Carregando '+label+'...'; mt.style.color='#888'; }
   const urlJac = GSHEETS_BASE.JACOBINA + entry.gidJacobina;
   const urlIrc = GSHEETS_BASE.IRECE + entry.gidIrece;
+
+  // CORRIGIDO: timeout de segurança — se o Sheets não responder em 15s, libera o banco local
+  const _mesFlagTimeout = setTimeout(() => {
+    window._mapaMesDoSheets = false;
+    if (mt) { mt.textContent = '❌ Timeout ao carregar '+label+' — verifique se as planilhas estão públicas'; mt.style.color='#c53030'; }
+    console.warn('[mapaCarregarMes] timeout de 15s atingido para', label);
+    if (bancoDB && bancoDB.length) {
+      setTimeout(() => { try { mapaCarregarDoBanco(); } catch(e2) {} }, 200);
+    }
+  }, 15000);
+
   compWithPapa(async () => {
     try {
-      const [resJac, resIrc] = await Promise.all([fetch(urlJac), fetch(urlIrc)]);
-      if (!resJac.ok) throw new Error('HTTP '+resJac.status+' (Jacobina)');
-      if (!resIrc.ok) throw new Error('HTTP '+resIrc.status+' (Irecê)');
+      // CORRIGIDO: AbortController com timeout de 12s no fetch
+      const ctrl = new AbortController();
+      const fetchTimeout = setTimeout(() => ctrl.abort(), 12000);
+      let resJac, resIrc;
+      try {
+        [resJac, resIrc] = await Promise.all([
+          fetch(urlJac, { signal: ctrl.signal }),
+          fetch(urlIrc, { signal: ctrl.signal })
+        ]);
+      } finally {
+        clearTimeout(fetchTimeout);
+      }
+      if (!resJac.ok) throw new Error('HTTP '+resJac.status+' (Jacobina) — verifique se a planilha está pública');
+      if (!resIrc.ok) throw new Error('HTTP '+resIrc.status+' (Irecê) — verifique se a planilha está pública');
       const [textJac, textIrc] = await Promise.all([resJac.text(), resIrc.text()]);
       const dataJac = compParseCSVText(textJac, 'JACOBINA') || [];
       const dataIrc = compParseCSVText(textIrc, 'IRECÊ') || [];
-      if (!dataJac.length && !dataIrc.length) throw new Error('Nenhum dado reconhecido nas planilhas');
+      if (!dataJac.length && !dataIrc.length) throw new Error('Nenhum dado reconhecido nas planilhas — verifique o compartilhamento (deve ser "Qualquer pessoa com o link")');
+      clearTimeout(_mesFlagTimeout); // sucesso — cancela o timeout de segurança
       // Substitui bancoDB temporariamente com dados deste mês
       bancoDB = [...dataJac, ...dataIrc];
       const pad = n => String(n).padStart(2,'0');
@@ -3661,8 +3697,18 @@ function mapaCarregarMes(ano, mes) {
       const es = document.getElementById('mapa-enc-filter'); if (es) es.value='';
       mapaCarregarDoBanco();
     } catch(e) {
-      if (mt) { mt.textContent = '❌ Erro ao carregar '+label+': '+e.message; mt.style.color='#c53030'; }
+      clearTimeout(_mesFlagTimeout);
+      // CORRIGIDO: reseta a flag para não bloquear o banco local indefinidamente
+      window._mapaMesDoSheets = false;
+      const msgErr = e.name === 'AbortError'
+        ? '❌ Timeout ao buscar planilha — verifique sua conexão ou se o Sheets está público'
+        : '❌ Erro ao carregar '+label+': '+e.message;
+      if (mt) { mt.textContent = msgErr; mt.style.color='#c53030'; }
       console.error('[mapaCarregarMes]', e);
+      // CORRIGIDO: fallback para o banco local se disponível
+      if (bancoDB && bancoDB.length) {
+        setTimeout(() => { try { mapaCarregarDoBanco(); } catch(e2) {} }, 500);
+      }
     }
   });
 }
