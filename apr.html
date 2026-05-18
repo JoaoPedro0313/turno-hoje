@@ -9,16 +9,22 @@
 <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;600;700;800&display=swap" rel="stylesheet">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:'Barlow',sans-serif;background:#f0f4f5;min-height:100vh;padding-bottom:60px}
+body{font-family:'Barlow',sans-serif;background:#f0f4f5;min-height:100vh;padding-bottom:60px;padding-top:108px}
+/* ── NAV BAR (igual ao Turno) ── */
+.page-nav{display:flex;gap:0;background:#fff;border-bottom:3px solid #e2e8f0;position:fixed;top:60px;left:0;right:0;z-index:90;box-shadow:0 2px 8px rgba(0,0,0,0.08)}
+.page-nav-btn{flex:1;padding:14px 10px;border:none;background:transparent;font-family:'Barlow',sans-serif;font-size:0.88rem;font-weight:800;color:#888;cursor:pointer;letter-spacing:0.5px;text-transform:uppercase;border-bottom:3px solid transparent;margin-bottom:-3px;transition:all 0.2s;display:flex;align-items:center;justify-content:center;gap:8px;text-decoration:none}
+.page-nav-btn:hover{background:#f7f9fc;color:#444}
+.page-nav-btn.active-apr{color:#b97400;border-bottom-color:#f0a500;background:#fffbf0}
+@media print{.page-nav{display:none!important}}
 
 /* HEADER */
-.header{background:linear-gradient(135deg,#0d7377 0%,#14a085 60%,#0d7377 100%);padding:10px 20px;display:flex;align-items:center;justify-content:space-between;min-height:52px;position:sticky;top:0;z-index:100;box-shadow:0 2px 12px rgba(0,0,0,.25)}
+.header{background:linear-gradient(135deg,#0d7377 0%,#14a085 60%,#0d7377 100%);padding:10px 20px;display:flex;align-items:center;justify-content:space-between;min-height:52px;position:fixed;top:0;left:0;right:0;z-index:100;box-shadow:0 2px 12px rgba(0,0,0,.25)}
 .header::before{content:'';position:absolute;inset:0;background:repeating-linear-gradient(45deg,rgba(255,255,255,0.02) 0,rgba(255,255,255,0.02) 1px,transparent 1px,transparent 20px)}
 .header-left{display:flex;align-items:center;gap:10px;position:relative}
 .logo-svg{width:36px;height:36px;flex-shrink:0}
 .logo-text h1{font-size:0.88rem;font-weight:800;letter-spacing:2px;color:#fff;text-transform:uppercase;position:relative}
 .logo-text small{font-size:0.62rem;font-weight:600;letter-spacing:2px;color:rgba(255,255,255,.7);text-transform:uppercase;display:block}
-.header-bar{height:4px;background:linear-gradient(90deg,#ff6b35,#ff9a3c,#ff6b35)}
+.header-bar{height:4px;background:linear-gradient(90deg,#ff6b35,#ff9a3c,#ff6b35);position:fixed;top:52px;left:0;right:0;z-index:100}
 .dark-toggle{background:rgba(255,255,255,.13);border:1.5px solid rgba(255,255,255,.25);color:#fff;padding:5px 12px;border-radius:20px;cursor:pointer;font-size:0.7rem;font-weight:800;font-family:'Barlow',sans-serif;letter-spacing:0.3px;transition:all .2s}
 .dark-toggle:hover{background:rgba(255,255,255,.22)}
 
@@ -174,6 +180,16 @@ body.dark .info-box{background:#0d2b21;border-color:#1D9E75;color:#9FE1CB}
   <button class="dark-toggle" onclick="toggleDark()" id="dark-btn">🌙 Dark</button>
 </div>
 <div class="header-bar"></div>
+
+<!-- ── BARRA DE NAVEGAÇÃO (igual ao Turno) ── -->
+<nav class="page-nav">
+  <a class="page-nav-btn" href="turno.html">&#128203; TURNO DO DIA</a>
+  <a class="page-nav-btn active-apr" href="apr.html">&#9888; APR</a>
+  <a class="page-nav-btn" href="comp.html">&#9889; COMPARADOR</a>
+  <a class="page-nav-btn" href="mapa.html" onclick="return typeof switchPage==='function'?(switchPage('posto'),false):true">&#128200; PROJE&#199;&#195;O</a>
+  <a class="page-nav-btn" href="mapa.html">&#128205; MAPA</a>
+  <a class="page-nav-btn" href="prog.html">&#128197; PROG. DI&#193;RIA</a>
+</nav>
 
 <!-- ==================== HOME ==================== -->
 <div class="page active" id="page-home">
@@ -1335,5 +1351,59 @@ function incrementBarr(barr,offset){
   return m[1]+String(parseInt(m[2])+offset).padStart(m[2].length,'0');
 }
 </script>
+
+<!-- ==================== BOTÕES FIXOS (mesmos do Turno) ==================== -->
+
+<!-- Botão Imprimir (canto inferior direito) -->
+<button onclick="window.print()" title="Imprimir" style="position:fixed;bottom:18px;right:18px;z-index:200;background:rgba(43,108,176,0.82);color:#fff;border:none;border-radius:50%;width:44px;height:44px;font-size:1.15rem;cursor:pointer;box-shadow:0 2px 10px rgba(43,108,176,0.35);display:flex;align-items:center;justify-content:center;transition:all 0.2s;backdrop-filter:blur(4px);" onmouseover="this.style.background='rgba(26,74,128,0.95)';this.style.transform='scale(1.1)'" onmouseout="this.style.background='rgba(43,108,176,0.82)';this.style.transform='scale(1)'">&#128247;</button>
+
+<!-- Engrenagem / Configurações (canto inferior esquerdo) -->
+<button id="gear-btn" title="Configurações" onclick="document.getElementById('gear-modal-apr').style.display='flex';" style="position:fixed;bottom:18px;left:18px;z-index:200;background:rgba(13,115,119,0.82);color:#fff;border:none;border-radius:50%;width:44px;height:44px;font-size:1.2rem;cursor:pointer;box-shadow:0 2px 10px rgba(13,115,119,0.35);display:flex;align-items:center;justify-content:center;transition:all 0.2s;backdrop-filter:blur(4px);" onmouseover="this.style.background='rgba(8,80,84,0.95)';this.style.transform='scale(1.1) rotate(30deg)'" onmouseout="this.style.background='rgba(13,115,119,0.82)';this.style.transform='scale(1) rotate(0deg)'">
+  <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="12" r="3"></circle>
+    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+  </svg>
+</button>
+
+<!-- Modal de Configurações APR -->
+<div id="gear-modal-apr" style="display:none;position:fixed;inset:0;background:rgba(10,20,30,0.65);z-index:500;align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(4px);">
+  <div style="background:#fff;border-radius:20px;width:100%;max-width:400px;box-shadow:0 32px 80px rgba(0,0,0,0.25);overflow:hidden;">
+    <div style="background:linear-gradient(135deg,#0b5e62,#14a085);padding:18px 24px;display:flex;align-items:center;justify-content:space-between;">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <div style="width:36px;height:36px;border-radius:10px;background:rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;font-size:1.1rem;">⚙️</div>
+        <div>
+          <div style="color:#fff;font-size:1rem;font-weight:800;letter-spacing:0.5px;">Configurações</div>
+          <div style="color:rgba(255,255,255,0.65);font-size:0.72rem;font-weight:600;">APR — Evidências Fotográficas</div>
+        </div>
+      </div>
+      <button onclick="document.getElementById('gear-modal-apr').style.display='none'" style="background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.2);color:#fff;width:34px;height:34px;border-radius:10px;cursor:pointer;font-size:1rem;font-weight:800;display:flex;align-items:center;justify-content:center;">✕</button>
+    </div>
+    <div style="padding:24px;">
+      <div style="font-size:0.68rem;font-weight:800;color:#aaa;letter-spacing:2px;text-transform:uppercase;margin-bottom:16px;padding-bottom:8px;border-bottom:1px solid #f0f2f5;">🎨 Aparência</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid #f0f2f5;margin-bottom:16px;">
+        <div>
+          <div style="font-size:0.88rem;font-weight:700;color:#2d3748;">Modo Escuro</div>
+          <div style="font-size:0.72rem;color:#888;margin-top:2px;">Ativa o tema dark na APR</div>
+        </div>
+        <button onclick="toggleDark();document.getElementById('dark-btn').textContent=document.body.classList.contains('dark')?'☀️ Light':'🌙 Dark';" style="padding:8px 18px;border-radius:20px;border:1.5px solid #e2e8f0;background:#f8fafc;font-family:'Barlow',sans-serif;font-size:0.78rem;font-weight:800;cursor:pointer;color:#555;transition:all 0.15s;">🌙 Dark / ☀️ Light</button>
+      </div>
+      <div style="font-size:0.68rem;font-weight:800;color:#aaa;letter-spacing:2px;text-transform:uppercase;margin-bottom:14px;">🔗 Navegação</div>
+      <a href="turno.html" style="display:flex;align-items:center;gap:10px;padding:12px 14px;background:#f0fafa;border:1px solid #c0e8e5;border-radius:10px;text-decoration:none;margin-bottom:8px;transition:background 0.15s;" onmouseover="this.style.background='#dbeffe'" onmouseout="this.style.background='#f0fafa'">
+        <span style="font-size:1rem;">📋</span>
+        <div>
+          <div style="font-size:0.82rem;font-weight:800;color:#0d7377;">Turno do Dia</div>
+          <div style="font-size:0.68rem;color:#888;font-weight:600;">Abrir sistema de turno</div>
+        </div>
+      </a>
+    </div>
+  </div>
+</div>
+<script>
+// Fechar gear-modal-apr clicando fora
+document.getElementById('gear-modal-apr').addEventListener('click', function(e){
+  if (e.target === this) this.style.display = 'none';
+});
+</script>
+
 </body>
 </html>
