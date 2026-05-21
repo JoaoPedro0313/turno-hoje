@@ -3658,6 +3658,7 @@ function mapaCarregarMes(ano, mes) {
   // CORRIGIDO: timeout de segurança — se o Sheets não responder em 15s, libera o banco local
   const _mesFlagTimeout = setTimeout(() => {
     window._mapaMesDoSheets = false;
+    window._mapaCarregarMesInterno = false;
     if (mt) { mt.textContent = '❌ Timeout ao carregar '+label+' — verifique se as planilhas estão públicas'; mt.style.color='#c53030'; }
     console.warn('[mapaCarregarMes] timeout de 15s atingido para', label);
     if (bancoDB && bancoDB.length) {
@@ -3695,6 +3696,8 @@ function mapaCarregarMes(ano, mes) {
       mapaFiltroAtivo='TODOS'; mapaUTDFiltro='TODAS'; mapaMunFiltro=''; mapaEncFiltro='';
       const ms = document.getElementById('mapa-mun-filter'); if (ms) ms.value='';
       const es = document.getElementById('mapa-enc-filter'); if (es) es.value='';
+      // CORRIGIDO: sinaliza que esta é a chamada interna (não deve ser bloqueada pela flag)
+      window._mapaCarregarMesInterno = true;
       mapaCarregarDoBanco();
     } catch(e) {
       clearTimeout(_mesFlagTimeout);
@@ -3956,7 +3959,9 @@ if (!bancoDB || !bancoDB.length) {
   return;
 }
 // Se o usuário já carregou um mês específico das planilhas, não resetar com dados do banco
-if (window._mapaMesDoSheets) return;
+// CORRIGIDO: a flag só bloqueia chamadas externas (Supabase/WebSocket), não a chamada interna de mapaCarregarMes
+if (window._mapaMesDoSheets && !window._mapaCarregarMesInterno) return;
+window._mapaCarregarMesInterno = false; // reseta após uso
 // Determina qual mês está ativo (usa o mês atual do GSHEETS_MESES se nenhum foi selecionado)
 if (!mapaMesAtivo && GSHEETS_MESES && GSHEETS_MESES.length) {
   const now = new Date();
