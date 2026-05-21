@@ -2232,6 +2232,7 @@ function mapaRaioLimpar() {
   if (mapaRaioCircle) { mapaRaioCircle.remove(); mapaRaioCircle = null; }
   if (mapaRaioMarker) { mapaRaioMarker.remove(); mapaRaioMarker = null; }
   mapaRaioCentro = null;
+  mapaFitFeito = false; // permite reencaixar ao mostrar todas as obras novamente
   // Reset campos de lat/lon
   const latEl = document.getElementById('mapa-raio-lat');
   const lonEl = document.getElementById('mapa-raio-lon');
@@ -4154,7 +4155,11 @@ function mapaEnsureLeaflet(cb) {
     if (!mapaMap) {
       mapaMap = L.map('mapa-container', {zoomControl:true});
       mapaMap.on('zoomstart movestart', function(e) {
-        if (e.originalEvent) mapaUsuarioMoveu = true; // só marca se foi interação humana
+        if (e.originalEvent) mapaUsuarioMoveu = true;
+      });
+      // Não marcar como movido quando for clique para raio
+      mapaMap.on('click', function() {
+        if (mapaRaioModoClick) return; // clique para raio — não marca como movido
       });
       var _mapaTileOSM = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {attribution:'© OpenStreetMap', maxZoom:20});
       var _mapaTileSat = L.tileLayer('https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {attribution:'© Google Satellite', maxZoom:20, subdomains:['mt0','mt1','mt2','mt3']});
@@ -4360,6 +4365,7 @@ L.marker([d.lat,d.lon],{icon}).addTo(mapaLayerGroup).bindPopup(popup,{maxWidth:3
 bounds.push([d.lat,d.lon]);
 });
 if (bounds.length && !mapaFitFeito) { mapaMap.fitBounds(bounds,{padding:[28,28]}); mapaFitFeito=true; }
+// Se raio ativo e sem resultados, não reseta o mapa — mantém a visão atual
 const mc = document.getElementById('mapa-container');
 if (mc && !mapaFitFeito) mc.scrollIntoView({behavior:'smooth',block:'center'});
 // Atualiza lista de obras
