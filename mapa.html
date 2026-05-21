@@ -340,7 +340,7 @@ window.presenceOpenModal = function() { if(window._presenceOpenModal) window._pr
       <div id="mapa-container" style="height:580px;width:100%;"></div>
       <div id="mapa-map-toolbar" style="display:none;position:absolute;top:10px;right:10px;z-index:500;flex-direction:column;gap:8px;align-items:flex-end;">
         <button onclick="mapaRotaAbrir()" style="padding:8px 16px;background:linear-gradient(135deg,#c05621,#dd6b20);color:#fff;border:none;border-radius:10px;font-family:'Barlow',sans-serif;font-size:0.75rem;font-weight:800;cursor:pointer;box-shadow:0 4px 14px rgba(192,86,33,0.4);display:flex;align-items:center;gap:6px;transition:all 0.15s;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">🛣️ Traçar Rota</button>
-        <button id="btn-toggle-satelite" onclick="mapaToggleSatelite()" style="padding:7px 14px;background:rgba(0,0,0,0.65);color:#fff;border:2px solid rgba(255,255,255,0.3);border-radius:10px;font-family:'Barlow',sans-serif;font-size:0.72rem;font-weight:800;cursor:pointer;backdrop-filter:blur(6px);display:flex;align-items:center;gap:6px;transition:all 0.15s;white-space:nowrap;" title="Alternar entre Satélite e Mapa">🛰️ Satélite</button>
+        <button id="btn-toggle-satelite" onclick="mapaToggleSatelite()" style="padding:7px 14px;background:rgba(13,115,119,0.85);color:#fff;border:2px solid rgba(255,255,255,0.4);border-radius:10px;font-family:'Barlow',sans-serif;font-size:0.72rem;font-weight:800;cursor:pointer;backdrop-filter:blur(6px);display:flex;align-items:center;gap:6px;transition:all 0.15s;white-space:nowrap;" title="Alternar entre Satélite e Mapa">🗺️ Ver Mapa</button>
       </div>
       <div id="mapa-placeholder" style="height:580px;display:none;flex-direction:column;align-items:center;justify-content:center;color:#aaa;font-family:'Barlow',sans-serif;">
         <div style="font-size:4rem;margin-bottom:16px;">&#128506;</div>
@@ -2552,16 +2552,15 @@ window.mapaToggleSatelite = function() {
     if (window._mapaTileLabels) mapaMap.removeLayer(window._mapaTileLabels);
     if (window._mapaTileOSM) window._mapaTileOSM.addTo(mapaMap);
     window._mapaModeSat = false;
-    if (btn) { btn.textContent = '🗺️ Mapa Rua'; btn.style.background = 'rgba(13,115,119,0.85)'; btn.style.borderColor = 'rgba(255,255,255,0.4)'; }
+    if (btn) { btn.innerHTML = '🛰️ Ver Satélite'; btn.style.background = 'rgba(0,0,0,0.65)'; btn.style.borderColor = 'rgba(255,255,255,0.3)'; }
   } else {
     // Trocar para satélite
     if (window._mapaTileOSM) mapaMap.removeLayer(window._mapaTileOSM);
     if (window._mapaTileSat) window._mapaTileSat.addTo(mapaMap);
     if (window._mapaTileLabels) window._mapaTileLabels.addTo(mapaMap);
-    // Garantir que marcadores ficam por cima
     if (mapaLayerGroup) mapaLayerGroup.bringToFront && mapaLayerGroup.bringToFront();
     window._mapaModeSat = true;
-    if (btn) { btn.textContent = '🛰️ Satélite'; btn.style.background = 'rgba(0,0,0,0.65)'; btn.style.borderColor = 'rgba(255,255,255,0.3)'; }
+    if (btn) { btn.innerHTML = '🗺️ Ver Mapa'; btn.style.background = 'rgba(13,115,119,0.85)'; btn.style.borderColor = 'rgba(255,255,255,0.4)'; }
   }
 };
 window.mapaProgFocarObra = mapaProgFocarObra;
@@ -4161,9 +4160,9 @@ function mapaEnsureLeaflet(cb) {
   const doInit = () => {
     if (!mapaMap) {
       mapaMap = L.map('mapa-container', {zoomControl:true});
-      var _mapaTileOSM = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {attribution:'© OpenStreetMap', maxZoom:19});
-      var _mapaTileSat = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {attribution:'© Esri World Imagery', maxZoom:19});
-      var _mapaTileLabels = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', {attribution:'', maxZoom:19, opacity:0.85});
+      var _mapaTileOSM = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {attribution:'© OpenStreetMap', maxZoom:20});
+      var _mapaTileSat = L.tileLayer('https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {attribution:'© Google Satellite', maxZoom:20, subdomains:['mt0','mt1','mt2','mt3']});
+      var _mapaTileLabels = L.tileLayer('https://mt1.google.com/vt/lyrs=h&x={x}&y={y}&z={z}', {attribution:'', maxZoom:20, subdomains:['mt0','mt1','mt2','mt3'], opacity:0.9});
       window._mapaTileOSM = _mapaTileOSM;
       window._mapaTileSat = _mapaTileSat;
       window._mapaTileLabels = _mapaTileLabels;
