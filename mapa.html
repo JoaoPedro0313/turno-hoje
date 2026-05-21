@@ -235,25 +235,7 @@ window.presenceOpenModal = function() { if(window._presenceOpenModal) window._pr
             <button id="mapa-prog-nenhum" onclick="mapaSetProgressoFiltro('NENHUM')" style="padding:5px 13px;border-radius:8px;border:1.5px solid #e2e8f0;background:#fff;font-family:'Barlow',sans-serif;font-size:0.72rem;font-weight:800;cursor:pointer;color:#555;transition:all 0.15s;white-space:nowrap;">❌ Sem progresso</button>
           </div>
         </div>
-        <!-- LINHA 3: Filtro por quantidade mínima -->
-        <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-top:10px;padding-top:10px;border-top:1px solid #f0f2f5;">
-          <div style="display:flex;align-items:center;gap:7px;">
-            <span style="font-size:0.68rem;font-weight:800;color:#38a169;letter-spacing:1.5px;text-transform:uppercase;white-space:nowrap;">⛏️ CAVA ≥:</span>
-            <input type="number" id="mapa-cava-min" min="0" placeholder="mín" oninput="mapaFiltrar()"
-              style="width:65px;padding:5px 8px;border:1.5px solid #c6f6d5;border-radius:8px;font-family:'Barlow',sans-serif;font-size:0.82rem;font-weight:700;color:#276749;outline:none;text-align:center;">
-          </div>
-          <div style="display:flex;align-items:center;gap:7px;">
-            <span style="font-size:0.68rem;font-weight:800;color:#2b6cb0;letter-spacing:1.5px;text-transform:uppercase;white-space:nowrap;">🪝 POSTES R. ≥:</span>
-            <input type="number" id="mapa-post-min" min="0" placeholder="mín" oninput="mapaFiltrar()"
-              style="width:65px;padding:5px 8px;border:1.5px solid #bee3f8;border-radius:8px;font-family:'Barlow',sans-serif;font-size:0.82rem;font-weight:700;color:#2b6cb0;outline:none;text-align:center;">
-          </div>
-          <div style="display:flex;align-items:center;gap:7px;">
-            <span style="font-size:0.68rem;font-weight:800;color:#d69e2e;letter-spacing:1.5px;text-transform:uppercase;white-space:nowrap;">📋 À IMPLANTAR ≥:</span>
-            <input type="number" id="mapa-posti-min" min="0" placeholder="mín" oninput="mapaFiltrar()"
-              style="width:65px;padding:5px 8px;border:1.5px solid #fef3cd;border-radius:8px;font-family:'Barlow',sans-serif;font-size:0.82rem;font-weight:700;color:#b7791f;outline:none;text-align:center;">
-          </div>
-          <button onclick="mapaLimparFiltrosQuantidade()" style="padding:5px 13px;border-radius:8px;border:1.5px solid #e2e8f0;background:#f8fafc;font-family:'Barlow',sans-serif;font-size:0.72rem;font-weight:800;cursor:pointer;color:#888;transition:all 0.15s;margin-left:auto;">↺ Limpar quantidades</button>
-        </div>
+        <div style="display:none;">
         <div style="display:none;">
         </div>
       </div>
