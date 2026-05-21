@@ -790,6 +790,7 @@ let aprData = [];
 let mapaMap=null, mapaLayerGroup=null, mapaData=[], mapaFiltroAtivo='TODOS', mapaUTDFiltro='TODAS', mapaMesFiltro='TODOS';
 let mapaMunFiltro='', mapaEncFiltro='', mapaCoordFiltro='TODAS';
 let mapaFitFeito=false; // só faz fitBounds automático uma vez
+let mapaUsuarioMoveu=false; // usuário já interagiu com zoom/pan manualmente
 let mapaCavaFiltro='TODAS', mapaPostFiltro='TODAS', mapaProgressoFiltro='TODOS';
 // Mês ativo na barra de meses (baseado em GSHEETS_MESES); null = usa o bancoDB já carregado
 let mapaMesAtivo = null;
@@ -2221,7 +2222,10 @@ function mapaRaioDesenhar() {
     }),
     zIndexOffset: 1000
   }).addTo(mapaMap).bindPopup(centerPopupHtml);
-  mapaMap.fitBounds(mapaRaioCircle.getBounds(), { padding: [20, 20] });
+  if (!mapaUsuarioMoveu) {
+    mapaMap.fitBounds(mapaRaioCircle.getBounds(), { padding: [20, 20] });
+  }
+  mapaFitFeito = true;
 }
 
 function mapaRaioLimpar() {
@@ -4080,6 +4084,8 @@ if (!mapaMesAtivo && GSHEETS_MESES && GSHEETS_MESES.length) {
 }
 const ph2 = document.getElementById('mapa-placeholder'); if (ph2) ph2.style.display='none';
 mapaFitFeito = false;
+mapaUsuarioMoveu = false;
+mapaFiltroAtivo = 'TODOS';
 mapaData = bancoDB.map(obj => {
   // Tenta todos os nomes possíveis de coluna de coordenadas
   const _latKeys = ['LATITUDE','LATITUDE SUL','LATITUDE (SUL)','LAT','COORD LAT','COORDENADA LAT'];
@@ -4099,6 +4105,8 @@ if (mt) {
     const aliasLat = ['LATITUDE','Latitude','latitude','LAT','lat','Lat'];
     const aliasLon = ['LONGITUDE','Longitude','longitude','LON','lon','Lon','LNG','lng','Lng'];
     mapaFitFeito = false;
+    mapaUsuarioMoveu = false;
+    mapaFiltroAtivo = 'TODOS';
     mapaData = bancoDB.map(obj => {
       const latVal = aliasLat.map(k=>obj[k]).find(v=>v!=null&&v!=='');
       const lonVal = aliasLon.map(k=>obj[k]).find(v=>v!=null&&v!=='');
@@ -4145,6 +4153,9 @@ function mapaEnsureLeaflet(cb) {
   const doInit = () => {
     if (!mapaMap) {
       mapaMap = L.map('mapa-container', {zoomControl:true});
+      mapaMap.on('zoomstart movestart', function(e) {
+        if (e.originalEvent) mapaUsuarioMoveu = true; // só marca se foi interação humana
+      });
       var _mapaTileOSM = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {attribution:'© OpenStreetMap', maxZoom:20});
       var _mapaTileSat = L.tileLayer('https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {attribution:'© Google Satellite', maxZoom:20, subdomains:['mt0','mt1','mt2','mt3']});
       var _mapaTileLabels = L.tileLayer('https://mt1.google.com/vt/lyrs=h&x={x}&y={y}&z={z}', {attribution:'', maxZoom:20, subdomains:['mt0','mt1','mt2','mt3'], opacity:0.9});
@@ -4245,6 +4256,11 @@ mapaLayerGroup.clearLayers();
 const search = (document.getElementById('mapa-search')?document.getElementById('mapa-search').value||'':'').toLowerCase();
 mapaMunFiltro = (document.getElementById('mapa-mun-filter')?document.getElementById('mapa-mun-filter').value||'':'');
 mapaEncFiltro = (document.getElementById('mapa-enc-filter')?document.getElementById('mapa-enc-filter').value||'':'');
+// Auto-reset filtro de status se não existir nos dados atuais
+if (mapaFiltroAtivo !== 'TODOS') {
+  const statusExiste = mapaData.some(d => d.temCoord && d.status.trim() === mapaFiltroAtivo);
+  if (!statusExiste) mapaFiltroAtivo = 'TODOS';
+}
 const filtered = mapaData.filter(d => {
 if (mapaCoordFiltro==='COM' && !d.temCoord) return false;
 if (mapaCoordFiltro==='SEM' && d.temCoord) return false;
@@ -4256,8 +4272,9 @@ if (mapaMunFiltro && d.mun!==mapaMunFiltro) return false;
 if (mapaEncFiltro && d.enc!==mapaEncFiltro) return false;
 if (search && !d.pep.toLowerCase().includes(search) && !d.titulo.toLowerCase().includes(search) && !d.mun.toLowerCase().includes(search)) return false;
 // Filtros novos: cava, postes, progresso
-const hasCava = d.cava && parseFloat(String(d.cava).replace(',','.')) > 0;
-const hasPost = d.postR && parseFloat(String(d.postR).replace(',','.')) > 0;
+const parseBR = v => parseFloat(String(v||'').replace(',','.').trim()) || 0;
+const hasCava = parseBR(d.cava) > 0;
+const hasPost = parseBR(d.postR) > 0;
 if (mapaCavaFiltro==='COM' && !hasCava) return false;
 if (mapaCavaFiltro==='SEM' && hasCava) return false;
 if (mapaPostFiltro==='COM' && !hasPost) return false;
