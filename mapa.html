@@ -789,6 +789,7 @@ let progRegistros = [], progEditIdx = null;
 let aprData = [];
 let mapaMap=null, mapaLayerGroup=null, mapaData=[], mapaFiltroAtivo='TODOS', mapaUTDFiltro='TODAS', mapaMesFiltro='TODOS';
 let mapaMunFiltro='', mapaEncFiltro='', mapaCoordFiltro='TODAS';
+let mapaFitFeito=false; // só faz fitBounds automático uma vez
 let mapaCavaFiltro='TODAS', mapaPostFiltro='TODAS', mapaProgressoFiltro='TODOS';
 // Mês ativo na barra de meses (baseado em GSHEETS_MESES); null = usa o bancoDB já carregado
 let mapaMesAtivo = null;
@@ -4078,6 +4079,7 @@ if (!mapaMesAtivo && GSHEETS_MESES && GSHEETS_MESES.length) {
   mapaMesAtivo = { ano: entry.ano, mes: entry.mes };
 }
 const ph2 = document.getElementById('mapa-placeholder'); if (ph2) ph2.style.display='none';
+mapaFitFeito = false;
 mapaData = bancoDB.map(obj => {
   // Tenta todos os nomes possíveis de coluna de coordenadas
   const _latKeys = ['LATITUDE','LATITUDE SUL','LATITUDE (SUL)','LAT','COORD LAT','COORDENADA LAT'];
@@ -4096,6 +4098,7 @@ if (mt) {
     // Tenta nomes alternativos de colunas de coordenadas
     const aliasLat = ['LATITUDE','Latitude','latitude','LAT','lat','Lat'];
     const aliasLon = ['LONGITUDE','Longitude','longitude','LON','lon','Lon','LNG','lng','Lng'];
+    mapaFitFeito = false;
     mapaData = bancoDB.map(obj => {
       const latVal = aliasLat.map(k=>obj[k]).find(v=>v!=null&&v!=='');
       const lonVal = aliasLon.map(k=>obj[k]).find(v=>v!=null&&v!=='');
@@ -4339,9 +4342,9 @@ const icon = L.divIcon({className:'',html:`<div style="width:13px;height:13px;bo
 L.marker([d.lat,d.lon],{icon}).addTo(mapaLayerGroup).bindPopup(popup,{maxWidth:310});
 bounds.push([d.lat,d.lon]);
 });
-if (bounds.length) mapaMap.fitBounds(bounds,{padding:[28,28]});
+if (bounds.length && !mapaFitFeito) { mapaMap.fitBounds(bounds,{padding:[28,28]}); mapaFitFeito=true; }
 const mc = document.getElementById('mapa-container');
-if (mc) mc.scrollIntoView({behavior:'smooth',block:'center'});
+if (mc && !mapaFitFeito) mc.scrollIntoView({behavior:'smooth',block:'center'});
 // Atualiza lista de obras
 mapaObrasListaFiltrados = filtered;
 if (typeof mapaObrasListaAtiva !== 'undefined' && mapaObrasListaAtiva) mapaRenderObrasList(filtered);
