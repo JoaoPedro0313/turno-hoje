@@ -442,6 +442,20 @@ window.presenceOpenModal = function() { if(window._presenceOpenModal) window._pr
             </div>
           </div>
         </div>
+        <!-- Distância entre duas obras -->
+        <div id="mapa-dist2-bar" style="margin-top:8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+          <button onclick="mapaDistDuasObras()" id="btn-dist2" style="padding:7px 16px;background:linear-gradient(135deg,#2b6cb0,#3182ce);color:#fff;border:none;border-radius:8px;font-family:'Barlow',sans-serif;font-size:0.75rem;font-weight:800;cursor:pointer;display:flex;align-items:center;gap:6px;">📐 Distância entre as 2 obras</button>
+          <span style="font-size:0.7rem;color:#aaa;font-weight:600;">Selecione exatamente 2 obras acima</span>
+        </div>
+        <div id="mapa-dist2-resultado" style="display:none;background:linear-gradient(135deg,#ebf4ff,#e3f0ff);border:1.5px solid #bee3f8;border-radius:10px;padding:14px 16px;margin-top:8px;">
+          <div style="font-size:0.68rem;font-weight:800;color:#2b6cb0;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:10px;">📐 DISTÂNCIA ENTRE AS OBRAS</div>
+          <div style="font-size:0.72rem;font-weight:700;color:#555;margin-bottom:8px;" id="mapa-dist2-nomes">—</div>
+          <div style="display:flex;gap:20px;flex-wrap:wrap;margin-bottom:10px;">
+            <div><span id="mapa-dist2-km" style="font-size:1.4rem;font-weight:800;color:#1a365d;">—</span><div style="font-size:0.62rem;font-weight:700;color:#888;text-transform:uppercase;">Distância</div></div>
+            <div><span id="mapa-dist2-tempo" style="font-size:1.4rem;font-weight:800;color:#1a365d;">—</span><div style="font-size:0.62rem;font-weight:700;color:#888;text-transform:uppercase;">Tempo estimado</div></div>
+          </div>
+        </div>
+
         <!-- Resumo da rota calculada -->
         <div id="mapa-rota-resumo" style="display:none;background:linear-gradient(135deg,#fff8f0,#fff3e0);border:1.5px solid #fbd38d;border-radius:10px;padding:14px 16px;margin-top:4px;">
           <div style="font-size:0.68rem;font-weight:800;color:#c05621;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:10px;">📊 RESUMO DA ROTA</div>
@@ -2933,6 +2947,48 @@ function mapaRotaExportarCSV() {
   a.click();
 }
 window.mapaRotaExportarCSV = mapaRotaExportarCSV;
+async function mapaDistDuasObras() {
+  const res = document.getElementById('mapa-dist2-resultado');
+  if (mapaRotaSelecionadas.length !== 2) {
+    alert('Selecione exatamente 2 obras para calcular a distância entre elas.');
+    return;
+  }
+  const [a, b] = mapaRotaSelecionadas;
+  if (!a.lat || !a.lon || !b.lat || !b.lon) {
+    alert('Uma das obras não possui coordenadas cadastradas.');
+    return;
+  }
+  const btn = document.getElementById('btn-dist2');
+  if (btn) { btn.textContent = '⏳ Calculando...'; btn.disabled = true; }
+  if (res) res.style.display = 'none';
+  try {
+    const url = `https://router.project-osrm.org/route/v1/driving/${a.lon},${a.lat};${b.lon},${b.lat}?overview=false`;
+    const resp = await fetch(url);
+    const data = await resp.json();
+    if (!data.routes || !data.routes.length) throw new Error('Sem rota');
+    const distM = data.routes[0].distance;
+    const durS  = data.routes[0].duration;
+    const distKm = (distM / 1000).toFixed(1) + ' km';
+    const min = Math.round(durS / 60);
+    const durStr = min >= 60 ? Math.floor(min/60) + 'h ' + (min%60) + 'min' : min + ' min';
+    document.getElementById('mapa-dist2-nomes').textContent = (a.titulo||a.pep) + '  →  ' + (b.titulo||b.pep);
+    document.getElementById('mapa-dist2-km').textContent = distKm;
+    document.getElementById('mapa-dist2-tempo').textContent = durStr;
+    if (res) res.style.display = '';
+    // desenha linha no mapa
+    if (window.mapaMap) {
+      if (window._dist2Layer) { window._dist2Layer.remove(); }
+      window._dist2Layer = L.polyline([[a.lat,a.lon],[b.lat,b.lon]],{color:'#2b6cb0',weight:4,dashArray:'8,6',opacity:0.85}).addTo(mapaMap);
+      mapaMap.fitBounds(window._dist2Layer.getBounds(), {padding:[40,40]});
+    }
+  } catch(e) {
+    alert('Erro ao calcular distância. Verifique as coordenadas das obras.');
+  } finally {
+    if (btn) { btn.textContent = '📐 Distância entre as 2 obras'; btn.disabled = false; }
+  }
+}
+window.mapaDistDuasObras = mapaDistDuasObras;
+
 function mapaRotaAdicionarDoPopup(pep, titulo, lat, lon, mun, status) {
   if (mapaRotaSelecionadas.find(s=>s.pep===pep)) return;
   mapaRotaSelecionadas.push({pep, titulo, lat, lon, mun, status});
