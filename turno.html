@@ -4361,7 +4361,438 @@ setTimeout(presenceInit, 1500);
 <button onclick="if(window.tirarPrint)window.tirarPrint();else window.print()" title="Imprimir" style="position:fixed;bottom:18px;right:18px;z-index:200;background:rgba(43,108,176,0.82);color:#fff;border:none;border-radius:50%;width:44px;height:44px;font-size:1.15rem;cursor:pointer;box-shadow:0 2px 10px rgba(43,108,176,0.35);display:flex;align-items:center;justify-content:center;transition:all 0.2s;backdrop-filter:blur(4px);" onmouseover="this.style.background='rgba(26,74,128,0.95)';this.style.transform='scale(1.1)'" onmouseout="this.style.background='rgba(43,108,176,0.82)';this.style.transform='scale(1)'">&#128247;</button>
 
 <!-- Botão Relatório de Faltas -->
-<button onclick="window.open('relatorio_turno.html','_blank')" title="Relatório de Faltas" style="position:fixed;bottom:18px;left:50%;transform:translateX(-50%);z-index:200;background:rgba(197,48,48,0.82);color:#fff;border:none;border-radius:22px;padding:0 18px;height:44px;font-family:'Barlow',sans-serif;font-size:0.78rem;font-weight:800;letter-spacing:0.5px;cursor:pointer;box-shadow:0 2px 10px rgba(197,48,48,0.4);display:flex;align-items:center;gap:7px;transition:all 0.2s;backdrop-filter:blur(4px);white-space:nowrap;" onmouseover="this.style.background='rgba(154,28,28,0.95)';this.style.transform='translateX(-50%) scale(1.05)'" onmouseout="this.style.background='rgba(197,48,48,0.82)';this.style.transform='translateX(-50%) scale(1)'">📊 RELATÓRIO DE FALTAS</button>
+<button onclick="abrirRelatorioFaltas()" title="Relatório de Faltas" style="position:fixed;bottom:18px;left:50%;transform:translateX(-50%);z-index:200;background:rgba(197,48,48,0.82);color:#fff;border:none;border-radius:22px;padding:0 18px;height:44px;font-family:'Barlow',sans-serif;font-size:0.78rem;font-weight:800;letter-spacing:0.5px;cursor:pointer;box-shadow:0 2px 10px rgba(197,48,48,0.4);display:flex;align-items:center;gap:7px;transition:all 0.2s;backdrop-filter:blur(4px);white-space:nowrap;" onmouseover="this.style.background='rgba(154,28,28,0.95)';this.style.transform='translateX(-50%) scale(1.05)'" onmouseout="this.style.background='rgba(197,48,48,0.82)';this.style.transform='translateX(-50%) scale(1)'">📊 RELATÓRIO DE FALTAS</button>
+
+<!-- ══════════════════════ MODAL RELATÓRIO DE FALTAS ══════════════════════ -->
+<div id="relatorio-modal" style="display:none;position:fixed;inset:0;background:rgba(10,20,30,0.7);z-index:600;align-items:flex-start;justify-content:center;padding:8px;backdrop-filter:blur(4px);overflow-y:auto;">
+<div style="background:#f0f4f5;border-radius:16px;width:100%;max-width:1100px;margin:0 auto;box-shadow:0 32px 80px rgba(0,0,0,0.35);overflow:hidden;min-height:92vh;display:flex;flex-direction:column;">
+
+  <!-- Header do modal -->
+  <div style="background:linear-gradient(90deg,#7b1111,#c53030,#9b2c2c);padding:0 20px;display:flex;align-items:center;justify-content:space-between;height:56px;flex-shrink:0;border-bottom:3px solid #ff6b35;">
+    <div style="display:flex;align-items:center;gap:12px;">
+      <span style="font-size:1.1rem;">📊</span>
+      <div>
+        <div style="font-size:.88rem;font-weight:900;color:#fff;letter-spacing:1px;text-transform:uppercase;">Relatório de Faltas</div>
+        <div style="font-size:.62rem;font-weight:700;color:rgba(255,255,255,.65);letter-spacing:.5px;" id="rel-periodo-label">Carregando...</div>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;">
+      <div id="rel-db-badge" style="font-size:.62rem;font-weight:800;padding:3px 10px;border-radius:6px;border:1px solid rgba(255,255,255,.3);display:flex;align-items:center;gap:5px;background:rgba(240,165,0,.3);color:#ffe9a0;">
+        <span style="width:6px;height:6px;border-radius:50%;background:#f0a500;animation:blink 1s infinite;display:inline-block;"></span>
+        <span id="rel-db-txt">Carregando...</span>
+      </div>
+      <button onclick="document.getElementById('relatorio-modal').style.display='none'" style="background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);color:#fff;width:32px;height:32px;border-radius:8px;cursor:pointer;font-size:.9rem;font-weight:800;display:flex;align-items:center;justify-content:center;">✕</button>
+    </div>
+  </div>
+
+  <!-- Controles -->
+  <div style="background:#fff;padding:14px 20px;display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;border-bottom:1px solid #e8ecef;flex-shrink:0;">
+    <div style="display:flex;flex-direction:column;gap:5px;">
+      <span style="font-size:.6rem;font-weight:800;color:#888;letter-spacing:1.5px;text-transform:uppercase;">Período</span>
+      <select id="rel-modo" style="padding:8px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-family:'Barlow',sans-serif;font-size:.82rem;font-weight:700;color:#2d3748;outline:none;background:#fafbfc;" onchange="relOnModoChange()">
+        <option value="semana">Esta Semana</option>
+        <option value="semana-passada">Semana Passada</option>
+        <option value="mes">Este Mês</option>
+        <option value="mes-passado">Mês Passado</option>
+        <option value="personalizado">Personalizado</option>
+      </select>
+    </div>
+    <div id="rel-grupo-ini" style="display:none;flex-direction:column;gap:5px;">
+      <span style="font-size:.6rem;font-weight:800;color:#888;letter-spacing:1.5px;text-transform:uppercase;">Início</span>
+      <input type="date" id="rel-data-ini" style="padding:8px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-family:'Barlow',sans-serif;font-size:.82rem;font-weight:700;color:#2d3748;outline:none;">
+    </div>
+    <div id="rel-grupo-fim" style="display:none;flex-direction:column;gap:5px;">
+      <span style="font-size:.6rem;font-weight:800;color:#888;letter-spacing:1.5px;text-transform:uppercase;">Fim</span>
+      <input type="date" id="rel-data-fim" style="padding:8px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-family:'Barlow',sans-serif;font-size:.82rem;font-weight:700;color:#2d3748;outline:none;">
+    </div>
+    <button onclick="relGerar()" style="padding:9px 20px;background:#c53030;color:#fff;border:none;border-radius:8px;font-family:'Barlow',sans-serif;font-size:.78rem;font-weight:800;cursor:pointer;letter-spacing:.5px;align-self:flex-end;white-space:nowrap;">🔍 GERAR</button>
+    <button onclick="relExportarCSV()" style="padding:9px 16px;background:#0d7377;color:#fff;border:none;border-radius:8px;font-family:'Barlow',sans-serif;font-size:.78rem;font-weight:800;cursor:pointer;letter-spacing:.5px;align-self:flex-end;white-space:nowrap;">📥 CSV</button>
+    <button onclick="window.print()" style="padding:9px 16px;background:#2b6cb0;color:#fff;border:none;border-radius:8px;font-family:'Barlow',sans-serif;font-size:.78rem;font-weight:800;cursor:pointer;letter-spacing:.5px;align-self:flex-end;white-space:nowrap;">🖨️ IMPRIMIR</button>
+  </div>
+
+  <!-- Corpo do relatório -->
+  <div id="rel-corpo" style="flex:1;padding:14px 16px;overflow-y:auto;">
+    <div style="text-align:center;padding:40px;color:#aaa;">
+      <div style="width:36px;height:36px;border:4px solid rgba(197,48,48,.2);border-top-color:#c53030;border-radius:50%;animation:spin2 .7s linear infinite;margin:0 auto 12px;"></div>
+      <p style="font-size:.85rem;font-weight:700;">Carregando dados...</p>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<style>
+/* ── Estilos do Relatório (scope isolado) ── */
+.rel-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}
+@media(max-width:600px){.rel-stats{grid-template-columns:repeat(2,1fr)}}
+.rel-stat{background:#fff;border-radius:10px;padding:14px 16px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.07)}
+.rel-stat.g{border-top:3px solid #14a085}.rel-stat.r{border-top:3px solid #e53e3e}.rel-stat.o{border-top:3px solid #f0a500}.rel-stat.b{border-top:3px solid #2b6cb0}
+.rel-sv{font-size:1.8rem;font-weight:900;color:#2d3748;line-height:1}
+.rel-sl{font-size:.58rem;font-weight:800;color:#aaa;text-transform:uppercase;letter-spacing:1.5px;margin-top:4px}
+.rel-card{background:#fff;border-radius:10px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.07);margin-bottom:14px}
+.rel-th{padding:12px 18px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #e8ecef;flex-wrap:wrap;gap:8px}
+.rel-title{font-size:.82rem;font-weight:900;color:#1a365d;letter-spacing:.5px;text-transform:uppercase}
+.rel-rank{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:8px;padding:14px 16px}
+.rel-rc{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;background:#fff8f8;border:1px solid #fde8e8}
+.rel-rc.ok{background:#f0fff4;border-color:#c6f6d5}
+.rel-rn{width:26px;height:26px;border-radius:7px;background:#e53e3e;color:#fff;font-size:.75rem;font-weight:900;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.rel-rn.t1{background:#c53030}.rel-rn.ok{background:#14a085}
+.rel-rnm{font-size:.8rem;font-weight:800;color:#742a2a;flex:1}.rel-rnm.ok{color:#0d7377}
+.rel-rcnt{font-size:.95rem;font-weight:900;color:#c53030}.rel-rcnt.ok{color:#0d7377}
+.rel-twrap{overflow-x:auto}
+.rel-tbl{width:100%;border-collapse:collapse;font-size:.78rem}
+.rel-tbl thead tr{background:#f8fafc;border-bottom:2px solid #e8ecef}
+.rel-tbl th{padding:9px 12px;text-align:left;font-size:.6rem;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:#888;white-space:nowrap}
+.rel-tbl th.c{text-align:center}
+.rel-tbl tbody tr{border-bottom:1px solid #edf0f2}
+.rel-tbl tbody tr:hover{background:#f9fbff}
+.rel-tbl td{padding:9px 12px;vertical-align:middle;color:#2d3748;font-weight:600}
+.rel-tbl td.c{text-align:center}
+.rel-nm{font-weight:800;color:#1a365d}
+.rel-base{font-size:.62rem;font-weight:800;padding:2px 7px;border-radius:10px;display:inline-block}
+.rel-base.irc{background:rgba(43,108,176,.12);color:#2b6cb0}
+.rel-base.jac{background:rgba(240,165,0,.12);color:#b97400}
+.rel-db{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:5px;font-size:.6rem;font-weight:900}
+.rel-db.ok{background:#d0f0ee;color:#0d7377}
+.rel-db.falta{background:#fde8e8;color:#c53030}
+.rel-db.justif{background:#fef3cd;color:#b97400}
+.rel-db.nodata{background:#f0f2f5;color:#ccc}
+.rel-pbar{height:4px;background:#e2e8f0;border-radius:3px;overflow:hidden;margin-top:3px;min-width:50px}
+.rel-pfill{height:100%;border-radius:3px}
+.rel-pfill.h{background:#14a085}.rel-pfill.m{background:#f0a500}.rel-pfill.l{background:#e53e3e}
+.rel-pv{font-size:.62rem;font-weight:800}
+.rel-pv.h{color:#0d7377}.rel-pv.m{color:#b97400}.rel-pv.l{color:#c53030}
+.rel-fbtns{display:flex;gap:4px;flex-wrap:wrap}
+.rel-fb{padding:5px 10px;border:1.5px solid #e2e8f0;background:#fff;border-radius:6px;font-family:'Barlow',sans-serif;font-size:.62rem;font-weight:800;cursor:pointer;color:#888;transition:all .12s;white-space:nowrap}
+.rel-fb:hover{border-color:#c53030;color:#c53030}
+.rel-fb.a{background:#c53030;border-color:#c53030;color:#fff}
+.rel-fb.a-ok{background:#14a085;border-color:#14a085;color:#fff}
+.rel-fb.a-irc{background:#2b6cb0;border-color:#2b6cb0;color:#fff}
+.rel-fb.a-jac{background:#b97400;border-color:#b97400;color:#fff}
+.rel-fb.a-todas{background:#888;border-color:#888;color:#fff}
+.rel-sinput{padding:6px 10px 6px 28px;border:1.5px solid #e2e8f0;border-radius:7px;font-family:'Barlow',sans-serif;font-size:.78rem;font-weight:600;color:#2d3748;outline:none;width:180px;background:#fafbfc}
+.rel-sinput:focus{border-color:#c53030}
+.rel-swrap{position:relative}
+.rel-sicon{position:absolute;left:9px;top:50%;transform:translateY(-50%);color:#aaa;font-size:.75rem;pointer-events:none}
+</style>
+
+<script>
+// ══════════════════ LÓGICA DO RELATÓRIO DE FALTAS ══════════════════
+(function(){
+  // dados e estado
+  let relDias = [], relDados = {}, relFiltro = 'todos', relBase = 'todas';
+
+  function relFmtDate(d){
+    return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear();
+  }
+  function relHistKey(d){
+    return 'turno_hist_'+String(d.getDate()).padStart(2,'0')+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+d.getFullYear();
+  }
+  function relDateRange(ini,fim){
+    const dias=[]; const cur=new Date(ini); cur.setHours(12); const end=new Date(fim); end.setHours(12);
+    while(cur<=end){dias.push(new Date(cur));cur.setDate(cur.getDate()+1);}
+    return dias;
+  }
+  function relGetBase(n){ return n.endsWith('-IRC')?'IRC':n.endsWith('-JAC')?'JAC':''; }
+  function relDispName(n){ return n.replace(/-IRC$/,'').replace(/-JAC$/,''); }
+  function relGetStatus(payload, nome){
+    if(!payload) return 'nodata';
+    const okS = new Set((payload.ok||[]).map(n=>typeof n==='string'?relDispName(n.trim().toUpperCase()):'' ));
+    const jS  = new Set((payload.justif||[]).map(t=>{const n=typeof t==='object'?t.name:t; return relDispName((n||'').trim().toUpperCase());}).filter(Boolean));
+    const d   = relDispName(nome.trim().toUpperCase());
+    if(okS.has(d)) return 'ok';
+    if(jS.has(d))  return 'justif';
+    return 'falta';
+  }
+
+  function relCalcPeriodo(){
+    const modo = document.getElementById('rel-modo').value;
+    const hoje = new Date(); hoje.setHours(12);
+    let ini, fim;
+    if(modo==='semana'){
+      const dow=hoje.getDay(); ini=new Date(hoje); ini.setDate(hoje.getDate()-(dow===0?6:dow-1)); fim=new Date(hoje);
+    } else if(modo==='semana-passada'){
+      const dow=hoje.getDay(); const ie=new Date(hoje); ie.setDate(hoje.getDate()-(dow===0?6:dow-1));
+      ini=new Date(ie); ini.setDate(ie.getDate()-7); fim=new Date(ie); fim.setDate(ie.getDate()-1);
+    } else if(modo==='mes'){
+      ini=new Date(hoje.getFullYear(),hoje.getMonth(),1); fim=new Date(hoje);
+    } else if(modo==='mes-passado'){
+      ini=new Date(hoje.getFullYear(),hoje.getMonth()-1,1); fim=new Date(hoje.getFullYear(),hoje.getMonth(),0);
+    } else {
+      const vi=document.getElementById('rel-data-ini').value;
+      const vf=document.getElementById('rel-data-fim').value;
+      if(!vi||!vf) return null;
+      ini=new Date(vi+'T12:00:00'); fim=new Date(vf+'T12:00:00');
+    }
+    return {ini,fim};
+  }
+
+  function relSetDb(tipo,txt){
+    const el=document.getElementById('rel-db-badge');
+    const tel=document.getElementById('rel-db-txt');
+    if(!el||!tel) return;
+    const colors={online:'rgba(45,184,100,.3)',local:'rgba(45,184,100,.15)',loading:'rgba(240,165,0,.3)'};
+    const tcols={online:'#b0ffd0',local:'#9ae6b4',loading:'#ffe9a0'};
+    const dcols={online:'#14a085',local:'#38a169',loading:'#f0a500'};
+    el.style.background=colors[tipo]||colors.local;
+    el.style.color=tcols[tipo]||tcols.local;
+    const dot=el.querySelector('span');
+    if(dot){ dot.style.background=dcols[tipo]||dcols.local; dot.style.boxShadow=tipo==='online'?'0 0 6px #14a085':'none'; }
+    tel.textContent=txt;
+  }
+
+  async function relCarregarSupabase(dias){
+    const keys=dias.map(relHistKey);
+    const filtro=keys.map(k=>'"'+k+'"').join(',');
+    try{
+      const res=await fetch(SUPA_URL+'/rest/v1/turno_data?select=key,value&key=in.('+filtro+')',
+        {headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}});
+      if(!res.ok) throw new Error('HTTP '+res.status);
+      const data=await res.json();
+      const r={};
+      data.forEach(row=>{ r[row.key]=row.value; });
+      return r;
+    } catch(e){ console.warn('[Relatorio] Supabase:',e.message); return null; }
+  }
+
+  function relCarregarLocal(dias){
+    const r={};
+    dias.forEach(d=>{
+      const k=relHistKey(d);
+      const v=lsGet(k);
+      if(v) r[k]=v;
+    });
+    // turno do dia atual
+    const ta=lsGet('turno');
+    if(ta&&ta.date){
+      const pts=ta.date.split('/');
+      if(pts.length===3){
+        const k='turno_hist_'+pts[0]+'-'+pts[1]+'-'+pts[2];
+        if(!r[k]) r[k]=ta;
+      }
+    }
+    return r;
+  }
+
+  window.abrirRelatorioFaltas = function(){
+    const modal=document.getElementById('relatorio-modal');
+    modal.style.display='flex';
+    // datas padrão personalizadas
+    const hoje=new Date();
+    document.getElementById('rel-data-fim').value=hoje.toISOString().slice(0,10);
+    const ini7=new Date(hoje); ini7.setDate(hoje.getDate()-6);
+    document.getElementById('rel-data-ini').value=ini7.toISOString().slice(0,10);
+    setTimeout(relGerar, 200);
+  };
+
+  window.relOnModoChange = function(){
+    const modo=document.getElementById('rel-modo').value;
+    const gi=document.getElementById('rel-grupo-ini');
+    const gf=document.getElementById('rel-grupo-fim');
+    if(gi) gi.style.display=modo==='personalizado'?'flex':'none';
+    if(gf) gf.style.display=modo==='personalizado'?'flex':'none';
+  };
+
+  window.relGerar = async function(){
+    const periodo=relCalcPeriodo();
+    if(!periodo){alert('Selecione datas válidas.');return;}
+    const {ini,fim}=periodo;
+    if(fim<ini){alert('Data fim deve ser maior que início.');return;}
+    const dias=relDateRange(ini,fim);
+    relDias=dias;
+    const lbl=relFmtDate(ini)+(dias.length>1?' a '+relFmtDate(fim):'');
+    const pl=document.getElementById('rel-periodo-label');
+    if(pl) pl.textContent=lbl;
+    const corpo=document.getElementById('rel-corpo');
+    corpo.innerHTML='<div style="text-align:center;padding:40px;color:#aaa;"><div style="width:32px;height:32px;border:4px solid rgba(197,48,48,.2);border-top-color:#c53030;border-radius:50%;animation:spin2 .7s linear infinite;margin:0 auto 12px;"></div><p style="font-size:.82rem;font-weight:700;">Buscando '+dias.length+' dia(s) de registros...</p></div>';
+    relSetDb('loading','Consultando...');
+
+    // local primeiro
+    const local=relCarregarLocal(dias);
+    relDados=Object.assign({},local);
+
+    // supabase
+    const remoto=await relCarregarSupabase(dias);
+    if(remoto){ Object.assign(relDados,remoto); relSetDb('online','Banco online'); }
+    else { relSetDb('local','Dados locais'); }
+
+    relRenderCorpo(dias);
+  };
+
+  function relRenderCorpo(dias){
+    relFiltro='todos'; relBase='todas';
+    const corpo=document.getElementById('rel-corpo');
+    if(!corpo) return;
+    corpo.innerHTML=relBuildHTML(dias);
+  }
+
+  function relBuildHTML(dias){
+    const eq=EQUIPES_ATIVAS;
+    const matrix={};
+    eq.forEach(e=>{ matrix[e]=dias.map(d=>relGetStatus(relDados[relHistKey(d)]||null,e)); });
+
+    let tOk=0,tFalta=0,tJustif=0,tDias=0;
+    dias.forEach(d=>{
+      const p=relDados[relHistKey(d)];
+      if(!p) return;
+      tDias++;
+      eq.forEach(e=>{ const s=relGetStatus(p,e); if(s==='ok')tOk++;else if(s==='falta')tFalta++;else if(s==='justif')tJustif++; });
+    });
+
+    const rankFalta=eq.map(e=>({
+      nome:e, base:relGetBase(e),
+      faltas:  matrix[e].filter(s=>s==='falta').length,
+      presencas:matrix[e].filter(s=>s==='ok').length,
+      justifs: matrix[e].filter(s=>s==='justif').length,
+      total:   dias.length
+    })).sort((a,b)=>b.faltas-a.faltas);
+
+    const ini=dias[0], fim=dias[dias.length-1];
+    const lbl=relFmtDate(ini)+(dias.length>1?' a '+relFmtDate(fim):'');
+
+    const rankHTML=rankFalta.slice(0,12).filter(r=>r.faltas>0).map((r,i)=>`
+      <div class="rel-rc">
+        <div class="rel-rn ${i===0?'t1':''}">${i+1}</div>
+        <div style="flex:1">
+          <div class="rel-rnm">${relDispName(r.nome)}</div>
+          <div style="font-size:.58rem;color:#888;font-weight:700;margin-top:1px;">
+            <span class="rel-base ${r.base.toLowerCase()}">${r.base}</span>
+            &nbsp;·&nbsp;${r.presencas} pres. · ${r.justifs} justif.
+          </div>
+        </div>
+        <div class="rel-rcnt">${r.faltas} falta${r.faltas!==1?'s':''}</div>
+      </div>`).join('') || '<div style="padding:16px;color:#aaa;font-size:.8rem;font-weight:700;text-align:center;">✅ Nenhuma falta registrada neste período!</div>';
+
+    const dowNames=['DOM','SEG','TER','QUA','QUI','SEX','SAB'];
+    const thDias=dias.map(d=>`<th class="c" style="min-width:36px;padding:8px 4px;" title="${relFmtDate(d)}">${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}<br><span style="font-size:.48rem;color:#ccc;font-weight:600;">${dowNames[d.getDay()]}</span></th>`).join('');
+
+    const icons={ok:'✓',falta:'✗',justif:'J',nodata:'—'};
+    const tbRows=rankFalta.map(r=>{
+      const pct=r.total>0?Math.round((r.presencas/r.total)*100):0;
+      const cls=pct>=80?'h':pct>=50?'m':'l';
+      const cells=matrix[r.nome].map((s,i)=>`<td class="c" style="padding:8px 4px;"><span class="rel-db ${s}" title="${relFmtDate(dias[i])}: ${s==='ok'?'Abriu Turno':s==='falta'?'Não Abriu':s==='justif'?'Justificado':'Sem Registro'}">${icons[s]}</span></td>`).join('');
+      return `<tr data-base="${r.base}" data-nome="${relDispName(r.nome).toLowerCase()}" data-faltas="${r.faltas}" data-pct="${pct}">
+        <td class="rel-nm">${relDispName(r.nome)}</td>
+        <td><span class="rel-base ${r.base.toLowerCase()}">${r.base}</span></td>
+        <td class="c">${r.presencas}</td>
+        <td class="c" style="font-weight:800;color:${r.faltas>0?'#c53030':'#2d3748'}">${r.faltas}</td>
+        <td class="c" style="color:${r.justifs>0?'#b97400':'#2d3748'}">${r.justifs}</td>
+        <td class="c">
+          <div class="rel-pv ${cls}">${pct}%</div>
+          <div class="rel-pbar"><div class="rel-pfill ${cls}" style="width:${pct}%"></div></div>
+        </td>
+        ${cells}
+      </tr>`;
+    }).join('');
+
+    return `
+    <div class="rel-stats">
+      <div class="rel-stat g"><div class="rel-sv">${tOk}</div><div class="rel-sl">✅ Abriram Turno</div></div>
+      <div class="rel-stat r"><div class="rel-sv">${tFalta}</div><div class="rel-sl">❌ Não Abriram</div></div>
+      <div class="rel-stat o"><div class="rel-sv">${tJustif}</div><div class="rel-sl">⚠️ Justificadas</div></div>
+      <div class="rel-stat b"><div class="rel-sv">${tDias}</div><div class="rel-sl">📅 Dias Registrados</div></div>
+    </div>
+
+    <div class="rel-card">
+      <div class="rel-th"><div class="rel-title">🔴 Mais Faltas — ${lbl}</div></div>
+      <div class="rel-rank">${rankHTML}</div>
+    </div>
+
+    <div class="rel-card">
+      <div class="rel-th">
+        <div class="rel-title">📋 Frequência Individual</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;">
+          <div class="rel-swrap"><span class="rel-sicon">🔍</span><input class="rel-sinput" id="rel-busca" placeholder="Buscar nome..." oninput="relFiltrarTabela()"></div>
+          <div class="rel-fbtns">
+            <button class="rel-fb a" id="rf-todos" onclick="relSetFiltro('todos')">TODOS</button>
+            <button class="rel-fb" id="rf-falta" onclick="relSetFiltro('falta')">COM FALTA</button>
+            <button class="rel-fb" id="rf-ok100" onclick="relSetFiltro('ok100')">100% PRES.</button>
+          </div>
+          <div class="rel-fbtns">
+            <button class="rel-fb" id="rf-irc" onclick="relSetBase('IRC')">IRC</button>
+            <button class="rel-fb" id="rf-jac" onclick="relSetBase('JAC')">JAC</button>
+            <button class="rel-fb a-todas" id="rf-todas" onclick="relSetBase('todas')">TODAS</button>
+          </div>
+        </div>
+      </div>
+      <div class="rel-twrap">
+        <table class="rel-tbl">
+          <thead><tr>
+            <th>Colaborador</th><th>Base</th>
+            <th class="c">Pres.</th><th class="c">Faltas</th><th class="c">Justif.</th>
+            <th class="c" style="min-width:80px">% Pres.</th>
+            ${thDias}
+          </tr></thead>
+          <tbody id="rel-tbody">${tbRows}</tbody>
+        </table>
+      </div>
+    </div>`;
+  }
+
+  window.relSetFiltro = function(f){
+    relFiltro=f;
+    ['todos','falta','ok100'].forEach(x=>{
+      const el=document.getElementById('rf-'+x);
+      if(el){ el.className='rel-fb'+(x==='todos'?' a':x==='ok100'?' a-ok':x===f?' a':''); }
+    });
+    document.getElementById('rf-todos').className='rel-fb'+(f==='todos'?' a':'');
+    document.getElementById('rf-falta').className='rel-fb'+(f==='falta'?' a':'');
+    document.getElementById('rf-ok100').className='rel-fb'+(f==='ok100'?' a-ok':'');
+    relFiltrarTabela();
+  };
+  window.relSetBase = function(b){
+    relBase=b;
+    document.getElementById('rf-irc').className='rel-fb'+(b==='IRC'?' a-irc':'');
+    document.getElementById('rf-jac').className='rel-fb'+(b==='JAC'?' a-jac':'');
+    document.getElementById('rf-todas').className='rel-fb'+(b==='todas'?' a-todas':'');
+    relFiltrarTabela();
+  };
+  window.relFiltrarTabela = function(){
+    const busca=(document.getElementById('rel-busca')?.value||'').toLowerCase();
+    const tbody=document.getElementById('rel-tbody');
+    if(!tbody) return;
+    Array.from(tbody.querySelectorAll('tr')).forEach(tr=>{
+      const base=tr.dataset.base, nome=tr.dataset.nome;
+      const faltas=parseInt(tr.dataset.faltas||0), pct=parseInt(tr.dataset.pct||0);
+      let show=true;
+      if(busca&&!nome.includes(busca)) show=false;
+      if(relBase!=='todas'&&base!==relBase) show=false;
+      if(relFiltro==='falta'&&faltas===0) show=false;
+      if(relFiltro==='ok100'&&pct<100) show=false;
+      tr.style.display=show?'':'none';
+    });
+  };
+
+  window.relExportarCSV = function(){
+    if(!relDias.length){alert('Gere o relatório primeiro.');return;}
+    const dias=relDias;
+    const ini=relFmtDate(dias[0]).replace(/\//g,'-');
+    const fim=relFmtDate(dias[dias.length-1]).replace(/\//g,'-');
+    let csv='Colaborador;Base;'+dias.map(d=>relFmtDate(d)).join(';')+';Presenças;Faltas;Justif.;% Presença\n';
+    EQUIPES_ATIVAS.forEach(eq=>{
+      const base=relGetBase(eq);
+      const ss=dias.map(d=>relGetStatus(relDados[relHistKey(d)]||null,eq));
+      const pres=ss.filter(s=>s==='ok').length;
+      const falt=ss.filter(s=>s==='falta').length;
+      const just=ss.filter(s=>s==='justif').length;
+      const pct=dias.length>0?Math.round((pres/dias.length)*100):0;
+      const cols=ss.map(s=>s==='ok'?'OK':s==='falta'?'FALTA':s==='justif'?'JUSTIF':'SEM REG');
+      csv+=`${relDispName(eq)};${base};${cols.join(';')};${pres};${falt};${just};${pct}%\n`;
+    });
+    const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(blob);
+    a.download=`relatorio_faltas_${ini}_a_${fim}.csv`;
+    a.click();
+  };
+
+  // Fecha modal ao clicar no fundo
+  document.getElementById('relatorio-modal').addEventListener('click', function(e){
+    if(e.target===this) this.style.display='none';
+  });
+
+})();
+</script>
 
 <!-- Engrenagem de Configurações -->
 <button id="gear-btn" title="Configurações" onclick="document.getElementById('gear-modal').style.display='flex';setTimeout(function(){if(typeof renderManageList==='function')renderManageList();},100);" style="position:fixed;bottom:18px;left:18px;z-index:200;background:rgba(13,115,119,0.82);color:#fff;border:none;border-radius:50%;width:44px;height:44px;font-size:1.2rem;cursor:pointer;box-shadow:0 2px 10px rgba(13,115,119,0.35);display:flex;align-items:center;justify-content:center;transition:all 0.2s;backdrop-filter:blur(4px);" onmouseover="this.style.background='rgba(8,80,84,0.95)';this.style.transform='scale(1.1) rotate(30deg)'" onmouseout="this.style.background='rgba(13,115,119,0.82)';this.style.transform='scale(1) rotate(0deg)'">
