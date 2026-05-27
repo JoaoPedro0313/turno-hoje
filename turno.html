@@ -803,17 +803,25 @@ const BASE_CONFIG = {
 function updateBaseFilterButtons() {
   const container = document.getElementById('turno-base-filter-btns');
   if (!container) return;
-  const activeStyle  = 'flex-shrink:0;padding:5px 14px;border-radius:20px;border:1.5px solid #0d7377;background:#0d7377;color:#fff;font-family:Barlow,sans-serif;font-size:0.72rem;font-weight:800;cursor:pointer;transition:all .18s;';
-  const inactStyle   = 'flex-shrink:0;padding:5px 14px;border-radius:20px;border:1.5px solid #e2e8f0;background:#f0f4f5;color:#888;font-family:Barlow,sans-serif;font-size:0.72rem;font-weight:800;cursor:pointer;transition:all .18s;';
-  let html = '<button id="base-btn-todos" onclick="turnoSetBase('todos',this)" style="' + (turnoBaseFilter==='todos'?activeStyle:inactStyle) + '">Todos</button>';
+  const aS = 'flex-shrink:0;padding:5px 14px;border-radius:20px;border:1.5px solid #0d7377;background:#0d7377;color:#fff;font-family:Barlow,sans-serif;font-size:0.72rem;font-weight:800;cursor:pointer;transition:all .18s;';
+  const iS = 'flex-shrink:0;padding:5px 14px;border-radius:20px;border:1.5px solid #e2e8f0;background:#f0f4f5;color:#888;font-family:Barlow,sans-serif;font-size:0.72rem;font-weight:800;cursor:pointer;transition:all .18s;';
+  function mkBtn(id, label) {
+    const s = turnoBaseFilter === id ? aS : iS;
+    const btn = document.createElement('button');
+    btn.id = 'base-btn-' + id;
+    btn.style.cssText = s;
+    btn.textContent = label;
+    btn.onclick = function() { turnoSetBase(id); };
+    return btn;
+  }
+  container.innerHTML = '';
+  container.appendChild(mkBtn('todos', 'Todos'));
   const states = turnoStateFilter === 'todos' ? ['ba','mg','se'] : [turnoStateFilter];
-  states.forEach(st => {
-    (BASE_CONFIG[st]||[]).forEach(b => {
-      const s = turnoBaseFilter === b.id ? activeStyle : inactStyle;
-      html += '<button id="base-btn-' + b.id + '" onclick="turnoSetBase('' + b.id + '',this)" style="' + s + '">' + b.label + '</button>';
+  states.forEach(function(st) {
+    (BASE_CONFIG[st]||[]).forEach(function(b) {
+      container.appendChild(mkBtn(b.id, b.label));
     });
   });
-  container.innerHTML = html;
 }
 
 function turnoSetState(state) {
