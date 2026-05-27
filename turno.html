@@ -306,7 +306,6 @@ falta: [
   // MG
   'RAIMUNDO-PA','LEVY-PA','GILVANDRO-PA','RICHARD-PA','FABRICIO-PA','OTAVIO-PA','LUIZCF-PA',
   'CRISTIANO-ITA','LEANDRO-ITA','RAFAEL-ITA','JULIANO-ITA','CLAYTON-ITA',
-  'DOUGLAS-LV','SIDNEI-LV',
   // SE
   'ADRIANO-AJU','ADAO-AJU','FELIPE-AJU','FRANCISCO-AJU','FRANCINALDO-AJU',
   'GILMAR-AJU','JEAN-AJU','JOSEFERNANDO-AJU','JOSENILTON-AJU','JOSEROBERTO-AJU',
@@ -771,14 +770,13 @@ function teamBase(name) {
   if (n.endsWith('-AJU')) return 'aju';
   if (n.endsWith('-PA'))  return 'pa';
   if (n.endsWith('-ITA')) return 'ita';
-  if (n.endsWith('-LV'))  return 'lv';
   return '';
 }
 // Retorna o estado de um nome de equipe
 function teamState(name) {
   const b = teamBase(name);
   if (b === 'irc' || b === 'jac') return 'ba';
-  if (b === 'pa'  || b === 'ita' || b === 'lv') return 'mg';
+  if (b === 'pa'  || b === 'ita') return 'mg';
   if (b === 'aju') return 'se';
   return '';
 }
@@ -791,8 +789,7 @@ const BASE_CONFIG = {
   ],
   mg: [
     { id:'pa',  label:'🏙 POUSO ALEGRE' },
-    { id:'ita', label:'🏔 ITAJUBÁ' },
-    { id:'lv',  label:'⚡ LINHA VIVA' }
+    { id:'ita', label:'🏔 ITAJUBÁ' }
   ],
   se: [
     { id:'aju', label:'🌊 ARACAJU' }
@@ -1185,8 +1182,6 @@ const EQUIPES_ATIVAS = [
   'RAIMUNDO-PA','LEVY-PA','GILVANDRO-PA','RICHARD-PA','FABRICIO-PA','OTAVIO-PA','LUIZCF-PA',
   // ── MG · ITAJUBÁ ──
   'CRISTIANO-ITA','LEANDRO-ITA','RAFAEL-ITA','JULIANO-ITA','CLAYTON-ITA',
-  // ── MG · LINHA VIVA ──
-  'DOUGLAS-LV','SIDNEI-LV',
   // ── SE · ARACAJU ──
   'ADRIANO-AJU','ADAO-AJU','FELIPE-AJU','FRANCISCO-AJU','FRANCINALDO-AJU',
   'GILMAR-AJU','JEAN-AJU','JOSEFERNANDO-AJU','JOSENILTON-AJU','JOSEROBERTO-AJU',
@@ -1226,8 +1221,6 @@ const CADASTRO_EQUIPES = {
   'CRISTIANO GOMES THEODORO':'ITA','LEANDRO RODRIGO RIBEIRO':'ITA',
   'RAFAEL DE AZEVEDO CARVALHO':'ITA','JULIANO SILVA DA CRUZ':'ITA',
   'CLAYTON JOSE ANTUNES':'ITA',
-  // MG · Linha Viva
-  'DOUGLAS BARBOSA DA CRUZ OLIVEIRA':'LV','SIDNEI SPADA':'LV',
   // SE · Aracaju
   'ADRIANO FRANCA DE ARAUJO':'AJU','ADAO LUCIANO DOS SANTOS':'AJU',
   'FELIPE BEZERRA VIEIRA':'AJU','FRANCISCO HILARIO VIEIRA SANTOS':'AJU',
@@ -1280,8 +1273,6 @@ const NOME_CURTO = {};
     'CRISTIANO GOMES THEODORO':'CRISTIANO','LEANDRO RODRIGO RIBEIRO':'LEANDRO',
     'RAFAEL DE AZEVEDO CARVALHO':'RAFAEL','JULIANO SILVA DA CRUZ':'JULIANO',
     'CLAYTON JOSE ANTUNES':'CLAYTON',
-    // MG · Linha Viva
-    'DOUGLAS BARBOSA DA CRUZ OLIVEIRA':'DOUGLAS','SIDNEI SPADA':'SIDNEI',
     // SE · Aracaju
     'ADRIANO FRANCA DE ARAUJO':'ADRIANO','ADAO LUCIANO DOS SANTOS':'ADAO',
     'FELIPE BEZERRA VIEIRA':'FELIPE','FRANCISCO HILARIO VIEIRA SANTOS':'FRANCISCO',
