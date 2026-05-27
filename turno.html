@@ -4749,6 +4749,10 @@ setTimeout(presenceInit, 1500);
 .rel-fb.a-pa{background:#276749;border-color:#276749;color:#fff}
 .rel-fb.a-ita{background:#553c9a;border-color:#553c9a;color:#fff}
 .rel-fb.a-aju{background:#c53030;border-color:#c53030;color:#fff}
+.rel-fb.a-ba{background:#2b6cb0;border-color:#2b6cb0;color:#fff}
+.rel-fb.a-mg{background:#276749;border-color:#276749;color:#fff}
+.rel-fb.a-se{background:#c53030;border-color:#c53030;color:#fff}
+.rel-fb.a-est{background:#1a2a3a;border-color:#1a2a3a;color:#fff}
 .rel-sinput{padding:6px 10px 6px 28px;border:1.5px solid #e2e8f0;border-radius:7px;font-family:'Barlow',sans-serif;font-size:.78rem;font-weight:600;color:#2d3748;outline:none;width:180px;background:#fafbfc}
 .rel-sinput:focus{border-color:#c53030}
 .rel-swrap{position:relative}
@@ -4759,7 +4763,7 @@ setTimeout(presenceInit, 1500);
 // ══════════════════ LÓGICA DO RELATÓRIO DE FALTAS ══════════════════
 (function(){
   // dados e estado
-  let relDias = [], relDados = {}, relFiltro = 'todos', relBase = 'todas';
+  let relDias = [], relDados = {}, relFiltro = 'todos', relBase = 'todas', relEstado = 'todos';
 
   function relFmtDate(d){
     return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear();
@@ -4907,7 +4911,7 @@ setTimeout(presenceInit, 1500);
   };
 
   function relRenderCorpo(dias){
-    relFiltro='todos'; relBase='todas';
+    relFiltro='todos'; relBase='todas'; relEstado='todos';
     const corpo=document.getElementById('rel-corpo');
     if(!corpo) return;
     corpo.innerHTML=relBuildHTML(dias);
@@ -4995,15 +4999,22 @@ setTimeout(presenceInit, 1500);
             <button class="rel-fb" id="rf-falta" onclick="relSetFiltro('falta')">COM FALTA</button>
             <button class="rel-fb" id="rf-ok100" onclick="relSetFiltro('ok100')">100% PRES.</button>
           </div>
+          <div class="rel-fbtns">
+            <span style="font-size:.55rem;font-weight:800;color:#aaa;align-self:center;letter-spacing:1px;">ESTADO:</span>
+            <button class="rel-fb a-est" id="re-todos" onclick="relSetEstado('todos')">TODOS</button>
+            <button class="rel-fb" id="re-ba" onclick="relSetEstado('ba')">🟡 BA</button>
+            <button class="rel-fb" id="re-mg" onclick="relSetEstado('mg')">🔵 MG</button>
+            <button class="rel-fb" id="re-se" onclick="relSetEstado('se')">🟣 SE</button>
+          </div>
           <div class="rel-fbtns" style="flex-wrap:wrap;">
             <button class="rel-fb a-todas" id="rf-todas" onclick="relSetBase('todas')">TODAS</button>
-            <span style="font-size:.55rem;font-weight:800;color:#aaa;align-self:center;letter-spacing:1px;">BA:</span>
+            <span id="rel-sep-ba" style="font-size:.55rem;font-weight:800;color:#aaa;align-self:center;letter-spacing:1px;">BA:</span>
             <button class="rel-fb" id="rf-irc" onclick="relSetBase('IRC')">IRECÊ</button>
             <button class="rel-fb" id="rf-jac" onclick="relSetBase('JAC')">JACOBINA</button>
-            <span style="font-size:.55rem;font-weight:800;color:#aaa;align-self:center;letter-spacing:1px;">MG:</span>
+            <span id="rel-sep-mg" style="font-size:.55rem;font-weight:800;color:#aaa;align-self:center;letter-spacing:1px;">MG:</span>
             <button class="rel-fb" id="rf-pa"  onclick="relSetBase('PA')">P.ALEGRE</button>
             <button class="rel-fb" id="rf-ita" onclick="relSetBase('ITA')">ITAJUBÁ</button>
-            <span style="font-size:.55rem;font-weight:800;color:#aaa;align-self:center;letter-spacing:1px;">SE:</span>
+            <span id="rel-sep-se" style="font-size:.55rem;font-weight:800;color:#aaa;align-self:center;letter-spacing:1px;">SE:</span>
             <button class="rel-fb" id="rf-aju" onclick="relSetBase('AJU')">ARACAJU</button>
           </div>
         </div>
@@ -5042,15 +5053,43 @@ setTimeout(presenceInit, 1500);
     });
     relFiltrarTabela();
   };
+  const REL_ESTADO_BASES = { ba:['IRC','JAC'], mg:['PA','ITA'], se:['AJU'] };
+  window.relSetEstado = function(e){
+    relEstado=e;
+    // reset base filter when switching state
+    relBase='todas';
+    window.relSetBase('todas');
+    // update state button styles
+    [{id:'re-todos',k:'todos',cls:'a-est'},{id:'re-ba',k:'ba',cls:'a-ba'},
+     {id:'re-mg',k:'mg',cls:'a-mg'},{id:'re-se',k:'se',cls:'a-se'}].forEach(function(x){
+      const el=document.getElementById(x.id); if(el) el.className='rel-fb'+(e===x.k?' '+x.cls:'');
+    });
+    // show/hide base buttons based on state
+    const allBases=['irc','jac','pa','ita','aju'];
+    const allowed = e==='todos' ? allBases : REL_ESTADO_BASES[e].map(function(b){return b.toLowerCase();});
+    allBases.forEach(function(b){
+      const el=document.getElementById('rf-'+b); if(el) el.style.display=allowed.includes(b)?'':'none';
+    });
+    // also hide state separators labels
+    const baSep=document.getElementById('rel-sep-ba');
+    const mgSep=document.getElementById('rel-sep-mg');
+    const seSep=document.getElementById('rel-sep-se');
+    if(baSep) baSep.style.display=(e==='todos'||e==='ba')?'':'none';
+    if(mgSep) mgSep.style.display=(e==='todos'||e==='mg')?'':'none';
+    if(seSep) seSep.style.display=(e==='todos'||e==='se')?'':'none';
+    relFiltrarTabela();
+  };
   window.relFiltrarTabela = function(){
     const busca=(document.getElementById('rel-busca')?.value||'').toLowerCase();
     const tbody=document.getElementById('rel-tbody');
     if(!tbody) return;
+    const estadoBases = relEstado==='todos' ? null : REL_ESTADO_BASES[relEstado];
     Array.from(tbody.querySelectorAll('tr')).forEach(tr=>{
       const base=tr.dataset.base, nome=tr.dataset.nome;
       const faltas=parseInt(tr.dataset.faltas||0), pct=parseInt(tr.dataset.pct||0);
       let show=true;
       if(busca&&!nome.includes(busca)) show=false;
+      if(estadoBases&&!estadoBases.includes(base)) show=false;
       if(relBase!=='todas'&&base!==relBase) show=false;
       if(relFiltro==='falta'&&faltas===0) show=false;
       if(relFiltro==='ok100'&&pct<100) show=false;
