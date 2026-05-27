@@ -5144,21 +5144,184 @@ setTimeout(presenceInit, 1500);
   </svg>
 </button>
 
-<!-- Modal de Configurações NOVO -->
 <!-- Modal de Configurações -->
-<div id="gear-modal" style="display:none;position:fixed;inset:0;background:rgba(10,20,30,0.65);z-index:500;align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(4px);">
-  <div style="background:#fff;border-radius:20px;width:100%;max-width:440px;box-shadow:0 32px 80px rgba(0,0,0,0.25);overflow:hidden;max-height:92vh;display:flex;flex-direction:column;">
-    <div style="background:linear-gradient(135deg,#0b5e62,#14a085);padding:18px 24px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
+<style>
+.gear-tab-btn{display:flex;align-items:center;gap:9px;width:100%;padding:10px 12px;border:none;border-radius:10px;background:transparent;font-family:'Barlow',sans-serif;font-size:0.78rem;font-weight:800;color:#888;cursor:pointer;text-align:left;transition:all .15s;margin-bottom:2px;}
+.gear-tab-btn:hover{background:#f0f4f5;color:#444;}
+.gear-tab-btn.active{background:linear-gradient(135deg,#0d7377,#14a085);color:#fff;box-shadow:0 3px 10px rgba(13,115,119,0.3);}
+.gear-tab-icon{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:0.95rem;flex-shrink:0;background:rgba(0,0,0,0.05);}
+.gear-tab-btn.active .gear-tab-icon{background:rgba(255,255,255,0.18);}
+.gear-section-title{font-size:0.65rem;font-weight:800;letter-spacing:2px;text-transform:uppercase;margin-bottom:14px;padding-bottom:8px;}
+.gear-card{background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:14px;margin-bottom:12px;}
+.gear-btn{width:100%;padding:11px;border:none;border-radius:10px;font-family:'Barlow',sans-serif;font-size:0.85rem;font-weight:800;cursor:pointer;transition:all .15s;margin-bottom:8px;display:flex;align-items:center;justify-content:center;gap:8px;}
+</style>
+<div id="gear-modal" style="display:none;position:fixed;inset:0;background:rgba(10,20,30,0.65);z-index:500;align-items:center;justify-content:center;padding:12px;backdrop-filter:blur(4px);">
+  <div style="background:#fff;border-radius:20px;width:100%;max-width:680px;box-shadow:0 32px 80px rgba(0,0,0,0.28);overflow:hidden;max-height:94vh;display:flex;flex-direction:column;">
+
+    <!-- Header -->
+    <div style="background:linear-gradient(135deg,#0b5e62,#0d7377,#14a085);padding:0 24px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;height:62px;">
       <div style="display:flex;align-items:center;gap:12px;">
-        <div style="width:36px;height:36px;border-radius:10px;background:rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;font-size:1.1rem;">⚙️</div>
+        <div style="width:38px;height:38px;border-radius:10px;background:rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;font-size:1.2rem;">⚙️</div>
         <div>
-          <div style="color:#fff;font-size:1rem;font-weight:800;letter-spacing:0.5px;">Configurações</div>
-          <div style="color:rgba(255,255,255,0.65);font-size:0.72rem;font-weight:600;">Sistema OBRAS BA</div>
+          <div style="color:#fff;font-size:1rem;font-weight:900;letter-spacing:0.5px;">Configurações</div>
+          <div style="color:rgba(255,255,255,0.6);font-size:0.68rem;font-weight:600;letter-spacing:0.5px;">Sistema OBRAS BA</div>
         </div>
       </div>
-      <button onclick="document.getElementById('gear-modal').style.display='none'" style="background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.2);color:#fff;width:34px;height:34px;border-radius:10px;cursor:pointer;font-size:1rem;font-weight:800;display:flex;align-items:center;justify-content:center;">✕</button>
+      <button onclick="document.getElementById('gear-modal').style.display='none'" style="background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.2);color:#fff;width:34px;height:34px;border-radius:10px;cursor:pointer;font-size:1rem;font-weight:800;display:flex;align-items:center;justify-content:center;transition:all .15s;" onmouseover="this.style.background='rgba(255,255,255,0.25)'" onmouseout="this.style.background='rgba(255,255,255,0.12)'">✕</button>
     </div>
-    <div style="padding:24px;overflow-y:auto;">
+
+    <!-- Body: sidebar + content -->
+    <div style="display:flex;flex:1;overflow:hidden;min-height:0;">
+
+      <!-- Sidebar -->
+      <div style="width:150px;flex-shrink:0;background:#f8fafc;border-right:1px solid #e8ecef;padding:14px 10px;display:flex;flex-direction:column;overflow-y:auto;">
+        <button class="gear-tab-btn active" id="gtab-turno" onclick="gearSwitchTab('turno')">
+          <span class="gear-tab-icon">📋</span><span>Turno</span>
+        </button>
+        <button class="gear-tab-btn" id="gtab-equipes" onclick="gearSwitchTab('equipes')">
+          <span class="gear-tab-icon">👥</span><span>Equipes</span>
+        </button>
+        <button class="gear-tab-btn" id="gtab-online" onclick="gearSwitchTab('online');gearRefreshPresence();">
+          <span class="gear-tab-icon">🟢</span><span>Online</span>
+        </button>
+        <button class="gear-tab-btn" id="gtab-visual" onclick="gearSwitchTab('visual')">
+          <span class="gear-tab-icon">🎨</span><span>Visual</span>
+        </button>
+        <button class="gear-tab-btn" id="gtab-dados" onclick="gearSwitchTab('dados')">
+          <span class="gear-tab-icon">🗄️</span><span>Dados</span>
+        </button>
+        <div style="flex:1;"></div>
+        <div style="font-size:0.6rem;color:#bbb;font-weight:600;text-align:center;padding:8px 0;letter-spacing:0.5px;">OBRAS BA</div>
+      </div>
+
+      <!-- Content area -->
+      <div style="flex:1;overflow-y:auto;padding:20px;">
+
+        <!-- ── ABA: TURNO ─────────────────────────────── -->
+        <div id="gear-content-turno">
+          <div class="gear-section-title" style="color:#0d7377;border-bottom:2px solid #c0e8e5;">📋 Arquivo de Turno</div>
+
+          <div class="gear-card" style="font-size:0.72rem;color:#555;">
+            <div style="font-weight:800;color:#0d7377;margin-bottom:6px;">Formato aceito <code style="background:#e8f4f5;padding:1px 6px;border-radius:4px;font-size:0.68rem;">.csv</code> separador <code style="background:#e8f4f5;padding:1px 6px;border-radius:4px;font-size:0.68rem;">;</code></div>
+            <code style="display:block;background:#f0f4f5;border-radius:6px;padding:8px 10px;font-size:0.68rem;line-height:1.9;color:#2d3748;">data;01/03/2026<br>nome;status;obs<br>ALAN-IRC;ok;<br>CARLOS-JAC;falta;<br>JOSE-IRC;justif;Motivo</code>
+            <div style="color:#aaa;margin-top:6px;font-size:0.68rem;">ou use o <strong>consulta_turno_*.csv</strong> do sistema de frotas</div>
+          </div>
+
+          <div id="gear-dropzone"
+            style="border:2px dashed #c0e8e5;border-radius:12px;padding:24px 16px;text-align:center;cursor:pointer;background:linear-gradient(135deg,#f0fafa,#e8f6f5);margin-bottom:10px;transition:all .2s;"
+            onclick="document.getElementById('gear-file-input').click()"
+            ondragover="event.preventDefault();this.style.borderColor='#0d7377';this.style.background='#d0efed';"
+            ondragleave="this.style.borderColor='#c0e8e5';this.style.background='linear-gradient(135deg,#f0fafa,#e8f6f5)';"
+            ondrop="event.preventDefault();this.style.borderColor='#c0e8e5';this.style.background='linear-gradient(135deg,#f0fafa,#e8f6f5)';gearImportarTurno(event.dataTransfer.files[0]);">
+            <div style="font-size:2rem;margin-bottom:6px;">📂</div>
+            <div style="font-size:0.88rem;font-weight:800;color:#0d7377;">Clique ou arraste o arquivo</div>
+            <div style="font-size:0.7rem;color:#888;margin-top:3px;">Formato aceito: <strong>.csv</strong></div>
+          </div>
+          <input type="file" id="gear-file-input" accept=".csv" style="display:none;" onchange="gearImportarTurno(this.files[0]);this.value='';">
+
+          <div id="gear-import-msg" style="display:none;font-size:0.78rem;font-weight:700;padding:10px 14px;border-radius:9px;margin-bottom:10px;"></div>
+
+          <div id="gear-import-preview" style="display:none;background:#f0fafa;border:1px solid #c0e8e5;border-radius:10px;padding:14px;margin-bottom:10px;">
+            <div style="font-size:0.65rem;font-weight:800;color:#0d7377;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:10px;">📊 Preview</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;text-align:center;margin-bottom:10px;">
+              <div style="background:#fff;border-radius:8px;padding:8px 4px;border:1px solid #c0e8e5;"><div id="gear-prev-ok" style="font-size:1.6rem;font-weight:900;color:#0d7377;">0</div><div style="font-size:0.58rem;font-weight:700;color:#888;text-transform:uppercase;">Abriram</div></div>
+              <div style="background:#fff;border-radius:8px;padding:8px 4px;border:1px solid #fde8b0;"><div id="gear-prev-justif" style="font-size:1.6rem;font-weight:900;color:#b97400;">0</div><div style="font-size:0.58rem;font-weight:700;color:#888;text-transform:uppercase;">Justif.</div></div>
+              <div style="background:#fff;border-radius:8px;padding:8px 4px;border:1px solid #fde8e8;"><div id="gear-prev-falta" style="font-size:1.6rem;font-weight:900;color:#c53030;">0</div><div style="font-size:0.58rem;font-weight:700;color:#888;text-transform:uppercase;">Faltas</div></div>
+            </div>
+            <div id="gear-prev-date" style="font-size:0.72rem;font-weight:700;color:#555;margin-bottom:10px;text-align:center;"></div>
+            <button id="gear-confirm-btn" onclick="gearConfirmarImport()" class="gear-btn" style="background:linear-gradient(135deg,#0d7377,#14a085);color:#fff;" onmouseover="this.style.opacity='.88'" onmouseout="this.style.opacity='1'">✅ Confirmar e Aplicar</button>
+          </div>
+
+          <button onclick="gearExportarTurno()" class="gear-btn" style="background:#ebf4ff;color:#2b6cb0;border:2px solid #bee3f8;" onmouseover="this.style.background='#2b6cb0';this.style.color='#fff'" onmouseout="this.style.background='#ebf4ff';this.style.color='#2b6cb0'">⬇️ Exportar Turno Atual (.csv)</button>
+        </div>
+
+        <!-- ── ABA: EQUIPES ────────────────────────────── -->
+        <div id="gear-content-equipes" style="display:none;">
+          <div class="gear-section-title" style="color:#0d7377;border-bottom:2px solid #c0e8e5;">👥 Gerenciar Equipes</div>
+
+          <div class="gear-card">
+            <div style="font-size:0.72rem;font-weight:800;color:#555;margin-bottom:8px;">Adicionar equipe</div>
+            <input id="new-name" type="text" placeholder="Nome (ex: JOAO-JAC)" style="width:100%;box-sizing:border-box;padding:8px 12px;border:1.5px solid #c0e8e5;border-radius:8px;font-family:'Barlow',sans-serif;font-size:0.82rem;font-weight:700;margin-bottom:8px;outline:none;">
+            <input id="new-obs" type="text" placeholder="Observação (opcional)" style="width:100%;box-sizing:border-box;padding:8px 12px;border:1.5px solid #c0e8e5;border-radius:8px;font-family:'Barlow',sans-serif;font-size:0.82rem;font-weight:700;margin-bottom:8px;outline:none;">
+            <div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap;">
+              <button class="btn-sm" id="sel-ok" onclick="selectedStatus='ok';document.getElementById('sel-ok').style.background='#14a085';document.getElementById('sel-ok').style.color='#fff';document.getElementById('sel-justif').style.background='#f0f4f5';document.getElementById('sel-justif').style.color='#555';document.getElementById('sel-falta').style.background='#f0f4f5';document.getElementById('sel-falta').style.color='#555';" style="background:#14a085;color:#fff;padding:6px 14px;">✅ OK</button>
+              <button class="btn-sm" id="sel-justif" onclick="selectedStatus='justif';document.getElementById('sel-justif').style.background='#f0a500';document.getElementById('sel-justif').style.color='#fff';document.getElementById('sel-ok').style.background='#f0f4f5';document.getElementById('sel-ok').style.color='#555';document.getElementById('sel-falta').style.background='#f0f4f5';document.getElementById('sel-falta').style.color='#555';" style="background:#f0f4f5;color:#555;padding:6px 14px;">⚠️ JUSTIF.</button>
+              <button class="btn-sm" id="sel-falta" onclick="selectedStatus='falta';document.getElementById('sel-falta').style.background='#e53e3e';document.getElementById('sel-falta').style.color='#fff';document.getElementById('sel-ok').style.background='#f0f4f5';document.getElementById('sel-ok').style.color='#555';document.getElementById('sel-justif').style.background='#f0f4f5';document.getElementById('sel-justif').style.color='#555';" style="background:#f0f4f5;color:#555;padding:6px 14px;">❌ FALTA</button>
+            </div>
+            <button onclick="addTeam()" style="width:100%;padding:10px;background:linear-gradient(135deg,#0d7377,#14a085);color:#fff;border:none;border-radius:9px;font-family:'Barlow',sans-serif;font-size:0.85rem;font-weight:800;cursor:pointer;">+ Adicionar</button>
+          </div>
+
+          <div style="position:relative;margin-bottom:8px;">
+            <span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:0.9rem;">🔍</span>
+            <input id="search-input" type="text" placeholder="Buscar equipe..." oninput="renderManageList()" style="width:100%;box-sizing:border-box;padding:8px 12px 8px 32px;border:1.5px solid #e2e8f0;border-radius:8px;font-family:'Barlow',sans-serif;font-size:0.82rem;font-weight:700;outline:none;">
+          </div>
+          <div id="manage-list" class="team-list"></div>
+          <script>setTimeout(function(){if(typeof renderManageList==='function')renderManageList();},200);</script>
+        </div>
+
+        <!-- ── ABA: ONLINE ─────────────────────────────── -->
+        <div id="gear-content-online" style="display:none;">
+          <div class="gear-section-title" style="color:#276749;border-bottom:2px solid #c6f6d5;">🟢 Quem está Online</div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+            <div id="gear-presence-count" style="font-size:0.78rem;font-weight:700;color:#555;"></div>
+            <button onclick="gearRefreshPresence()" style="padding:5px 14px;background:#f0fff4;border:1.5px solid #c6f6d5;border-radius:8px;font-family:'Barlow',sans-serif;font-size:0.7rem;font-weight:800;color:#276749;cursor:pointer;transition:all .15s;" onmouseover="this.style.background='#276749';this.style.color='#fff'" onmouseout="this.style.background='#f0fff4';this.style.color='#276749'">🔄 Atualizar</button>
+          </div>
+          <div id="gear-presence-list" style="background:#f8fafc;border-radius:12px;border:1px solid #e2e8f0;overflow:hidden;min-height:60px;">
+            <div style="text-align:center;padding:20px;color:#aaa;font-size:0.82rem;font-weight:600;">Carregando...</div>
+          </div>
+          <div style="margin-top:12px;background:#f0fff4;border:1px solid #c6f6d5;border-radius:10px;padding:12px 14px;font-size:0.7rem;color:#276749;">
+            <strong>ℹ️ Como funciona:</strong> cada usuário envia um sinal a cada 20s. Quem não sinalizou nos últimos 2 minutos sai da lista automaticamente.
+          </div>
+        </div>
+
+        <!-- ── ABA: VISUAL ─────────────────────────────── -->
+        <div id="gear-content-visual" style="display:none;">
+          <div class="gear-section-title" style="color:#553c9a;border-bottom:2px solid #d6bcfa;">🎨 Aparência</div>
+
+          <div class="gear-card" style="display:flex;align-items:center;justify-content:space-between;">
+            <div>
+              <div style="font-size:0.88rem;font-weight:800;color:#2d3748;">🌙 Modo Escuro</div>
+              <div style="font-size:0.72rem;color:#888;margin-top:2px;">Alterna tema claro/escuro</div>
+            </div>
+            <label style="position:relative;display:inline-block;width:44px;height:24px;cursor:pointer;">
+              <input type="checkbox" id="dark-mode-toggle" style="opacity:0;width:0;height:0;" onchange="toggleDarkMode(this.checked)">
+              <span id="dark-mode-slider" style="position:absolute;cursor:pointer;inset:0;background:#ccc;border-radius:24px;transition:0.3s;"></span>
+              <span id="dark-mode-knob" style="position:absolute;height:18px;width:18px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:0.3s;box-shadow:0 1px 4px rgba(0,0,0,0.2);"></span>
+            </label>
+          </div>
+
+          <div class="gear-card" style="display:flex;align-items:center;justify-content:space-between;margin-top:0;">
+            <div>
+              <div style="font-size:0.88rem;font-weight:800;color:#2d3748;">🔤 Meu Nome</div>
+              <div style="font-size:0.72rem;color:#888;margin-top:2px;">Aparece na lista de usuários online</div>
+            </div>
+          </div>
+          <input id="presence-my-name" type="text" placeholder="Seu nome (ex: João)" oninput="if(window.presenceSaveName)presenceSaveName(this.value)"
+            style="width:100%;box-sizing:border-box;padding:10px 14px;border:1.5px solid #e2e8f0;border-radius:10px;font-family:'Barlow',sans-serif;font-size:0.88rem;font-weight:700;outline:none;margin-top:-4px;">
+          <div id="presence-name-saved" style="display:none;font-size:0.7rem;color:#276749;font-weight:700;margin-top:5px;padding-left:4px;">✅ Nome salvo!</div>
+        </div>
+
+        <!-- ── ABA: DADOS ──────────────────────────────── -->
+        <div id="gear-content-dados" style="display:none;">
+          <div class="gear-section-title" style="color:#c53030;border-bottom:2px solid #fde8e8;">🗄️ Dados e Conexão</div>
+
+          <div class="gear-card" style="margin-bottom:12px;">
+            <div style="font-size:0.78rem;font-weight:800;color:#2d3748;margin-bottom:4px;">🔄 Conexão com Banco</div>
+            <div style="font-size:0.7rem;color:#888;margin-bottom:10px;">Reconecta ao Supabase e recarrega os dados</div>
+            <button onclick="if(window.dbReconectar)window.dbReconectar();document.getElementById('gear-modal').style.display='none';" class="gear-btn" style="background:linear-gradient(135deg,#0d7377,#14a085);color:#fff;margin-bottom:0;" onmouseover="this.style.opacity='.9'" onmouseout="this.style.opacity='1'">🔄 Reconectar ao Banco</button>
+          </div>
+
+          <div class="gear-card">
+            <div style="font-size:0.78rem;font-weight:800;color:#c53030;margin-bottom:4px;">⚠️ Limpar Cache Local</div>
+            <div style="font-size:0.7rem;color:#888;margin-bottom:10px;">Remove todos os dados salvos localmente e recarrega a página</div>
+            <button onclick="if(confirm('Limpar todo o cache local? Esta ação não pode ser desfeita.')){localStorage.clear();location.reload();}" class="gear-btn" style="background:#fff5f5;color:#c53030;border:2px solid #fde8e8;margin-bottom:0;" onmouseover="this.style.background='#c53030';this.style.color='#fff'" onmouseout="this.style.background='#fff5f5';this.style.color='#c53030'">🗑️ Limpar Cache Local</button>
+          </div>
+        </div>
+
+      </div><!-- /content -->
+    </div><!-- /body -->
+  </div>
+</div>
 
       <!-- TURNO -->
       <div style="font-size:0.68rem;font-weight:800;color:#0d7377;letter-spacing:2px;text-transform:uppercase;margin-bottom:14px;padding-bottom:8px;border-bottom:2px solid #c0e8e5;">📋 Arquivo de Turno</div>
@@ -5416,12 +5579,21 @@ setTimeout(presenceInit, 1500);
     reader.readAsText(file, 'utf-8');
   };
 
-  window.gearRefreshPresence = function() {
-    const listEl  = document.getElementById('gear-presence-list');
-    const countEl = document.getElementById('gear-presence-count');
-    if (!listEl) return;
+  window.gearSwitchTab = function(tab) {
+    ['turno','equipes','online','visual','dados'].forEach(function(t) {
+      const btn = document.getElementById('gtab-'+t);
+      const pane = document.getElementById('gear-content-'+t);
+      if (btn)  btn.className  = 'gear-tab-btn' + (t===tab?' active':'');
+      if (pane) pane.style.display = t===tab ? '' : 'none';
+    });
+    if (tab === 'equipes') setTimeout(function(){ if(typeof renderManageList==='function') renderManageList(); }, 50);
+    if (tab === 'visual') {
+      var inp = document.getElementById('presence-my-name');
+      if (inp && typeof presenceGetMyName === 'function') inp.value = presenceGetMyName();
+    }
+  };
 
-    // Pull fresh data from presence system
+  window.gearRefreshPresence = function() {
     if (typeof presencePoll === 'function' && typeof presenceEnabled !== 'undefined' && presenceEnabled) {
       presencePoll().then(function() { gearRenderPresenceList(); });
     } else {
@@ -5473,7 +5645,9 @@ setTimeout(presenceInit, 1500);
   var _gearBtn = document.getElementById('gear-btn');
   if (_gearBtn) {
     _gearBtn.addEventListener('click', function() {
-      setTimeout(function() { if(window.gearRefreshPresence) window.gearRefreshPresence(); }, 150);
+      setTimeout(function() {
+        if(window.gearSwitchTab) window.gearSwitchTab('turno');
+      }, 50);
     });
   }
 
