@@ -5248,6 +5248,16 @@ setTimeout(presenceInit, 1500);
       <div id="manage-list" class="team-list" style="margin-bottom:20px;"></div>
       <script>setTimeout(function(){if(typeof renderManageList==='function')renderManageList();},200);</script>
 
+      <!-- QUEM ESTÁ ONLINE -->
+      <div style="font-size:0.68rem;font-weight:800;color:#276749;letter-spacing:2px;text-transform:uppercase;margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid #c6f6d5;">👥 Quem está Online</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+        <div id="gear-presence-count" style="font-size:0.75rem;font-weight:700;color:#555;"></div>
+        <button onclick="gearRefreshPresence()" style="padding:5px 12px;background:#f0fff4;border:1.5px solid #c6f6d5;border-radius:8px;font-family:'Barlow',sans-serif;font-size:0.7rem;font-weight:800;color:#276749;cursor:pointer;transition:all .15s;" onmouseover="this.style.background='#276749';this.style.color='#fff'" onmouseout="this.style.background='#f0fff4';this.style.color='#276749'">🔄 Atualizar</button>
+      </div>
+      <div id="gear-presence-list" style="background:#f8fafc;border-radius:10px;border:1px solid #e2e8f0;overflow:hidden;min-height:56px;margin-bottom:18px;">
+        <div style="text-align:center;padding:18px;color:#aaa;font-size:0.8rem;font-weight:600;">Carregando...</div>
+      </div>
+
       <!-- DADOS -->
       <div style="font-size:0.68rem;font-weight:800;color:#aaa;letter-spacing:2px;text-transform:uppercase;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid #f0f2f5;">🗄️ Dados</div>
       <button onclick="if(confirm('Limpar cache local?')){localStorage.clear();location.reload();}" style="width:100%;padding:11px;background:#fff5f5;color:#c53030;border:2px solid #fde8e8;border-radius:10px;font-family:'Barlow',sans-serif;font-size:0.88rem;font-weight:800;cursor:pointer;margin-bottom:10px;transition:all 0.15s;" onmouseover="this.style.background='#c53030';this.style.color='#fff'" onmouseout="this.style.background='#fff5f5';this.style.color='#c53030'">🗑️ Limpar Cache Local</button>
@@ -5405,6 +5415,67 @@ setTimeout(presenceInit, 1500);
     };
     reader.readAsText(file, 'utf-8');
   };
+
+  window.gearRefreshPresence = function() {
+    const listEl  = document.getElementById('gear-presence-list');
+    const countEl = document.getElementById('gear-presence-count');
+    if (!listEl) return;
+
+    // Pull fresh data from presence system
+    if (typeof presencePoll === 'function' && typeof presenceEnabled !== 'undefined' && presenceEnabled) {
+      presencePoll().then(function() { gearRenderPresenceList(); });
+    } else {
+      gearRenderPresenceList();
+    }
+  };
+
+  function gearRenderPresenceList() {
+    const listEl  = document.getElementById('gear-presence-list');
+    const countEl = document.getElementById('gear-presence-count');
+    if (!listEl) return;
+
+    const users = (typeof presenceActive !== 'undefined') ? presenceActive : [];
+    const count = users.length;
+    if (countEl) countEl.textContent = count + ' usuário' + (count !== 1 ? 's' : '') + ' online agora';
+
+    if (!count) {
+      listEl.innerHTML = '<div style="text-align:center;padding:18px;color:#aaa;font-size:0.8rem;font-weight:600;">Nenhum usuário online</div>';
+      return;
+    }
+
+    const pageLabels = { TURNO:'📋 Turno', PROD:'📊 Produção', APR:'⚠️ APR', COMP:'⚡ Comparador', MAPA:'🗺 Mapa', PROG:'📅 Programação' };
+    const myUID = (typeof presenceUID !== 'undefined') ? presenceUID : '';
+    const now = Date.now();
+
+    listEl.innerHTML = users.map(function(u) {
+      const isMe = u.uid === myUID;
+      const name = u.name || 'Anônimo';
+      const initials = name.replace(/anônimo/i,'?').trim().charAt(0).toUpperCase();
+      const ms = now - new Date(u.last_seen).getTime();
+      const when = ms < 30000 ? 'agora' : ms < 60000 ? Math.floor(ms/1000)+'s' : Math.floor(ms/60000)+'min';
+      const ua = u.user_agent || '';
+      const device = /mobile|android|iphone/i.test(ua) ? '📱' : '💻';
+      const page = pageLabels[u.page] || u.page || '—';
+      const bgColor = isMe ? '#f0fff4' : '#fff';
+      const borderColor = isMe ? '#c6f6d5' : '#e2e8f0';
+      return '<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid ' + borderColor + ';background:' + bgColor + ';">'
+        + '<div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,' + (isMe?'#276749,#38a169':'#0d7377,#14a085') + ');color:#fff;font-size:0.82rem;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">' + initials + '</div>'
+        + '<div style="flex:1;min-width:0;">'
+        +   '<div style="font-size:0.82rem;font-weight:800;color:#1a365d;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + name + (isMe?' <span style="background:#c6f6d5;color:#276749;font-size:0.58rem;padding:1px 6px;border-radius:8px;font-weight:800;vertical-align:middle;">VOCÊ</span>':'') + '</div>'
+        +   '<div style="font-size:0.65rem;font-weight:600;color:#888;margin-top:1px;">' + device + ' ' + page + ' · ' + when + '</div>'
+        + '</div>'
+        + '<div style="width:8px;height:8px;border-radius:50%;background:#38d996;box-shadow:0 0 5px #38d996;flex-shrink:0;"></div>'
+        + '</div>';
+    }).join('');
+  }
+
+  // Render when gear modal opens
+  var _gearBtn = document.getElementById('gear-btn');
+  if (_gearBtn) {
+    _gearBtn.addEventListener('click', function() {
+      setTimeout(function() { if(window.gearRefreshPresence) window.gearRefreshPresence(); }, 150);
+    });
+  }
 
   window.gearConfirmarImport = function() {
     if (!_gearPayloadPendente) return;
