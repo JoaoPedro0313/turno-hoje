@@ -1527,12 +1527,20 @@ function tirarPrint() {
 const pad = n => String(n).padStart(2,'0');
 const now = new Date();
 const hora = pad(now.getHours())+':'+pad(now.getMinutes());
-const ok     = [...teams.ok].sort();
-const justif = [...teams.justif].sort((a,b)=>a.name.localeCompare(b.name));
-// CORRIGIDO: usa mesma dedup do render() para garantir que falta seja correto no print
+// Aplica filtro de estado/base ativo (igual ao render())
+const ok     = filterByStateAndBase([...teams.ok].sort());
+const justif = filterByStateAndBase([...teams.justif].sort((a,b)=>a.name.localeCompare(b.name)));
 const _okD  = new Set(ok.map(n => toDisplayName(n)));
 const _jD   = new Set(justif.map(t => toDisplayName(t.name)));
-const falta = teams.falta.filter(n => { const d=toDisplayName(n); return !_okD.has(d)&&!_jD.has(d); }).sort();
+const falta = filterByStateAndBase(
+  teams.falta.filter(n => { const d=toDisplayName(n); return !_okD.has(d)&&!_jD.has(d); }).sort()
+);
+// Label do filtro ativo para o cabeçalho
+const STATE_LABELS = { todos:'TODOS OS ESTADOS', ba:'🟡 BA', mg:'🔵 MG', se:'🟣 SE' };
+const BASE_LABELS  = { todos:'TODAS AS BASES', irc:'IRECÊ', jac:'JACOBINA', pa:'POUSO ALEGRE', ita:'ITAJUBÁ', lv:'LINHA VIVA', aju:'ARACAJU' };
+const filtroLabel  = (turnoStateFilter!=='todos'||turnoBaseFilter!=='todos')
+  ? (STATE_LABELS[turnoStateFilter]||turnoStateFilter) + (turnoBaseFilter!=='todos' ? ' · '+(BASE_LABELS[turnoBaseFilter]||turnoBaseFilter) : '')
+  : '';
 function buildGrid(list, type) {
 if (!list || list.length===0) return '<div style="padding:12px 16px;color:#aaa;font-size:13px;">Nenhum</div>';
 let bg='#f0fafa', border='#e0f5f3', namecol='#1a3a3a', badgeBg='#14a085', badgeTxt='OK';
@@ -1570,7 +1578,7 @@ const html = `
 <div id="__print_wpp__" style="width:900px;background:#f0f4f5;padding:0;font-family:'Barlow',Arial,sans-serif;box-sizing:border-box;">
 <div style="background:linear-gradient(135deg,#0d7377 0%,#14a085 60%,#0d7377 100%);padding:24px 30px 20px;text-align:center;">
 <div style="font-size:32px;font-weight:900;color:#fff;letter-spacing:1px;">TURNO HOJE (${currentDate})</div>
-<div style="font-size:13px;font-weight:700;color:rgba(255,255,255,0.75);margin-top:5px;letter-spacing:2px;text-transform:uppercase;">Relatório: ${currentDate} · Gerado às ${hora}</div>
+<div style="font-size:13px;font-weight:700;color:rgba(255,255,255,0.75);margin-top:5px;letter-spacing:2px;text-transform:uppercase;">Relatório: ${currentDate} · ${hora}${filtroLabel?' · '+filtroLabel:''}</div>
 </div>
 <div style="height:4px;background:linear-gradient(90deg,#ff6b35,#ff9a3c,#ff6b35);"></div>
 <div style="padding:20px 20px 10px;">
