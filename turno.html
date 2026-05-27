@@ -2433,6 +2433,8 @@ window.presenceSaveName = typeof presenceSaveName === 'function' ? presenceSaveN
 // ── Funções gerais do modal e listas ──
 window.renderManageList = renderManageList;
 window.receberAbertura  = typeof receberAbertura === 'function' ? receberAbertura : undefined;
+window._CON_MNT_MAP     = typeof CON_MNT_MAP     !== 'undefined' ? CON_MNT_MAP     : {};
+window._resolverEquipe  = typeof resolverEquipe  === 'function'  ? resolverEquipe  : function(e){ return e; };
 window.limparProducao   = limparProducao;
 window.handleCSV        = handleCSV;
 window.handleAprCSV     = handleAprCSV;
@@ -5231,9 +5233,10 @@ setTimeout(presenceInit, 1500);
         const iResp    = headers.findIndex(h => h === 'responsável' || h === 'responsavel');
         const respRaw  = iResp >= 0 ? (cols[iResp] || '') : '';
         // Mapeia CON_MNT-XX → código interno (CRISTIANO-ITA, SIDNEI-PA, etc.)
-        const nome = (typeof resolverEquipe === 'function')
-          ? resolverEquipe(nomeRaw, respRaw)
-          : nomeRaw;
+        // Usa window._resolverEquipe pois esta função está num IIFE separado
+        const nome = (typeof window._resolverEquipe === 'function')
+          ? window._resolverEquipe(nomeRaw, respRaw)
+          : (window._CON_MNT_MAP && window._CON_MNT_MAP[nomeRaw]) || nomeRaw;
         const situacao = (cols[iSit] || '').toLowerCase();
 
         // Extrai data da primeira linha de dados
