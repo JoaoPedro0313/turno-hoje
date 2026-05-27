@@ -5227,7 +5227,13 @@ setTimeout(presenceInit, 1500);
         const cols = splitLine(lines[i]).map(c => c.replace(/^"|"$/g, '').trim());
         if (!cols[iEqCol]) continue;
 
-        const nome    = cols[iEqCol].toUpperCase();
+        const nomeRaw  = cols[iEqCol].toUpperCase();
+        const iResp    = headers.findIndex(h => h === 'responsável' || h === 'responsavel');
+        const respRaw  = iResp >= 0 ? (cols[iResp] || '') : '';
+        // Mapeia CON_MNT-XX → código interno (CRISTIANO-ITA, SIDNEI-PA, etc.)
+        const nome = (typeof resolverEquipe === 'function')
+          ? resolverEquipe(nomeRaw, respRaw)
+          : nomeRaw;
         const situacao = (cols[iSit] || '').toLowerCase();
 
         // Extrai data da primeira linha de dados
@@ -5335,7 +5341,15 @@ setTimeout(presenceInit, 1500);
     if (typeof teams !== 'undefined') {
       teams.ok     = payload.ok     || [];
       teams.justif = payload.justif || [];
-      teams.falta  = payload.falta  || [];
+      // Garante que todos EQUIPES_ATIVAS que não abriram aparecem em falta
+      const _justifNms = (payload.justif||[]).map(t=>t.name||t);
+      const _okSet = new Set(teams.ok.map(n=>n));
+      const _jSet  = new Set(_justifNms);
+      const _faltaCSV = payload.falta || [];
+      teams.falta = [...new Set([
+        ..._faltaCSV,
+        ...(typeof EQUIPES_ATIVAS !== 'undefined' ? EQUIPES_ATIVAS : []).filter(e => !_okSet.has(e) && !_jSet.has(e))
+      ])];
     }
     if (typeof currentDate !== 'undefined' && payload.date) {
       currentDate = payload.date;
