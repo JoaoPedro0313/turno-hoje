@@ -4725,6 +4725,9 @@ setTimeout(presenceInit, 1500);
 .rel-base{font-size:.62rem;font-weight:800;padding:2px 7px;border-radius:10px;display:inline-block}
 .rel-base.irc{background:rgba(43,108,176,.12);color:#2b6cb0}
 .rel-base.jac{background:rgba(240,165,0,.12);color:#b97400}
+.rel-base.pa{background:rgba(56,161,105,.12);color:#276749}
+.rel-base.ita{background:rgba(107,70,193,.12);color:#553c9a}
+.rel-base.aju{background:rgba(229,62,62,.12);color:#c53030}
 .rel-db{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:5px;font-size:.6rem;font-weight:900}
 .rel-db.ok{background:#d0f0ee;color:#0d7377}
 .rel-db.falta{background:#fde8e8;color:#c53030}
@@ -4743,6 +4746,9 @@ setTimeout(presenceInit, 1500);
 .rel-fb.a-irc{background:#2b6cb0;border-color:#2b6cb0;color:#fff}
 .rel-fb.a-jac{background:#b97400;border-color:#b97400;color:#fff}
 .rel-fb.a-todas{background:#888;border-color:#888;color:#fff}
+.rel-fb.a-pa{background:#276749;border-color:#276749;color:#fff}
+.rel-fb.a-ita{background:#553c9a;border-color:#553c9a;color:#fff}
+.rel-fb.a-aju{background:#c53030;border-color:#c53030;color:#fff}
 .rel-sinput{padding:6px 10px 6px 28px;border:1.5px solid #e2e8f0;border-radius:7px;font-family:'Barlow',sans-serif;font-size:.78rem;font-weight:600;color:#2d3748;outline:none;width:180px;background:#fafbfc}
 .rel-sinput:focus{border-color:#c53030}
 .rel-swrap{position:relative}
@@ -4766,7 +4772,15 @@ setTimeout(presenceInit, 1500);
     while(cur<=end){dias.push(new Date(cur));cur.setDate(cur.getDate()+1);}
     return dias;
   }
-  function relGetBase(n){ return n.endsWith('-IRC')?'IRC':n.endsWith('-JAC')?'JAC':''; }
+  function relGetBase(n){
+    if(n.endsWith('-IRC')) return 'IRC';
+    if(n.endsWith('-JAC')) return 'JAC';
+    if(n.endsWith('-PA'))  return 'PA';
+    if(n.endsWith('-ITA')) return 'ITA';
+    if(n.endsWith('-AJU')) return 'AJU';
+    return '';
+  }
+  const REL_BASE_LABEL = { IRC:'IRECÊ', JAC:'JACOBINA', PA:'POUSO ALEGRE', ITA:'ITAJUBÁ', AJU:'ARACAJU', '':'' };
   function relDispName(n){ return n.replace(/-IRC$/,'').replace(/-JAC$/,''); }
   function relGetStatus(payload, nome){
     if(!payload) return 'nodata';
@@ -4929,7 +4943,7 @@ setTimeout(presenceInit, 1500);
         <div style="flex:1">
           <div class="rel-rnm">${relDispName(r.nome)}</div>
           <div style="font-size:.58rem;color:#888;font-weight:700;margin-top:1px;">
-            <span class="rel-base ${r.base.toLowerCase()}">${r.base}</span>
+            <span class="rel-base ${r.base.toLowerCase()}">${REL_BASE_LABEL[r.base]||r.base}</span>
             &nbsp;·&nbsp;${r.presencas} pres. · ${r.justifs} justif.
           </div>
         </div>
@@ -4946,7 +4960,7 @@ setTimeout(presenceInit, 1500);
       const cells=matrix[r.nome].map((s,i)=>`<td class="c" style="padding:8px 4px;"><span class="rel-db ${s}" title="${relFmtDate(dias[i])}: ${s==='ok'?'Abriu Turno':s==='falta'?'Não Abriu':s==='justif'?'Justificado':'Sem Registro'}">${icons[s]}</span></td>`).join('');
       return `<tr data-base="${r.base}" data-nome="${relDispName(r.nome).toLowerCase()}" data-faltas="${r.faltas}" data-pct="${pct}">
         <td class="rel-nm">${relDispName(r.nome)}</td>
-        <td><span class="rel-base ${r.base.toLowerCase()}">${r.base}</span></td>
+        <td><span class="rel-base ${r.base.toLowerCase()}">${REL_BASE_LABEL[r.base]||r.base}</span></td>
         <td class="c">${r.presencas}</td>
         <td class="c" style="font-weight:800;color:${r.faltas>0?'#c53030':'#2d3748'}">${r.faltas}</td>
         <td class="c" style="color:${r.justifs>0?'#b97400':'#2d3748'}">${r.justifs}</td>
@@ -4981,10 +4995,16 @@ setTimeout(presenceInit, 1500);
             <button class="rel-fb" id="rf-falta" onclick="relSetFiltro('falta')">COM FALTA</button>
             <button class="rel-fb" id="rf-ok100" onclick="relSetFiltro('ok100')">100% PRES.</button>
           </div>
-          <div class="rel-fbtns">
-            <button class="rel-fb" id="rf-irc" onclick="relSetBase('IRC')">IRC</button>
-            <button class="rel-fb" id="rf-jac" onclick="relSetBase('JAC')">JAC</button>
+          <div class="rel-fbtns" style="flex-wrap:wrap;">
             <button class="rel-fb a-todas" id="rf-todas" onclick="relSetBase('todas')">TODAS</button>
+            <span style="font-size:.55rem;font-weight:800;color:#aaa;align-self:center;letter-spacing:1px;">BA:</span>
+            <button class="rel-fb" id="rf-irc" onclick="relSetBase('IRC')">IRECÊ</button>
+            <button class="rel-fb" id="rf-jac" onclick="relSetBase('JAC')">JACOBINA</button>
+            <span style="font-size:.55rem;font-weight:800;color:#aaa;align-self:center;letter-spacing:1px;">MG:</span>
+            <button class="rel-fb" id="rf-pa"  onclick="relSetBase('PA')">P.ALEGRE</button>
+            <button class="rel-fb" id="rf-ita" onclick="relSetBase('ITA')">ITAJUBÁ</button>
+            <span style="font-size:.55rem;font-weight:800;color:#aaa;align-self:center;letter-spacing:1px;">SE:</span>
+            <button class="rel-fb" id="rf-aju" onclick="relSetBase('AJU')">ARACAJU</button>
           </div>
         </div>
       </div>
@@ -5015,9 +5035,11 @@ setTimeout(presenceInit, 1500);
   };
   window.relSetBase = function(b){
     relBase=b;
-    document.getElementById('rf-irc').className='rel-fb'+(b==='IRC'?' a-irc':'');
-    document.getElementById('rf-jac').className='rel-fb'+(b==='JAC'?' a-jac':'');
-    document.getElementById('rf-todas').className='rel-fb'+(b==='todas'?' a-todas':'');
+    const map={IRC:'a-irc',JAC:'a-jac',PA:'a-pa',ITA:'a-ita',AJU:'a-aju',todas:'a-todas'};
+    [{id:'rf-irc',k:'IRC'},{id:'rf-jac',k:'JAC'},{id:'rf-pa',k:'PA'},
+     {id:'rf-ita',k:'ITA'},{id:'rf-aju',k:'AJU'},{id:'rf-todas',k:'todas'}].forEach(function(x){
+      const el=document.getElementById(x.id); if(el) el.className='rel-fb'+(b===x.k?' '+map[x.k]:'');
+    });
     relFiltrarTabela();
   };
   window.relFiltrarTabela = function(){
