@@ -159,6 +159,21 @@ window.presenceOpenModal = function() { if(window._presenceOpenModal) window._pr
 </div>
 <div id="page-turno">
 
+  <!-- Filtro Estado -->
+  <div id="turno-state-filter" style="background:#1a2a3a;padding:7px 12px;display:flex;align-items:center;gap:8px;overflow-x:auto;scrollbar-width:none;border-bottom:2px solid #0d3344;">
+    <span style="font-size:0.6rem;font-weight:800;color:rgba(255,255,255,0.45);letter-spacing:1.5px;text-transform:uppercase;white-space:nowrap;flex-shrink:0;">🌎 ESTADO:</span>
+    <button id="state-btn-todos" onclick="turnoSetState('todos')" style="flex-shrink:0;padding:4px 14px;border-radius:20px;border:1.5px solid rgba(255,255,255,0.5);background:#fff;color:#1a2a3a;font-family:Barlow,sans-serif;font-size:0.7rem;font-weight:800;cursor:pointer;transition:all .18s;">Todos</button>
+    <button id="state-btn-ba" onclick="turnoSetState('ba')" style="flex-shrink:0;padding:4px 14px;border-radius:20px;border:1.5px solid rgba(255,255,255,0.2);background:transparent;color:rgba(255,255,255,0.65);font-family:Barlow,sans-serif;font-size:0.7rem;font-weight:800;cursor:pointer;transition:all .18s;">🟡 BA</button>
+    <button id="state-btn-mg" onclick="turnoSetState('mg')" style="flex-shrink:0;padding:4px 14px;border-radius:20px;border:1.5px solid rgba(255,255,255,0.2);background:transparent;color:rgba(255,255,255,0.65);font-family:Barlow,sans-serif;font-size:0.7rem;font-weight:800;cursor:pointer;transition:all .18s;">🔵 MG</button>
+    <button id="state-btn-se" onclick="turnoSetState('se')" style="flex-shrink:0;padding:4px 14px;border-radius:20px;border:1.5px solid rgba(255,255,255,0.2);background:transparent;color:rgba(255,255,255,0.65);font-family:Barlow,sans-serif;font-size:0.7rem;font-weight:800;cursor:pointer;transition:all .18s;">🟣 SE</button>
+    <div id="turno-base-counts" style="margin-left:auto;font-size:0.62rem;font-weight:700;color:rgba(255,255,255,0.4);white-space:nowrap;"></div>
+  </div>
+  <!-- Filtro Base (dinâmico conforme estado selecionado) -->
+  <div style="background:#fff;border-bottom:2px solid #e2e8f0;padding:7px 12px;display:flex;align-items:center;gap:7px;overflow-x:auto;scrollbar-width:none;">
+    <span style="font-size:0.6rem;font-weight:800;color:#aaa;letter-spacing:1.5px;text-transform:uppercase;white-space:nowrap;flex-shrink:0;">🏢 BASE:</span>
+    <div id="turno-base-filter-btns" style="display:flex;gap:7px;align-items:center;overflow-x:auto;scrollbar-width:none;"></div>
+  </div>
+
   <div id="turno-hist-bar" style="background:#1a2a3a;padding:10px 16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;border-bottom:2px solid #0d7377;">
     <span style="font-size:0.72rem;font-weight:800;color:rgba(255,255,255,0.6);letter-spacing:1px;text-transform:uppercase;white-space:nowrap;">📅 CONSULTAR DIA:</span>
     <input type="date" id="turno-hist-date"
@@ -283,7 +298,21 @@ const DEFAULTS = {
 date: todayDate(),
 ok: ['ALAN-IRC','ALEX-IRC','ANDRE-JAC','CAIQUE-JAC','CLEBSON-JAC','DANILO-IRC','DIOGO-JAC','DOUGLAS-JAC','EDILSON-IRC','EDMILSON-IRC','ELIEZER-IRC','EMERSON-JAC','ENES-IRC','ESMERALDO-IRC','FABIANO-JAC','FELIPE-IRC','GABRIEL-IRC','GIORLAN-IRC','JAILSON-IRC','JAILTON-JAC','JARBAS-IRC','JOAO-JAC','MARCOS-IRC','PATRICIO-JAC','RIAN-IRC','ROMERO-IRC','TIAGO-IRC','UBERDAN-IRC','VALMIR-JAC','VANILSON-IRC','WILIAN-IRC'],
 justif: [],
-falta: ['ERONILSON-JAC','GERALDO-JAC','JAIR-JAC','LUCIANO-JAC','MAURIVALDO-JAC','MENEZES-IRC','MURILO-JAC','REVERTON-IRC','RODRIGO-JAC','UELTON-JAC','WASHINGTON-IRC','WESLEY-IRC']
+falta: [
+  // BA
+  'ERONILSON-JAC','FABIO-JAC','GERALDO-JAC','JAIR-JAC','LUCIANO-JAC','LUIZ-JAC',
+  'MARCELO-JAC','MAURIVALDO-JAC','MENEZES-IRC','MURILO-JAC','REVERTON-IRC',
+  'RODRIGO-JAC','UELTON-JAC','VAGNO-IRC','WASHINGTON-IRC','WESLEY-IRC',
+  // MG
+  'RAIMUNDO-PA','LEVY-PA','GILVANDRO-PA','RICHARD-PA','FABRICIO-PA','OTAVIO-PA','LUIZCF-PA',
+  'CRISTIANO-ITA','LEANDRO-ITA','RAFAEL-ITA','JULIANO-ITA','CLAYTON-ITA',
+  'DOUGLAS-LV','SIDNEI-LV',
+  // SE
+  'ADRIANO-AJU','ADAO-AJU','FELIPE-AJU','FRANCISCO-AJU','FRANCINALDO-AJU',
+  'GILMAR-AJU','JEAN-AJU','JOSEFERNANDO-AJU','JOSENILTON-AJU','JOSEROBERTO-AJU',
+  'LUAN-AJU','ROBSON-AJU','RODRIGOARAUJO-AJU','RODRIGOJESUS-AJU',
+  'VALDEMAR-AJU','WILSON-AJU'
+]
 };
 let teams = { ok: [...DEFAULTS.ok], justif: [], falta: [...DEFAULTS.falta] };
 let currentDate = DEFAULTS.date;
@@ -659,12 +688,12 @@ const faltaSetH = new Set([
   ...EQUIPES_ATIVAS.filter(e => !okDispH.has(e) && !justifDispH.has(e))
 ]);
 const faltaTemp = [...faltaSetH].filter(n => { const d=toDisplayName(n); return !okDispH.has(d)&&!justifDispH.has(d); });
-buildGridOk('abriu-grid', [...okTemp].sort());
-buildGridJustif('justif-grid', [...justifTemp].sort((a,b)=>a.name.localeCompare(b.name)));
-buildGridFalta('falta-grid', [...faltaTemp].sort());
-document.getElementById('ok-count').textContent = okTemp.length;
-document.getElementById('justif-count').textContent = justifTemp.length;
-document.getElementById('falta-count').textContent = faltaTemp.length;
+buildGridOk('abriu-grid', filterByBase([...okTemp].sort()));
+buildGridJustif('justif-grid', filterByBase([...justifTemp].sort((a,b)=>a.name.localeCompare(b.name))));
+buildGridFalta('falta-grid', filterByBase([...faltaTemp].sort()));
+document.getElementById('ok-count').textContent = filterByBase(okTemp).length;
+document.getElementById('justif-count').textContent = filterByBase(justifTemp).length;
+document.getElementById('falta-count').textContent = filterByBase(faltaTemp).length;
 // título fixo SISTEMA DE OBRAS
 const _psHist = document.getElementById('page-sub'); if (_psHist) _psHist.textContent = 'Histórico: ' + dataFormatada;
 const total = okTemp.length + justifTemp.length + faltaTemp.length;
@@ -729,6 +758,110 @@ setTimeout(() => setDbStatus('local', 'Dados locais'), 2000);
 }
 } // fim de dbSaveApr() -- CORRIGIDO: chave de fechamento estava faltando
 
+// ── Filtro por Estado e Base ───────────────────────────────────────────────
+let turnoStateFilter = 'todos'; // 'todos' | 'ba' | 'mg' | 'se'
+let turnoBaseFilter  = 'todos'; // 'todos' | irc/jac | pa/ita/lv | aju
+
+// Retorna a base (sufixo) de um nome de equipe
+function teamBase(name) {
+  if (!name) return '';
+  const n = (name || '').toUpperCase();
+  if (n.endsWith('-IRC')) return 'irc';
+  if (n.endsWith('-JAC')) return 'jac';
+  if (n.endsWith('-AJU')) return 'aju';
+  if (n.endsWith('-PA'))  return 'pa';
+  if (n.endsWith('-ITA')) return 'ita';
+  if (n.endsWith('-LV'))  return 'lv';
+  return '';
+}
+// Retorna o estado de um nome de equipe
+function teamState(name) {
+  const b = teamBase(name);
+  if (b === 'irc' || b === 'jac') return 'ba';
+  if (b === 'pa'  || b === 'ita' || b === 'lv') return 'mg';
+  if (b === 'aju') return 'se';
+  return '';
+}
+
+// Configuração das bases por estado
+const BASE_CONFIG = {
+  ba: [
+    { id:'irc', label:'🗺 IRECÊ' },
+    { id:'jac', label:'🏗 JACOBINA' }
+  ],
+  mg: [
+    { id:'pa',  label:'🏙 POUSO ALEGRE' },
+    { id:'ita', label:'🏔 ITAJUBÁ' },
+    { id:'lv',  label:'⚡ LINHA VIVA' }
+  ],
+  se: [
+    { id:'aju', label:'🌊 ARACAJU' }
+  ]
+};
+
+// Atualiza os botões do filtro de Base conforme o estado selecionado
+function updateBaseFilterButtons() {
+  const container = document.getElementById('turno-base-filter-btns');
+  if (!container) return;
+  const activeStyle  = 'flex-shrink:0;padding:5px 14px;border-radius:20px;border:1.5px solid #0d7377;background:#0d7377;color:#fff;font-family:Barlow,sans-serif;font-size:0.72rem;font-weight:800;cursor:pointer;transition:all .18s;';
+  const inactStyle   = 'flex-shrink:0;padding:5px 14px;border-radius:20px;border:1.5px solid #e2e8f0;background:#f0f4f5;color:#888;font-family:Barlow,sans-serif;font-size:0.72rem;font-weight:800;cursor:pointer;transition:all .18s;';
+  let html = '<button id="base-btn-todos" onclick="turnoSetBase('todos',this)" style="' + (turnoBaseFilter==='todos'?activeStyle:inactStyle) + '">Todos</button>';
+  const states = turnoStateFilter === 'todos' ? ['ba','mg','se'] : [turnoStateFilter];
+  states.forEach(st => {
+    (BASE_CONFIG[st]||[]).forEach(b => {
+      const s = turnoBaseFilter === b.id ? activeStyle : inactStyle;
+      html += '<button id="base-btn-' + b.id + '" onclick="turnoSetBase('' + b.id + '',this)" style="' + s + '">' + b.label + '</button>';
+    });
+  });
+  container.innerHTML = html;
+}
+
+function turnoSetState(state) {
+  turnoStateFilter = state;
+  turnoBaseFilter  = 'todos';
+  // Atualiza botões de estado
+  ['todos','ba','mg','se'].forEach(s => {
+    const el = document.getElementById('state-btn-' + s);
+    if (!el) return;
+    if (s === state) {
+      el.style.background = '#1a2a3a'; el.style.color = '#fff'; el.style.borderColor = '#1a2a3a';
+    } else {
+      el.style.background = '#f0f4f5'; el.style.color = '#888'; el.style.borderColor = '#e2e8f0';
+    }
+  });
+  updateBaseFilterButtons();
+  render();
+}
+
+function turnoSetBase(base) {
+  turnoBaseFilter = base;
+  updateBaseFilterButtons();
+  render();
+}
+
+// Filtra lista de equipes por estado + base ativos
+function filterByStateAndBase(arr) {
+  return arr.filter(n => {
+    const name = typeof n === 'string' ? n : (n.name || '');
+    const st = teamState(name);
+    if (turnoStateFilter !== 'todos' && st !== turnoStateFilter) return false;
+    if (turnoBaseFilter  !== 'todos' && teamBase(name) !== turnoBaseFilter) return false;
+    return true;
+  });
+}
+// Mantém alias usado no turnoHistExibir já existente
+function filterByBase(arr) { return filterByStateAndBase(arr); }
+
+function updateBaseCounts() {
+  const el = document.getElementById('turno-base-counts');
+  if (!el) return;
+  const all = [...teams.ok];
+  const ba = all.filter(n=>teamState(n)==='ba').length;
+  const mg = all.filter(n=>teamState(n)==='mg').length;
+  const se = all.filter(n=>teamState(n)==='se').length;
+  el.textContent = 'BA: ' + ba + ' · MG: ' + mg + ' · SE: ' + se + ' (abriram)';
+}
+
 function render() {
 if (turnoModoHistorico) return;
 // Deduplicar: remove de falta qualquer nome cujo display já exista em ok ou justif
@@ -738,20 +871,34 @@ const faltaFiltrada = teams.falta.filter(n => {
   const d = toDisplayName(n);
   return !okDisplay.has(d) && !justifDisplay.has(d);
 });
-buildGridOk('abriu-grid', [...teams.ok].sort());
-buildGridJustif('justif-grid', [...teams.justif].sort((a,b)=>a.name.localeCompare(b.name)));
-buildGridFalta('falta-grid', [...faltaFiltrada].sort());
-document.getElementById('ok-count').textContent    = teams.ok.length;
-document.getElementById('justif-count').textContent = teams.justif.length;
-document.getElementById('falta-count').textContent  = faltaFiltrada.length;
+// Aplicar filtro por base
+const okFilt     = filterByStateAndBase([...teams.ok].sort());
+const justifFilt = filterByStateAndBase([...teams.justif].sort((a,b)=>a.name.localeCompare(b.name)));
+const faltaFilt  = filterByStateAndBase([...faltaFiltrada].sort());
+buildGridOk('abriu-grid', okFilt);
+buildGridJustif('justif-grid', justifFilt);
+buildGridFalta('falta-grid', faltaFilt);
+document.getElementById('ok-count').textContent    = okFilt.length;
+document.getElementById('justif-count').textContent = justifFilt.length;
+document.getElementById('falta-count').textContent  = faltaFilt.length;
 const total = teams.ok.length + teams.justif.length + faltaFiltrada.length;
 // título fixo SISTEMA DE OBRAS
 const _pageSub = document.getElementById('page-sub'); if (_pageSub) _pageSub.textContent = 'Relatorio: ' + currentDate;
 const _dateInput = document.getElementById('date-input'); if (_dateInput) _dateInput.value = currentDate;
 document.getElementById('footer-text').innerHTML  =
 'OBRAS - BA &nbsp;|&nbsp; BA_PROCESSO &nbsp;|&nbsp; ' + total + ' equipes ativas &nbsp;|&nbsp; ' + currentDate;
+updateBaseCounts();
 renderProducao();
 }
+// Inicializa os botões de base ao carregar
+(function initBaseFilter() {
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', updateBaseFilterButtons);
+  } else {
+    setTimeout(updateBaseFilterButtons, 0);
+  }
+})();
+
 function emptyMsg(id) {
 document.getElementById(id).innerHTML = '<div class="_s9">Nenhuma equipe</div>';
 }
@@ -1015,7 +1162,29 @@ if (!el) return;
 el.textContent=text; el.className='msg '+type;
 clearTimeout(el._t); el._t=setTimeout(()=>el.className='msg',5000);
 }
-const EQUIPES_ATIVAS = ['ESMERALDO-IRC','ENES-IRC','FELIPE-IRC','JAILSON-IRC','JARBAS-IRC','VANILSON-IRC','WILIAN-IRC','EDILSON-IRC','ALEX-IRC','EDMILSON-IRC','MENEZES-IRC','WESLEY-IRC','MARCOS-IRC','GIORLAN-IRC','GABRIEL-IRC','WASHINGTON-IRC','ALAN-IRC','TIAGO-IRC','REVERTON-IRC','ELIEZER-IRC','UBERDAN-IRC','ROMERO-IRC','RIAN-IRC','DANILO-IRC','DOUGLAS-JAC','RODRIGO-JAC','JAILTON-JAC','GERALDO-JAC','CLEBSON-JAC','DIOGO-JAC','LUCIANO-JAC','FABIANO-JAC','EMERSON-JAC','MAURIVALDO-JAC','PATRICIO-JAC','VALMIR-JAC','JOAO-JAC','ANDRE-JAC','JAIR-JAC','CAIQUE-JAC'];
+const EQUIPES_ATIVAS = [
+  // ── BA · IRECÊ ──
+  'ESMERALDO-IRC','ENES-IRC','FELIPE-IRC','JAILSON-IRC','JARBAS-IRC','VANILSON-IRC',
+  'WILIAN-IRC','EDILSON-IRC','ALEX-IRC','VAGNO-IRC','EDMILSON-IRC','MENEZES-IRC',
+  'WESLEY-IRC','MARCOS-IRC','GIORLAN-IRC','GABRIEL-IRC','WASHINGTON-IRC','ALAN-IRC',
+  'TIAGO-IRC','REVERTON-IRC','ELIEZER-IRC','UBERDAN-IRC','ROMERO-IRC','RIAN-IRC','DANILO-IRC',
+  // ── BA · JACOBINA ──
+  'DOUGLAS-JAC','RODRIGO-JAC','JAILTON-JAC','GERALDO-JAC','CLEBSON-JAC','DIOGO-JAC',
+  'LUCIANO-JAC','FABIANO-JAC','EMERSON-JAC','MAURIVALDO-JAC','PATRICIO-JAC','VALMIR-JAC',
+  'JOAO-JAC','ANDRE-JAC','JAIR-JAC','CAIQUE-JAC','FABIO-JAC','MARCELO-JAC',
+  'MURILO-JAC','UELTON-JAC','ERONILSON-JAC','LUIZ-JAC',
+  // ── MG · POUSO ALEGRE ──
+  'RAIMUNDO-PA','LEVY-PA','GILVANDRO-PA','RICHARD-PA','FABRICIO-PA','OTAVIO-PA','LUIZCF-PA',
+  // ── MG · ITAJUBÁ ──
+  'CRISTIANO-ITA','LEANDRO-ITA','RAFAEL-ITA','JULIANO-ITA','CLAYTON-ITA',
+  // ── MG · LINHA VIVA ──
+  'DOUGLAS-LV','SIDNEI-LV',
+  // ── SE · ARACAJU ──
+  'ADRIANO-AJU','ADAO-AJU','FELIPE-AJU','FRANCISCO-AJU','FRANCINALDO-AJU',
+  'GILMAR-AJU','JEAN-AJU','JOSEFERNANDO-AJU','JOSENILTON-AJU','JOSEROBERTO-AJU',
+  'LUAN-AJU','ROBSON-AJU','RODRIGOARAUJO-AJU','RODRIGOJESUS-AJU',
+  'VALDEMAR-AJU','WILSON-AJU'
+];
 // Mapeamento nome completo -> UTD. Edite CADASTRO_EQUIPES para adicionar/corrigir nomes.
 const CADASTRO_EQUIPES = {
   'ALAN NUNES BARRETO':'IRC','ALEX SANDRO SANTOS BISPO':'IRC','EDMILSON RIBEIRO DO NASCIMENTO':'IRC',
@@ -1035,7 +1204,31 @@ const CADASTRO_EQUIPES = {
   'VALMIR ALVES DA SILVA':'JAC','RODRIGO SANTOS SILVA':'JAC',
   'JAILTON DA SILVA':'JAC','GERALDO DA COSTA GOMES':'JAC',
   'EMERSON DE CARVALHO SILVA':'JAC','JULIO SERAFIM DAMACENO DOS SANTOS':'JAC',
-  'CARLOS DA CRUZ SANTANA':'JAC'
+  'CARLOS DA CRUZ SANTANA':'JAC',
+  'VAGNO SILVA NOVAIS':'IRC',
+  'FABIO DIAS GOMES':'JAC','MARCELO MENESES DOS SANTOS':'JAC',
+  'MURILO SILVA PINTO':'JAC','UELTON FERREIRA DE OLIVEIRA':'JAC',
+  'ERONILSON SILVA SANTANA':'JAC','LUIZ CARLOS SILVA DOS SANTOS':'JAC',
+  // MG · Pouso Alegre
+  'RAIMUNDO NONATO GOMES PEIXOTO':'PA','LEVY LEONARDO MONTOYA CALCURIAN':'PA',
+  'GILVANDRO ALVES DE SOUZA':'PA','RICHARD AUGUSTO PELOSO':'PA',
+  'FABRICIO DA SILVA OLIVEIRA':'PA','OTAVIO MACHADO DOS SANTOS':'PA',
+  'LUIZ CARLOS DA FONSECA':'PA',
+  // MG · Itajubá
+  'CRISTIANO GOMES THEODORO':'ITA','LEANDRO RODRIGO RIBEIRO':'ITA',
+  'RAFAEL DE AZEVEDO CARVALHO':'ITA','JULIANO SILVA DA CRUZ':'ITA',
+  'CLAYTON JOSE ANTUNES':'ITA',
+  // MG · Linha Viva
+  'DOUGLAS BARBOSA DA CRUZ OLIVEIRA':'LV','SIDNEI SPADA':'LV',
+  // SE · Aracaju
+  'ADRIANO FRANCA DE ARAUJO':'AJU','ADAO LUCIANO DOS SANTOS':'AJU',
+  'FELIPE BEZERRA VIEIRA':'AJU','FRANCISCO HILARIO VIEIRA SANTOS':'AJU',
+  'FRANCINALDO BEZERRA DA ROCHA':'AJU','GILMAR MACIEL DOS SANTOS':'AJU',
+  'JEAN FELIPE SANTANA SILVA':'AJU','JOSE FERNANDO DE JESUS SANTOS':'AJU',
+  'JOSENILTON MELO DOS SANTOS JUNIOR':'AJU','JOSE ROBERTO OLIVEIRA SANTOS':'AJU',
+  'LUAN DE ANDRADE NASCIMENTO':'AJU','ROBSON FERREIRA DOS SANTOS':'AJU',
+  'RODRIGO ARAUJO TELES':'AJU','RODRIGO FIGUEIREDO DE JESUS':'AJU',
+  'VALDEMAR DOS SANTOS FILHO':'AJU','WILSON RAFAEL LIMA ROSA':'AJU'
 };
 // Mapa reverso: nome completo -> formato CURTO-UTD para exibição
 const NOME_CURTO = {};
@@ -1064,7 +1257,32 @@ const NOME_CURTO = {};
     'VALMIR ALVES DA SILVA':'VALMIR','RODRIGO SANTOS SILVA':'RODRIGO',
     'JAILTON DA SILVA':'JAILTON','GERALDO DA COSTA GOMES':'GERALDO',
     'EMERSON DE CARVALHO SILVA':'EMERSON','JULIO SERAFIM DAMACENO DOS SANTOS':'JULIO',
-    'CARLOS DA CRUZ SANTANA':'CARLOS'
+    'CARLOS DA CRUZ SANTANA':'CARLOS',
+    'VAGNO SILVA NOVAIS':'VAGNO',
+    'FABIO DIAS GOMES':'FABIO','MARCELO MENESES DOS SANTOS':'MARCELO',
+    'MURILO SILVA PINTO':'MURILO','UELTON FERREIRA DE OLIVEIRA':'UELTON',
+    'ERONILSON SILVA SANTANA':'ERONILSON','LUIZ CARLOS SILVA DOS SANTOS':'LUIZ',
+    'ANDERSON SANTANA DE SOUZA':'EDMILSON',
+    // MG · Pouso Alegre
+    'RAIMUNDO NONATO GOMES PEIXOTO':'RAIMUNDO','LEVY LEONARDO MONTOYA CALCURIAN':'LEVY',
+    'GILVANDRO ALVES DE SOUZA':'GILVANDRO','RICHARD AUGUSTO PELOSO':'RICHARD',
+    'FABRICIO DA SILVA OLIVEIRA':'FABRICIO','OTAVIO MACHADO DOS SANTOS':'OTAVIO',
+    'LUIZ CARLOS DA FONSECA':'LUIZCF',
+    // MG · Itajubá
+    'CRISTIANO GOMES THEODORO':'CRISTIANO','LEANDRO RODRIGO RIBEIRO':'LEANDRO',
+    'RAFAEL DE AZEVEDO CARVALHO':'RAFAEL','JULIANO SILVA DA CRUZ':'JULIANO',
+    'CLAYTON JOSE ANTUNES':'CLAYTON',
+    // MG · Linha Viva
+    'DOUGLAS BARBOSA DA CRUZ OLIVEIRA':'DOUGLAS','SIDNEI SPADA':'SIDNEI',
+    // SE · Aracaju
+    'ADRIANO FRANCA DE ARAUJO':'ADRIANO','ADAO LUCIANO DOS SANTOS':'ADAO',
+    'FELIPE BEZERRA VIEIRA':'FELIPE','FRANCISCO HILARIO VIEIRA SANTOS':'FRANCISCO',
+    'FRANCINALDO BEZERRA DA ROCHA':'FRANCINALDO','GILMAR MACIEL DOS SANTOS':'GILMAR',
+    'JEAN FELIPE SANTANA SILVA':'JEAN','JOSE FERNANDO DE JESUS SANTOS':'JOSEFERNANDO',
+    'JOSENILTON MELO DOS SANTOS JUNIOR':'JOSENILTON','JOSE ROBERTO OLIVEIRA SANTOS':'JOSEROBERTO',
+    'LUAN DE ANDRADE NASCIMENTO':'LUAN','ROBSON FERREIRA DOS SANTOS':'ROBSON',
+    'RODRIGO ARAUJO TELES':'RODRIGOARAUJO','RODRIGO FIGUEIREDO DE JESUS':'RODRIGOJESUS',
+    'VALDEMAR DOS SANTOS FILHO':'VALDEMAR','WILSON RAFAEL LIMA ROSA':'WILSON'
   };
   Object.keys(manual).forEach(function(full) {
     const utd = CADASTRO_EQUIPES[full] || '';
