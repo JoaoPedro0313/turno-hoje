@@ -1188,6 +1188,33 @@ const EQUIPES_ATIVAS = [
   'LUAN-AJU','ROBSON-AJU','RODRIGOARAUJO-AJU','RODRIGOJESUS-AJU',
   'VALDEMAR-AJU','WILSON-AJU'
 ];
+// Mapeamento CON_MNT-XX (formato sistema externo) → código interno
+const CON_MNT_MAP = {
+  'CON_MNT-01':'RAIMUNDO-PA','CON_MNT-02':'LEVY-PA',
+  'CON_MNT-03':'GILVANDRO-PA','CON_MNT-04':'RICHARD-PA',
+  'CON_MNT-05':'FABRICIO-PA','CON_MNT-06':'OTAVIO-PA',
+  'CON_MNT-07':'JULIANO-ITA','CON_MNT-08':'LUIZCF-PA',
+  'CON_MNT-09':'LEANDRO-ITA','CON_MNT-10':'RAFAEL-ITA',
+  'CON_MNT-11':'CRISTIANO-ITA','CON_MNT-12':'CLAYTON-ITA',
+  'CON_MNT-LV-01':'DOUGLAS-PA','CON_MNT-LV-02':'SIDNEI-PA',
+};
+// Resolve equipe do CSV externo para código interno
+function resolverEquipe(eqRaw, responsavelRaw) {
+  const eq = (eqRaw||'').trim().toUpperCase();
+  if (!eq) return '';
+  // 1. Já está no formato interno (ex: ALAN-IRC, CRISTIANO-ITA)
+  if (EQUIPES_ATIVAS.includes(eq)) return eq;
+  // 2. Mapeamento CON_MNT
+  if (CON_MNT_MAP[eq]) return CON_MNT_MAP[eq];
+  // 3. Tenta pelo Responsável (nome completo → NOME_CURTO)
+  const resp = (responsavelRaw||'').trim().toUpperCase();
+  if (resp && NOME_CURTO[resp]) return NOME_CURTO[resp];
+  // 4. toDisplayName como fallback
+  const disp = toDisplayName(eq);
+  if (EQUIPES_ATIVAS.includes(disp)) return disp;
+  return eq;
+}
+
 // Mapeamento nome completo -> UTD. Edite CADASTRO_EQUIPES para adicionar/corrigir nomes.
 const CADASTRO_EQUIPES = {
   'ALAN NUNES BARRETO':'IRC','ALEX SANDRO SANTOS BISPO':'IRC','EDMILSON RIBEIRO DO NASCIMENTO':'IRC',
@@ -1305,31 +1332,56 @@ try {
 const text = e.target.result;
 const lines = text.split(/\r?\n/).filter(l=>l.trim());
 lines[0] = lines[0].replace(/^\uFEFF/,'');
-const headers = lines[0].split(';').map(h=>h.trim().replace(/^"|"$/g,''));
-const iEq = headers.findIndex(h=>h.toLowerCase()==='equipe');
-if (iEq < 0) { showImportMsg('Coluna "Equipe" nao encontrada.','error'); return; }
+// Detecta separador automaticamente
+const sep = lines[0].includes(';') ? ';' : ',';
+const hdr = lines[0].split(sep).map(h=>h.trim().replace(/^"|"$/g,''));
+const ci  = col => hdr.findIndex(h=>h.toLowerCase()===col.toLowerCase());
+// Colunas do CSV de consulta_turno (sistema externo)
+const iEq   = ci('Equipe');
+const iSit  = ci('Situação');
+const iResp = ci('Responsável');
+const iDt   = ci('Data início');
+// Colunas alternativas (outros formatos)
+const iEq2  = iEq >= 0 ? iEq : ci('des_equipe');
+if (iEq2 < 0) { showImportMsg('Coluna "Equipe" não encontrada.','error'); return; }
 const abriram = [];
+let dataCsv = '';
 for (let i=1; i<lines.length; i++) {
-const cols = lines[i].split(';').map(c=>c.trim().replace(/^"|"$/g,''));
-// Usa diretamente a coluna "Equipe" do CSV (ex: "WASHINGTON-IRC")
-const eq = (cols[iEq]||'').trim().toUpperCase();
-if (eq && !abriram.includes(eq)) abriram.push(eq);
+  const cols = lines[i].split(sep).map(c=>c.trim().replace(/^"|"$/g,''));
+  if (cols.length < 3) continue;
+  // Filtra por Situação = Aberto (se coluna existir)
+  const sit = iSit >= 0 ? (cols[iSit]||'').trim().toLowerCase() : 'aberto';
+  if (sit && sit !== 'aberto') continue;
+  const eqRaw  = (cols[iEq2]||'').trim();
+  const resp   = iResp >= 0 ? (cols[iResp]||'').trim() : '';
+  const eq = resolverEquipe(eqRaw, resp);
+  if (eq && !abriram.includes(eq)) abriram.push(eq);
+  // Extrai data do CSV (DD/MM/AAAA HH:MM:SS → DD/MM/AAAA)
+  if (!dataCsv && iDt >= 0 && cols[iDt]) {
+    const m = (cols[iDt]||'').match(/(\d{2}\/\d{2}\/\d{4})/);
+    if (m) dataCsv = m[1];
+  }
+}
+// Aplica data do CSV se detectada
+if (dataCsv) {
+  currentDate = dataCsv;
+  const _di = document.getElementById('date-input'); if (_di) _di.value = dataCsv;
 }
 const justifNames = teams.justif.map(t=>t.name);
-// EQUIPES_ATIVAS é a lista mestre — garante que equipes novas apareçam mesmo com estado antigo no Supabase
-const todosConhecidos = [...new Set([
-  ...EQUIPES_ATIVAS,
-  ...teams.ok,
-  ...justifNames,
-  ...teams.falta,
-  ...abriram
-])];
 teams.ok    = abriram.filter(n=>!justifNames.includes(n));
-teams.falta = todosConhecidos.filter(n=>!abriram.includes(n)&&!justifNames.includes(n));
+// falta = todos EQUIPES_ATIVAS que não abriram e não têm justificativa
+teams.falta = EQUIPES_ATIVAS.filter(n=>!abriram.includes(n)&&!justifNames.includes(n));
 render();
 await dbSaveTurno();
-document.getElementById('lbl-abertura') && (document.getElementById('lbl-abertura').textContent = '✅ '+abriram.length+' abriram turno');
-showImportMsg('✅ '+teams.ok.length+' abriram | ❌ '+teams.falta.length+' nao abriram. Salvo!','success');
+const byState = { ba:0, mg:0, se:0 };
+abriram.forEach(n=>{ const s=teamState(n); if(byState[s]!==undefined) byState[s]++; });
+const lblEl = document.getElementById('lbl-abertura');
+if (lblEl) lblEl.textContent = '✅ '+abriram.length+' abriram turno';
+showImportMsg(
+  '✅ '+abriram.length+' abriram (BA:'+byState.ba+' MG:'+byState.mg+' SE:'+byState.se+
+  ') | ❌ '+teams.falta.length+' não abriram'+(dataCsv?' · '+dataCsv:''),
+  'success'
+);
 } catch(err) { showImportMsg('Erro: '+err.message,'error'); }
 };
 r.readAsText(file,'utf-8');
