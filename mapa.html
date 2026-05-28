@@ -4406,7 +4406,9 @@ if (raioCount && mapaRaioCentro) {
   raioCount.innerHTML = `<span style="color:#276749;font-weight:800;">✓ ${dentro} dentro</span>${fora>0?` <span style="color:#aaa;font-weight:600;">· ${fora} fora (visíveis)</span>`:''}`;
 } else if (raioCount) raioCount.textContent = '';
 const bounds = [];
+let _addedCount = 0, _errorCount = 0;
 filtered.forEach(d => {
+try {
 const cor = mapaGetCor(d.status);
 const jaSel = mapaRotaSelecionadas.find(s=>s.pep===d.pep);
 const pepAttr = (d.pep||'').replace(/"/g,'&quot;');
@@ -4452,7 +4454,23 @@ const icon = L.divIcon({className:'',html:iconHtml,iconSize:[tam,tam],iconAnchor
 const marker = L.marker([d.lat,d.lon],{icon}).addTo(mapaLayerGroup);
 marker.bindPopup(popup,{maxWidth:310});
 if (dentroRaio) bounds.push([d.lat,d.lon]);
+_addedCount++;
+} catch(err) {
+  _errorCount++;
+  // fallback: marcador simples sem popup
+  try {
+    const _cor = mapaGetCor(d.status||'');
+    const _html = '<div style="width:11px;height:11px;border-radius:50%;background:'+_cor+';border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,0.4);cursor:pointer;"></div>';
+    L.divIcon({className:'',html:_html,iconSize:[11,11],iconAnchor:[5,5]});
+    L.marker([d.lat,d.lon],{icon:L.divIcon({className:'',html:_html,iconSize:[11,11],iconAnchor:[5,5]})}).addTo(mapaLayerGroup);
+    _addedCount++;
+  } catch(e2) {}
+}
 });
+// Debug toast
+if (_errorCount > 0) {
+  console.warn('[MAPA] forEach errors:', _errorCount, '/', filtered.length);
+}
 // bounds só tem obras DENTRO do raio → fitBounds foca nelas
 // Quando raio ativo, não muda o zoom — mantém visão do usuário
 if (!mapaRaioCentro && bounds.length && !mapaFitFeito && !mapaUsuarioMoveu) { mapaMap.fitBounds(bounds,{padding:[28,28]}); mapaFitFeito=true; }
