@@ -400,7 +400,7 @@ justif: [],
 falta: [
   // BA
   'ERONILSON-JAC','GERALDO-JAC','JAIR-JAC','LUCIANO-JAC','LUIZ-JAC',
-  'MARCELO-JAC','MAURIVALDO-JAC','MENEZES-IRC','MURILO-JAC','REVERTON-IRC',
+  'MAURIVALDO-JAC','MENEZES-IRC','MURILO-JAC','REVERTON-IRC',
   'RODRIGO-JAC','UELTON-JAC','VAGNO-IRC','WASHINGTON-IRC','WESLEY-IRC',
   // MG
   'RAIMUNDO-PA','LEVY-PA','GILVANDRO-PA','RICHARD-PA','FABRICIO-PA','OTAVIO-PA','LUIZCF-PA','DOUGLAS-PA','SIDNEI-PA',
@@ -1275,7 +1275,7 @@ const EQUIPES_ATIVAS = [
   // ── BA · JACOBINA ──
   'DOUGLAS-JAC','RODRIGO-JAC','JAILTON-JAC','GERALDO-JAC','CLEBSON-JAC','DIOGO-JAC',
   'LUCIANO-JAC','FABIANO-JAC','EMERSON-JAC','MAURIVALDO-JAC','PATRICIO-JAC','VALMIR-JAC',
-  'JOAO-JAC','ANDRE-JAC','JAIR-JAC','CAIQUE-JAC','MARCELO-JAC',
+  'JOAO-JAC','ANDRE-JAC','JAIR-JAC','CAIQUE-JAC',
   'MURILO-JAC','UELTON-JAC','ERONILSON-JAC','LUIZ-JAC',
   // ── MG · POUSO ALEGRE ──
   'RAIMUNDO-PA','LEVY-PA','GILVANDRO-PA','RICHARD-PA','FABRICIO-PA','OTAVIO-PA','LUIZCF-PA','DOUGLAS-PA','SIDNEI-PA',
@@ -5300,8 +5300,7 @@ setTimeout(presenceInit, 1500);
         <div id="gear-content-turno">
           <div class="gear-section-title" style="color:#0d7377;border-bottom:2px solid #c0e8e5;">📋 Arquivo de Turno</div>
 
-          <div class="gear-card" style="font-size:0.72rem;color:#555;">
-            <div style="font-weight:800;color:#0d7377;margin-bottom:6px;">Formato aceito <code style="background:#e8f4f5;padding:1px 6px;border-radius:4px;font-size:0.68rem;">.csv</code> separador <code style="background:#e8f4f5;padding:1px 6px;border-radius:4px;font-size:0.68rem;">;</code></div>
+          
             <code style="display:block;background:#f0f4f5;border-radius:6px;padding:8px 10px;font-size:0.68rem;line-height:1.9;color:#2d3748;">data;01/03/2026<br>nome;status;obs<br>ALAN-IRC;ok;<br>CARLOS-JAC;falta;<br>JOSE-IRC;justif;Motivo</code>
             <div style="color:#aaa;margin-top:6px;font-size:0.68rem;">ou use o <strong>consulta_turno_*.csv</strong> do sistema de frotas</div>
           </div>
@@ -5331,7 +5330,7 @@ setTimeout(presenceInit, 1500);
             <button id="gear-confirm-btn" onclick="gearConfirmarImport()" class="gear-btn" style="background:linear-gradient(135deg,#0d7377,#14a085);color:#fff;" onmouseover="this.style.opacity='.88'" onmouseout="this.style.opacity='1'">✅ Confirmar e Aplicar</button>
           </div>
 
-          <button onclick="gearExportarTurno()" class="gear-btn" style="background:#ebf4ff;color:#2b6cb0;border:2px solid #bee3f8;" onmouseover="this.style.background='#2b6cb0';this.style.color='#fff'" onmouseout="this.style.background='#ebf4ff';this.style.color='#2b6cb0'">⬇️ Exportar Turno Atual (.csv)</button>
+          
         </div>
 
         <!-- ── ABA: EQUIPES ────────────────────────────── -->
