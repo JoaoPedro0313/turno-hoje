@@ -4171,7 +4171,7 @@ if (!mapaMesAtivo && GSHEETS_MESES && GSHEETS_MESES.length) {
 }
 const ph2 = document.getElementById('mapa-placeholder'); if (ph2) ph2.style.display='none';
 mapaFitFeito = false;
-mapaUsuarioMoveu = false;
+if (!mapaUsuarioMoveu) mapaUsuarioMoveu = false; // preserva zoom do usuário
 mapaFiltroAtivo = 'TODOS';
 mapaData = bancoDB.map(obj => {
   // Tenta todos os nomes possíveis de coluna de coordenadas
@@ -4192,7 +4192,7 @@ if (mt) {
     const aliasLat = ['LATITUDE','Latitude','latitude','LAT','lat','Lat'];
     const aliasLon = ['LONGITUDE','Longitude','longitude','LON','lon','Lon','LNG','lng','Lng'];
     mapaFitFeito = false;
-    mapaUsuarioMoveu = false;
+    if (!mapaUsuarioMoveu) mapaUsuarioMoveu = false; // preserva zoom do usuário
     mapaFiltroAtivo = 'TODOS';
     mapaData = bancoDB.map(obj => {
       const latVal = aliasLat.map(k=>obj[k]).find(v=>v!=null&&v!=='');
@@ -4241,7 +4241,10 @@ function mapaEnsureLeaflet(cb) {
     if (!mapaMap) {
       mapaMap = L.map('mapa-container', {zoomControl:true});
       mapaMap.on('zoomstart movestart', function(e) {
-        if (e.originalEvent) mapaUsuarioMoveu = true;
+        if (e.originalEvent) {
+          mapaUsuarioMoveu = true;
+          mapaFitFeito = true; // impede fitBounds automático após zoom manual
+        }
       });
       // Não marcar como movido quando for clique para raio
       mapaMap.on('click', function() {
@@ -4450,7 +4453,7 @@ const icon = L.divIcon({className:'',html:`<div style="width:13px;height:13px;bo
 L.marker([d.lat,d.lon],{icon}).addTo(mapaLayerGroup).bindPopup(popup,{maxWidth:310});
 bounds.push([d.lat,d.lon]);
 });
-if (bounds.length && !mapaFitFeito) { mapaMap.fitBounds(bounds,{padding:[28,28]}); mapaFitFeito=true; }
+if (bounds.length && !mapaFitFeito && !mapaUsuarioMoveu) { mapaMap.fitBounds(bounds,{padding:[28,28]}); mapaFitFeito=true; }
 // Se raio ativo e sem resultados, não reseta o mapa — mantém a visão atual
 const mc = document.getElementById('mapa-container');
 if (mc && !mapaFitFeito) mc.scrollIntoView({behavior:'smooth',block:'center'});
