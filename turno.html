@@ -5424,13 +5424,6 @@ setTimeout(presenceInit, 1500);
       <!-- TURNO -->
       <div style="font-size:0.68rem;font-weight:800;color:#0d7377;letter-spacing:2px;text-transform:uppercase;margin-bottom:14px;padding-bottom:8px;border-bottom:2px solid #c0e8e5;">📋 Arquivo de Turno</div>
 
-      <!-- Formato esperado -->
-      <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:0.72rem;color:#555;">
-        <div style="font-weight:800;color:#0d7377;margin-bottom:5px;">Formato esperado (.csv, separador <code>;</code>)</div>
-        <code style="display:block;background:#f0f4f5;border-radius:6px;padding:8px 10px;font-size:0.7rem;line-height:1.8;color:#2d3748;">data;01/03/2026<br>nome;status;obs<br>ALAN-IRC;ok;<br>CARLOS-JAC;falta;<br>JOSE-IRC;justif;Motivo</code>
-        <div style="color:#888;margin-top:5px;">Status aceitos: <strong>ok</strong>, <strong>falta</strong>, <strong>justif</strong></div>
-      </div>
-
       <!-- Drop zone -->
       <div id="gear-dropzone"
         style="border:2px dashed #c0e8e5;border-radius:12px;padding:20px 16px;text-align:center;cursor:pointer;background:linear-gradient(135deg,#f0fafa,#e8f6f5);margin-bottom:12px;transition:all 0.2s;"
@@ -5467,9 +5460,6 @@ setTimeout(presenceInit, 1500);
         <div id="gear-prev-date" style="font-size:0.72rem;font-weight:700;color:#555;margin-bottom:12px;text-align:center;"></div>
         <button id="gear-confirm-btn" onclick="gearConfirmarImport()" style="width:100%;padding:11px;background:linear-gradient(135deg,#0d7377,#14a085);color:#fff;border:none;border-radius:10px;font-family:'Barlow',sans-serif;font-size:0.88rem;font-weight:800;cursor:pointer;" onmouseover="this.style.opacity='0.88'" onmouseout="this.style.opacity='1'">✅ Confirmar e Aplicar</button>
       </div>
-
-      <!-- Exportar -->
-      <button onclick="gearExportarTurno()" style="width:100%;padding:11px;background:#ebf4ff;color:#2b6cb0;border:2px solid #bee3f8;border-radius:10px;font-family:'Barlow',sans-serif;font-size:0.88rem;font-weight:800;cursor:pointer;margin-bottom:20px;transition:all 0.15s;" onmouseover="this.style.background='#2b6cb0';this.style.color='#fff'" onmouseout="this.style.background='#ebf4ff';this.style.color='#2b6cb0'">⬇️ Exportar Turno Atual (.csv)</button>
 
       <!-- APARÊNCIA -->
       <div style="font-size:0.68rem;font-weight:800;color:#aaa;letter-spacing:2px;text-transform:uppercase;margin-bottom:14px;padding-bottom:8px;border-bottom:1px solid #f0f2f5;">🎨 Aparência</div>
