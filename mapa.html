@@ -840,17 +840,25 @@ currentDate  = v.date   || DEFAULTS.date;
 }
 if (row.key==='producao') { producao = row.value || {}; }
 if (row.key==='obras_base') {
-bancoDB     = row.value.data || null;
-bancoDBInfo = row.value.info || null;
-compUpdateBaseUI();
-if (bancoDB) setTimeout(() => {
-  mapaCarregarDoBanco();
-  // Se a aba Mapa estiver aberta, força invalidateSize após render
-  const pm = document.getElementById('page-mapa');
-  if (pm && pm.style.display !== 'none' && mapaMap) {
-    setTimeout(() => mapaMap.invalidateSize(), 200);
-  }
-}, 300);
+// Se o usuário está visualizando um mês específico das planilhas,
+// atualiza apenas o cache local sem sobrescrever bancoDB
+if (window._mapaMesDoSheets) {
+  // Salva no localStorage para quando voltar ao mês atual
+  try { lsSet('obras_base', row.value); } catch(e2) {}
+  bancoDBInfo = row.value.info || null;
+  compUpdateBaseUI();
+} else {
+  bancoDB     = row.value.data || null;
+  bancoDBInfo = row.value.info || null;
+  compUpdateBaseUI();
+  if (bancoDB) setTimeout(() => {
+    mapaCarregarDoBanco();
+    const pm = document.getElementById('page-mapa');
+    if (pm && pm.style.display !== 'none' && mapaMap) {
+      setTimeout(() => mapaMap.invalidateSize(), 200);
+    }
+  }, 300);
+}
 }
 if (row.key==='apr_data') {
 if (Array.isArray(row.value) && row.value.length > 0) aprData = row.value;
@@ -3910,6 +3918,8 @@ b.style.background = on ? '#6b46c1' : '#fff';
 b.style.color = on ? '#fff' : '#555';
 b.style.borderColor = on ? '#6b46c1' : '#e2e8f0';
 });
+// Preserva zoom ao trocar filtro manualmente
+mapaFitFeito = true;
 mapaFiltrar();
 }
 // Carrega dados de um mês específico diretamente das abas do Google Sheets
@@ -4216,7 +4226,7 @@ b.style.borderColor = on ? '#6b46c1' : '#e2e8f0';
 compRenderTable();
 }
 function mapaSetUTD(utd) {
-mapaUTDFiltro = utd; mapaFiltroAtivo = 'TODOS'; mapaMesFiltro = 'TODOS'; mapaMunFiltro = ''; mapaEncFiltro = '';
+mapaUTDFiltro = utd; mapaFiltroAtivo = 'TODOS'; mapaMesFiltro = 'TODOS'; mapaMunFiltro = ''; mapaEncFiltro = ''; mapaFitFeito = true;
 const ms = document.getElementById('mapa-mun-filter'); if (ms) ms.value = '';
 const es = document.getElementById('mapa-enc-filter'); if (es) es.value = '';
 ['TODAS','IRECÊ','JACOBINA'].forEach(u => {
@@ -4413,7 +4423,7 @@ const btn = document.createElement('button');
 btn.style.cssText = `padding:4px 12px;border-radius:20px;border:2px solid ${bg||'#e2e8f0'};background:#fff;font-family:'Barlow',sans-serif;font-size:0.7rem;font-weight:800;cursor:pointer;color:#555;transition:all 0.15s;white-space:nowrap;`;
 btn.textContent = label + ' (' + count + ')';
 btn.id = 'mfbtn-' + key.replace(/[^a-z0-9]/gi,'_');
-btn.onclick = () => { mapaFiltroAtivo = key; mapaFiltrar(); };
+btn.onclick = () => { mapaFiltroAtivo = key; mapaFitFeito = true; mapaFiltrar(); };
 bar.appendChild(btn);
 };
 mkStatus('Todos','TODOS',base.length);
