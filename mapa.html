@@ -4371,10 +4371,13 @@ if (postiMinEl && postiMinEl.value !== '') {
   const min = parseFloat(postiMinEl.value);
   if (!isNaN(min) && parseFloat(String(d.postI||'0').replace(',','.')) < min) return false;
 }
-// Filtro de raio
+// Filtro de raio — não remove, só guarda distância para usar no render
 if (mapaRaioCentro && d.temCoord) {
-  const dist = mapaRaioDistKm(mapaRaioCentro.lat, mapaRaioCentro.lon, d.lat, d.lon);
-  if (dist > mapaRaioKm) return false;
+  d._raioDistKm = mapaRaioDistKm(mapaRaioCentro.lat, mapaRaioCentro.lon, d.lat, d.lon);
+  d._raioFora   = d._raioDistKm > mapaRaioKm;
+} else {
+  d._raioDistKm = null;
+  d._raioFora   = false;
 }
 return true;
 });
@@ -4386,9 +4389,9 @@ const cl = document.getElementById('mapa-count-label');
 if (cl) cl.textContent = filtered.length+' obra'+(filtered.length!==1?'s':'');
 const raioCount = document.getElementById('mapa-raio-count');
 if (raioCount && mapaRaioCentro) {
-  const totalComCoord = mapaData.filter(d => d.temCoord).length;
-  const fora = totalComCoord - filtered.length;
-  raioCount.innerHTML = `<span style="color:#276749;">✓ ${filtered.length} dentro</span>${fora>0?` <span style="color:#888;font-weight:600;">· ${fora} fora</span>`:''}`;
+  const dentro = filtered.filter(d => d.temCoord && !d._raioFora).length;
+  const fora   = filtered.filter(d => d.temCoord && d._raioFora).length;
+  raioCount.innerHTML = `<span style="color:#276749;font-weight:800;">✓ ${dentro} dentro</span>${fora>0?` <span style="color:#aaa;font-weight:600;">· ${fora} fora (visíveis)</span>`:''}`;
 } else if (raioCount) raioCount.textContent = '';
 const bounds = [];
 filtered.forEach(d => {
@@ -4428,10 +4431,18 @@ ${d.enc?`<div style="font-size:0.72rem;color:#2d3748;font-weight:700;margin-bott
 </div>
 <button onclick="(function(){var url='https://www.google.com/maps?q=${d.lat},${d.lon}';if(navigator.share){navigator.share({title:'${d.titulo||d.pep}',text:'${d.mun||''}',url:url});}else if(navigator.clipboard){navigator.clipboard.writeText(url).then(function(){var b=event.target;var t=b.textContent;b.textContent='✅ Copiado!';b.style.background='#276749';setTimeout(function(){b.textContent=t;b.style.background='#f0fff4';},2000);});}})();" style="width:100%;padding:6px 0;background:#f0fff4;color:#276749;border:1.5px solid #c6f6d5;border-radius:6px;font-size:0.65rem;font-weight:800;cursor:pointer;font-family:'Barlow',sans-serif;margin-bottom:2px;">📤 Copiar localização</button>
 ${rotaBtnHtml}</div>`;
-const icon = L.divIcon({className:'',html:`<div style="width:13px;height:13px;border-radius:50%;background:${cor};border:2.5px solid #fff;box-shadow:0 1px 5px rgba(0,0,0,0.45);cursor:pointer;"></div>`,iconSize:[13,13],iconAnchor:[6,6]});
-L.marker([d.lat,d.lon],{icon}).addTo(mapaLayerGroup).bindPopup(popup,{maxWidth:310});
-bounds.push([d.lat,d.lon]);
+// Dentro do raio = full size; fora = menor + semi-transparente
+const foraDoRaio = !!(mapaRaioCentro && d._raioFora);
+const iconSize   = foraDoRaio ? 9  : 13;
+const iconOpacity= foraDoRaio ? 0.3 : 1;
+const iconHtml   = `<div style="width:${iconSize}px;height:${iconSize}px;border-radius:50%;background:${cor};border:2px solid #fff;box-shadow:0 1px 5px rgba(0,0,0,0.35);cursor:pointer;opacity:${iconOpacity};transition:opacity .2s;"></div>`;
+const icon = L.divIcon({className:'',html:iconHtml,iconSize:[iconSize,iconSize],iconAnchor:[iconSize/2,iconSize/2]});
+const marker = L.marker([d.lat,d.lon],{icon,opacity:iconOpacity}).addTo(mapaLayerGroup);
+if (!foraDoRaio) marker.bindPopup(popup,{maxWidth:310});
+else marker.bindPopup(popup,{maxWidth:310}); // sempre permite abrir popup
+if (!foraDoRaio) bounds.push([d.lat,d.lon]);
 });
+// bounds só tem obras DENTRO do raio → fitBounds foca nelas
 if (bounds.length && !mapaFitFeito && !mapaUsuarioMoveu) { mapaMap.fitBounds(bounds,{padding:[28,28]}); mapaFitFeito=true; }
 // Se raio ativo e sem resultados, não reseta o mapa — mantém a visão atual
 const mc = document.getElementById('mapa-container');
