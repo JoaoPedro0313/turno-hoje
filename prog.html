@@ -45,7 +45,7 @@
 .top-bar-center{flex:1;display:flex;justify-content:center;}
 .top-bar-clock{font-size:0.78rem;font-weight:700;color:rgba(255,255,255,0.6);letter-spacing:1px;font-variant-numeric:tabular-nums;}
 .top-bar-right{display:flex;align-items:center;gap:8px;flex-shrink:0;}
-.page-nav{display:flex;gap:0;background:#fff;border-bottom:3px solid #e2e8f0;position:fixed;top:52px;left:0;right:0;z-index:90;box-shadow:0 2px 8px rgba(0,0,0,0.08);}box-shadow:0 2px 8px rgba(0,0,0,0.08)}.page-nav-btn{flex:1;padding:14px 10px;border:none;background:transparent;font-family:'Barlow',sans-serif;font-size:0.88rem;font-weight:800;color:#888;cursor:pointer;letter-spacing:0.5px;text-transform:uppercase;border-bottom:3px solid transparent;margin-bottom:-3px;transition:all 0.2s;display:flex;align-items:center;justify-content:center;gap:8px}.page-nav-btn:hover{background:#f7f9fc;color:#444}.page-nav-btn.active-turno{color:#0d7377;background:#f0fafa}.page-nav-btn.active-prod{color:#2b6cb0;background:#ebf4ff}.page-nav-btn.active-rdo{color:#b97400;background:#fffbf0}.page-nav-btn.page-nav-btn.active-comp{color:#0d7377;background:#f0fafa}.page-nav-btn.active-posto{color:#16a34a;background:#f0fff4}
+.page-nav{display:flex;background:#1a2a3a;position:fixed;top:52px;left:0;right:0;z-index:1099;overflow-x:auto;scrollbar-width:none;border-bottom:2px solid rgba(255,255,255,0.08)}.page-nav::-webkit-scrollbar{display:none}.page-nav-btn{flex:1;min-width:80px;padding:0 6px;height:42px;border:none;background:transparent;font-family:'Barlow',sans-serif;font-size:0.65rem;font-weight:800;color:rgba(255,255,255,0.45);cursor:pointer;letter-spacing:0.8px;text-transform:uppercase;border-bottom:3px solid transparent;transition:all 0.2s;display:flex;align-items:center;justify-content:center;gap:5px;white-space:nowrap;text-decoration:none}.page-nav-btn:hover{background:rgba(255,255,255,0.07);color:rgba(255,255,255,0.82)}.page-nav-btn.active-turno{color:#5eead4;border-bottom-color:#14a085;background:rgba(20,160,133,0.15)}.page-nav-btn.active-rdo{color:#fbd38d;border-bottom-color:#f6ad55;background:rgba(246,173,85,0.12)}.page-nav-btn.active-comp{color:#93c5fd;border-bottom-color:#60a5fa;background:rgba(96,165,250,0.12)}.page-nav-btn.active-posto{color:#86efac;border-bottom-color:#4ade80;background:rgba(74,222,128,0.12)}.page-nav-btn.active-mapa{color:#f9a8d4;border-bottom-color:#f472b6;background:rgba(244,114,182,0.12)}.page-nav-btn.active-prog{color:#c4b5fd;border-bottom-color:#a78bfa;background:rgba(167,139,250,0.12)}
 #page-posto{background:#f0f4f5;min-height:100vh;padding-bottom:80px}
 #page-posto .posto-container{max-width:100%;padding:0 8px;margin:0}
 #page-posto .posto-filter-strip{display:flex;gap:8px;padding:10px 8px;overflow-x:auto;scrollbar-width:none;align-items:center;background:#fff;border-bottom:1px solid #e8ecef}
@@ -139,14 +139,14 @@
   </div>
 </div>
 
-<div class="page-nav">
-  <a class="page-nav-btn" id="nav-turno" href="turno.html">&#128203; TURNO DO DIA</a>
+<nav class="page-nav">
+  <a class="page-nav-btn" href="turno.html">📋 TURNO</a>
   <a class="page-nav-btn" href="apr.html">📊 RDO</a>
-  <a class="page-nav-btn" href="comp.html">&#9889; COMPARADOR</a>
-  <button class="page-nav-btn" id="nav-posto" onclick="switchPage('posto')">&#128200; PROJEÇÃO</button>
-  <a class="page-nav-btn" href="mapa.html">&#128205; MAPA</a>
-  <a class="page-nav-btn active-prog" href="prog.html">&#128197; PROG. DI&#193;RIA</a>
-</div>
+  <a class="page-nav-btn" href="comp.html">⚡ COMPARADOR</a>
+  <a class="page-nav-btn" href="projeçao.html">📈 PROJEÇÃO</a>
+  <a class="page-nav-btn" href="mapa.html">🗺️ MAPA</a>
+  <a class="page-nav-btn active-prog" href="prog.html">📅 PROG. DIÁRIA</a>
+</nav>
 
 <div id="page-prog">
 <div style="max-width:100%;margin:0;padding:12px 8px 80px;">
