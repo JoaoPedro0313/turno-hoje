@@ -1649,11 +1649,16 @@ const cols = 4;
 const rows = [];
 for(let i=0;i<list.length;i+=cols){
 const rowItems = list.slice(i, i+cols);
-while(rowItems.length < cols) rowItems.push(null);
-const cells = rowItems.map(item => {
+const isLastRow = (i + cols >= list.length);
+const remainder = rowItems.length; // items in this row before padding
+if(!isLastRow) while(rowItems.length < cols) rowItems.push(null);
+const cells = rowItems.map((item, idx) => {
+const isLastItem = isLastRow && idx === remainder - 1;
+const colSpan = isLastItem && remainder < cols ? (cols - remainder + 1) : 1;
+const width = (25 * colSpan) + '%';
 if(!item) return `<td style="width:25%;padding:5px 4px;"></td>`;
 const name = typeof item==='string'?item:item.name;
-return `<td style="width:25%;padding:5px 4px;">
+return `<td ${colSpan>1?`colspan="${colSpan}"`:''}style="width:${width};padding:5px 4px;">
 <div style="background:${bg};border-left:3px solid ${badgeBg};border-radius:4px;padding:9px 12px;display:flex;align-items:center;justify-content:space-between;gap:6px;">
 <span style="font-size:12.5px;font-weight:700;color:${namecol};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${name}</span>
 <span style="background:${badgeBg};color:#fff;font-size:10px;font-weight:800;padding:2px 7px;border-radius:3px;white-space:nowrap;letter-spacing:0.5px;flex-shrink:0;">${badgeTxt}</span>
