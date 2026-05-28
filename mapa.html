@@ -6008,55 +6008,7 @@ setTimeout(presenceInit, 1500);
 })();
 </script>
 
-// ── Drag do balão de raio ───────────────────────────────────────────────────
-(function() {
-  var el, hdr, closeBtn;
-  var dragging = false, sx, sy, sl, st;
 
-  function setup() {
-    el       = document.getElementById('mapa-raio-balao');
-    hdr      = document.getElementById('mapa-raio-balao-header');
-    closeBtn = document.getElementById('mapa-raio-balao-close');
-    if (!el || !hdr) return;
-    if (closeBtn) closeBtn.onclick = function(){ el.style.display='none'; };
-
-    function getPos(e){ return e.touches ? e.touches[0] : e; }
-
-    hdr.onmousedown = function(e){
-      e.preventDefault();
-      dragging = true;
-      var p = getPos(e);
-      sx = p.clientX; sy = p.clientY;
-      sl = el.offsetLeft; st = el.offsetTop;
-      hdr.style.cursor = 'grabbing';
-    };
-    hdr.ontouchstart = function(e){
-      dragging = true;
-      var p = getPos(e);
-      sx = p.clientX; sy = p.clientY;
-      sl = el.offsetLeft; st = el.offsetTop;
-    };
-
-    document.onmousemove = function(e){
-      if (!dragging) return;
-      el.style.left = (sl + e.clientX - sx) + 'px';
-      el.style.top  = (st + e.clientY - sy) + 'px';
-      el.style.right = 'auto'; el.style.bottom = 'auto';
-    };
-    document.ontouchmove = function(e){
-      if (!dragging) return;
-      el.style.left = (sl + e.touches[0].clientX - sx) + 'px';
-      el.style.top  = (st + e.touches[0].clientY - sy) + 'px';
-      el.style.right = 'auto'; el.style.bottom = 'auto';
-    };
-    document.onmouseup  = function(){ if(dragging){ dragging=false; hdr.style.cursor='grab'; } };
-    document.ontouchend = function(){ dragging = false; };
-  }
-
-  window._initBalaoDrag = setup;
-  if (document.readyState==='loading') document.addEventListener('DOMContentLoaded', setup);
-  else setup();
-})();
 
 <!-- BALÃO OBRAS NO RAIO — fora do Leaflet, draggável via fixed -->
 <div id="mapa-raio-balao" style="display:none;position:fixed;top:120px;right:20px;z-index:1200;width:280px;max-height:420px;background:#fff;border-radius:14px;box-shadow:0 8px 28px rgba(107,70,193,0.3);border:2px solid #d6bcfa;flex-direction:column;overflow:hidden;user-select:none;touch-action:none;">
