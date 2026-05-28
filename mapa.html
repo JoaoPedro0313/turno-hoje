@@ -2235,6 +2235,8 @@ function mapaRaioDesenhar() {
   mapaFitFeito = true;
   const ra = document.getElementById('mapa-raio-actions');
   if (ra) ra.style.display = 'flex';
+  // Destaca marcadores existentes sem re-renderizar
+  setTimeout(mapaRaioHighlight, 100);
 }
 
 function mapaRaioLimpar() {
@@ -2262,6 +2264,34 @@ function mapaRaioLimpar() {
   if (btnClicar) { btnClicar.style.background = '#faf5ff'; btnClicar.style.color = '#6b46c1'; btnClicar.textContent = '🖱️ Clicar no mapa'; }
   mapaFiltrar();
 }
+
+
+// Destaca marcadores dentro do raio sem re-renderizar
+function mapaRaioHighlight() {
+  if (!mapaRaioCentro || !mapaLayerGroup) return;
+  var dentro = 0;
+  mapaLayerGroup.eachLayer(function(layer) {
+    if (!layer.getLatLng) return;
+    var ll   = layer.getLatLng();
+    var dist = mapaRaioDistKm(mapaRaioCentro.lat, mapaRaioCentro.lon, ll.lat, ll.lng);
+    var isDentro = dist <= mapaRaioKm;
+    if (isDentro) dentro++;
+    // Encontra o div do ícone e muda a borda
+    var el = layer.getElement ? layer.getElement() : null;
+    if (el) {
+      var dot = el.querySelector('div');
+      if (dot) {
+        dot.style.border = isDentro ? '3px solid #14a085' : '2.5px solid #fff';
+        dot.style.width  = isDentro ? '16px' : '13px';
+        dot.style.height = isDentro ? '16px' : '13px';
+        dot.style.boxShadow = isDentro ? '0 0 8px rgba(20,160,133,0.7)' : '0 1px 5px rgba(0,0,0,0.45)';
+      }
+    }
+  });
+  var rc = document.getElementById('mapa-raio-count');
+  if (rc) rc.innerHTML = '<span style="color:#276749;font-weight:800;">✓ '+dentro+' dentro do raio</span>';
+}
+window.mapaRaioHighlight = mapaRaioHighlight;
 
 // Haversine distance in km
 function mapaRaioDistKm(lat1, lon1, lat2, lon2) {
@@ -2606,6 +2636,12 @@ window.mapaLimparFiltrosQuantidade = function() {
   const pi = document.getElementById('mapa-post-min'); if (pi) pi.value='';
   const pii = document.getElementById('mapa-posti-min'); if (pii) pii.value='';
   mapaFiltrar();
+  // Remove destaques
+  if (window.mapaLayerGroup) mapaLayerGroup.eachLayer(function(layer) {
+    if (!layer.getLatLng) return;
+    var el = layer.getElement ? layer.getElement() : null;
+    if (el) { var dot = el.querySelector('div'); if (dot) { dot.style.border='2.5px solid #fff'; dot.style.width='13px'; dot.style.height='13px'; dot.style.boxShadow='0 1px 5px rgba(0,0,0,0.45)'; } }
+  });
 };
 function mapaAtualizarBotoesCava(val) {
   const map = {TODAS:{id:'mapa-cava-todas',cor:'#38a169'},COM:{id:'mapa-cava-com',cor:'#38a169'},SEM:{id:'mapa-cava-sem',cor:'#e53e3e'}};
@@ -4383,14 +4419,6 @@ if (postiMinEl && postiMinEl.value !== '') {
   const min = parseFloat(postiMinEl.value);
   if (!isNaN(min) && parseFloat(String(d.postI||'0').replace(',','.')) < min) return false;
 }
-// Filtro de raio — não remove, só guarda distância para usar no render
-if (mapaRaioCentro && d.temCoord) {
-  d._raioDistKm = mapaRaioDistKm(mapaRaioCentro.lat, mapaRaioCentro.lon, d.lat, d.lon);
-  d._raioFora   = d._raioDistKm > mapaRaioKm;
-} else {
-  d._raioDistKm = null;
-  d._raioFora   = false;
-}
 return true;
 });
 document.querySelectorAll('[id^="mfbtn-"]').forEach(b => {
@@ -4445,15 +4473,11 @@ ${d.enc?`<div style="font-size:0.72rem;color:#2d3748;font-weight:700;margin-bott
 </div>
 <button onclick="(function(){var url='https://www.google.com/maps?q=${d.lat},${d.lon}';if(navigator.share){navigator.share({title:'${d.titulo||d.pep}',text:'${d.mun||''}',url:url});}else if(navigator.clipboard){navigator.clipboard.writeText(url).then(function(){var b=event.target;var t=b.textContent;b.textContent='✅ Copiado!';b.style.background='#276749';setTimeout(function(){b.textContent=t;b.style.background='#f0fff4';},2000);});}})();" style="width:100%;padding:6px 0;background:#f0fff4;color:#276749;border:1.5px solid #c6f6d5;border-radius:6px;font-size:0.65rem;font-weight:800;cursor:pointer;font-family:'Barlow',sans-serif;margin-bottom:2px;">📤 Copiar localização</button>
 ${rotaBtnHtml}</div>`;
-// Ícone: marcadores dentro do raio = destaque verde; fora = normal
-const dentroRaio = !!(mapaRaioCentro && d.temCoord && !d._raioFora);
-const borda = dentroRaio ? '3px solid #14a085' : '2.5px solid #fff';
-const tam   = dentroRaio ? 16 : 13;
-const iconHtml = '<div style="width:'+tam+'px;height:'+tam+'px;border-radius:50%;background:'+cor+';border:'+borda+';box-shadow:0 1px 6px rgba(0,0,0,0.5);cursor:pointer;"></div>';
-const icon = L.divIcon({className:'',html:iconHtml,iconSize:[tam,tam],iconAnchor:[tam/2,tam/2]});
+const iconHtml = '<div style="width:13px;height:13px;border-radius:50%;background:'+cor+';border:2.5px solid #fff;box-shadow:0 1px 5px rgba(0,0,0,0.45);cursor:pointer;"></div>';
+const icon = L.divIcon({className:'',html:iconHtml,iconSize:[13,13],iconAnchor:[6,6]});
 const marker = L.marker([d.lat,d.lon],{icon}).addTo(mapaLayerGroup);
 marker.bindPopup(popup,{maxWidth:310});
-if (dentroRaio) bounds.push([d.lat,d.lon]);
+bounds.push([d.lat,d.lon]);
 _addedCount++;
 } catch(err) {
   _errorCount++;
@@ -4471,9 +4495,9 @@ _addedCount++;
 if (_errorCount > 0) {
   console.warn('[MAPA] forEach errors:', _errorCount, '/', filtered.length);
 }
-// bounds só tem obras DENTRO do raio → fitBounds foca nelas
-// Quando raio ativo, não muda o zoom — mantém visão do usuário
-if (!mapaRaioCentro && bounds.length && !mapaFitFeito && !mapaUsuarioMoveu) { mapaMap.fitBounds(bounds,{padding:[28,28]}); mapaFitFeito=true; }
+if (bounds.length && !mapaFitFeito && !mapaUsuarioMoveu) { mapaMap.fitBounds(bounds,{padding:[28,28]}); mapaFitFeito=true; }
+// Atualiza destaque do raio DEPOIS de renderizar
+if (mapaRaioCentro) setTimeout(mapaRaioHighlight, 50);
 // Se raio ativo e sem resultados, não reseta o mapa — mantém a visão atual
 const mc = document.getElementById('mapa-container');
 if (mc && !mapaFitFeito) mc.scrollIntoView({behavior:'smooth',block:'center'});
