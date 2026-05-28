@@ -5956,49 +5956,62 @@ setTimeout(presenceInit, 1500);
 
 // ── Drag do balão de raio ───────────────────────────────────────────────────
 (function() {
-  var el, hdr, isDragging = false, startX, startY, origLeft, origTop;
+  var el, hdr, active = false, ox, oy, ex, ey;
+
   function initDrag() {
     el  = document.getElementById('mapa-raio-balao');
     hdr = document.getElementById('mapa-raio-balao-header');
-    if (!el || !hdr) return;
-    hdr.addEventListener('mousedown', onDown);
-    hdr.addEventListener('touchstart', function(e){ onDown(e.touches[0]); }, {passive:true});
+    if (!el || !hdr || hdr._dragInit) return;
+    hdr._dragInit = true;
+
+    // Coloca em fixed já no início para coordenadas simples
+    function ensureFixed() {
+      if (el.style.position !== 'fixed') {
+        var r = el.getBoundingClientRect();
+        el.style.position = 'fixed';
+        el.style.left  = r.left + 'px';
+        el.style.top   = r.top  + 'px';
+        el.style.right = 'auto';
+        el.style.bottom= 'auto';
+      }
+    }
+
+    function start(cx, cy) {
+      ensureFixed();
+      active = true;
+      ex = parseInt(el.style.left) || 0;
+      ey = parseInt(el.style.top)  || 0;
+      ox = cx; oy = cy;
+      hdr.style.cursor = 'grabbing';
+    }
+    function move(cx, cy) {
+      if (!active) return;
+      el.style.left = (ex + cx - ox) + 'px';
+      el.style.top  = (ey + cy - oy) + 'px';
+    }
+    function stop() {
+      active = false;
+      hdr.style.cursor = 'grab';
+    }
+
+    hdr.addEventListener('mousedown', function(e) {
+      e.preventDefault(); e.stopPropagation();
+      start(e.clientX, e.clientY);
+    });
+    document.addEventListener('mousemove', function(e) { if (active) move(e.clientX, e.clientY); });
+    document.addEventListener('mouseup',   function()  { if (active) stop(); });
+
+    hdr.addEventListener('touchstart', function(e) {
+      e.stopPropagation();
+      start(e.touches[0].clientX, e.touches[0].clientY);
+    }, {passive:true});
+    document.addEventListener('touchmove', function(e) {
+      if (active) { e.preventDefault(); move(e.touches[0].clientX, e.touches[0].clientY); }
+    }, {passive:false});
+    document.addEventListener('touchend', function() { if (active) stop(); });
   }
-  function onDown(e) {
-    isDragging = true;
-    startX = e.clientX; startY = e.clientY;
-    var r = el.getBoundingClientRect();
-    origLeft = r.left; origTop = r.top;
-    // Switch to fixed positioning for free drag
-    el.style.position = 'fixed';
-    el.style.left = origLeft + 'px';
-    el.style.top  = origTop  + 'px';
-    el.style.right = 'auto';
-    hdr.style.cursor = 'grabbing';
-    document.addEventListener('mousemove', onMove);
-    document.addEventListener('mouseup',   onUp);
-    document.addEventListener('touchmove', function(e){ onMove(e.touches[0]); }, {passive:true});
-    document.addEventListener('touchend',  onUp);
-  }
-  function onMove(e) {
-    if (!isDragging) return;
-    var dx = e.clientX - startX, dy = e.clientY - startY;
-    el.style.left = (origLeft + dx) + 'px';
-    el.style.top  = (origTop  + dy) + 'px';
-  }
-  function onUp() {
-    isDragging = false;
-    hdr.style.cursor = 'grab';
-    document.removeEventListener('mousemove', onMove);
-    document.removeEventListener('mouseup',   onUp);
-  }
-  // Init after DOM ready
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initDrag);
-  } else {
-    initDrag();
-  }
-  // Also init when balloon first appears
+
+  document.addEventListener('DOMContentLoaded', initDrag);
   window._initBalaoDrag = initDrag;
 })();
 </body>
