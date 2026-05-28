@@ -4532,6 +4532,7 @@ ${d.enc?`<div style="font-size:0.72rem;color:#2d3748;font-weight:700;margin-bott
   <button onclick="navigator.clipboard&&navigator.clipboard.writeText('${d.lat},${d.lon}')" style="flex:1;padding:5px 0;background:#f0f4f8;color:#555;border:none;border-radius:6px;font-size:0.65rem;font-weight:800;cursor:pointer;font-family:'Barlow',sans-serif;">📋 Copiar coords</button>
 </div>
 <button onclick="(function(){var url='https://www.google.com/maps?q=${d.lat},${d.lon}';if(navigator.share){navigator.share({title:'${d.titulo||d.pep}',text:'${d.mun||''}',url:url});}else if(navigator.clipboard){navigator.clipboard.writeText(url).then(function(){var b=event.target;var t=b.textContent;b.textContent='✅ Copiado!';b.style.background='#276749';setTimeout(function(){b.textContent=t;b.style.background='#f0fff4';},2000);});}})();" style="width:100%;padding:6px 0;background:#f0fff4;color:#276749;border:1.5px solid #c6f6d5;border-radius:6px;font-size:0.65rem;font-weight:800;cursor:pointer;font-family:'Barlow',sans-serif;margin-bottom:2px;">📤 Copiar localização</button>
+<button onclick="mapaAbrirCorrecao('${pepAttr}','${d.titulo||d.pep}','${d.mun||''}',${d.lat||0},${d.lon||0})" style="width:100%;padding:6px 0;background:#fff5f5;color:#c53030;border:1.5px solid #fdd;border-radius:6px;font-size:0.65rem;font-weight:800;cursor:pointer;font-family:Barlow,sans-serif;margin-bottom:2px;">📍 Corrigir Localização</button>
 ${rotaBtnHtml}</div>`;
 const iconHtml = '<div style="width:13px;height:13px;border-radius:50%;background:'+cor+';border:2.5px solid #fff;box-shadow:0 1px 5px rgba(0,0,0,0.45);cursor:pointer;"></div>';
 const icon = L.divIcon({className:'',html:iconHtml,iconSize:[13,13],iconAnchor:[6,6]});
@@ -6015,5 +6016,223 @@ setTimeout(presenceInit, 1500);
   </div>
   <div id="mapa-raio-balao-lista" style="overflow-y:auto;flex:1;padding:6px 0;"></div>
 </div>
+
+<!-- MODAL CORREÇÃO DE LOCALIZAÇÃO -->
+<div id="mapa-correcao-modal" style="display:none;position:fixed;inset:0;background:rgba(10,20,30,0.7);z-index:1300;align-items:center;justify-content:center;padding:12px;backdrop-filter:blur(4px);"
+  onclick="if(event.target===this)mapaFecharCorrecao()">
+  <div style="background:#fff;border-radius:18px;width:100%;max-width:480px;max-height:90vh;box-shadow:0 24px 64px rgba(0,0,0,0.3);overflow:hidden;display:flex;flex-direction:column;">
+    <!-- Header -->
+    <div style="background:linear-gradient(135deg,#c53030,#e53e3e);padding:14px 20px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
+      <div>
+        <div style="color:#fff;font-size:0.92rem;font-weight:900;">📍 Corrigir Localização</div>
+        <div id="mapa-correcao-titulo" style="color:rgba(255,255,255,0.75);font-size:0.68rem;font-weight:700;margin-top:2px;"></div>
+      </div>
+      <button onclick="mapaFecharCorrecao()" style="background:rgba(255,255,255,0.15);border:none;color:#fff;width:30px;height:30px;border-radius:8px;cursor:pointer;font-size:1rem;font-weight:800;">✕</button>
+    </div>
+    <div style="overflow-y:auto;padding:16px 20px;flex:1;">
+
+      <!-- Opção 1: Google Maps link -->
+      <div style="background:#f0f7ff;border:1.5px solid #bee3f8;border-radius:10px;padding:12px 14px;margin-bottom:12px;">
+        <div style="font-size:0.72rem;font-weight:800;color:#2b6cb0;margin-bottom:8px;">📋 Colar link do Google Maps</div>
+        <input id="mapa-correcao-gmaps" type="text" placeholder="https://maps.google.com/?q=-12.123,-41.456 ou maps.app.goo.gl/..."
+          style="width:100%;box-sizing:border-box;padding:8px 10px;border:1.5px solid #bee3f8;border-radius:8px;font-size:0.78rem;font-family:'Barlow',sans-serif;outline:none;margin-bottom:8px;">
+        <button onclick="mapaCorrecaoExtrairGmaps()" style="width:100%;padding:8px;background:#2b6cb0;color:#fff;border:none;border-radius:8px;font-family:'Barlow',sans-serif;font-size:0.78rem;font-weight:800;cursor:pointer;">
+          📋 Extrair coordenadas do link
+        </button>
+      </div>
+
+      <!-- Opção 2: Busca automática -->
+      <div style="background:#f0fff4;border:1.5px solid #c6f6d5;border-radius:10px;padding:12px 14px;margin-bottom:12px;">
+        <div style="font-size:0.72rem;font-weight:800;color:#276749;margin-bottom:8px;">🔍 Buscar por nome ou endereço</div>
+        <input id="mapa-correcao-busca" type="text" placeholder="Ex: Rua Principal, São Gabriel, Bahia"
+          style="width:100%;box-sizing:border-box;padding:8px 10px;border:1.5px solid #c6f6d5;border-radius:8px;font-size:0.78rem;font-family:'Barlow',sans-serif;outline:none;margin-bottom:6px;">
+        <div id="mapa-correcao-resultados" style="max-height:140px;overflow-y:auto;margin-bottom:8px;"></div>
+        <button onclick="mapaCorrecaoBuscar()" style="width:100%;padding:8px;background:#276749;color:#fff;border:none;border-radius:8px;font-family:'Barlow',sans-serif;font-size:0.78rem;font-weight:800;cursor:pointer;">
+          🔍 Buscar no OpenStreetMap
+        </button>
+      </div>
+
+      <!-- Opção 3: Clicar no mapa -->
+      <div style="background:#faf5ff;border:1.5px solid #d6bcfa;border-radius:10px;padding:12px 14px;margin-bottom:12px;">
+        <div style="font-size:0.72rem;font-weight:800;color:#6b46c1;margin-bottom:8px;">🖱️ Clicar no mapa</div>
+        <button id="mapa-correcao-btn-clicar" onclick="mapaCorrecaoModoClick()" style="width:100%;padding:8px;background:#6b46c1;color:#fff;border:none;border-radius:8px;font-family:'Barlow',sans-serif;font-size:0.78rem;font-weight:800;cursor:pointer;">
+          🖱️ Fechar e clicar no mapa
+        </button>
+        <div id="mapa-correcao-click-hint" style="display:none;font-size:0.7rem;color:#6b46c1;font-weight:700;margin-top:6px;text-align:center;">Clique no local correto no mapa...</div>
+      </div>
+
+      <!-- Opção 4: Coordenadas manuais -->
+      <div style="background:#fffbf0;border:1.5px solid #fde8b0;border-radius:10px;padding:12px 14px;margin-bottom:12px;">
+        <div style="font-size:0.72rem;font-weight:800;color:#b97400;margin-bottom:8px;">✏️ Digitar coordenadas</div>
+        <div style="display:flex;gap:8px;margin-bottom:8px;">
+          <input id="mapa-correcao-lat" type="text" placeholder="Latitude (ex: -12.1234)"
+            style="flex:1;padding:8px 10px;border:1.5px solid #fde8b0;border-radius:8px;font-size:0.78rem;font-family:'Barlow',sans-serif;outline:none;">
+          <input id="mapa-correcao-lon" type="text" placeholder="Longitude (ex: -41.5678)"
+            style="flex:1;padding:8px 10px;border:1.5px solid #fde8b0;border-radius:8px;font-size:0.78rem;font-family:'Barlow',sans-serif;outline:none;">
+        </div>
+      </div>
+
+      <!-- Preview da coordenada escolhida -->
+      <div id="mapa-correcao-preview" style="display:none;background:#f0fafa;border:2px solid #0d7377;border-radius:10px;padding:10px 14px;margin-bottom:12px;">
+        <div style="font-size:0.65rem;font-weight:800;color:#0d7377;margin-bottom:4px;">📍 COORDENADA SELECIONADA</div>
+        <div id="mapa-correcao-preview-txt" style="font-size:0.85rem;font-weight:800;color:#1a365d;font-family:monospace;"></div>
+      </div>
+
+      <!-- Botão confirmar -->
+      <button onclick="mapaCorrecaoSalvar()" style="width:100%;padding:12px;background:linear-gradient(135deg,#0d7377,#14a085);color:#fff;border:none;border-radius:10px;font-family:'Barlow',sans-serif;font-size:0.88rem;font-weight:800;cursor:pointer;margin-bottom:6px;">
+        ✅ Salvar Correção
+      </button>
+      <div id="mapa-correcao-msg" style="text-align:center;font-size:0.72rem;font-weight:700;color:#888;"></div>
+    </div>
+  </div>
+</div>
 </body>
 </html>
+<script>
+// ── Correção de localização ─────────────────────────────────────────────────
+var _correcaoPep='', _correcaoLat=null, _correcaoLon=null, _correcaoClickMode=false;
+
+window.mapaAbrirCorrecao = function(pep, titulo, mun, latAtual, lonAtual) {
+  _correcaoPep = pep;
+  _correcaoLat = latAtual || null;
+  _correcaoLon = lonAtual || null;
+  document.getElementById('mapa-correcao-titulo').textContent = titulo + (mun?' · '+mun:'');
+  document.getElementById('mapa-correcao-gmaps').value = '';
+  document.getElementById('mapa-correcao-busca').value = mun ? mun+', Bahia' : '';
+  document.getElementById('mapa-correcao-resultados').innerHTML = '';
+  document.getElementById('mapa-correcao-lat').value = latAtual||'';
+  document.getElementById('mapa-correcao-lon').value = lonAtual||'';
+  document.getElementById('mapa-correcao-msg').textContent = '';
+  document.getElementById('mapa-correcao-click-hint').style.display = 'none';
+  if (latAtual && lonAtual) {
+    document.getElementById('mapa-correcao-preview').style.display = 'block';
+    document.getElementById('mapa-correcao-preview-txt').textContent = latAtual+', '+lonAtual+' (atual)';
+  } else {
+    document.getElementById('mapa-correcao-preview').style.display = 'none';
+  }
+  document.getElementById('mapa-correcao-modal').style.display = 'flex';
+};
+
+window.mapaFecharCorrecao = function() {
+  document.getElementById('mapa-correcao-modal').style.display = 'none';
+  if (_correcaoClickMode && mapaMap) {
+    mapaMap.off('click', _correcaoClickHandler);
+    _correcaoClickMode = false;
+    document.body.style.cursor = '';
+  }
+};
+
+function _setCorrecaoCoord(lat, lon, origem) {
+  _correcaoLat = parseFloat(lat).toFixed(6);
+  _correcaoLon = parseFloat(lon).toFixed(6);
+  document.getElementById('mapa-correcao-lat').value = _correcaoLat;
+  document.getElementById('mapa-correcao-lon').value = _correcaoLon;
+  document.getElementById('mapa-correcao-preview').style.display = 'block';
+  document.getElementById('mapa-correcao-preview-txt').textContent = _correcaoLat+', '+_correcaoLon+' ('+origem+')';
+}
+
+// Opção 1: Extrair do link Google Maps
+window.mapaCorrecaoExtrairGmaps = function() {
+  var txt = document.getElementById('mapa-correcao-gmaps').value.trim();
+  // Padrões: ?q=-12.123,-41.456 | @-12.123,-41.456 | /place/.../@lat,lon
+  var m = txt.match(/@(-?\d+\.?\d*),(-?\d+\.?\d*)/) ||
+          txt.match(/[?&]q=(-?\d+\.?\d*),(-?\d+\.?\d*)/) ||
+          txt.match(/!3d(-?\d+\.?\d*)!4d(-?\d+\.?\d*)/) ||
+          txt.match(/(-?\d{1,3}\.\d{4,}),(-?\d{1,3}\.\d{4,})/);
+  if (m) {
+    _setCorrecaoCoord(m[1], m[2], 'Google Maps');
+    document.getElementById('mapa-correcao-msg').textContent = '✅ Coordenadas extraídas!';
+  } else {
+    document.getElementById('mapa-correcao-msg').textContent = '❌ Não foi possível extrair coordenadas deste link.';
+  }
+};
+
+// Opção 2: Buscar por nome (Nominatim)
+window.mapaCorrecaoBuscar = function() {
+  var q = document.getElementById('mapa-correcao-busca').value.trim();
+  if (!q) return;
+  var res = document.getElementById('mapa-correcao-resultados');
+  res.innerHTML = '<div style="padding:6px;color:#888;font-size:0.72rem;">⏳ Buscando...</div>';
+  var url = 'https://nominatim.openstreetmap.org/search?q='+encodeURIComponent(q+', Brasil')+'&format=json&limit=5&countrycodes=br';
+  fetch(url).then(function(r){return r.json();}).then(function(data) {
+    if (!data.length) { res.innerHTML='<div style="padding:6px;color:#c53030;font-size:0.72rem;">Nenhum resultado</div>'; return; }
+    res.innerHTML = data.map(function(item) {
+      return '<div onclick="mapaCorrecaoSelecionarNominatim('+item.lat+','+item.lon+')" style="padding:8px 10px;border-bottom:1px solid #f0f0f8;cursor:pointer;font-size:0.72rem;font-weight:700;color:#1a365d;" onmouseover="this.style.background=\'#f0fafa\'" onmouseout="this.style.background=\'\'">'+
+        '<div>'+item.display_name.split(',').slice(0,3).join(', ')+'</div>'+
+        '<div style="font-size:0.62rem;color:#6b46c1;font-weight:800;">📍 '+parseFloat(item.lat).toFixed(5)+', '+parseFloat(item.lon).toFixed(5)+'</div>'+
+        '</div>';
+    }).join('');
+  }).catch(function(){res.innerHTML='<div style="padding:6px;color:#c53030;font-size:0.72rem;">Erro de conexão</div>';});
+};
+
+window.mapaCorrecaoSelecionarNominatim = function(lat, lon) {
+  _setCorrecaoCoord(lat, lon, 'OpenStreetMap');
+  document.getElementById('mapa-correcao-resultados').innerHTML = '';
+};
+
+// Opção 3: Clicar no mapa
+function _correcaoClickHandler(e) {
+  _setCorrecaoCoord(e.latlng.lat, e.latlng.lng, 'clique no mapa');
+  mapaMap.off('click', _correcaoClickHandler);
+  _correcaoClickMode = false;
+  document.body.style.cursor = '';
+  document.getElementById('mapa-correcao-modal').style.display = 'flex';
+  document.getElementById('mapa-correcao-click-hint').style.display = 'none';
+  document.getElementById('mapa-correcao-btn-clicar').textContent = '🖱️ Fechar e clicar no mapa';
+}
+window.mapaCorrecaoModoClick = function() {
+  document.getElementById('mapa-correcao-modal').style.display = 'none';
+  _correcaoClickMode = true;
+  document.body.style.cursor = 'crosshair';
+  mapaMap.once('click', _correcaoClickHandler);
+  // Toast hint
+  var h = document.createElement('div');
+  h.textContent = '🖱️ Clique no local correto no mapa...';
+  h.style.cssText = 'position:fixed;top:80px;left:50%;transform:translateX(-50%);background:#6b46c1;color:#fff;padding:10px 20px;border-radius:10px;font-family:Barlow,sans-serif;font-size:0.82rem;font-weight:800;z-index:1400;pointer-events:none;';
+  document.body.appendChild(h);
+  setTimeout(function(){h.remove();},4000);
+};
+
+// Salvar correção
+window.mapaCorrecaoSalvar = function() {
+  // Pega coordenadas digitadas se não selecionou nenhuma opção
+  var latEl = document.getElementById('mapa-correcao-lat').value;
+  var lonEl = document.getElementById('mapa-correcao-lon').value;
+  if (latEl && lonEl && !_correcaoLat) _setCorrecaoCoord(latEl, lonEl, 'manual');
+  if (latEl && lonEl) { _correcaoLat = parseFloat(latEl).toFixed(6); _correcaoLon = parseFloat(lonEl).toFixed(6); }
+  if (!_correcaoLat || !_correcaoLon) {
+    document.getElementById('mapa-correcao-msg').textContent = '❌ Selecione uma localização primeiro.';
+    return;
+  }
+  var pep = _correcaoPep;
+  var lat = parseFloat(_correcaoLat);
+  var lon = parseFloat(_correcaoLon);
+  // Salva localmente
+  try {
+    var local = JSON.parse(localStorage.getItem('coords_manual')||'{}');
+    local[pep] = {lat:lat, lon:lon};
+    localStorage.setItem('coords_manual', JSON.stringify(local));
+  } catch(e) {}
+  // Atualiza mapaData imediatamente
+  if (mapaData) {
+    var item = mapaData.find(function(d){return d.pep===pep;});
+    if (item) { item.lat=lat; item.lon=lon; item.temCoord=true; }
+  }
+  // Re-renderiza mapa
+  try { mapaFiltrar(); } catch(e) {}
+  // Salva no Supabase
+  var payload = {};
+  try { payload = JSON.parse(localStorage.getItem('coords_manual')||'{}'); } catch(e) {}
+  fetch(SUPA_URL+'/rest/v1/turno_data?key=eq.coords_manual', {
+    method:'PATCH', headers:{...SUPA_HEADERS,'Prefer':'return=minimal'},
+    body:JSON.stringify({value:payload, updated_at:new Date().toISOString()})
+  }).catch(function(){
+    fetch(SUPA_URL+'/rest/v1/turno_data', {
+      method:'POST', headers:{...SUPA_HEADERS,'Prefer':'return=minimal'},
+      body:JSON.stringify({key:'coords_manual',value:payload,updated_at:new Date().toISOString()})
+    });
+  });
+  document.getElementById('mapa-correcao-msg').textContent = '✅ Localização corrigida e salva!';
+  setTimeout(mapaFecharCorrecao, 1200);
+};
+</script>
