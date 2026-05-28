@@ -260,6 +260,16 @@
       <div id="mapa-raio-hint" style="margin-top:8px;font-size:0.7rem;font-weight:700;color:#6b46c1;display:none;">
         🖱️ Clique no mapa para definir o centro do raio...
       </div>
+      <div id="mapa-raio-actions" style="display:none;margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;">
+        <button onclick="if(mapaRaioCircle&&mapaMap)mapaMap.fitBounds(mapaRaioCircle.getBounds(),{padding:[30,30]})"
+          style="padding:5px 12px;background:#f5f3ff;border:1.5px solid #d6bcfa;border-radius:7px;font-family:'Barlow',sans-serif;font-size:0.7rem;font-weight:800;color:#6b46c1;cursor:pointer;">
+          🎯 Focar no raio
+        </button>
+        <button onclick="if(mapaLayerGroup&&mapaMap){var b=[];mapaLayerGroup.eachLayer(function(l){if(l.getLatLng)b.push(l.getLatLng());});if(b.length)mapaMap.fitBounds(b,{padding:[30,30]});}"
+          style="padding:5px 12px;background:#f0fafa;border:1.5px solid #c0e8e5;border-radius:7px;font-family:'Barlow',sans-serif;font-size:0.7rem;font-weight:800;color:#0d7377;cursor:pointer;">
+          📍 Ver todas as obras
+        </button>
+      </div>
     </div>
 
     <!-- BOTÃO ROTA POR DISTÂNCIA -->
@@ -2221,10 +2231,10 @@ function mapaRaioDesenhar() {
     }),
     zIndexOffset: 1000
   }).addTo(mapaMap).bindPopup(centerPopupHtml);
-  if (!mapaUsuarioMoveu) {
-    mapaMap.fitBounds(mapaRaioCircle.getBounds(), { padding: [20, 20] });
-  }
+  // Não muda o zoom — usuário vê as obras em relação ao círculo
   mapaFitFeito = true;
+  const ra = document.getElementById('mapa-raio-actions');
+  if (ra) ra.style.display = 'flex';
 }
 
 function mapaRaioLimpar() {
@@ -4444,7 +4454,8 @@ marker.bindPopup(popup,{maxWidth:310});
 if (dentroRaio) bounds.push([d.lat,d.lon]);
 });
 // bounds só tem obras DENTRO do raio → fitBounds foca nelas
-if (bounds.length && !mapaFitFeito && !mapaUsuarioMoveu) { mapaMap.fitBounds(bounds,{padding:[28,28]}); mapaFitFeito=true; }
+// Quando raio ativo, não muda o zoom — mantém visão do usuário
+if (!mapaRaioCentro && bounds.length && !mapaFitFeito && !mapaUsuarioMoveu) { mapaMap.fitBounds(bounds,{padding:[28,28]}); mapaFitFeito=true; }
 // Se raio ativo e sem resultados, não reseta o mapa — mantém a visão atual
 const mc = document.getElementById('mapa-container');
 if (mc && !mapaFitFeito) mc.scrollIntoView({behavior:'smooth',block:'center'});
