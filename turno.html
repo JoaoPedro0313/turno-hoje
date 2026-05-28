@@ -5316,6 +5316,22 @@ setTimeout(presenceInit, 1500);
             <div style="font-size:0.7rem;color:#888;margin-top:3px;">Formato aceito: <strong>.csv</strong></div>
           </div>
           <input type="file" id="gear-file-input" accept=".csv" style="display:none;" onchange="gearImportarTurno(this.files[0]);this.value='';">
+          <input type="file" id="gear-hist-input" accept=".csv" style="display:none;" onchange="gearImportarHistorico(this.files[0]);this.value='';">
+          <div style="border:2px dashed #d6bcfa;border-radius:12px;padding:14px;text-align:center;cursor:pointer;background:linear-gradient(135deg,#faf5ff,#f3e8ff);margin-bottom:10px;"
+            onclick="document.getElementById('gear-hist-input').click()"
+            ondragover="event.preventDefault();this.style.borderColor='#6b46c1'"
+            ondragleave="this.style.borderColor='#d6bcfa'"
+            ondrop="event.preventDefault();this.style.borderColor='#d6bcfa';gearImportarHistorico(event.dataTransfer.files[0])">
+            <div style="font-size:1.3rem;margin-bottom:3px;">📅</div>
+            <div style="font-size:0.82rem;font-weight:800;color:#6b46c1;">Importar histórico do mês</div>
+            <div style="font-size:0.68rem;color:#888;margin-top:2px;">consulta_turno_*.csv — salva cada dia no banco</div>
+          </div>
+          <div id="gear-hist-progress" style="display:none;background:#faf5ff;border:1px solid #d6bcfa;border-radius:9px;padding:10px 14px;margin-bottom:10px;">
+            <div style="font-size:0.72rem;font-weight:700;color:#553c9a;" id="gear-hist-msg">Processando...</div>
+            <div style="height:6px;background:#e9d8fd;border-radius:3px;margin-top:6px;overflow:hidden;">
+              <div id="gear-hist-bar" style="height:100%;background:#6b46c1;width:0%;transition:width .3s;border-radius:3px;"></div>
+            </div>
+          </div>
 
           <div id="gear-import-msg" style="display:none;font-size:0.78rem;font-weight:700;padding:10px 14px;border-radius:9px;margin-bottom:10px;"></div>
 
@@ -5738,6 +5754,78 @@ setTimeout(presenceInit, 1500);
       }, 50);
     });
   }
+
+  window.gearImportarHistorico = async function(file) {
+    if (!file) return;
+    var prog = document.getElementById('gear-hist-progress');
+    var msgEl = document.getElementById('gear-hist-msg');
+    var barEl = document.getElementById('gear-hist-bar');
+    if (prog) prog.style.display = 'block';
+    var reader = new FileReader();
+    reader.onload = async function(e) {
+      try {
+        var text = e.target.result.replace(/^\uFEFF/,'');
+        var lines = text.split(/[\x0d\x0a]+/).filter(function(l){ return l.trim(); });
+        var sep = lines[0].includes(';') ? ';' : ',';
+        var hdr = lines[0].split(sep).map(function(h){ return h.trim().replace(/^"|"$/g,'').toLowerCase(); });
+        var iEq  = hdr.findIndex(function(h){ return h==='equipe'; });
+        var iSit = hdr.findIndex(function(h){ return h==='situa\u00e7\u00e3o'||h==='situacao'; });
+        var iDt  = hdr.findIndex(function(h){ return h==='data in\u00edcio'||h==='data inicio'; });
+        var iResp= hdr.findIndex(function(h){ return h==='respons\u00e1vel'||h==='responsavel'; });
+        if (iEq < 0 || iDt < 0) { if (msgEl) msgEl.textContent = '❌ Colunas Equipe/Data não encontradas.'; return; }
+        var byDate = {};
+        for (var i = 1; i < lines.length; i++) {
+          var cols = lines[i].split(sep).map(function(x){ return x.trim().replace(/^"|"$/g,''); });
+          if (cols.length < 3) continue;
+          var dateRaw = (cols[iDt]||'').trim();
+          var dm = dateRaw.match(/(\d{2}\/\d{2}\/\d{4})/);
+          if (!dm) continue;
+          var date = dm[1];
+          var sit  = (cols[iSit]||'').trim().toLowerCase();
+          var eqRaw = (cols[iEq]||'').trim().toUpperCase();
+          var respRaw = iResp >= 0 ? (cols[iResp]||'') : '';
+          var eq = window._resolverEquipe ? window._resolverEquipe(eqRaw, respRaw) : eqRaw;
+          if (!eq) continue;
+          if (!byDate[date]) byDate[date] = {};
+          if (sit === 'aberto' || sit === 'fechado/finalizado' || sit === 'fechado') byDate[date][eq] = true;
+        }
+        var dates = Object.keys(byDate).sort();
+        if (!dates.length) { if (msgEl) msgEl.textContent = '❌ Nenhuma data encontrada.'; return; }
+        var saved = 0, failed = 0;
+        var equipes = typeof EQUIPES_ATIVAS !== 'undefined' ? EQUIPES_ATIVAS : [];
+        for (var di = 0; di < dates.length; di++) {
+          var date = dates[di];
+          var okSet = byDate[date];
+          var okList = Object.keys(okSet);
+          var faltaList = equipes.filter(function(e){ return !okSet[e]; });
+          var parts = date.split('/');
+          var histKey = 'turno_hist_' + parts[0] + '-' + parts[1] + '-' + parts[2];
+          var payload = { ok: okList, justif: [], falta: faltaList, date: date, source: 'csv_hist' };
+          try {
+            var r1 = await fetch(SUPA_URL + '/rest/v1/turno_data?key=eq.' + histKey, {
+              method: 'PATCH',
+              headers: Object.assign({}, SUPA_HEADERS, {'Prefer':'return=minimal'}),
+              body: JSON.stringify({ key: histKey, value: payload })
+            });
+            if (r1.status === 204 || r1.ok) { saved++; }
+            else {
+              await fetch(SUPA_URL + '/rest/v1/turno_data', {
+                method: 'POST',
+                headers: Object.assign({}, SUPA_HEADERS, {'Prefer':'return=minimal'}),
+                body: JSON.stringify({ key: histKey, value: payload })
+              });
+              saved++;
+            }
+          } catch(ex) { failed++; }
+          if (msgEl) msgEl.textContent = '⏳ ' + (di+1) + '/' + dates.length + ' dias salvos...';
+          if (barEl) barEl.style.width = Math.round((di+1)/dates.length*100) + '%';
+        }
+        if (msgEl) msgEl.textContent = '✅ ' + saved + ' dias salvos no banco!' + (failed ? ' (' + failed + ' falharam)' : '');
+        if (barEl) barEl.style.background = '#14a085';
+      } catch(err) { if (msgEl) msgEl.textContent = '❌ Erro: ' + err.message; }
+    };
+    reader.readAsText(file, 'utf-8');
+  };
 
   window.gearConfirmarImport = function() {
     if (!_gearPayloadPendente) return;
