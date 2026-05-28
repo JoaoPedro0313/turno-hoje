@@ -4433,25 +4433,15 @@ ${d.enc?`<div style="font-size:0.72rem;color:#2d3748;font-weight:700;margin-bott
 </div>
 <button onclick="(function(){var url='https://www.google.com/maps?q=${d.lat},${d.lon}';if(navigator.share){navigator.share({title:'${d.titulo||d.pep}',text:'${d.mun||''}',url:url});}else if(navigator.clipboard){navigator.clipboard.writeText(url).then(function(){var b=event.target;var t=b.textContent;b.textContent='✅ Copiado!';b.style.background='#276749';setTimeout(function(){b.textContent=t;b.style.background='#f0fff4';},2000);});}})();" style="width:100%;padding:6px 0;background:#f0fff4;color:#276749;border:1.5px solid #c6f6d5;border-radius:6px;font-size:0.65rem;font-weight:800;cursor:pointer;font-family:'Barlow',sans-serif;margin-bottom:2px;">📤 Copiar localização</button>
 ${rotaBtnHtml}</div>`;
-// Dentro do raio = anel verde destacado; fora = marcador normal
-const dentroDoRaio = !!(mapaRaioCentro && d.temCoord && !d._raioFora);
-const foraDoRaio   = !!(mapaRaioCentro && d._raioFora);
-let iconHtml;
-if (dentroDoRaio) {
-  // Marcador grande com anel pulsante
-  iconHtml = `<div style="position:relative;width:18px;height:18px;">
-    <div style="position:absolute;inset:-4px;border-radius:50%;border:2px solid #14a085;opacity:0.6;animation:pulse-ring 1.5s ease-out infinite;"></div>
-    <div style="width:18px;height:18px;border-radius:50%;background:${cor};border:2.5px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,0.5);cursor:pointer;position:relative;z-index:2;"></div>
-  </div>`;
-} else {
-  // Marcador normal — tamanho e opacidade normais independente do raio
-  iconHtml = `<div style="width:13px;height:13px;border-radius:50%;background:${cor};border:2.5px solid #fff;box-shadow:0 1px 5px rgba(0,0,0,0.45);cursor:pointer;"></div>`;
-}
-const iSize = dentroDoRaio ? 18 : 13;
-const icon = L.divIcon({className:'',html:iconHtml,iconSize:[iSize,iSize],iconAnchor:[iSize/2,iSize/2]});
+// Ícone: marcadores dentro do raio = destaque verde; fora = normal
+const dentroRaio = !!(mapaRaioCentro && d.temCoord && !d._raioFora);
+const borda = dentroRaio ? '3px solid #14a085' : '2.5px solid #fff';
+const tam   = dentroRaio ? 16 : 13;
+const iconHtml = '<div style="width:'+tam+'px;height:'+tam+'px;border-radius:50%;background:'+cor+';border:'+borda+';box-shadow:0 1px 6px rgba(0,0,0,0.5);cursor:pointer;"></div>';
+const icon = L.divIcon({className:'',html:iconHtml,iconSize:[tam,tam],iconAnchor:[tam/2,tam/2]});
 const marker = L.marker([d.lat,d.lon],{icon}).addTo(mapaLayerGroup);
 marker.bindPopup(popup,{maxWidth:310});
-if (dentroDoRaio) bounds.push([d.lat,d.lon]);
+if (dentroRaio) bounds.push([d.lat,d.lon]);
 });
 // bounds só tem obras DENTRO do raio → fitBounds foca nelas
 if (bounds.length && !mapaFitFeito && !mapaUsuarioMoveu) { mapaMap.fitBounds(bounds,{padding:[28,28]}); mapaFitFeito=true; }
