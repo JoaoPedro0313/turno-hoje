@@ -63,9 +63,9 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);min-height:100vh;padd
 .page-nav{
   display:flex;gap:0;
   background:#fff;
-  border-bottom:3px solid #e2e8f0;
+  border-bottom:none;
   position:fixed;top:48px;left:0;right:0;z-index:90;
-  box-shadow:0 2px 8px rgba(0,0,0,0.08);
+  
   padding:0 10px;
 }
 .page-nav a.page-nav-btn{text-decoration:none;}
@@ -831,6 +831,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);min-height:100vh;padd
 
 </style>
 
+<style>/* page-nav override */.page-nav{border-bottom:none!important;box-shadow:none!important;}</style>
 </head>
 <body>
 
