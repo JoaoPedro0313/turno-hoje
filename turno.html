@@ -5571,9 +5571,31 @@ setTimeout(presenceInit, 1500);
       const ok = [], falta = [], justif = [];
       let date = '';
 
+      // ── Detecta se CSV tem múltiplas datas (histórico mensal) ─────────────
+      const allDates = {};
+      for (let i = 1; i < lines.length; i++) {
+        const cols = splitLine(lines[i]).map(c => c.replace(/^"|"$/g, '').trim());
+        if (iData >= 0 && cols[iData]) {
+          const d = cols[iData].split(' ')[0];
+          if (d) allDates[d] = (allDates[d] || 0) + 1;
+        }
+      }
+      const uniqueDates = Object.keys(allDates).sort();
+      // Se tem múltiplas datas, usa apenas a mais recente
+      const targetDate = uniqueDates.length > 1 ? uniqueDates[uniqueDates.length - 1] : null;
+      if (targetDate) date = targetDate;
+
+      const okSet = new Set(); // evita duplicatas
+
       for (let i = 1; i < lines.length; i++) {
         const cols = splitLine(lines[i]).map(c => c.replace(/^"|"$/g, '').trim());
         if (!cols[iEqCol]) continue;
+
+        // Filtra pela data mais recente se CSV tiver múltiplas datas
+        if (targetDate && iData >= 0) {
+          const rowDate = (cols[iData] || '').split(' ')[0];
+          if (rowDate !== targetDate) continue;
+        }
 
         const nomeRaw  = cols[iEqCol].toUpperCase();
         const iResp    = headers.findIndex(h => h === 'responsável' || h === 'responsavel');
@@ -5585,21 +5607,22 @@ setTimeout(presenceInit, 1500);
           : (window._CON_MNT_MAP && window._CON_MNT_MAP[nomeRaw]) || nomeRaw;
         const situacao = (cols[iSit] || '').toLowerCase();
 
-        // Extrai data da primeira linha de dados
+        // Extrai data da primeira linha de dados (se não detectou múltiplas)
         if (!date && iData >= 0 && cols[iData]) {
-          date = cols[iData].split(' ')[0]; // "16/03/2026 08:02:32" → "16/03/2026"
+          date = cols[iData].split(' ')[0];
         }
 
-        // Mapeia situação do sistema de frotas para status do turno
+        // Mapeia situação → status (sem duplicatas via Set)
         if (situacao === 'aberto' || situacao === 'fechado/finalizado' || situacao === 'fechado') {
-          ok.push(nome);
+          okSet.add(nome);
         } else if (situacao === 'cancelado' || situacao === 'ausente') {
           falta.push(nome);
         } else {
-          ok.push(nome); // demais situações tratadas como presente
+          okSet.add(nome);
         }
       }
 
+      ok.push(...okSet);
       return { date, ok, falta, justif };
     }
 
