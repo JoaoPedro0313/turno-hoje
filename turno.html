@@ -5578,7 +5578,13 @@ setTimeout(presenceInit, 1500);
           <div class="gear-card" style="margin-bottom:12px;">
             <div style="font-size:0.78rem;font-weight:800;color:#2d3748;margin-bottom:4px;">🔄 Conexão com Banco</div>
             <div style="font-size:0.7rem;color:#888;margin-bottom:10px;">Reconecta ao Supabase e recarrega os dados</div>
-            <button onclick="if(window.dbReconectar)window.dbReconectar();document.getElementById('gear-modal').style.display='none';" class="gear-btn" style="background:linear-gradient(135deg,#0d7377,#14a085);color:#fff;margin-bottom:0;" onmouseover="this.style.opacity='.9'" onmouseout="this.style.opacity='1'">🔄 Reconectar ao Banco</button>
+            <button onclick="if(window.dbReconectar)window.dbReconectar();document.getElementById('gear-modal').style.display='none';" class="gear-btn" style="background:linear-gradient(135deg,#0d7377,#14a085);color:#fff;margin-bottom:8px;" onmouseover="this.style.opacity='.9'" onmouseout="this.style.opacity='1'">🔄 Reconectar ao Banco</button>
+          <button onclick="
+            var btn=this; btn.textContent='⏳ Enviando...'; btn.disabled=true;
+            fetch('https://mariua-whatsapp-bot.onrender.com/testar',{method:'POST',headers:{'x-webhook-secret':'mariua2026','Content-Type':'application/json'}})
+            .then(r=>r.json()).then(d=>{btn.textContent=d.ok?'✅ Mensagem enviada! ('+d.falta+' faltas)':'⚠️ '+( d.msg||'Sem turno hoje');btn.disabled=false;setTimeout(()=>{btn.textContent='🤖 Testar Bot WhatsApp';},4000);})
+            .catch(e=>{btn.textContent='❌ Erro: '+e.message;btn.disabled=false;setTimeout(()=>{btn.textContent='🤖 Testar Bot WhatsApp';},4000);});
+          " class="gear-btn" style="background:#25d366;color:#fff;margin-bottom:0;" onmouseover="this.style.opacity='.9'" onmouseout="this.style.opacity='1'">🤖 Testar Bot WhatsApp</button>
           </div>
 
           <div class="gear-card">
