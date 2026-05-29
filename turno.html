@@ -5054,7 +5054,7 @@ setTimeout(presenceInit, 1500);
     const lbl=relFmtDate(ini)+(dias.length>1?' a '+relFmtDate(fim):'');
 
     const rankHTML=rankFalta.slice(0,12).filter(r=>r.faltas>0).map((r,i)=>`
-      <div class="rel-rc">
+      <div class="rel-rc" data-base="${r.base}">
         <div class="rel-rn ${i===0?'t1':''}">${i+1}</div>
         <div style="flex:1">
           <div class="rel-rnm">${relDispName(r.nome)}</div>
@@ -5194,18 +5194,41 @@ setTimeout(presenceInit, 1500);
   window.relFiltrarTabela = function(){
     const busca=(document.getElementById('rel-busca')?.value||'').toLowerCase();
     const tbody=document.getElementById('rel-tbody');
-    if(!tbody) return;
     const estadoBases = relEstado==='todos' ? null : REL_ESTADO_BASES[relEstado];
-    Array.from(tbody.querySelectorAll('tr')).forEach(tr=>{
-      const base=tr.dataset.base, nome=tr.dataset.nome;
-      const faltas=parseInt(tr.dataset.faltas||0), pct=parseInt(tr.dataset.pct||0);
+
+    // Filtra tabela
+    if(tbody){
+      Array.from(tbody.querySelectorAll('tr')).forEach(tr=>{
+        const base=tr.dataset.base, nome=tr.dataset.nome;
+        const faltas=parseInt(tr.dataset.faltas||0), pct=parseInt(tr.dataset.pct||0);
+        let show=true;
+        if(busca&&!nome.includes(busca)) show=false;
+        if(estadoBases&&!estadoBases.includes(base)) show=false;
+        if(relBase!=='todas'&&base!==relBase) show=false;
+        if(relFiltro==='falta'&&faltas===0) show=false;
+        if(relFiltro==='ok100'&&pct<100) show=false;
+        tr.style.display=show?'':'none';
+      });
+    }
+
+    // Filtra ranking cards também
+    const rankCards=document.querySelectorAll('.rel-rc[data-base]');
+    let visibleRank=0;
+    rankCards.forEach(function(card){
+      const base=card.dataset.base;
       let show=true;
-      if(busca&&!nome.includes(busca)) show=false;
       if(estadoBases&&!estadoBases.includes(base)) show=false;
       if(relBase!=='todas'&&base!==relBase) show=false;
-      if(relFiltro==='falta'&&faltas===0) show=false;
-      if(relFiltro==='ok100'&&pct<100) show=false;
-      tr.style.display=show?'':'none';
+      card.style.display=show?'':'none';
+      // Renumera os visíveis
+      if(show){
+        visibleRank++;
+        const numEl=card.querySelector('.rel-rn');
+        if(numEl){
+          numEl.textContent=visibleRank;
+          numEl.className='rel-rn'+(visibleRank===1?' t1':'');
+        }
+      }
     });
   };
 
