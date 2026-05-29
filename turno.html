@@ -1707,9 +1707,19 @@ windowWidth: 900,
 }).then(canvas => {
 const a = document.createElement('a');
 a.download = 'turno_' + currentDate.replace(/\//g, '_') + '.png';
-a.href = canvas.toDataURL('image/png');
+const dataURL = canvas.toDataURL('image/jpeg', 0.85);
+a.href = dataURL;
 a.click();
 document.body.removeChild(wrapper);
+// Salva no Supabase para o bot WhatsApp enviar
+try {
+  const base64 = dataURL.split(',')[1];
+  fetch(SUPA_URL + '/rest/v1/turno_data', {
+    method: 'POST',
+    headers: { ...SUPA_HEADERS, 'Prefer': 'resolution=merge-duplicates,return=minimal' },
+    body: JSON.stringify({ key: 'turno_imagem', value: { base64, date: currentDate, updatedAt: new Date().toISOString() } })
+  }).then(() => console.log('[turno] Imagem salva para o bot')).catch(()=>{});
+} catch(e) {}
 });
 };
 if (window.html2canvas) { doCapture(); }
