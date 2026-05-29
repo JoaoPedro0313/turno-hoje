@@ -5593,49 +5593,6 @@ setTimeout(presenceInit, 1500);
   </div>
 </div>
 
-      <!-- TURNO -->
-      <div style="font-size:0.68rem;font-weight:800;color:#0d7377;letter-spacing:2px;text-transform:uppercase;margin-bottom:14px;padding-bottom:8px;border-bottom:2px solid #c0e8e5;">📋 Arquivo de Turno</div>
-
-      <!-- Drop zone -->
-      <div id="gear-dropzone"
-        style="border:2px dashed #c0e8e5;border-radius:12px;padding:20px 16px;text-align:center;cursor:pointer;background:linear-gradient(135deg,#f0fafa,#e8f6f5);margin-bottom:12px;transition:all 0.2s;"
-        onclick="document.getElementById('gear-file-input').click()"
-        ondragover="event.preventDefault();this.style.borderColor='#0d7377';this.style.background='#d0efed';"
-        ondragleave="this.style.borderColor='#c0e8e5';this.style.background='linear-gradient(135deg,#f0fafa,#e8f6f5)';"
-        ondrop="event.preventDefault();this.style.borderColor='#c0e8e5';this.style.background='linear-gradient(135deg,#f0fafa,#e8f6f5)';gearImportarTurno(event.dataTransfer.files[0]);">
-        <div style="font-size:1.8rem;margin-bottom:6px;">📂</div>
-        <div style="font-size:0.85rem;font-weight:800;color:#0d7377;">Clique ou arraste o arquivo</div>
-        <div style="font-size:0.72rem;color:#888;margin-top:3px;">Formato aceito: <strong>.csv</strong></div>
-      </div>
-      <input type="file" id="gear-file-input" accept=".csv" style="display:none;" onchange="gearImportarTurno(this.files[0]);this.value='';">
-
-      <!-- Feedback -->
-      <div id="gear-import-msg" style="display:none;font-size:0.78rem;font-weight:700;padding:10px 14px;border-radius:9px;margin-bottom:12px;"></div>
-
-      <!-- Preview -->
-      <div id="gear-import-preview" style="display:none;background:#f0fafa;border:1px solid #c0e8e5;border-radius:10px;padding:14px 16px;margin-bottom:12px;">
-        <div style="font-size:0.68rem;font-weight:800;color:#0d7377;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:10px;">📊 Preview do Arquivo</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;text-align:center;margin-bottom:10px;">
-          <div style="background:#fff;border-radius:8px;padding:8px 4px;border:1px solid #c0e8e5;">
-            <div id="gear-prev-ok" style="font-size:1.5rem;font-weight:800;color:#0d7377;">0</div>
-            <div style="font-size:0.62rem;font-weight:700;color:#888;text-transform:uppercase;">Abriram</div>
-          </div>
-          <div style="background:#fff;border-radius:8px;padding:8px 4px;border:1px solid #fde8b0;">
-            <div id="gear-prev-justif" style="font-size:1.5rem;font-weight:800;color:#b97400;">0</div>
-            <div style="font-size:0.62rem;font-weight:700;color:#888;text-transform:uppercase;">Justif.</div>
-          </div>
-          <div style="background:#fff;border-radius:8px;padding:8px 4px;border:1px solid #fde8e8;">
-            <div id="gear-prev-falta" style="font-size:1.5rem;font-weight:800;color:#c53030;">0</div>
-            <div style="font-size:0.62rem;font-weight:700;color:#888;text-transform:uppercase;">Faltas</div>
-          </div>
-        </div>
-        <div id="gear-prev-date" style="font-size:0.72rem;font-weight:700;color:#555;margin-bottom:12px;text-align:center;"></div>
-        <button id="gear-confirm-btn" onclick="gearConfirmarImport()" style="width:100%;padding:11px;background:linear-gradient(135deg,#0d7377,#14a085);color:#fff;border:none;border-radius:10px;font-family:'Barlow',sans-serif;font-size:0.88rem;font-weight:800;cursor:pointer;" onmouseover="this.style.opacity='0.88'" onmouseout="this.style.opacity='1'">✅ Confirmar e Aplicar</button>
-      </div>
-
-    </div>
-  </div>
-</div>
 
 <script>
 (function(){
