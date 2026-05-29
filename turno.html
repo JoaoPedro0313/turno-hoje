@@ -4792,6 +4792,7 @@ setTimeout(presenceInit, 1500);
     </div>
     <button onclick="relGerar()" style="padding:9px 20px;background:#c53030;color:#fff;border:none;border-radius:8px;font-family:'Barlow',sans-serif;font-size:.78rem;font-weight:800;cursor:pointer;letter-spacing:.5px;align-self:flex-end;white-space:nowrap;">🔍 GERAR</button>
     <button onclick="relExportarCSV()" style="padding:9px 16px;background:#0d7377;color:#fff;border:none;border-radius:8px;font-family:'Barlow',sans-serif;font-size:.78rem;font-weight:800;cursor:pointer;letter-spacing:.5px;align-self:flex-end;white-space:nowrap;">📥 CSV</button>
+    <button onclick="relGerarVisual()" style="padding:9px 16px;background:#553c9a;color:#fff;border:none;border-radius:8px;font-family:'Barlow',sans-serif;font-size:.78rem;font-weight:800;cursor:pointer;letter-spacing:.5px;align-self:flex-end;white-space:nowrap;">📊 VISUAL</button>
     <button onclick="window.print()" style="padding:9px 16px;background:#2b6cb0;color:#fff;border:none;border-radius:8px;font-family:'Barlow',sans-serif;font-size:.78rem;font-weight:800;cursor:pointer;letter-spacing:.5px;align-self:flex-end;white-space:nowrap;">🖨️ IMPRIMIR</button>
   </div>
 
@@ -5259,6 +5260,109 @@ setTimeout(presenceInit, 1500);
         }
       }
     });
+  };
+
+  window.relGerarVisual = function(){
+    // Coleta dados filtrados do ranking e tabela
+    const rankCards = Array.from(document.querySelectorAll('.rel-rc[data-base]')).filter(function(el){ return el.style.display !== 'none'; });
+    const rows      = Array.from(document.querySelectorAll('#rel-tbody tr')).filter(function(el){ return el.style.display !== 'none'; });
+    const periodo   = document.getElementById('rel-sub') ? document.getElementById('rel-sub').textContent : '';
+    const svs       = document.querySelectorAll('.rel-sv');
+    const tOk       = svs[0] ? svs[0].textContent : '—';
+    const tFalta    = svs[1] ? svs[1].textContent : '—';
+    const tJustif   = svs[2] ? svs[2].textContent : '—';
+    const tDias     = svs[3] ? svs[3].textContent : '—';
+    const COLS = 4;
+
+    // Build ranked items
+    const rankItems = rankCards.slice(0,12).map(function(card){
+      const num   = card.querySelector('.rel-rn') ? card.querySelector('.rel-rn').textContent : '';
+      const nome  = card.querySelector('.rel-rnm') ? card.querySelector('.rel-rnm').textContent : '';
+      const cnt   = card.querySelector('.rel-rcnt') ? card.querySelector('.rel-rcnt').textContent : '';
+      const base  = card.querySelector('.rel-base') ? card.querySelector('.rel-base').textContent : '';
+      const baseClass = card.querySelector('.rel-base') ? card.querySelector('.rel-base').className.replace('rel-base','').trim() : '';
+      return {num, nome, cnt, base, baseClass};
+    });
+
+    // Build freq table rows
+    const freqRows = rows.slice(0,30).map(function(tr){
+      const tds = tr.querySelectorAll('td');
+      return {
+        nome:   tds[0] ? tds[0].textContent.trim() : '',
+        base:   tds[1] ? tds[1].textContent.trim() : '',
+        pres:   tds[2] ? tds[2].textContent.trim() : '',
+        faltas: tds[3] ? tds[3].textContent.trim() : '',
+        justif: tds[4] ? tds[4].textContent.trim() : '',
+        pct:    tds[5] ? tds[5].querySelector('.rel-pv') ? tds[5].querySelector('.rel-pv').textContent.trim() : '' : '',
+      };
+    });
+
+    const BASE_COLORS = {irc:'#2b6cb0',jac:'#b97400',pa:'#276749',ita:'#553c9a',aju:'#c53030'};
+
+    const rankHtml = rankItems.length
+      ? rankItems.map(function(r){
+          const bc = BASE_COLORS[r.baseClass] || '#888';
+          return '<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:#fff;border-radius:8px;border-left:4px solid '+bc+';">'
+            + '<div style="width:26px;height:26px;border-radius:6px;background:'+(r.num==='1'?'#c53030':'#f0f4f5')+';color:'+(r.num==='1'?'#fff':'#555')+';font-size:0.8rem;font-weight:900;display:flex;align-items:center;justify-content:center;flex-shrink:0;">'+r.num+'</div>'
+            + '<div style="flex:1;min-width:0;"><div style="font-size:0.78rem;font-weight:800;color:#1a365d;">'+r.nome+'</div>'
+            + '<div style="font-size:0.6rem;color:'+bc+';font-weight:700;margin-top:1px;">'+r.base+'</div></div>'
+            + '<div style="font-size:0.78rem;font-weight:900;color:#c53030;white-space:nowrap;">'+r.cnt+'</div>'
+            + '</div>';
+        }).join('')
+      : '<div style="padding:12px;color:#aaa;text-align:center;">Nenhuma falta registrada</div>';
+
+    const freqHtml = freqRows.length
+      ? '<table style="width:100%;border-collapse:collapse;font-size:0.72rem;">'
+        + '<thead><tr style="background:#f0f4f5;">'
+        + '<th style="padding:6px 8px;text-align:left;font-weight:800;color:#555;">Colaborador</th>'
+        + '<th style="padding:6px 8px;text-align:left;font-weight:800;color:#555;">Base</th>'
+        + '<th style="padding:6px 8px;text-align:center;font-weight:800;color:#555;">Pres.</th>'
+        + '<th style="padding:6px 8px;text-align:center;font-weight:800;color:#555;">Faltas</th>'
+        + '<th style="padding:6px 8px;text-align:center;font-weight:800;color:#555;">%</th>'
+        + '</tr></thead><tbody>'
+        + freqRows.map(function(r, i){
+            const faltasNum = parseInt(r.faltas)||0;
+            const bg = i%2===0?'#fff':'#f8fafc';
+            return '<tr style="background:'+bg+';border-bottom:1px solid #f0f0f0;">'
+              + '<td style="padding:5px 8px;font-weight:700;color:#1a365d;">'+r.nome+'</td>'
+              + '<td style="padding:5px 8px;color:#888;font-size:0.65rem;">'+r.base+'</td>'
+              + '<td style="padding:5px 8px;text-align:center;color:#276749;font-weight:700;">'+r.pres+'</td>'
+              + '<td style="padding:5px 8px;text-align:center;color:'+(faltasNum>0?'#c53030':'#2d3748')+';font-weight:'+(faltasNum>0?'800':'400')+';">'+r.faltas+'</td>'
+              + '<td style="padding:5px 8px;text-align:center;font-weight:700;">'+r.pct+'</td>'
+              + '</tr>';
+          }).join('')
+        + '</tbody></table>'
+      : '<div style="padding:12px;color:#aaa;text-align:center;">Nenhum dado disponível</div>';
+
+    const html = '<!DOCTYPE html><html><head><meta charset="UTF-8">'
+      + '<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;600;700;800;900&display=swap" rel="stylesheet">'
+      + '<style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:Barlow,sans-serif;background:#f0f4f5;padding:0;}</style>'
+      + '</head><body>'
+      + '<div style="background:linear-gradient(135deg,#a01818,#c53030);padding:20px 28px;color:#fff;">'
+      + '<div style="font-size:1.3rem;font-weight:900;letter-spacing:0.5px;">📊 RELATÓRIO DE FALTAS</div>'
+      + '<div style="font-size:0.78rem;font-weight:700;opacity:0.75;margin-top:4px;">'+periodo+'</div>'
+      + '</div>'
+      + '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;padding:16px 20px;background:#fff;border-bottom:1px solid #e2e8f0;">'
+      + '<div style="text-align:center;padding:10px;background:#f0fff4;border-radius:8px;border:1px solid #c6f6d5;"><div style="font-size:1.5rem;font-weight:900;color:#276749;">'+tOk+'</div><div style="font-size:0.6rem;font-weight:800;color:#555;text-transform:uppercase;margin-top:2px;">✅ Abriram</div></div>'
+      + '<div style="text-align:center;padding:10px;background:#fff5f5;border-radius:8px;border:1px solid #fdd;"><div style="font-size:1.5rem;font-weight:900;color:#c53030;">'+tFalta+'</div><div style="font-size:0.6rem;font-weight:800;color:#555;text-transform:uppercase;margin-top:2px;">❌ Não Abriram</div></div>'
+      + '<div style="text-align:center;padding:10px;background:#fffbf0;border-radius:8px;border:1px solid #fde8b0;"><div style="font-size:1.5rem;font-weight:900;color:#b97400;">'+tJustif+'</div><div style="font-size:0.6rem;font-weight:800;color:#555;text-transform:uppercase;margin-top:2px;">⚠️ Justif.</div></div>'
+      + '<div style="text-align:center;padding:10px;background:#ebf4ff;border-radius:8px;border:1px solid #bee3f8;"><div style="font-size:1.5rem;font-weight:900;color:#2b6cb0;">'+tDias+'</div><div style="font-size:0.6rem;font-weight:800;color:#555;text-transform:uppercase;margin-top:2px;">📅 Dias</div></div>'
+      + '</div>'
+      + '<div style="padding:16px 20px;">'
+      + '<div style="font-size:0.65rem;font-weight:800;color:#c53030;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:10px;">🔴 Mais Faltas</div>'
+      + '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:20px;">'+rankHtml+'</div>'
+      + '<div style="font-size:0.65rem;font-weight:800;color:#555;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:10px;">📋 Frequência Individual</div>'
+      + freqHtml
+      + '</div>'
+      + '<div style="text-align:center;padding:16px;font-size:0.65rem;color:#aaa;font-weight:600;">Mariuá Construção e Energia · Sistema de Obras</div>'
+      + '</body></html>';
+
+    const w = window.open('', '_blank', 'width=900,height=700');
+    if (w) {
+      w.document.write(html);
+      w.document.close();
+      setTimeout(function(){ w.print(); }, 800);
+    }
   };
 
   window.relExportarCSV = function(){
