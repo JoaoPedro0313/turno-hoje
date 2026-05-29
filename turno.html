@@ -5029,10 +5029,36 @@ setTimeout(presenceInit, 1500);
     corpo.innerHTML=relBuildHTML(dias);
   }
 
+  let _relMatrix={}, _relDias=[], _relRankFalta=[];
+
+  function relAtualizarContadores(){
+    const estadoBases = relEstado==='todos' ? null : REL_ESTADO_BASES[relEstado];
+    const eqFilt = EQUIPES_ATIVAS.filter(function(e){
+      const b=relGetBase(e);
+      if(estadoBases && !estadoBases.includes(b)) return false;
+      if(relBase!=='todas' && b!==relBase) return false;
+      return true;
+    });
+    let tOk=0,tFalta=0,tJustif=0,tDias=0;
+    _relDias.forEach(function(d){
+      const p=relDados[relHistKey(d)];
+      if(!p) return;
+      tDias++;
+      eqFilt.forEach(function(e){
+        const s=relGetStatus(p,e);
+        if(s==='ok')tOk++;else if(s==='falta')tFalta++;else if(s==='justif')tJustif++;
+      });
+    });
+    const sv=document.querySelectorAll('.rel-sv');
+    if(sv.length>=4){ sv[0].textContent=tOk; sv[1].textContent=tFalta; sv[2].textContent=tJustif; sv[3].textContent=tDias||_relDias.length; }
+  }
+
   function relBuildHTML(dias){
+    _relDias=dias;
     const eq=EQUIPES_ATIVAS;
     const matrix={};
     eq.forEach(e=>{ matrix[e]=dias.map(d=>relGetStatus(relDados[relHistKey(d)]||null,e)); });
+    _relMatrix=matrix;
 
     let tOk=0,tFalta=0,tJustif=0,tDias=0;
     dias.forEach(d=>{
@@ -5210,6 +5236,9 @@ setTimeout(presenceInit, 1500);
         tr.style.display=show?'':'none';
       });
     }
+
+    // Atualiza contadores conforme filtro
+    if(typeof relAtualizarContadores==='function') relAtualizarContadores();
 
     // Filtra ranking cards também
     const rankCards=document.querySelectorAll('.rel-rc[data-base]');
