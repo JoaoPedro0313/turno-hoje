@@ -431,6 +431,11 @@ const TIPO_CONFIG = {
   'PESADA':       { cls:'tipo-leve',label:'Pesada' }
 };
 
+// ── Supabase ────────────────────────────────────────────────────────────────
+const SUPA_URL = 'https://eqxejfoibebcbtsqymji.supabase.co';
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVxeGVqZm9pYmViY2J0c3F5bWppIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE4NjUzMTEsImV4cCI6MjA4NzQ0MTMxMX0.lwf7_EJ6UchEOpzhW3cVKztxDGy78gaQblRvgiEwWh8';
+const SUPA_HEADERS = { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY, 'Content-Type': 'application/json' };
+
 let rdoStateFilter = 'todos';
 let rdoBaseFilter  = 'todos';
 let rdoData        = {}; // { 'ALAN-IRC': ['LINHA MORTA', 'LINHA MORTA'], ... }
@@ -506,6 +511,76 @@ function rdoFilter(list) {
 
 function rdoDisplayName(n) {
   return n.replace(/-IRC$|-JAC$|-PA$|-ITA$|-AJU$/, '');
+}
+
+// ── Salvar/Carregar Supabase ─────────────────────────────────────────────────
+function rdoKeyForDate(date) {
+  if (!date) {
+    var now = new Date();
+    var dd = String(now.getDate()).padStart(2,'0');
+    var mm = String(now.getMonth()+1).padStart(2,'0');
+    var yyyy = now.getFullYear();
+    date = dd+'/'+mm+'/'+yyyy;
+  }
+  var p = date.split('/');
+  return 'rdo_dia_' + p[0] + '-' + p[1] + '-' + p[2];
+}
+
+async function rdoSalvarBanco() {
+  if (!rdoDate && Object.keys(rdoData).length === 0) return;
+  var key = rdoKeyForDate(rdoDate);
+  var payload = { lancou: rdoData, date: rdoDate, savedAt: new Date().toISOString() };
+  try {
+    var r = await fetch(SUPA_URL + '/rest/v1/turno_data?key=eq.' + key, {
+      method: 'PATCH',
+      headers: Object.assign({}, SUPA_HEADERS, {'Prefer':'return=minimal'}),
+      body: JSON.stringify({ key: key, value: payload })
+    });
+    if (r.status === 404 || (r.status === 204 && r.headers.get('content-range') === '*/0')) {
+      await fetch(SUPA_URL + '/rest/v1/turno_data', {
+        method: 'POST',
+        headers: Object.assign({}, SUPA_HEADERS, {'Prefer':'return=minimal'}),
+        body: JSON.stringify({ key: key, value: payload })
+      });
+    }
+    rdoShowMsg('✅ Salvo no banco!', 'success');
+  } catch(e) {
+    rdoShowMsg('⚠️ Salvo localmente (sem conexão)', 'success');
+  }
+  // Also save locally
+  try { localStorage.setItem(key, JSON.stringify(payload)); } catch(e2) {}
+}
+
+async function rdoCarregarBanco() {
+  var now = new Date();
+  var dd = String(now.getDate()).padStart(2,'0');
+  var mm = String(now.getMonth()+1).padStart(2,'0');
+  var yyyy = now.getFullYear();
+  var today = dd+'/'+mm+'/'+yyyy;
+  var key = rdoKeyForDate(today);
+  try {
+    var r = await fetch(SUPA_URL + '/rest/v1/turno_data?select=key,value&key=eq.' + key, {
+      headers: SUPA_HEADERS
+    });
+    var data = await r.json();
+    if (data && data.length && data[0].value && data[0].value.lancou) {
+      rdoData = data[0].value.lancou;
+      rdoDate = data[0].value.date || today;
+      var dl = document.getElementById('rdo-date-label');
+      if (dl) dl.textContent = rdoDate ? '📅 ' + rdoDate : '';
+      rdoRender();
+      rdoShowMsg('✅ RDO de hoje carregado do banco!', 'success');
+      return;
+    }
+  } catch(e) {}
+  // Fallback: localStorage
+  try {
+    var local = JSON.parse(localStorage.getItem(key));
+    if (local && local.lancou) {
+      rdoData = local.lancou; rdoDate = local.date || today;
+      rdoRender();
+    }
+  } catch(e2) {}
 }
 
 function rdoRender() {
@@ -590,6 +665,7 @@ function rdoImportar(file) {
       const qtd = Object.keys(rdoData).length;
       rdoShowMsg('✅ ' + qtd + ' equipes carregadas!', 'success');
       rdoRender();
+      rdoSalvarBanco();
     } catch(err) { rdoShowMsg('Erro: '+err.message,'error'); }
   };
   reader.readAsText(file,'utf-8');
@@ -597,7 +673,7 @@ function rdoImportar(file) {
 
 // Init
 rdoBuildBaseButtons();
-rdoRender();
+rdoCarregarBanco();
 </script>
 
 
