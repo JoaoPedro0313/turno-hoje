@@ -8,7 +8,39 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;600;700;800&display=swap" rel="stylesheet">
 
-<style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Barlow',sans-serif;background:#f0f4f5;min-height:100vh;padding-bottom:80px;padding-top:100px}.db-badge{display:inline-flex;align-items:center;gap:5px;font-size:0.7rem;font-weight:800;padding:4px 10px;border-radius:6px;letter-spacing:0.5px;position:relative;border:1px solid rgba(255,255,255,0.3)}.db-badge.offline{background:rgba(229,62,62,0.3);color:#ffc0c0}.db-badge.online{background:rgba(45,184,100,0.3);color:#b0ffd0}.db-badge.local{background:rgba(45,184,100,0.15);color:#9ae6b4}.db-badge.syncing{background:rgba(240,165,0,0.3);color:#ffe9a0}.db-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}.db-badge.offline .db-dot{background:#e53e3e}.db-badge.online .db-dot{background:#14a085;box-shadow:0 0 6px #14a085}.db-badge.syncing .db-dot{background:#f0a500;animation:blink 1s infinite}.db-badge.local .db-dot{background:#38a169}@keyframes blink{0%,100%{opacity:1}50%{opacity:0.3}}.presence-btn{display:inline-flex;align-items:center;gap:6px;font-size:0.7rem;font-weight:800;padding:4px 10px;border-radius:6px;letter-spacing:0.5px;margin-left:6px;position:relative;background:rgba(45,184,100,0.2);color:#b0ffd0;border:1px solid rgba(255,255,255,0.3);cursor:pointer;transition:all 0.2s}.presence-btn:hover{background:rgba(45,184,100,0.35)}.presence-dot{width:7px;height:7px;border-radius:50%;background:#38d996;box-shadow:0 0 6px #38d996;flex-shrink:0;animation:blink 2s infinite}.presence-modal{display:none;position:fixed;inset:0;background:rgba(10,20,30,0.65);z-index:300;align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(4px)}.presence-modal.open{display:flex}.presence-box{background:#fff;border-radius:20px;width:100%;max-width:520px;box-shadow:0 32px 80px rgba(0,0,0,0.25);overflow:hidden;max-height:90vh;display:flex;flex-direction:column}.presence-header{background:linear-gradient(135deg,#0b5e62,#14a085);padding:18px 24px;display:flex;align-items:center;justify-content:space-between}.presence-body{overflow-y:auto;padding:20px 24px}.presence-user-row{display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:10px;margin-bottom:6px;background:#f0fafa;border:1px solid #c0e8e5;transition:all 0.15s}.presence-user-row.me{background:#f0fff4;border-color:#c6f6d5}.presence-avatar{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#0d7377,#14a085);color:#fff;font-size:0.9rem;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+<style>
+.cards-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:0;}
+@media(max-width:600px){.cards-grid{grid-template-columns:repeat(2,1fr);}}
+
+.section{background:#fff;border-radius:12px;margin-bottom:18px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.07)}
+.section-header{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:1px solid #e8ecef}
+.section-header.green{background:#f0fafa;border-bottom-color:#c0e8e5}
+.section-header.red{background:#fff5f5;border-bottom-color:#fdd}
+.section-header.orange{background:#fffbf0;border-bottom-color:#fde8b0}
+.section-header.blue{background:#ebf4ff;border-bottom-color:#bee3f8}
+.section-label{display:flex;align-items:center;gap:10px;font-size:1rem;font-weight:800;letter-spacing:0.5px;color:#222}
+.section-count{font-size:1.3rem;font-weight:800}
+.section-count.green{color:#0d7377}
+.section-count.red{color:#c53030}
+.section-count.orange{color:#b97400}
+.section-count.blue{color:#2b6cb0}
+.card{display:flex;align-items:center;justify-content:space-between;padding:11px 14px;border-right:1px solid #edf0f2;border-bottom:1px solid #edf0f2;gap:8px;transition:background 0.15s}
+.card:hover{background:#f9fbff}
+.card:nth-child(6n){border-right:none}
+.card.absent{background:#fff8f8}
+.card.absent:hover{background:#fff0f0}
+.card.justif{background:#fffdf0;position:relative;cursor:default}
+.card.justif:hover{background:#fff8dc}
+.card-name{font-size:0.82rem;font-weight:700;color:#2d3748;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1}
+.card.absent .card-name{color:#742a2a}
+.card.justif .card-name{color:#7a4f00}
+.card.justif:hover .justif-obs{display:block}
+.section-divider{margin:0 20px;font-size:0.7rem;font-weight:800;color:#aaa;letter-spacing:1.5px;text-transform:uppercase;padding:8px 0 6px;border-top:1px solid #f0f2f5}
+.section-title{font-size:0.68rem;font-weight:800;color:#aaa;letter-spacing:2px;text-transform:uppercase;margin-bottom:16px;padding-bottom:8px;border-bottom:1px solid #f0f2f5}
+.section{box-shadow:none;border:1px solid #e0e0e0}
+.card:nth-child(6n),.prod-card:nth-child(6n){border-right:1px solid #edf0f2}
+.card:nth-child(2n),.prod-card:nth-child(2n){border-right:none}
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Barlow',sans-serif;background:#f0f4f5;min-height:100vh;padding-bottom:80px;padding-top:100px}.db-badge{display:inline-flex;align-items:center;gap:5px;font-size:0.7rem;font-weight:800;padding:4px 10px;border-radius:6px;letter-spacing:0.5px;position:relative;border:1px solid rgba(255,255,255,0.3)}.db-badge.offline{background:rgba(229,62,62,0.3);color:#ffc0c0}.db-badge.online{background:rgba(45,184,100,0.3);color:#b0ffd0}.db-badge.local{background:rgba(45,184,100,0.15);color:#9ae6b4}.db-badge.syncing{background:rgba(240,165,0,0.3);color:#ffe9a0}.db-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}.db-badge.offline .db-dot{background:#e53e3e}.db-badge.online .db-dot{background:#14a085;box-shadow:0 0 6px #14a085}.db-badge.syncing .db-dot{background:#f0a500;animation:blink 1s infinite}.db-badge.local .db-dot{background:#38a169}@keyframes blink{0%,100%{opacity:1}50%{opacity:0.3}}.presence-btn{display:inline-flex;align-items:center;gap:6px;font-size:0.7rem;font-weight:800;padding:4px 10px;border-radius:6px;letter-spacing:0.5px;margin-left:6px;position:relative;background:rgba(45,184,100,0.2);color:#b0ffd0;border:1px solid rgba(255,255,255,0.3);cursor:pointer;transition:all 0.2s}.presence-btn:hover{background:rgba(45,184,100,0.35)}.presence-dot{width:7px;height:7px;border-radius:50%;background:#38d996;box-shadow:0 0 6px #38d996;flex-shrink:0;animation:blink 2s infinite}.presence-modal{display:none;position:fixed;inset:0;background:rgba(10,20,30,0.65);z-index:300;align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(4px)}.presence-modal.open{display:flex}.presence-box{background:#fff;border-radius:20px;width:100%;max-width:520px;box-shadow:0 32px 80px rgba(0,0,0,0.25);overflow:hidden;max-height:90vh;display:flex;flex-direction:column}.presence-header{background:linear-gradient(135deg,#0b5e62,#14a085);padding:18px 24px;display:flex;align-items:center;justify-content:space-between}.presence-body{overflow-y:auto;padding:20px 24px}.presence-user-row{display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:10px;margin-bottom:6px;background:#f0fafa;border:1px solid #c0e8e5;transition:all 0.15s}.presence-user-row.me{background:#f0fff4;border-color:#c6f6d5}.presence-avatar{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#0d7377,#14a085);color:#fff;font-size:0.9rem;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:'Barlow',sans-serif;background:#f0f4f5;min-height:100vh;padding-bottom:60px;padding-top:100px}
@@ -368,30 +400,44 @@ box-shadow:0 2px 8px rgba(0,0,0,0.08)}
 </div>
 
 <!-- Seção: Lançou RDO -->
-<div class="rdo-section">
-  <div class="rdo-section-hdr green">
-    <div style="display:flex;align-items:center;gap:10px;font-size:1rem;font-weight:800;color:#222;">
-      <div style="width:24px;height:24px;border-radius:6px;background:#14a085;color:#fff;display:flex;align-items:center;justify-content:center;font-size:0.9rem;">✓</div>
-      LANÇOU RDO
+<div class="section">
+  <div class="section-header green">
+    <div style="display:flex;align-items:center;gap:10px;">
+      <div style="width:22px;height:22px;border-radius:6px;background:#14a085;color:#fff;display:flex;align-items:center;justify-content:center;font-size:0.85rem;">✓</div>
+      <span class="section-label">LANÇOU RDO</span>
     </div>
-    <span class="rdo-count-badge green" id="rdo-count-lancou">0</span>
+    <span class="section-count green" id="rdo-count-lancou">0</span>
   </div>
-  <div class="rdo-grid" id="rdo-grid-lancou">
-    <div class="rdo-empty">Nenhum lançamento importado</div>
+  <div class="cards-grid" id="rdo-grid-lancou">
+    <div class="empty-msg">Nenhum lançamento importado</div>
   </div>
 </div>
 
-<!-- Seção: Não Lançou -->
-<div class="rdo-section">
-  <div class="rdo-section-hdr red">
-    <div style="display:flex;align-items:center;gap:10px;font-size:1rem;font-weight:800;color:#222;">
-      <div style="width:14px;height:14px;border-radius:50%;background:#e53e3e;flex-shrink:0;"></div>
-      NÃO LANÇOU RDO
+<!-- Seção: Falta Justificada -->
+<div class="section">
+  <div class="section-header orange">
+    <div style="display:flex;align-items:center;gap:10px;">
+      <div style="width:22px;height:22px;border-radius:6px;background:#f0a500;color:#fff;display:flex;align-items:center;justify-content:center;font-size:0.85rem;">!</div>
+      <span class="section-label">FALTA JUSTIFICADA</span>
     </div>
-    <span class="rdo-count-badge red" id="rdo-count-nao">0</span>
+    <span class="section-count orange" id="rdo-count-justif">0</span>
   </div>
-  <div class="rdo-grid" id="rdo-grid-nao">
-    <div class="rdo-empty">Importe o CSV para ver quem não lançou</div>
+  <div class="cards-grid" id="rdo-grid-justif">
+    <div class="empty-msg">Nenhuma equipe</div>
+  </div>
+</div>
+
+<!-- Seção: Não Lançou RDO -->
+<div class="section">
+  <div class="section-header red">
+    <div style="display:flex;align-items:center;gap:10px;">
+      <div style="width:14px;height:14px;border-radius:50%;background:#e53e3e;flex-shrink:0;"></div>
+      <span class="section-label">NÃO LANÇOU RDO</span>
+    </div>
+    <span class="section-count red" id="rdo-count-nao">0</span>
+  </div>
+  <div class="cards-grid" id="rdo-grid-nao">
+    <div class="empty-msg">Importe o CSV para ver quem não lançou</div>
   </div>
 </div>
 
@@ -588,8 +634,7 @@ function rdoRender() {
   const lancou = rdoFilter(RDO_EQUIPES.filter(function(e) { return lancouSet.includes(e); }));
   const nao    = rdoFilter(RDO_EQUIPES.filter(function(e) { return !lancouSet.includes(e); }));
 
-  document.getElementById('rdo-count-lancou').textContent = lancou.length;
-  document.getElementById('rdo-count-nao').textContent    = nao.length;
+  // counts set in buildCard section below
 
   // Counts for state bar
   const ba = lancouSet.filter(function(n){ return rdoTeamState(n)==='ba'; }).length;
@@ -598,27 +643,35 @@ function rdoRender() {
   const sc = document.getElementById('rdo-state-counts');
   if (sc) sc.textContent = lancouSet.length ? 'BA:'+ba+' MG:'+mg+' SE:'+se+' (lançaram)' : '';
 
-  function buildCard(name, absent) {
-    const tipos = rdoData[name] || [];
-    const tiposUniq = [...new Set(tipos)];
+  function buildCard(name, type) {
+    // type: 'ok' | 'falta' | 'justif'
     const disp = rdoDisplayName(name);
-    let badgesHtml = tiposUniq.map(function(t) {
-      const cfg = TIPO_CONFIG[t.toUpperCase()] || {cls:'tipo-out', label:t};
-      return '<span class="rdo-card-tipo '+cfg.cls+'">'+cfg.label+'</span>';
-    }).join(' ');
-    if (!badgesHtml && absent) badgesHtml = '<span class="rdo-card-tipo tipo-out">—</span>';
-    return '<div class="rdo-card'+(absent?' absent':'')+'"><div class="rdo-card-name">'+disp+'</div>'+badgesHtml+'</div>';
+    const badgeClass = type === 'ok' ? 'badge-ok' : type === 'justif' ? 'badge-justif' : 'badge-falta';
+    const badgeTxt   = type === 'ok' ? 'OK' : type === 'justif' ? 'JUS' : 'FALTA';
+    const cardClass  = type === 'falta' ? 'card absent' : type === 'justif' ? 'card justif' : 'card';
+    return '<div class="'+cardClass+'"><span class="card-name">'+disp+'</span><span class="card-badge '+badgeClass+'">'+badgeTxt+'</span></div>';
   }
 
-  const gl = document.getElementById('rdo-grid-lancou');
-  gl.innerHTML = lancou.length
-    ? lancou.sort().map(function(n){ return buildCard(n,false); }).join('')
-    : '<div class="rdo-empty">Nenhum lançamento no filtro selecionado</div>';
+  var gl = document.getElementById('rdo-grid-lancou');
+  var gj = document.getElementById('rdo-grid-justif');
+  var gn = document.getElementById('rdo-grid-nao');
+  var cl = document.getElementById('rdo-count-lancou');
+  var cj = document.getElementById('rdo-count-justif');
+  var cn = document.getElementById('rdo-count-nao');
 
-  const gn = document.getElementById('rdo-grid-nao');
-  gn.innerHTML = nao.length
-    ? nao.sort().map(function(n){ return buildCard(n,true); }).join('')
-    : '<div class="rdo-empty">✅ Todos lançaram!</div>';
+  if (cl) cl.textContent = lancou.length;
+  if (cj) cj.textContent = 0;
+  if (cn) cn.textContent = nao.length;
+
+  if (gl) gl.innerHTML = lancou.length
+    ? lancou.sort().map(function(n){ return buildCard(n,'ok'); }).join('')
+    : '<div class="empty-msg">Nenhum lançamento no filtro selecionado</div>';
+
+  if (gj) gj.innerHTML = '<div class="empty-msg">Nenhuma equipe</div>';
+
+  if (gn) gn.innerHTML = nao.length
+    ? nao.sort().map(function(n){ return buildCard(n,'falta'); }).join('')
+    : '<div class="empty-msg">✅ Todos lançaram!</div>';
 }
 
 function rdoShowMsg(txt, type) {
