@@ -5945,6 +5945,10 @@ setTimeout(presenceInit, 1500);
     }
     if (typeof dbSaveTurno === 'function') dbSaveTurno();
     try { render(); } catch(e) {}
+    // Gera imagem do relatório e salva no Supabase para o bot
+    setTimeout(function() {
+      try { gerarEsalvarImagemTurno(); } catch(e) {}
+    }, 1500);
 
     document.getElementById('gear-modal').style.display = 'none';
     document.getElementById('gear-import-preview').style.display = 'none';
@@ -6178,6 +6182,34 @@ async function postoCarregar() {
 }
 window.postoCarregar = postoCarregar;
 window.postoFiltro   = postoFiltro;
+
+// ── Gera imagem do turno e salva no Supabase para o bot WhatsApp ─────────────
+async function gerarEsalvarImagemTurno() {
+  try {
+    // Usa html2canvas para capturar as seções visíveis
+    if (typeof html2canvas === 'undefined') return;
+    const el = document.getElementById('sections');
+    if (!el) return;
+    const canvas = await html2canvas(el, {
+      scale: 1.5,
+      useCORS: true,
+      backgroundColor: '#f0f4f5',
+      logging: false,
+      width: el.scrollWidth,
+      height: Math.min(el.scrollHeight, 1200)
+    });
+    const base64 = canvas.toDataURL('image/jpeg', 0.82).split(',')[1];
+    // Salva no Supabase como turno_imagem
+    await fetch(SUPA_URL + '/rest/v1/turno_data', {
+      method: 'POST',
+      headers: { ...SUPA_HEADERS, 'Prefer': 'resolution=merge-duplicates,return=minimal' },
+      body: JSON.stringify({ key: 'turno_imagem', value: { base64, date: currentDate, updatedAt: new Date().toISOString() } })
+    });
+    console.log('[turno] Imagem salva no Supabase para o bot');
+  } catch(e) {
+    console.warn('[turno] Erro ao gerar imagem:', e.message);
+  }
+}
 </script>
 </body>
 </html>
