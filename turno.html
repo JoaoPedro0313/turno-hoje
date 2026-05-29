@@ -5684,7 +5684,9 @@ setTimeout(presenceInit, 1500);
           if (d) allDates[d] = (allDates[d] || 0) + 1;
         }
       }
-      const uniqueDates = Object.keys(allDates).sort();
+      // Ordena datas DD/MM/YYYY corretamente (converte para YYYYMMDD para comparar)
+      function dtSortKey(d) { const p=d.split('/'); return p[2]+p[1]+p[0]; }
+      const uniqueDates = Object.keys(allDates).sort(function(a,b){ return dtSortKey(a).localeCompare(dtSortKey(b)); });
       // Se tem múltiplas datas, usa apenas a mais recente
       const targetDate = uniqueDates.length > 1 ? uniqueDates[uniqueDates.length - 1] : null;
       if (targetDate) date = targetDate;
