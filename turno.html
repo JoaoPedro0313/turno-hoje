@@ -1705,14 +1705,18 @@ backgroundColor: '#f0f4f5',
 width: 900,
 windowWidth: 900,
 }).then(canvas => {
-const a = document.createElement('a');
-a.download = 'turno_' + currentDate.replace(/\//g, '_') + '.png';
-const dataURL = canvas.toDataURL('image/jpeg', 0.85);
-a.href = dataURL;
-a.click();
-document.body.removeChild(wrapper);
-// Salva no Supabase para o bot WhatsApp
+const dataURL = canvas.toDataURL('image/jpeg', 0.88);
+// Salva SEMPRE no Supabase para o bot
 salvarImagemParaBot(dataURL);
+if (!window._botMode) {
+  // Download só quando usuário clicou em 📷
+  const a = document.createElement('a');
+  a.download = 'turno_' + currentDate.replace(/\//g, '_') + '.png';
+  a.href = dataURL;
+  a.click();
+}
+window._botMode = false;
+document.body.removeChild(wrapper);
 });
 };
 if (window.html2canvas) { doCapture(); }
@@ -5948,8 +5952,13 @@ setTimeout(presenceInit, 1500);
     }
     if (typeof dbSaveTurno === 'function') dbSaveTurno();
     try { render(); } catch(e) {}
-    // Gera e salva imagem automaticamente para o bot
-    setTimeout(function() { capturarEsalvarParaBot(); }, 1500);
+    // Gera e salva imagem para o bot (usa o mesmo tirarPrint)
+    setTimeout(function() {
+      if (typeof tirarPrint === 'function') {
+        window._botMode = true; // flag: salva no Supabase, não faz download
+        tirarPrint();
+      }
+    }, 1500);
 
     document.getElementById('gear-modal').style.display = 'none';
     document.getElementById('gear-import-preview').style.display = 'none';
