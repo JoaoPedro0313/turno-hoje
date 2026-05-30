@@ -3257,7 +3257,7 @@ if (pageMapa && pageMapa.style.display!=='none') {
   mapaRenderFiltros && mapaRenderFiltros();
 }
 mapaRotaObrasFiltradas = mapaData.filter(d=>d.temCoord);
-mapaRotaFiltrarLista && mapaRotaFiltrarLista();
+window.mapaRotaFiltrarLista && window.mapaRotaFiltrarLista();
 }
 function mapaEnsureLeaflet(cb) {
   const ph = document.getElementById('mapa-placeholder'); if (ph) ph.style.display='none';
