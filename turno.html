@@ -5961,18 +5961,8 @@ setTimeout(presenceInit, 1500);
     }
     if (typeof dbSaveTurno === 'function') dbSaveTurno();
     try { render(); } catch(e) {}
-    // Gera e salva imagem para o bot com filtro BA forçado
-    setTimeout(function() {
-      if (typeof tirarPrint === 'function') {
-        window._botPrevState = turnoStateFilter;
-        window._botPrevBase  = turnoBaseFilter;
-        turnoStateFilter = 'ba';
-        turnoBaseFilter  = 'todos';
-        window._botMode  = true;
-        tirarPrint();
-        // filtros serão restaurados DENTRO do tirarPrint após html2canvas terminar
-      }
-    }, 1500);
+    // Gera imagem apenas com equipes BA (direto, sem mexer nos filtros)
+    setTimeout(function() { gerarImagemBA(); }, 1500);
 
     document.getElementById('gear-modal').style.display = 'none';
     document.getElementById('gear-import-preview').style.display = 'none';
@@ -6290,6 +6280,49 @@ function _doCaptureForBot() {
     document.body.removeChild(wrapper);
     console.warn('[bot] Erro ao gerar imagem:', e.message);
   });
+}
+
+// ── Gera imagem apenas com equipes BA para o bot ─────────────────────────────
+function gerarImagemBA() {
+  try {
+    // Filtra apenas BA (-IRC = Irecê, -JAC = Jacobina)
+    function isBA(n) { return n && (n.endsWith('-IRC') || n.endsWith('-JAC')); }
+    const okBA    = [...teams.ok].filter(isBA).sort();
+    const justifBA= [...teams.justif].filter(t => isBA(t.name||t)).sort();
+    const faltaBA = [...teams.falta].filter(isBA).sort();
+
+    console.log('[bot] Imagem BA — ok:', okBA.length, 'falta:', faltaBA.length);
+
+    // Usa buildGrid do tirarPrint para gerar o HTML
+    const now = new Date();
+    const hora = String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
+
+    // Reutiliza a função buildGrid via tirarPrint com dados BA
+    // Salva os times originais, substitui temporariamente, chama tirarPrint, restaura
+    const _ok    = teams.ok;
+    const _justif= teams.justif;
+    const _falta = teams.falta;
+    const _state = turnoStateFilter;
+    const _base  = turnoBaseFilter;
+
+    teams.ok     = okBA;
+    teams.justif = justifBA;
+    teams.falta  = faltaBA;
+    turnoStateFilter = 'todos'; // já filtrado manualmente
+    turnoBaseFilter  = 'todos';
+    window._botMode  = true;
+
+    tirarPrint();
+
+    // Restaura imediatamente (tirarPrint salva o HTML antes do async)
+    teams.ok     = _ok;
+    teams.justif = _justif;
+    teams.falta  = _falta;
+    turnoStateFilter = _state;
+    turnoBaseFilter  = _base;
+  } catch(e) {
+    console.warn('[bot] Erro gerarImagemBA:', e.message);
+  }
 }
 </script>
 </body>
