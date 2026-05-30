@@ -1711,15 +1711,8 @@ const dataURL = canvas.toDataURL('image/jpeg', 0.85);
 a.href = dataURL;
 a.click();
 document.body.removeChild(wrapper);
-// Salva no Supabase para o bot WhatsApp enviar
-try {
-  const base64 = dataURL.split(',')[1];
-  fetch(SUPA_URL + '/rest/v1/turno_data', {
-    method: 'POST',
-    headers: { ...SUPA_HEADERS, 'Prefer': 'resolution=merge-duplicates,return=minimal' },
-    body: JSON.stringify({ key: 'turno_imagem', value: { base64, date: currentDate, updatedAt: new Date().toISOString() } })
-  }).then(() => console.log('[turno] Imagem salva para o bot')).catch(()=>{});
-} catch(e) {}
+// Salva no Supabase para o bot WhatsApp
+salvarImagemParaBot(dataURL);
 });
 };
 if (window.html2canvas) { doCapture(); }
@@ -5955,10 +5948,8 @@ setTimeout(presenceInit, 1500);
     }
     if (typeof dbSaveTurno === 'function') dbSaveTurno();
     try { render(); } catch(e) {}
-    // Gera imagem do relatório e salva no Supabase para o bot
-    setTimeout(function() {
-      try { gerarEsalvarImagemTurno(); } catch(e) {}
-    }, 1500);
+    // Gera e salva imagem automaticamente para o bot
+    setTimeout(function() { capturarEsalvarParaBot(); }, 1500);
 
     document.getElementById('gear-modal').style.display = 'none';
     document.getElementById('gear-import-preview').style.display = 'none';
@@ -6219,6 +6210,63 @@ async function gerarEsalvarImagemTurno() {
   } catch(e) {
     console.warn('[turno] Erro ao gerar imagem:', e.message);
   }
+}
+
+// ── Salva imagem para o bot WhatsApp ─────────────────────────────────────────
+function salvarImagemParaBot(dataURL) {
+  try {
+    const base64 = dataURL.split(',')[1];
+    fetch(SUPA_URL + '/rest/v1/turno_data', {
+      method: 'POST',
+      headers: { ...SUPA_HEADERS, 'Prefer': 'resolution=merge-duplicates,return=minimal' },
+      body: JSON.stringify({ key: 'turno_imagem', value: { base64, date: currentDate, updatedAt: new Date().toISOString() } })
+    }).then(() => console.log('[bot] Imagem salva no Supabase')).catch(()=>{});
+  } catch(e) {}
+}
+
+// Captura o relatório visível e salva automaticamente
+function capturarEsalvarParaBot() {
+  try {
+    if (typeof html2canvas === 'undefined') {
+      const s = document.createElement('script');
+      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+      s.onload = () => _doCaptureForBot();
+      document.head.appendChild(s);
+    } else {
+      _doCaptureForBot();
+    }
+  } catch(e) {}
+}
+
+function _doCaptureForBot() {
+  // Cria o mesmo wrapper que tirarPrint usa
+  const wrapper = document.createElement('div');
+  wrapper.style.cssText = 'position:fixed;left:-9999px;top:0;width:900px;background:#f0f4f5;z-index:-1;';
+  document.body.appendChild(wrapper);
+
+  // Copia as seções
+  const sections = document.getElementById('sections');
+  if (!sections) { document.body.removeChild(wrapper); return; }
+  const clone = sections.cloneNode(true);
+  clone.style.cssText = 'padding:20px;background:#f0f4f5;';
+  wrapper.appendChild(clone);
+
+  html2canvas(wrapper, {
+    scale: 2,
+    useCORS: true,
+    backgroundColor: '#f0f4f5',
+    width: 900,
+    windowWidth: 900,
+    logging: false
+  }).then(canvas => {
+    document.body.removeChild(wrapper);
+    const dataURL = canvas.toDataURL('image/jpeg', 0.85);
+    salvarImagemParaBot(dataURL);
+    console.log('[bot] Imagem gerada automaticamente');
+  }).catch(e => {
+    document.body.removeChild(wrapper);
+    console.warn('[bot] Erro ao gerar imagem:', e.message);
+  });
 }
 </script>
 </body>
