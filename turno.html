@@ -5952,11 +5952,20 @@ setTimeout(presenceInit, 1500);
     }
     if (typeof dbSaveTurno === 'function') dbSaveTurno();
     try { render(); } catch(e) {}
-    // Gera e salva imagem para o bot (usa o mesmo tirarPrint)
+    // Gera e salva imagem para o bot com filtro BA forçado
     setTimeout(function() {
       if (typeof tirarPrint === 'function') {
-        window._botMode = true; // flag: salva no Supabase, não faz download
+        // Salva filtros atuais
+        var prevState = turnoStateFilter;
+        var prevBase  = turnoBaseFilter;
+        // Força filtro BA
+        turnoStateFilter = 'ba';
+        turnoBaseFilter  = 'todos';
+        window._botMode  = true;
         tirarPrint();
+        // Restaura filtros originais
+        turnoStateFilter = prevState;
+        turnoBaseFilter  = prevBase;
       }
     }, 1500);
 
