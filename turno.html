@@ -1714,6 +1714,15 @@ if (!window._botMode) {
   a.download = 'turno_' + currentDate.replace(/\//g, '_') + '.png';
   a.href = dataURL;
   a.click();
+} else {
+  // Restaura filtros APÓS captura (async — não antes!)
+  if (window._botPrevState !== undefined) {
+    turnoStateFilter = window._botPrevState;
+    turnoBaseFilter  = window._botPrevBase;
+    window._botPrevState = undefined;
+    window._botPrevBase  = undefined;
+    try { render(); } catch(e) {}
+  }
 }
 window._botMode = false;
 document.body.removeChild(wrapper);
@@ -5955,17 +5964,13 @@ setTimeout(presenceInit, 1500);
     // Gera e salva imagem para o bot com filtro BA forçado
     setTimeout(function() {
       if (typeof tirarPrint === 'function') {
-        // Salva filtros atuais
-        var prevState = turnoStateFilter;
-        var prevBase  = turnoBaseFilter;
-        // Força filtro BA
+        window._botPrevState = turnoStateFilter;
+        window._botPrevBase  = turnoBaseFilter;
         turnoStateFilter = 'ba';
         turnoBaseFilter  = 'todos';
         window._botMode  = true;
         tirarPrint();
-        // Restaura filtros originais
-        turnoStateFilter = prevState;
-        turnoBaseFilter  = prevBase;
+        // filtros serão restaurados DENTRO do tirarPrint após html2canvas terminar
       }
     }, 1500);
 
