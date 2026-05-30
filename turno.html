@@ -6282,44 +6282,80 @@ function _doCaptureForBot() {
   });
 }
 
-// ── Gera imagem apenas com equipes BA para o bot ─────────────────────────────
+// ── Gera imagem apenas com equipes BA para o bot (HTML direto) ───────────────
 function gerarImagemBA() {
   try {
-    // Filtra apenas BA (-IRC = Irecê, -JAC = Jacobina)
     function isBA(n) { return n && (n.endsWith('-IRC') || n.endsWith('-JAC')); }
-    const okBA    = [...teams.ok].filter(isBA).sort();
-    const justifBA= [...teams.justif].filter(t => isBA(t.name||t)).sort();
-    const faltaBA = [...teams.falta].filter(isBA).sort();
+    const okBA    = [...(teams.ok||[])].filter(isBA).sort();
+    const justifBA= [...(teams.justif||[])].filter(function(t){ return isBA(t.name||t); });
+    const faltaBA = [...(teams.falta||[])].filter(isBA).sort();
+    console.log('[bot] gerarImagemBA — ok:', okBA.length, 'falta:', faltaBA.length);
 
-    console.log('[bot] Imagem BA — ok:', okBA.length, 'falta:', faltaBA.length);
+    const doGen = function() {
+      const now  = new Date();
+      const hora = String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
 
-    // Usa buildGrid do tirarPrint para gerar o HTML
-    const now = new Date();
-    const hora = String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
+      // Gera HTML igual ao tirarPrint mas só com dados BA
+      const cardHtml = function(list, type) {
+        if (!list.length) return '<div style="padding:12px 16px;color:#aaa;font-size:13px;">Nenhum</div>';
+        var bg='#f0fafa', border='#e0f5f3', namecol='#1a3a3a', badgeBg='#14a085', badgeTxt='OK';
+        if(type==='justif'){ bg='#fffbf0'; border='#fdefc0'; namecol='#5a3a00'; badgeBg='#f0a500'; badgeTxt='JUS'; }
+        if(type==='falta') { bg='#fff5f5'; border='#ffd8d8'; namecol='#6b1a1a'; badgeBg='#e53e3e'; badgeTxt='FALTA'; }
+        var rows = [], COLS = 4;
+        for(var i=0; i<list.length; i+=COLS) {
+          var row = list.slice(i, i+COLS);
+          var last = i+COLS >= list.length;
+          var rem  = row.length;
+          if(!last) while(row.length<COLS) row.push(null);
+          var cells = row.map(function(item, idx) {
+            if(!item) return '<td style="width:25%;padding:5px 4px;"></td>';
+            var n = typeof item==='string'?item:(item.name||'');
+            var cs = (last && idx===rem-1 && rem<COLS) ? (COLS-rem+1) : 1;
+            var w  = (25*cs)+'%';
+            return '<td '+(cs>1?'colspan="'+cs+'"':'')+'style="width:'+w+';padding:5px 4px;"><div style="background:'+bg+';border-left:3px solid '+border+';border-radius:4px;padding:9px 12px;display:flex;align-items:center;justify-content:space-between;gap:6px;"><span style="font-size:12.5px;font-weight:700;color:'+namecol+';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+n+'</span><span style="background:'+badgeBg+';color:#fff;font-size:10px;font-weight:800;padding:2px 7px;border-radius:3px;white-space:nowrap;">'+badgeTxt+'</span></div></td>';
+          });
+          rows.push('<tr>'+cells.join('')+'</tr>');
+        }
+        return '<table style="width:100%;border-collapse:collapse;">'+rows.join('')+'</table>';
+      };
 
-    // Reutiliza a função buildGrid via tirarPrint com dados BA
-    // Salva os times originais, substitui temporariamente, chama tirarPrint, restaura
-    const _ok    = teams.ok;
-    const _justif= teams.justif;
-    const _falta = teams.falta;
-    const _state = turnoStateFilter;
-    const _base  = turnoBaseFilter;
+      var sectionHtml = function(icon, title, count, bg, headerBg, divBg, grid) {
+        return '<div style="background:#fff;border-radius:10px;margin-bottom:16px;overflow:hidden;border:1px solid #e0e0e0;"><div style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px;background:'+headerBg+';border-bottom:2px solid '+divBg+'"><div style="display:flex;align-items:center;gap:10px;font-size:0.88rem;font-weight:900;color:#222;">'+icon+' '+title+'</div><span style="font-size:1.5rem;font-weight:900;color:'+bg+'">'+count+'</span></div><div>'+grid+'</div></div>';
+      };
 
-    teams.ok     = okBA;
-    teams.justif = justifBA;
-    teams.falta  = faltaBA;
-    turnoStateFilter = 'todos'; // já filtrado manualmente
-    turnoBaseFilter  = 'todos';
-    window._botMode  = true;
+      var html = '<div style="font-family:Barlow,Arial,sans-serif;background:#f0f4f5;padding:0;width:900px;">' +
+        '<div style="background:linear-gradient(135deg,#0d7377,#14a085);padding:22px 24px;">' +
+        '<div style="font-size:32px;font-weight:900;color:#fff;">TURNO HOJE ('+currentDate+')</div>' +
+        '<div style="font-size:13px;color:rgba(255,255,255,0.75);margin-top:5px;letter-spacing:2px;text-transform:uppercase;">Relatório: '+currentDate+' · '+hora+' · BA</div>' +
+        '</div><div style="height:4px;background:linear-gradient(90deg,#ff6b35,#ff9a3c,#ff6b35);"></div>' +
+        '<div style="padding:20px 20px 10px;">' +
+        sectionHtml('✅','ABRIU TURNO', okBA.length, '#0d7377','#f0fafa','#c0e8e5', cardHtml(okBA,'ok')) +
+        (justifBA.length ? sectionHtml('⚠️','FALTA JUSTIFICADA', justifBA.length,'#b97400','#fffbf0','#f0d080',cardHtml(justifBA,'justif')) : '') +
+        sectionHtml('🔴','NÃO ABRIU TURNO', faltaBA.length,'#c53030','#fff5f5','#fcc',cardHtml(faltaBA,'falta')) +
+        '</div><div style="text-align:center;padding:4px 0 16px;font-size:11px;color:#aaa;">Mariuá Construção e Energia · OBRAS BA</div></div>';
 
-    tirarPrint();
+      var wrapper = document.createElement('div');
+      wrapper.style.cssText = 'position:fixed;left:-9999px;top:0;z-index:-1;';
+      wrapper.innerHTML = html;
+      document.body.appendChild(wrapper);
 
-    // Restaura imediatamente (tirarPrint salva o HTML antes do async)
-    teams.ok     = _ok;
-    teams.justif = _justif;
-    teams.falta  = _falta;
-    turnoStateFilter = _state;
-    turnoBaseFilter  = _base;
+      html2canvas(wrapper, { scale:2.5, useCORS:true, backgroundColor:'#f0f4f5', width:900, windowWidth:900 })
+        .then(function(canvas) {
+          var dataURL = canvas.toDataURL('image/jpeg', 0.88);
+          salvarImagemParaBot(dataURL);
+          document.body.removeChild(wrapper);
+          console.log('[bot] Imagem BA salva!');
+        })
+        .catch(function(e) { document.body.removeChild(wrapper); console.warn('[bot]', e.message); });
+    };
+
+    if (window.html2canvas) { doGen(); }
+    else {
+      var s = document.createElement('script');
+      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+      s.onload = doGen;
+      document.head.appendChild(s);
+    }
   } catch(e) {
     console.warn('[bot] Erro gerarImagemBA:', e.message);
   }
