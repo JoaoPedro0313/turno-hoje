@@ -4397,7 +4397,15 @@ function mapaEnsureLeaflet(cb) {
       window._mapaModeSat = true;
       _mapaTileSat.addTo(mapaMap);
       _mapaTileLabels.addTo(mapaMap);
-      mapaLayerGroup = L.layerGroup().addTo(mapaMap);
+      mapaLayerGroup = (window.L && L.markerClusterGroup)
+      ? L.markerClusterGroup({
+          maxClusterRadius: 40,
+          spiderfyOnMaxZoom: true,
+          showCoverageOnHover: false,
+          zoomToBoundsOnClick: true,
+          disableClusteringAtZoom: 14
+        }).addTo(mapaMap)
+      : L.layerGroup().addTo(mapaMap);
       mapaMap.setView([-11.3, -41.2], 9);
     }
     mapaMap.invalidateSize();
@@ -4412,7 +4420,17 @@ function mapaEnsureLeaflet(cb) {
   }
   const s = document.createElement('script');
   s.src='https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js';
-  s.onload = doInit;
+  s.onload = function() {
+    // Carrega MarkerCluster para melhor performance
+    const mcc = document.createElement('link');
+    mcc.rel='stylesheet';
+    mcc.href='https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/MarkerCluster.Default.min.css';
+    document.head.appendChild(mcc);
+    const mcs = document.createElement('script');
+    mcs.src='https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/leaflet.markercluster.min.js';
+    mcs.onload = doInit;
+    document.head.appendChild(mcs);
+  };
   document.head.appendChild(s);
 }
 function mapaRenderFiltros() {
