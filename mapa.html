@@ -4589,7 +4589,10 @@ const iconHtml = '<div style="width:13px;height:13px;border-radius:50%;backgroun
 const icon = L.divIcon({className:'',html:iconHtml,iconSize:[13,13],iconAnchor:[6,6]});
 const marker = L.marker([d.lat,d.lon],{icon}).addTo(mapaLayerGroup);
 marker.bindPopup(popup,{maxWidth:310});
-bounds.push([d.lat,d.lon]);
+// Só inclui no fitBounds se estiver dentro do Brasil (evita zoom mundial por coords inválidas)
+if (d.lat >= -34 && d.lat <= 6 && d.lon >= -74 && d.lon <= -28) {
+  bounds.push([d.lat,d.lon]);
+}
 _addedCount++;
 } catch(err) {
   _errorCount++;
