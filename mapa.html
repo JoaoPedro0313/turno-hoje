@@ -694,9 +694,7 @@ async function mapaMMCarregarSupabase() {
     const data = await res.json();
     if (!data || !data.length || !data[0].value) { console.log('[meses] Registro não encontrado no banco.'); return; }
     const extras = Array.isArray(data[0].value) ? data[0].value : [];
-    // Reconstrói GSHEETS_MESES: fixos + extras do Supabase
-    const fixos = [{ano:2026,mes:1},{ano:2026,mes:2},{ano:2026,mes:3},{ano:2026,mes:4},{ano:2026,mes:5}];
-    GSHEETS_MESES = GSHEETS_MESES.filter(e => fixos.some(f=>f.ano===e.ano&&f.mes===e.mes));
+    // Reconstrói GSHEETS_MESES: mantém todos os já existentes + adiciona novos extras
     extras.forEach(e => {
       if (e && e.ano && e.mes && !GSHEETS_MESES.find(m => m.ano===e.ano && m.mes===e.mes)) {
         GSHEETS_MESES.push(e);
