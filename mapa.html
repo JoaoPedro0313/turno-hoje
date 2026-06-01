@@ -1584,14 +1584,17 @@ const navProg = document.getElementById('nav-prog');
 if (navProg) navProg.className = 'page-nav-btn' + (page==='prog' ? ' active-prog' : '');
 if (page==='mapa') {
   setTimeout(() => {
-    if (bancoDB && bancoDB.length) {
-      // Sempre recarrega para garantir dados atualizados
+    // Só recarrega banco se NÃO estiver vendo dados das planilhas
+    if (window._mapaViewingSheets) {
+      // Usuário está vendo um mês das planilhas — não sobrescreve com banco
+      mapaEnsureLeaflet(null);
+      setTimeout(() => { try { mapaMap && mapaMap.invalidateSize(); } catch(e) {} }, 200);
+    } else if (bancoDB && bancoDB.length) {
       mapaCarregarDoBanco();
     } else {
-      // Sem banco local: inicia mapa vazio e tenta buscar do servidor
       mapaEnsureLeaflet(null);
       dbLoadObrasBase().then(() => {
-        if (bancoDB && bancoDB.length) mapaCarregarDoBanco();
+        if (bancoDB && bancoDB.length && !window._mapaViewingSheets) mapaCarregarDoBanco();
       }).catch(() => {});
     }
     mapaProgOnShow();
