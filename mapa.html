@@ -273,6 +273,10 @@
         <span style="font-size:0.85rem;font-weight:800;color:#68d391;">🔍 DIAGNÓSTICO DO BANCO</span>
         <button onclick="document.getElementById('mapa-diag-panel').style.display='none'" style="background:#e53e3e;color:#fff;border:none;border-radius:6px;padding:3px 12px;cursor:pointer;font-size:0.72rem;font-weight:800;">✕ Fechar</button>
       </div>
+      <div style="display:flex;gap:8px;margin-bottom:12px;">
+        <input id="mapa-diag-pep-input" type="text" placeholder="Buscar PEP (ex: B-1252676)" style="flex:1;padding:6px 10px;border:1px solid #444;border-radius:6px;background:#2d3748;color:#e2e8f0;font-family:monospace;font-size:0.78rem;">
+        <button onclick="mapaDiagnosticar()" style="padding:6px 14px;background:#14a085;color:#fff;border:none;border-radius:6px;font-family:Barlow,sans-serif;font-size:0.72rem;font-weight:800;cursor:pointer;">🔍 Buscar</button>
+      </div>
       <div id="mapa-diag-content" style="white-space:pre-wrap;line-height:1.8;"></div>
       <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap;">
         <button onclick="mapaEnsureLeaflet(()=>{mapaRenderFiltros();mapaFiltrar();})" style="padding:6px 14px;background:#38a169;color:#fff;border:none;border-radius:8px;font-family:'Barlow',sans-serif;font-size:0.72rem;font-weight:800;cursor:pointer;">📍 Renderizar marcadores</button>
@@ -2163,7 +2167,8 @@ function mapaDiagnosticar() {
     txt += '\n📊 RESULTADO: ' + comCoord + ' de ' + mapaData.length + ' obras com coordenadas válidas\n';
 
     // 5. Busca obra específica por PEP
-    const pepBusca = prompt('Buscar obra por PEP (ex: B-1252676) ou ENTER para pular:');
+    const _pepInput = document.getElementById('mapa-diag-pep-input');
+    const pepBusca = _pepInput ? _pepInput.value.trim() : prompt('Buscar obra por PEP (ex: B-1252676) ou ENTER para pular:');
     if (pepBusca && pepBusca.trim()) {
       const obraRaw = bancoDB.find(o => (o['PEP OBRA']||'').includes(pepBusca.trim()));
       const obraMap = mapaData.find(o => (o.pep||'').includes(pepBusca.trim()));
@@ -2550,6 +2555,7 @@ function mapaRotaDistCalcular() {
   }).addTo(mapaMap);
 
   // Adiciona marcadores numerados sobre o mapa (re-numera sobre os existentes)
+  if (!mapaLayerGroup) return;
   mapaLayerGroup.clearLayers();
   sorted.forEach((d, i) => {
     const cor = mapaGetCor(d.status);
@@ -4048,8 +4054,12 @@ function mapaCarregarMes(ano, mes) {
   window._mapaMesDoSheets = true; // marca que o mapa está mostrando dados das planilhas
   const mt = document.getElementById('mapa-titulo');
   if (mt) { mt.textContent = '⏳ Carregando '+label+'...'; mt.style.color='#888'; }
-  const urlJac = GSHEETS_BASE.JACOBINA + entry.gidJacobina;
-  const urlIrc = GSHEETS_BASE.IRECE + entry.gidIrece;
+  if (!entry.gidJacobina && !entry.gidIrece) {
+    console.warn('[mapa] Entrada do mês sem GIDs:', entry);
+    return;
+  }
+  const urlJac = entry.gidJacobina ? GSHEETS_BASE.JACOBINA + entry.gidJacobina : null;
+  const urlIrc = entry.gidIrece ? GSHEETS_BASE.IRECE + entry.gidIrece : null;
 
   // CORRIGIDO: timeout de segurança — se o Sheets não responder em 15s, libera o banco local
   const _mesFlagTimeout = setTimeout(() => {
@@ -4501,7 +4511,7 @@ function mapaEnsureLeaflet(cb) {
       window._mapaModeSat = true;
       _mapaTileSat.addTo(mapaMap);
       _mapaTileLabels.addTo(mapaMap);
-      mapaLayerGroup = (window.L && L.markerClusterGroup)
+      try { mapaLayerGroup = (window.L && L.markerClusterGroup)
       ? L.markerClusterGroup({
           maxClusterRadius: 40,
           spiderfyOnMaxZoom: true,
@@ -4509,7 +4519,7 @@ function mapaEnsureLeaflet(cb) {
           zoomToBoundsOnClick: true,
           disableClusteringAtZoom: 14
         }).addTo(mapaMap)
-      : L.layerGroup().addTo(mapaMap);
+      : L.layerGroup().addTo(mapaMap); } catch(e) { mapaLayerGroup = L.layerGroup().addTo(mapaMap); }
       mapaMap.setView([-11.3, -41.2], 9);
     }
     mapaMap.invalidateSize();
@@ -4605,6 +4615,7 @@ const sep = document.createElement('span'); sep.style.cssText='border-left:1.5px
 Object.entries(statusCount).sort((a,b)=>b[1]-a[1]).forEach(([s,c]) => mkStatus(s,s,c,mapaGetCor(s)+'44'));
 }
 function mapaFiltrar() {
+  if (!mapaMap || !mapaLayerGroup) return;
 if (!mapaMap || !mapaLayerGroup) return;
 mapaLayerGroup.clearLayers();
 const search = (document.getElementById('mapa-search')?document.getElementById('mapa-search').value||'':'').toLowerCase();
@@ -4733,7 +4744,7 @@ _addedCount++;
 if (_errorCount > 0) {
   console.warn('[MAPA] forEach errors:', _errorCount, '/', filtered.length);
 }
-if (bounds.length && !mapaFitFeito && !mapaUsuarioMoveu) { mapaMap.fitBounds(bounds,{padding:[28,28]}); mapaFitFeito=true; }
+if (bounds.length > 1 && !mapaFitFeito && !mapaUsuarioMoveu) { try { mapaMap.fitBounds(bounds,{padding:[28,28]}); mapaFitFeito=true; } catch(e){} }
 // Atualiza destaque do raio DEPOIS de renderizar
 if (mapaRaioCentro) setTimeout(mapaRaioHighlight, 50);
 // Se raio ativo e sem resultados, não reseta o mapa — mantém a visão atual
