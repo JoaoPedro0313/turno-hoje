@@ -894,7 +894,12 @@ if (row.key==='producao') { producao = row.value || {}; }
 if (row.key==='obras_base') {
 // Se o usuário está visualizando um mês específico das planilhas,
 // atualiza apenas o cache local sem sobrescrever bancoDB
-if (window._mapaMesDoSheets) {
+const _viewingSheetsMes = window._mapaMesDoSheets ||
+  (window.mapaMesAtivo && (function(){
+    var now = new Date();
+    return !(mapaMesAtivo.ano === now.getFullYear() && mapaMesAtivo.mes === (now.getMonth()+1));
+  })());
+if (_viewingSheetsMes) {
   // Salva no localStorage para quando voltar ao mês atual
   try { lsSet('obras_base', row.value); } catch(e2) {}
   bancoDBInfo = row.value.info || null;
