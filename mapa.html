@@ -44,6 +44,23 @@
   });
 })();
 </script>
+<script>
+// Console limpo: silencia os logs internos de diagnóstico (mensagens que começam com [Tag],
+// ex.: [mapa], [meses], [Supabase]). Erros reais (console.error) continuam aparecendo.
+// Para reativar todos os logs: rode no console  localStorage.setItem('mariua_debug','1')  e recarregue.
+(function(){
+  try { if (localStorage.getItem('mariua_debug') === '1') return; } catch(e) {}
+  var TAG = /^\s*\[[^\]]+\]/;
+  ['log','info','debug','warn'].forEach(function(m){
+    var orig = (console[m] || function(){}).bind(console);
+    console[m] = function(){
+      var a0 = arguments[0];
+      if (typeof a0 === 'string' && TAG.test(a0)) return;
+      orig.apply(console, arguments);
+    };
+  });
+})();
+</script>
 <!-- SEGURANÇA: Content Security Policy — limita fontes de scripts, estilos e conexões -->
 <meta http-equiv="Content-Security-Policy"
   content="default-src 'self'
