@@ -4517,6 +4517,12 @@ function mapaEnsureLeaflet(cb) {
           mapaFitFeito = true; // impede fitBounds automático após zoom manual
         }
       });
+      // Clicar numa obra (abrir o popup) conta como interação do usuário:
+      // assim re-renders em background não voltam a dar fitBounds/scroll e resetar a visão.
+      mapaMap.on('popupopen', function() {
+        mapaUsuarioMoveu = true;
+        mapaFitFeito = true;
+      });
       // Não marcar como movido quando for clique para raio
       mapaMap.on('click', function() {
         if (mapaRaioModoClick) return; // clique para raio — não marca como movido
