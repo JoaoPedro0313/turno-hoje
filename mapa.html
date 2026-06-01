@@ -853,7 +853,7 @@ let mapaUsuarioMoveu=false; // usuário já interagiu com zoom/pan manualmente
 let mapaCavaFiltro='TODAS', mapaPostFiltro='TODAS', mapaProgressoFiltro='TODOS';
 // Mês ativo na barra de meses (baseado em GSHEETS_MESES); null = usa o bancoDB já carregado
 let mapaMesAtivo = null;
-let _mapaViewingSheets = false; // true = usuário está vendo dados das planilhas (não banco)
+window._mapaViewingSheets = false; // true = usuário está vendo dados das planilhas (não banco)
 let mapaRaioAtivo=false, mapaRaioCircle=null, mapaRaioMarker=null, mapaRaioModoClick=false, mapaRaioCentro=null, mapaRaioKm=50;
 let mapaRotaLayerGroup = null;
 let mapaRotaSelecionadas = [];
@@ -893,7 +893,7 @@ if (row.key==='obras_base') {
 // Se o usuário está visualizando um mês específico das planilhas,
 // atualiza apenas o cache local sem sobrescrever bancoDB
 // Bloqueia reload do banco se usuário está vendo planilhas (independente do mês)
-const _viewingSheetsMes = _mapaViewingSheets || window._mapaMesDoSheets ||
+const _viewingSheetsMes = window._mapaViewingSheets || window._mapaMesDoSheets ||
   (window.mapaMesAtivo && (function(){
     var now = new Date();
     return !(mapaMesAtivo.ano === now.getFullYear() && mapaMesAtivo.mes === (now.getMonth()+1));
@@ -4047,7 +4047,7 @@ function mapaCarregarMes(ano, mes) {
   });
   const label = (MESES_PT[mes]||'?')+'/'+String(ano).slice(-2);
   window._mapaMesDoSheets = true; // marca que o mapa está mostrando dados das planilhas
-  _mapaViewingSheets = true; // flag permanente — só reseta se usuário voltar ao banco
+  window._mapaViewingSheets = true; // flag permanente — só reseta se usuário voltar ao banco
   const mt = document.getElementById('mapa-titulo');
   if (mt) { mt.textContent = '⏳ Carregando '+label+'...'; mt.style.color='#888'; }
   if (!entry.gidJacobina && !entry.gidIrece) {
@@ -4063,7 +4063,7 @@ function mapaCarregarMes(ano, mes) {
     window._mapaCarregarMesInterno = false;
     if (mt) { mt.textContent = '❌ Timeout ao carregar '+label+' — verifique se as planilhas estão públicas'; mt.style.color='#c53030'; }
     console.warn('[mapaCarregarMes] timeout de 15s atingido para', label);
-    // Timeout: mantém _mapaViewingSheets para não resetar dados do usuário
+    // Timeout: mantém window._mapaViewingSheets para não resetar dados do usuário
     console.warn('[mapaCarregarMes] Timeout — mantendo última visualização');
   }, 15000);
 
@@ -4117,7 +4117,7 @@ function mapaCarregarMes(ano, mes) {
   });
 }
 window.mapaVoltarAoBanco = function() {
-  _mapaViewingSheets = false;
+  window._mapaViewingSheets = false;
   window._mapaMesDoSheets = false;
   mapaMesAtivo = null;
   document.querySelectorAll('.mapa-mes-btn').forEach(b => {
@@ -4371,7 +4371,7 @@ if (!bancoDB || !bancoDB.length) {
 }
 // BLOQUEIO PRINCIPAL: se usuário está vendo planilha, NUNCA sobrescrever com banco
 // _mapaCarregarMesInterno=true só permite a chamada vinda de mapaCarregarMes
-if (_mapaViewingSheets && !window._mapaCarregarMesInterno) {
+if (window._mapaViewingSheets && !window._mapaCarregarMesInterno) {
   console.log('[mapa] Bloqueado mapaCarregarDoBanco — usuário está vendo planilha');
   return;
 }
