@@ -3987,6 +3987,12 @@ if (icon) icon.textContent = '⚡';
 }
 const MESES_PT = ['','JAN','FEV','MAR','ABR','MAI','JUN','JUL','AGO','SET','OUT','NOV','DEZ'];
 const MESES_ORDER = {'JAN':1,'FEV':2,'MAR':3,'ABR':4,'MAI':5,'JUN':6,'JUL':7,'AGO':8,'SET':9,'OUT':10,'NOV':11,'DEZ':12};
+// Lê o rótulo de mês declarado no topo de uma aba (ex.: "JUN/26"), se existir.
+function mapaMesDaPlanilha(csvText) {
+  const m = String(csvText || '').slice(0, 800).toUpperCase()
+    .match(/\b(JAN|FEV|MAR|ABR|MAI|JUN|JUL|AGO|SET|OUT|NOV|DEZ)\s*\/\s*(\d{2})\b/);
+  return m ? (m[1] + '/' + m[2]) : null;
+}
 function parseMesObra(dateStr) {
 if (!dateStr) return null;
 const s = String(dateStr).trim().split(/[\s\n]/)[0].trim();
@@ -4137,10 +4143,21 @@ function mapaCarregarMes(ano, mes) {
       if (!resJac.ok) throw new Error('HTTP '+resJac.status+' (Jacobina) — verifique se a planilha está pública');
       if (!resIrc.ok) throw new Error('HTTP '+resIrc.status+' (Irecê) — verifique se a planilha está pública');
       const [textJac, textIrc] = await Promise.all([resJac.text(), resIrc.text()]);
-      const dataJac = compParseCSVText(textJac, 'JACOBINA') || [];
-      const dataIrc = compParseCSVText(textIrc, 'IRECÊ') || [];
+      let dataJac = compParseCSVText(textJac, 'JACOBINA') || [];
+      let dataIrc = compParseCSVText(textIrc, 'IRECÊ') || [];
       if (!dataJac.length && !dataIrc.length) throw new Error('Nenhum dado reconhecido nas planilhas — verifique o compartilhamento (deve ser "Qualquer pessoa com o link")');
       clearTimeout(_mesFlagTimeout); // sucesso — cancela o timeout de segurança
+      // Verifica o mês REAL declarado em cada aba (célula do topo, ex.: "JUN/26").
+      // Se a aba ainda estiver em outro mês (ex.: Irecê de Junho com conteúdo de Maio),
+      // não usa as obras dela — assim o mapa nunca mostra mês errado.
+      const mesJac = mapaMesDaPlanilha(textJac);
+      const mesIrc = mapaMesDaPlanilha(textIrc);
+      const avisosMes = [];
+      if (entry.gidJacobina && mesJac && mesJac !== label) { avisosMes.push('Jacobina ainda em '+mesJac); dataJac = []; }
+      if (entry.gidIrece    && mesIrc && mesIrc !== label) { avisosMes.push('Irecê ainda em '+mesIrc);    dataIrc = []; }
+      window._mapaAvisoMes = avisosMes.length
+        ? ('⚠️ '+avisosMes.join(' · ')+' — exibindo só o que é de '+label)
+        : '';
       // Substitui bancoDB temporariamente com dados deste mês
       bancoDB = [...dataJac, ...dataIrc];
       const pad = n => String(n).padStart(2,'0');
@@ -4153,6 +4170,13 @@ function mapaCarregarMes(ano, mes) {
       // CORRIGIDO: sinaliza que esta é a chamada interna (não deve ser bloqueada pela flag)
       window._mapaCarregarMesInterno = true;
       mapaCarregarDoBanco();
+      // Se alguma aba estava em outro mês, mostra o aviso no título (após o render)
+      if (window._mapaAvisoMes) {
+        setTimeout(function(){
+          const t = document.getElementById('mapa-titulo');
+          if (t) { t.textContent = window._mapaAvisoMes; t.style.color = '#b7791f'; }
+        }, 60);
+      }
     } catch(e) {
       clearTimeout(_mesFlagTimeout);
       // CORRIGIDO: reseta a flag para não bloquear o banco local indefinidamente
