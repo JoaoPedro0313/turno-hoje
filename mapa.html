@@ -3975,6 +3975,23 @@ if (icon) icon.textContent = '⚡';
 }
 const MESES_PT = ['','JAN','FEV','MAR','ABR','MAI','JUN','JUL','AGO','SET','OUT','NOV','DEZ'];
 const MESES_ORDER = {'JAN':1,'FEV':2,'MAR':3,'ABR':4,'MAI':5,'JUN':6,'JUL':7,'AGO':8,'SET':9,'OUT':10,'NOV':11,'DEZ':12};
+// Converte um mês de obra ("JUL/26") em índice comparável (ano*12+mês). Null se não reconhecer.
+function mapaMesIndexDe(mesStr) {
+  if (!mesStr) return null;
+  const m = String(mesStr).trim().toUpperCase().match(/^([A-Z]{3})\s*\/\s*(\d{2,4})$/);
+  if (!m) return null;
+  const mo = MESES_ORDER[m[1]];
+  if (!mo) return null;
+  let y = parseInt(m[2], 10);
+  if (y < 100) y += 2000;
+  return y * 12 + mo;
+}
+// True se a obra tem mês previsto POSTERIOR ao mês selecionado no topo (ex.: Julho ao ver Junho).
+function mapaObraEhFutura(d) {
+  if (!d || !mapaMesAtivo || !d.mes) return false;
+  const i = mapaMesIndexDe(d.mes);
+  return i !== null && i > (mapaMesAtivo.ano * 12 + mapaMesAtivo.mes);
+}
 function parseMesObra(dateStr) {
 if (!dateStr) return null;
 const s = String(dateStr).trim().split(/[\s\n]/)[0].trim();
@@ -4626,7 +4643,7 @@ if (mesBar && GSHEETS_MESES && GSHEETS_MESES.length > 0) {
       📅 ${label}</button>`;
   }).join('');
 } else if (mesWrapper) { mesWrapper.style.display = 'none'; }
-const base = mapaUTDFiltro==='TODAS' ? withCoord : withCoord.filter(d=>d.utd===mapaUTDFiltro);
+const base = (mapaUTDFiltro==='TODAS' ? withCoord : withCoord.filter(d=>d.utd===mapaUTDFiltro)).filter(d=>!mapaObraEhFutura(d));
 // Show extra filters bar
 const extraBar = document.getElementById('mapa-extra-filtros');
 if (extraBar) extraBar.style.display = '';
@@ -4687,6 +4704,8 @@ if (mapaCoordFiltro==='SEM' && d.temCoord) return false;
 if (!d.temCoord && mapaCoordFiltro!=='SEM') return false;
 if (mapaUTDFiltro!=='TODAS' && d.utd!==mapaUTDFiltro) return false;
 if (mapaMesFiltro!=='TODOS' && d.mes!==mapaMesFiltro) return false;
+// Oculta obras com mês previsto/energização posterior ao mês selecionado no topo.
+if (mapaObraEhFutura(d)) return false;
 if (mapaFiltroAtivo!=='TODOS' && d.status.trim()!==mapaFiltroAtivo) return false;
 if (mapaMunFiltro && d.mun!==mapaMunFiltro) return false;
 if (mapaEncFiltro && d.enc!==mapaEncFiltro) return false;
