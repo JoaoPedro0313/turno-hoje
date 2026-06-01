@@ -4322,7 +4322,16 @@ mapaData = bancoDB.map(obj => {
   const _lonKeys = ['LONGITUDE','LONGITUDE OESTE','LONGITUDE (OESTE)','LON','LNG','COORD LON','COORDENADA LON'];
   const _latVal  = _latKeys.map(k=>obj[k]).find(v=>v!=null&&v!=='');
   const _lonVal  = _lonKeys.map(k=>obj[k]).find(v=>v!=null&&v!=='');
-  const lat=mapaParseCoord(_latVal), lon=mapaParseCoord(_lonVal);
+  let lat=mapaParseCoord(_latVal), lon=mapaParseCoord(_lonVal);
+  // Fallback: extrai coordenadas de link Google Maps se lat/lon vazios
+  if (lat===null || lon===null) {
+    const _linkKeys = ['LINK','LOCALIZAÇÃO','LOCALIZACAO','LINK LOCALIZAÇÃO','LINK LOCALIZACAO','GOOGLE MAPS','MAPS','LINK MAPS','LINK DO LOCAL','LOCATION'];
+    const _linkVal = _linkKeys.map(k=>obj[k]).find(v=>v&&String(v).includes('google'));
+    if (_linkVal) {
+      const coords = mapaExtrairCoordsDoLink(String(_linkVal));
+      if (coords) { lat = coords.lat; lon = coords.lon; }
+    }
+  }
   return { pep:obj['PEP OBRA']||'', titulo:obj['TÍTULO']||obj['TITULO']||'', status:obj['STATUS DA OBRA']||'', mun:obj['MUNICIPIO']||obj['MUNICÍPIO']||'', utd:obj['_UTD']||'', lat, lon, cava:obj['CAVA REALIZADA']||'', postR:obj['POSTES  REALIZADO']||obj['POSTES REALIZADO']||'', postI:obj['POSTES  À IMPLANTA']||obj['POSTES À IMPLANTA']||'', enc:obj['ENCARREGADO']||'', mes:mesFromObra(obj)||'', temCoord:lat!==null&&lon!==null };
 });
 const comCoord = mapaData.filter(d=>d.temCoord).length;
