@@ -3266,6 +3266,12 @@ function mapaParseCoord(s) {
   let v = String(s).trim().split('\n')[0].trim();
   // Remove invisible chars
   v = v.replace(/[\u00a0\u200b\u200c\u200d\ufeff]/g, '');
+  // Se é um link do Google Maps, extrai a latitude do link
+  if (v.includes('google') || v.includes('maps') || v.startsWith('http')) {
+    const coords = mapaExtrairCoordsDoLink(v);
+    if (coords) return coords.lat; // retorna só lat aqui; lon será tratado abaixo
+    return null;
+  }
   // Replace comma decimal separator
   v = v.replace(',', '.');
   // Handle "S -11.3" or "W -41.5" prefixes (sometimes exported this way)
@@ -3274,6 +3280,15 @@ function mapaParseCoord(s) {
   v = v.replace(/°.*$/, '');
   const n = parseFloat(v);
   return isNaN(n) ? null : n;
+}
+
+// Versão que retorna {lat, lon} quando a coluna LATITUDE tem um link
+function mapaParseCoordFromLink(latVal, lonVal) {
+  const v = String(latVal||'').trim();
+  if (v.includes('google') || v.includes('maps') || v.startsWith('http')) {
+    return mapaExtrairCoordsDoLink(v);
+  }
+  return null;
 }
 function compNorm(s) { return (s||'').toUpperCase().replace(/\s+/g,'').normalize('NFD').replace(/[\u0300-\u036f]/g,''); }
 function compParseNum(v) { if (v===''||v===null||v===undefined) return null; const n=parseFloat(String(v).replace(',','.')); return isNaN(n)?null:n; }
@@ -4322,8 +4337,17 @@ mapaData = bancoDB.map(obj => {
   const _lonKeys = ['LONGITUDE','LONGITUDE OESTE','LONGITUDE (OESTE)','LON','LNG','COORD LON','COORDENADA LON'];
   const _latVal  = _latKeys.map(k=>obj[k]).find(v=>v!=null&&v!=='');
   const _lonVal  = _lonKeys.map(k=>obj[k]).find(v=>v!=null&&v!=='');
-  let lat=mapaParseCoord(_latVal), lon=mapaParseCoord(_lonVal);
-  // Fallback: extrai coordenadas de link Google Maps se lat/lon vazios
+  // Se LATITUDE tem um link, extrai lat+lon do link
+  let lat, lon;
+  const _linkFromLat = mapaParseCoordFromLink(_latVal, _lonVal);
+  if (_linkFromLat) {
+    lat = _linkFromLat.lat;
+    lon = _linkFromLat.lon;
+  } else {
+    lat = mapaParseCoord(_latVal);
+    lon = mapaParseCoord(_lonVal);
+  }
+  // Fallback: link em coluna dedicada
   if (lat===null || lon===null) {
     const _linkKeys = ['LINK','LOCALIZAÇÃO','LOCALIZACAO','LINK LOCALIZAÇÃO','LINK LOCALIZACAO','GOOGLE MAPS','MAPS','LINK MAPS','LINK DO LOCAL','LOCATION'];
     const _linkVal = _linkKeys.map(k=>obj[k]).find(v=>v&&String(v).includes('google'));
