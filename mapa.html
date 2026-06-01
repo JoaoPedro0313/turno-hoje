@@ -1589,6 +1589,9 @@ if (page==='mapa') {
       // Usuário está vendo um mês das planilhas — não sobrescreve com banco
       mapaEnsureLeaflet(null);
       setTimeout(() => { try { mapaMap && mapaMap.invalidateSize(); } catch(e) {} }, 200);
+      // Debug visual: mostra estado atual
+      const _dbg = document.getElementById('mapa-sheets-flag');
+      if (_dbg) _dbg.textContent = '🟢 ' + (mapaMesAtivo ? ((['JAN','FEV','MAR','ABR','MAI','JUN','JUL','AGO','SET','OUT','NOV','DEZ'][mapaMesAtivo.mes-1]||mapaMesAtivo.mes)+'/'+mapaMesAtivo.ano) : 'Planilha');
     } else if (bancoDB && bancoDB.length) {
       mapaCarregarDoBanco();
     } else {
@@ -4372,15 +4375,14 @@ if (!bancoDB || !bancoDB.length) {
   const mc = document.getElementById('mapa-container'); if (mc) mc.style.display='none';
   return;
 }
-// BLOQUEIO PRINCIPAL: se usuário está vendo planilha, NUNCA sobrescrever com banco
-// _mapaCarregarMesInterno=true só permite a chamada vinda de mapaCarregarMes
-if (window._mapaViewingSheets && !window._mapaCarregarMesInterno) {
-  console.log('[mapa] Bloqueado mapaCarregarDoBanco — usuário está vendo planilha');
+// BLOQUEIO TRIPLO: qualquer uma das 3 condições bloqueia o reload
+const _bloqueado = (window._mapaViewingSheets || window._mapaMesDoSheets || mapaMesAtivo)
+  && !window._mapaCarregarMesInterno;
+if (_bloqueado) {
+  console.log('[mapa] BLOQUEADO mapaCarregarDoBanco — sheets:', window._mapaViewingSheets, '| mesAtivo:', mapaMesAtivo?.mes);
   return;
 }
-// Bloqueia também pela flag antiga para compatibilidade
-if (window._mapaMesDoSheets && !window._mapaCarregarMesInterno) return;
-window._mapaCarregarMesInterno = false; // reseta após uso
+window._mapaCarregarMesInterno = false;
 // Determina qual mês está ativo (usa o mês atual do GSHEETS_MESES se nenhum foi selecionado)
 if (!mapaMesAtivo && GSHEETS_MESES && GSHEETS_MESES.length) {
   const now = new Date();
