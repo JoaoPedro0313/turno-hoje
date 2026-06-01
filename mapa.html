@@ -4525,11 +4525,11 @@ function mapaEnsureLeaflet(cb) {
       _mapaTileLabels.addTo(mapaMap);
       try { mapaLayerGroup = (window.L && L.markerClusterGroup)
       ? L.markerClusterGroup({
-          maxClusterRadius: 40,
+          maxClusterRadius: 25,
           spiderfyOnMaxZoom: true,
           showCoverageOnHover: false,
           zoomToBoundsOnClick: true,
-          disableClusteringAtZoom: 14
+          disableClusteringAtZoom: 11
         }).addTo(mapaMap)
       : L.layerGroup().addTo(mapaMap); } catch(e) { mapaLayerGroup = L.layerGroup().addTo(mapaMap); }
       mapaMap.setView([-11.3, -41.2], 9);
