@@ -4335,8 +4335,6 @@ mapaData = bancoDB.map(obj => {
   // Tenta todos os nomes possíveis de coluna de coordenadas
   const _latKeys = ['LATITUDE','LATITUDE SUL','LATITUDE (SUL)','LAT','COORD LAT','COORDENADA LAT'];
   const _lonKeys = ['LONGITUDE','LONGITUDE OESTE','LONGITUDE (OESTE)','LON','LNG','COORD LON','COORDENADA LON'];
-  const _latVal  = _latKeys.map(k=>obj[k]).find(v=>v!=null&&v!=='');
-  const _lonVal  = _lonKeys.map(k=>obj[k]).find(v=>v!=null&&v!=='');
   // Se LATITUDE tem um link, extrai lat+lon do link
   let lat, lon;
   const _linkFromLat = mapaParseCoordFromLink(_latVal, _lonVal);
@@ -4348,15 +4346,27 @@ mapaData = bancoDB.map(obj => {
     lon = mapaParseCoord(_lonVal);
   }
   // Fallback: link em coluna dedicada
+  let _linkRaw = null, _latFromLink = null, _lonFromLink = null;
   if (lat===null || lon===null) {
     const _linkKeys = ['LINK','LOCALIZAÇÃO','LOCALIZACAO','LINK LOCALIZAÇÃO','LINK LOCALIZACAO','GOOGLE MAPS','MAPS','LINK MAPS','LINK DO LOCAL','LOCATION'];
     const _linkVal = _linkKeys.map(k=>obj[k]).find(v=>v&&String(v).includes('google'));
     if (_linkVal) {
       const coords = mapaExtrairCoordsDoLink(String(_linkVal));
-      if (coords) { lat = coords.lat; lon = coords.lon; }
+      if (coords) { lat = coords.lat; lon = coords.lon; _linkRaw = String(_linkVal); }
+    }
+  } else {
+    // Tem coordenadas diretas — verifica se também tem link para comparar
+    const _linkKeys = ['LINK','LOCALIZAÇÃO','LOCALIZACAO','LINK LOCALIZAÇÃO','LINK LOCALIZACAO','GOOGLE MAPS','MAPS','LINK MAPS','LINK DO LOCAL','LOCATION'];
+    const _linkColVal = _linkKeys.map(k=>obj[k]).find(v=>v&&String(v).includes('google'));
+    // Também verifica se LATITUDE tem link (caso tenha coord em LONGITUDE mas link em LATITUDE)
+    const _linkInLat = _latVal && (String(_latVal).includes('google')||String(_latVal).startsWith('http')) ? _latVal : null;
+    const _anyLink = _linkColVal || _linkInLat;
+    if (_anyLink) {
+      const coords = mapaExtrairCoordsDoLink(String(_anyLink));
+      if (coords) { _latFromLink = coords.lat; _lonFromLink = coords.lon; _linkRaw = String(_anyLink); }
     }
   }
-  return { pep:obj['PEP OBRA']||'', titulo:obj['TÍTULO']||obj['TITULO']||'', status:obj['STATUS DA OBRA']||'', mun:obj['MUNICIPIO']||obj['MUNICÍPIO']||'', utd:obj['_UTD']||'', lat, lon, cava:obj['CAVA REALIZADA']||'', postR:obj['POSTES  REALIZADO']||obj['POSTES REALIZADO']||'', postI:obj['POSTES  À IMPLANTA']||obj['POSTES À IMPLANTA']||'', enc:obj['ENCARREGADO']||'', mes:mesFromObra(obj)||'', temCoord:lat!==null&&lon!==null };
+  return { pep:obj['PEP OBRA']||'', titulo:obj['TÍTULO']||obj['TITULO']||'', status:obj['STATUS DA OBRA']||'', mun:obj['MUNICIPIO']||obj['MUNICÍPIO']||'', utd:obj['_UTD']||'', lat, lon, cava:obj['CAVA REALIZADA']||'', postR:obj['POSTES  REALIZADO']||obj['POSTES REALIZADO']||'', postI:obj['POSTES  À IMPLANTA']||obj['POSTES À IMPLANTA']||'', enc:obj['ENCARREGADO']||'', mes:mesFromObra(obj)||'', temCoord:lat!==null&&lon!==null, latLink:_latFromLink, lonLink:_lonFromLink, linkUrl:_linkRaw };
 });
 const comCoord = mapaData.filter(d=>d.temCoord).length;
 const semCoord = mapaData.length - comCoord;
@@ -6393,11 +6403,24 @@ window.mapaVerificarLocalizacoes = async function() {
                    cidadeBanco === cidadeRealN);
 
       var status = (!cidadeReal) ? 'sem_dados' : (match ? 'ok' : 'suspeito');
+
+      // NOVO: compara coordenadas com o link (se obra tiver link com coords)
+      var distLink = null, linkDivergente = false;
+      if (d.latLink !== null && d.latLink !== undefined && d.lonLink !== null) {
+        distLink = mapaRaioDistKm(d.lat, d.lon, d.latLink, d.lonLink);
+        if (distLink > 0.5) { // mais de 500m de diferença
+          linkDivergente = true;
+          if (status === 'ok') status = 'diverge_link';
+          suspeitas++;
+          ok = Math.max(0, ok-1); // ajusta contador
+        }
+      }
+
       if (status==='ok') ok++;
-      else if (status==='suspeito') suspeitas++;
+      else if (status==='suspeito' || status==='diverge_link') suspeitas++;
       else erros++;
 
-      _verifResultados.push({d:d, cidadeReal:cidadeReal, estadoReal:estadoReal, status:status, addr:addr});
+      _verifResultados.push({d:d, cidadeReal:cidadeReal, estadoReal:estadoReal, status:status, addr:addr, distLink:distLink, linkDivergente:linkDivergente});
 
     } catch(e) {
       erros++;
@@ -6425,20 +6448,24 @@ window.mapaVerificarLocalizacoes = async function() {
 
   listaEl.innerHTML = sorted.map(function(r){
     var d = r.d;
-    var cor = r.status==='ok'?'#276749':r.status==='suspeito'?'#c53030':'#b97400';
-    var bg  = r.status==='ok'?'#f0fff4':r.status==='suspeito'?'#fff5f5':'#fffbf0';
-    var icon= r.status==='ok'?'✅':r.status==='suspeito'?'⚠️':'❓';
+    var cor = r.status==='ok'?'#276749':r.status==='diverge_link'?'#6b46c1':r.status==='suspeito'?'#c53030':'#b97400';
+    var bg  = r.status==='ok'?'#f0fff4':r.status==='diverge_link'?'#faf5ff':r.status==='suspeito'?'#fff5f5':'#fffbf0';
+    var icon= r.status==='ok'?'✅':r.status==='diverge_link'?'🔗':r.status==='suspeito'?'⚠️':'❓';
     var detalhe = r.cidadeReal
       ? ('Encontrado: <b>'+r.cidadeReal+(r.estadoReal?', '+r.estadoReal:'')+'</b>')
       : 'Reverse geocoding não retornou dados';
+    var linkInfo = r.linkDivergente
+      ? '<div style="font-size:0.68rem;color:#6b46c1;margin-top:3px;font-weight:700;">🔗 Link diverge <b>'+r.distLink.toFixed(2)+'km</b> das coordenadas · Link aponta para lat:'+r.d.latLink.toFixed(5)+', lon:'+r.d.lonLink.toFixed(5)+'</div>'
+      : (d.latLink!==null&&d.latLink!==undefined?'<div style="font-size:0.65rem;color:#888;margin-top:2px;">🔗 Link OK · distância: '+(r.distLink||0).toFixed(0)+'m</div>':'');
     return '<div style="padding:10px 16px;border-bottom:1px solid #f0f0f8;background:'+bg+';">' +
       '<div style="display:flex;align-items:flex-start;gap:8px;">' +
       '<span style="font-size:1rem;flex-shrink:0;">'+icon+'</span>' +
       '<div style="flex:1;min-width:0;">' +
       '<div style="font-size:0.8rem;font-weight:800;color:#1a365d;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+(d.titulo||d.pep)+'</div>' +
       '<div style="font-size:0.68rem;color:#555;margin-top:2px;">Banco: <b>'+(d.mun||'—')+'</b> · '+detalhe+'</div>' +
+      linkInfo +
       '</div>' +
-      (r.status==='suspeito'?'<button onclick="mapaAbrirCorrecao(\''+d.pep.replace(/'/g,'')+'\',\''+( d.titulo||d.pep).replace(/'/g,'')+'\',\''+( d.mun||'').replace(/'/g,'')+'\','+d.lat+','+d.lon+')" style="flex-shrink:0;padding:4px 10px;background:#c53030;color:#fff;border:none;border-radius:6px;font-family:Barlow,sans-serif;font-size:0.62rem;font-weight:800;cursor:pointer;">Corrigir</button>':'') +
+      (r.status==='suspeito'||r.status==='diverge_link'?'<button onclick="mapaAbrirCorrecao(\''+d.pep.replace(/'/g,'')+'\',\''+( d.titulo||d.pep).replace(/'/g,'')+'\',\''+( d.mun||'').replace(/'/g,'')+'\','+d.lat+','+d.lon+')" style="flex-shrink:0;padding:4px 10px;background:'+cor+';color:#fff;border:none;border-radius:6px;font-family:Barlow,sans-serif;font-size:0.62rem;font-weight:800;cursor:pointer;">Corrigir</button>':'') +
       '</div></div>';
   }).join('');
 };
