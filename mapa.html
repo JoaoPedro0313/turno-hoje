@@ -2162,6 +2162,29 @@ function mapaDiagnosticar() {
     const comCoord = mapaData.filter(d=>d.temCoord).length;
     txt += '\n📊 RESULTADO: ' + comCoord + ' de ' + mapaData.length + ' obras com coordenadas válidas\n';
 
+    // 5. Busca obra específica por PEP
+    const pepBusca = prompt('Buscar obra por PEP (ex: B-1252676) ou ENTER para pular:');
+    if (pepBusca && pepBusca.trim()) {
+      const obraRaw = bancoDB.find(o => (o['PEP OBRA']||'').includes(pepBusca.trim()));
+      const obraMap = mapaData.find(o => (o.pep||'').includes(pepBusca.trim()));
+      if (obraRaw) {
+        txt += '\n🔍 OBRA ' + pepBusca + ':\n';
+        const latKeys2 = Object.keys(obraRaw).filter(k => /lat/i.test(k));
+        const lonKeys2 = Object.keys(obraRaw).filter(k => /lon|lng/i.test(k));
+        latKeys2.forEach(k => txt += '   '+k+' = '+JSON.stringify(obraRaw[k])+'\n');
+        lonKeys2.forEach(k => txt += '   '+k+' = '+JSON.stringify(obraRaw[k])+'\n');
+        if (obraMap) {
+          txt += '   → lat parseado: ' + obraMap.lat + '\n';
+          txt += '   → lon parseado: ' + obraMap.lon + '\n';
+          txt += '   → temCoord: ' + obraMap.temCoord + '\n';
+          txt += '   → latLink: ' + obraMap.latLink + '\n';
+          txt += '   → linkUrl: ' + (obraMap.linkUrl||'nenhum') + '\n';
+        }
+      } else {
+        txt += '\n❌ Obra "'+pepBusca+'" não encontrada no bancoDB\n';
+      }
+    }
+
     if (comCoord === 0) {
       txt += '\n⚠️  PROBLEMA IDENTIFICADO:\n';
       if (!latKeys.length) {
@@ -3267,9 +3290,9 @@ function mapaParseCoord(s) {
   // Remove invisible chars
   v = v.replace(/[\u00a0\u200b\u200c\u200d\ufeff]/g, '');
   // Se é um link do Google Maps, extrai a latitude do link
-  if (v.includes('google') || v.includes('maps') || v.startsWith('http')) {
+  if (v.startsWith('http') || v.includes('google.com') || v.includes('maps.app')) {
     const coords = mapaExtrairCoordsDoLink(v);
-    if (coords) return coords.lat; // retorna só lat aqui; lon será tratado abaixo
+    if (coords) return coords.lat;
     return null;
   }
   // Replace comma decimal separator
