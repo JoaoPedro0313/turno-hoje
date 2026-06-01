@@ -712,6 +712,20 @@ let GSHEETS_MESES = [
     GSHEETS_MESES.sort((a,b) => a.ano!==b.ano ? a.ano-b.ano : a.mes-b.mes);
   } catch(e) {}
 })();
+// Carrega o ÚLTIMO mês disponível (o mais recente da lista). Usado ao entrar no mapa.
+function mapaCarregarUltimoMes() {
+  if (!Array.isArray(GSHEETS_MESES) || !GSHEETS_MESES.length) return false;
+  let ultimo = GSHEETS_MESES[0];
+  for (const e of GSHEETS_MESES) {
+    if ((e.ano*12 + e.mes) > (ultimo.ano*12 + ultimo.mes)) ultimo = e;
+  }
+  if (ultimo && typeof mapaCarregarMes === 'function') {
+    mapaCarregarMes(ultimo.ano, ultimo.mes);
+    return true;
+  }
+  return false;
+}
+window.mapaCarregarUltimoMes = mapaCarregarUltimoMes;
 // Carrega meses extras do Supabase (compartilhado entre todos os usuários)
 async function mapaMMCarregarSupabase() {
   try {
@@ -733,18 +747,10 @@ async function mapaMMCarregarSupabase() {
     try { localStorage.setItem('mariua_meses_extras', JSON.stringify(extras)); } catch(ex) {}
     if (typeof mapaInitMesBar === 'function') mapaInitMesBar();
     if (typeof mapaMMRenderLista === 'function' && document.getElementById('modal-meses-overlay')?.style.display==='flex') mapaMMRenderLista();
-    // Auto-carrega o mês atual UMA ÚNICA VEZ (no primeiro load) e só se nada estiver ativo.
-    // Os polls seguintes (a cada 30s) atualizam apenas a LISTA de meses — NUNCA recarregam
-    // o mês ativo. Antes, o guard usava window.mapaMesAtivo (que nunca era setado, pois a
-    // variável real é local), então o mapa se recarregava/resetava a cada 30s enquanto o
-    // usuário interagia (ex.: ao clicar numa obra).
+    // Auto-carrega o ÚLTIMO mês (o mais recente) UMA ÚNICA VEZ, só se nada estiver ativo.
+    // Os polls seguintes (30s) atualizam apenas a LISTA de meses — não recarregam o mês ativo.
     if (!window._mapaMesAutoLoaded && !mapaMesAtivo && !window._mapaViewingSheets) {
-      const now2 = new Date();
-      const mesAtualDisp = GSHEETS_MESES.find(e => e.ano===now2.getFullYear() && e.mes===now2.getMonth()+1);
-      if (mesAtualDisp && typeof mapaCarregarMes === 'function') {
-        window._mapaMesAutoLoaded = true;
-        mapaCarregarMes(mesAtualDisp.ano, mesAtualDisp.mes);
-      }
+      if (mapaCarregarUltimoMes()) window._mapaMesAutoLoaded = true;
     }
   } catch(e) { console.error('[meses] Erro ao carregar do Supabase:', e); }
 }
@@ -761,6 +767,12 @@ async function mapaMMNotificarOutros() {
 }
 window.mapaMMNotificarOutros = mapaMMNotificarOutros;
 window.addEventListener('load', function() {
+  // Ao entrar no mapa, abre já no ÚLTIMO mês (lista embutida/local), sem depender do Supabase.
+  setTimeout(function() {
+    if (!window._mapaMesAutoLoaded && !mapaMesAtivo && !window._mapaViewingSheets) {
+      if (mapaCarregarUltimoMes()) window._mapaMesAutoLoaded = true;
+    }
+  }, 1200);
   setTimeout(mapaMMCarregarSupabase, 2000);
   setInterval(mapaMMCarregarSupabase, 30000);
 });
