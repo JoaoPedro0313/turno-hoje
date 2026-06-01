@@ -4370,6 +4370,16 @@ mapaData = bancoDB.map(obj => {
     lat = mapaParseCoord(_latVal);
     lon = mapaParseCoord(_lonVal);
   }
+  // Auto-corrige longitude positiva no Brasil (deveria ser negativa)
+  // Brasil: lon entre -74 e -28. Se lon > 0 e entre 28 e 74, provavelmente falta o sinal "-"
+  if (lon !== null && lon > 0 && lon >= 28 && lon <= 74) {
+    console.warn('[MAPA] Auto-corrigindo longitude positiva para negativa:', lon, '→', -lon);
+    lon = -lon;
+  }
+  // Também corrige lat positiva no Brasil (deveria ser negativa, exceto região norte)
+  if (lat !== null && lat > 6) {
+    console.warn('[MAPA] Lat fora do Brasil:', lat);
+  }
   // Fallback: link em coluna dedicada
   let _linkRaw = null, _latFromLink = null, _lonFromLink = null;
   if (lat===null || lon===null) {
