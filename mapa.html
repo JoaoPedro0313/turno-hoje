@@ -703,11 +703,16 @@ async function mapaMMCarregarSupabase() {
     try { localStorage.setItem('mariua_meses_extras', JSON.stringify(extras)); } catch(ex) {}
     if (typeof mapaInitMesBar === 'function') mapaInitMesBar();
     if (typeof mapaMMRenderLista === 'function' && document.getElementById('modal-meses-overlay')?.style.display==='flex') mapaMMRenderLista();
-    // Só carrega o mês atual automaticamente se o mapa ainda não tiver nenhum mês ativo
-    if (!window.mapaMesAtivo) {
+    // Auto-carrega o mês atual UMA ÚNICA VEZ (no primeiro load) e só se nada estiver ativo.
+    // Os polls seguintes (a cada 30s) atualizam apenas a LISTA de meses — NUNCA recarregam
+    // o mês ativo. Antes, o guard usava window.mapaMesAtivo (que nunca era setado, pois a
+    // variável real é local), então o mapa se recarregava/resetava a cada 30s enquanto o
+    // usuário interagia (ex.: ao clicar numa obra).
+    if (!window._mapaMesAutoLoaded && !mapaMesAtivo && !window._mapaViewingSheets) {
       const now2 = new Date();
       const mesAtualDisp = GSHEETS_MESES.find(e => e.ano===now2.getFullYear() && e.mes===now2.getMonth()+1);
       if (mesAtualDisp && typeof mapaCarregarMes === 'function') {
+        window._mapaMesAutoLoaded = true;
         mapaCarregarMes(mesAtualDisp.ano, mesAtualDisp.mes);
       }
     }
