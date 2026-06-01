@@ -6035,6 +6035,25 @@ setTimeout(presenceInit, 1500);
     if (e.target === this) this.style.display = 'none';
   });
 
+  // Abrir modal de configurações (usado pelo header e por links #gear)
+  window.abrirGear = function() {
+    var m = document.getElementById('gear-modal');
+    if (!m) return;
+    m.style.display = 'flex';
+    setTimeout(function(){ if (typeof renderManageList === 'function') renderManageList(); }, 100);
+  };
+
+  // Abrir configurações se a URL vier com #gear (ex.: vindo do mapa)
+  function checarHashGear() {
+    if (location.hash === '#gear') {
+      window.abrirGear();
+      // limpa o hash pra não reabrir ao recarregar
+      history.replaceState(null, '', location.pathname + location.search);
+    }
+  }
+  checarHashGear();
+  window.addEventListener('hashchange', checarHashGear);
+
   // Restaurar dark mode ao carregar
   if (localStorage.getItem('mariua_darkmode') === '1') {
     const tog = document.getElementById('dark-mode-toggle');
