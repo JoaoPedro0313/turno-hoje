@@ -2348,8 +2348,7 @@ function mapaRaioLimpar() {
   if (mapaRaioCircle) { mapaRaioCircle.remove(); mapaRaioCircle = null; }
   if (mapaRaioMarker) { mapaRaioMarker.remove(); mapaRaioMarker = null; }
   mapaRaioCentro = null;
-  // Só reencaixa se usuário não navegou manualmente
-if (!mapaUsuarioMoveu) mapaFitFeito = false;
+  // Não reseta zoom ao filtrar — usuário mantém sua posição
   // Reset campos de lat/lon
   const latEl = document.getElementById('mapa-raio-lat');
   const lonEl = document.getElementById('mapa-raio-lon');
@@ -4737,7 +4736,7 @@ _addedCount++;
 if (_errorCount > 0) {
   console.warn('[MAPA] forEach errors:', _errorCount, '/', filtered.length);
 }
-if (bounds.length > 1 && !mapaFitFeito && !mapaUsuarioMoveu) { try { mapaMap.fitBounds(bounds,{padding:[28,28]}); mapaFitFeito=true; mapaUsuarioMoveu=false; } catch(e){} }
+if (bounds.length > 1 && !mapaFitFeito && !mapaUsuarioMoveu) { try { mapaMap.fitBounds(bounds,{padding:[28,28]}); mapaFitFeito=true; } catch(e){} }
 // Atualiza destaque do raio DEPOIS de renderizar
 if (mapaRaioCentro) setTimeout(mapaRaioHighlight, 50);
 // Se raio ativo e sem resultados, não reseta o mapa — mantém a visão atual
