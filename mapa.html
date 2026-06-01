@@ -4369,8 +4369,13 @@ if (!bancoDB || !bancoDB.length) {
   const mc = document.getElementById('mapa-container'); if (mc) mc.style.display='none';
   return;
 }
-// Se o usuário já carregou um mês específico das planilhas, não resetar com dados do banco
-// CORRIGIDO: a flag só bloqueia chamadas externas (Supabase/WebSocket), não a chamada interna de mapaCarregarMes
+// BLOQUEIO PRINCIPAL: se usuário está vendo planilha, NUNCA sobrescrever com banco
+// _mapaCarregarMesInterno=true só permite a chamada vinda de mapaCarregarMes
+if (_mapaViewingSheets && !window._mapaCarregarMesInterno) {
+  console.log('[mapa] Bloqueado mapaCarregarDoBanco — usuário está vendo planilha');
+  return;
+}
+// Bloqueia também pela flag antiga para compatibilidade
 if (window._mapaMesDoSheets && !window._mapaCarregarMesInterno) return;
 window._mapaCarregarMesInterno = false; // reseta após uso
 // Determina qual mês está ativo (usa o mês atual do GSHEETS_MESES se nenhum foi selecionado)
