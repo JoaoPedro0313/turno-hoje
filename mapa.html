@@ -3993,6 +3993,16 @@ function mapaMesDaPlanilha(csvText) {
     .match(/\b(JAN|FEV|MAR|ABR|MAI|JUN|JUL|AGO|SET|OUT|NOV|DEZ)\s*\/\s*(\d{2})\b/);
   return m ? (m[1] + '/' + m[2]) : null;
 }
+// Extrai as colunas PES (percentuais de execução) de uma obra da planilha.
+function mapaPesDeObra(obj) {
+  obj = obj || {};
+  return {
+    lv:    obj['PES LV'] || '',
+    lm:    obj['PES LM'] || '',
+    energ: obj['PES ENERGIZAÇÃO'] || obj['PES ENERGIZACAO'] || '',
+    pd:    obj['PES PD'] || ''
+  };
+}
 function parseMesObra(dateStr) {
 if (!dateStr) return null;
 const s = String(dateStr).trim().split(/[\s\n]/)[0].trim();
@@ -4511,7 +4521,7 @@ mapaData = bancoDB.map(obj => {
       if (coords) { _latFromLink = coords.lat; _lonFromLink = coords.lon; _linkRaw = String(_anyLink); }
     }
   }
-  return { pep:obj['PEP OBRA']||'', titulo:obj['TÍTULO']||obj['TITULO']||'', status:obj['STATUS DA OBRA']||'', mun:obj['MUNICIPIO']||obj['MUNICÍPIO']||'', utd:obj['_UTD']||'', lat, lon, cava:obj['CAVA REALIZADA']||'', postR:obj['POSTES  REALIZADO']||obj['POSTES REALIZADO']||'', postI:obj['POSTES  À IMPLANTA']||obj['POSTES À IMPLANTA']||'', enc:obj['ENCARREGADO']||'', mes:mesFromObra(obj)||'', temCoord:lat!==null&&lon!==null, latLink:_latFromLink, lonLink:_lonFromLink, linkUrl:_linkRaw };
+  return { pep:obj['PEP OBRA']||'', titulo:obj['TÍTULO']||obj['TITULO']||'', status:obj['STATUS DA OBRA']||'', mun:obj['MUNICIPIO']||obj['MUNICÍPIO']||'', utd:obj['_UTD']||'', lat, lon, cava:obj['CAVA REALIZADA']||'', postR:obj['POSTES  REALIZADO']||obj['POSTES REALIZADO']||'', postI:obj['POSTES  À IMPLANTA']||obj['POSTES À IMPLANTA']||'', enc:obj['ENCARREGADO']||'', pes:mapaPesDeObra(obj), mes:mesFromObra(obj)||'', temCoord:lat!==null&&lon!==null, latLink:_latFromLink, lonLink:_lonFromLink, linkUrl:_linkRaw };
 });
 const comCoord = mapaData.filter(d=>d.temCoord).length;
 const semCoord = mapaData.length - comCoord;
@@ -4539,7 +4549,7 @@ if (mt) {
         mun:obj['MUNICIPIO']||obj['MUNICÍPIO']||'', utd:obj['_UTD']||'', lat:lat2, lon:lon2,
         cava:obj['CAVA REALIZADA']||'', postR:obj['POSTES  REALIZADO']||obj['POSTES REALIZADO']||'',
         postI:obj['POSTES  À IMPLANTA']||obj['POSTES À IMPLANTA']||'', enc:obj['ENCARREGADO']||'',
-        mes:mesFromObra(obj)||'', temCoord:lat2!==null&&lon2!==null, latLink:null, lonLink:null, linkUrl:null };
+        pes:mapaPesDeObra(obj), mes:mesFromObra(obj)||'', temCoord:lat2!==null&&lon2!==null, latLink:null, lonLink:null, linkUrl:null };
     });
     const comCoord2 = mapaData.filter(d=>d.temCoord).length;
     const colsFound = bancoDB.length > 0 ? Object.keys(bancoDB[0]).join(', ') : '—';
@@ -4780,6 +4790,12 @@ const rotaBtnHtml = d.temCoord ? `<button class="mapa-rota-add-btn" data-pep="${
 const utdTag = d.utd?`<span style="background:#ebf4ff;color:#2b6cb0;padding:1px 7px;border-radius:4px;font-size:0.65rem;font-weight:800;margin-left:4px;">${d.utd}</span>`:'';
 const distTag = (mapaRaioCentro && d.temCoord) ? (()=>{const km=mapaRaioDistKm(mapaRaioCentro.lat,mapaRaioCentro.lon,d.lat,d.lon);return `<span style="background:#f5f3ff;color:#6b46c1;padding:1px 7px;border-radius:4px;font-size:0.65rem;font-weight:800;margin-left:4px;">📏 ${km<1?(km*1000).toFixed(0)+'m':km.toFixed(1)+'km'}</span>`;})() : '';
 const gmapsUrl = `https://www.google.com/maps?q=${d.lat},${d.lon}`;
+const _pes = d.pes || {};
+const _pesItens = [['LV',_pes.lv],['LM',_pes.lm],['Energiz.',_pes.energ],['PD',_pes.pd]]
+  .filter(x => x[1] != null && String(x[1]).trim() !== '');
+const pesHtml = _pesItens.length
+  ? `<div style="margin-bottom:8px;"><div style="font-size:0.62rem;font-weight:800;color:#6b46c1;letter-spacing:0.5px;text-transform:uppercase;margin-bottom:3px;">PES</div><div style="display:flex;gap:4px;flex-wrap:wrap;">${_pesItens.map(x=>`<span style="background:#faf5ff;color:#6b46c1;border:1px solid #e9d8fd;border-radius:6px;padding:3px 8px;font-size:0.66rem;font-weight:800;">${x[0]}: ${String(x[1]).trim()}</span>`).join('')}</div></div>`
+  : '';
 const popup = `<div style="font-family:'Barlow',sans-serif;min-width:240px;max-width:310px;">
 <div style="display:flex;align-items:center;gap:5px;margin-bottom:5px;flex-wrap:wrap;">
   <span style="background:${cor}22;color:${cor};padding:2px 10px;border-radius:4px;font-size:0.68rem;font-weight:800;">${d.status||'–'}</span>${utdTag}${distTag}
@@ -4803,6 +4819,7 @@ ${d.enc?`<div style="font-size:0.72rem;color:#2d3748;font-weight:700;margin-bott
     <div class="_s22">À Implantar</div>
   </div>
 </div>
+${pesHtml}
 <div style="display:flex;gap:6px;margin-bottom:6px;">
   <a href="${gmapsUrl}" target="_blank" rel="noopener" style="flex:1;text-align:center;padding:5px 0;background:#ebf4ff;color:#2b6cb0;border-radius:6px;font-size:0.65rem;font-weight:800;text-decoration:none;font-family:'Barlow',sans-serif;">🗺️ Ver no Maps</a>
   <button onclick="navigator.clipboard&&navigator.clipboard.writeText('${d.lat},${d.lon}')" style="flex:1;padding:5px 0;background:#f0f4f8;color:#555;border:none;border-radius:6px;font-size:0.65rem;font-weight:800;cursor:pointer;font-family:'Barlow',sans-serif;">📋 Copiar coords</button>
