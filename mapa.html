@@ -3986,11 +3986,14 @@ function mapaMesIndexDe(mesStr) {
   if (y < 100) y += 2000;
   return y * 12 + mo;
 }
-// True se a obra tem mês previsto POSTERIOR ao mês selecionado no topo (ex.: Julho ao ver Junho).
-function mapaObraEhFutura(d) {
+// True se a obra tem um mês previsto identificável DIFERENTE do mês selecionado no topo
+// (esconde tanto meses passados quanto futuros — ex.: Maio e Julho ao ver Junho).
+// Obras sem data reconhecível continuam aparecendo, para não esvaziar o mapa.
+function mapaObraForaDoMes(d) {
   if (!d || !mapaMesAtivo || !d.mes) return false;
   const i = mapaMesIndexDe(d.mes);
-  return i !== null && i > (mapaMesAtivo.ano * 12 + mapaMesAtivo.mes);
+  if (i === null) return false;
+  return i !== (mapaMesAtivo.ano * 12 + mapaMesAtivo.mes);
 }
 function parseMesObra(dateStr) {
 if (!dateStr) return null;
@@ -4643,7 +4646,7 @@ if (mesBar && GSHEETS_MESES && GSHEETS_MESES.length > 0) {
       📅 ${label}</button>`;
   }).join('');
 } else if (mesWrapper) { mesWrapper.style.display = 'none'; }
-const base = (mapaUTDFiltro==='TODAS' ? withCoord : withCoord.filter(d=>d.utd===mapaUTDFiltro)).filter(d=>!mapaObraEhFutura(d));
+const base = (mapaUTDFiltro==='TODAS' ? withCoord : withCoord.filter(d=>d.utd===mapaUTDFiltro)).filter(d=>!mapaObraForaDoMes(d));
 // Show extra filters bar
 const extraBar = document.getElementById('mapa-extra-filtros');
 if (extraBar) extraBar.style.display = '';
@@ -4705,7 +4708,7 @@ if (!d.temCoord && mapaCoordFiltro!=='SEM') return false;
 if (mapaUTDFiltro!=='TODAS' && d.utd!==mapaUTDFiltro) return false;
 if (mapaMesFiltro!=='TODOS' && d.mes!==mapaMesFiltro) return false;
 // Oculta obras com mês previsto/energização posterior ao mês selecionado no topo.
-if (mapaObraEhFutura(d)) return false;
+if (mapaObraForaDoMes(d)) return false;
 if (mapaFiltroAtivo!=='TODOS' && d.status.trim()!==mapaFiltroAtivo) return false;
 if (mapaMunFiltro && d.mun!==mapaMunFiltro) return false;
 if (mapaEncFiltro && d.enc!==mapaEncFiltro) return false;
