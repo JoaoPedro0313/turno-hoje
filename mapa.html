@@ -2181,7 +2181,21 @@ function mapaDiagnosticar() {
           txt += '   → linkUrl: ' + (obraMap.linkUrl||'nenhum') + '\n';
         }
       } else {
-        txt += '\n❌ Obra "'+pepBusca+'" não encontrada no bancoDB\n';
+        // Busca em mapaData (pode ser de planilha/Sheets)
+        const obraMap2 = (mapaData||[]).find(function(o){ return (o.pep||'').includes(pepBusca.trim()); });
+        if (obraMap2) {
+          txt += '\n🔍 OBRA ' + pepBusca + ' (planilha/Sheets — não está no banco salvo):\n';
+          txt += '   → lat: ' + obraMap2.lat + '\n';
+          txt += '   → lon: ' + obraMap2.lon + '\n';
+          txt += '   → município: ' + (obraMap2.mun||'—') + '\n';
+          txt += '   → status: ' + (obraMap2.status||'—') + '\n';
+          txt += '   → temCoord: ' + obraMap2.temCoord + '\n';
+          txt += '   → latLink: ' + obraMap2.latLink + '\n';
+          txt += '   → linkUrl: ' + (obraMap2.linkUrl||'nenhum') + '\n';
+          txt += '   ℹ️  Para corrigir: clique no marcador > botão Corrigir\n';
+        } else {
+          txt += '\n❌ Obra "'+pepBusca+'" não encontrada no bancoDB nem no mapaData\n';
+        }
       }
     }
 
