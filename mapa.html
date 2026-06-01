@@ -2348,7 +2348,8 @@ function mapaRaioLimpar() {
   if (mapaRaioCircle) { mapaRaioCircle.remove(); mapaRaioCircle = null; }
   if (mapaRaioMarker) { mapaRaioMarker.remove(); mapaRaioMarker = null; }
   mapaRaioCentro = null;
-  mapaFitFeito = false; // permite reencaixar ao mostrar todas as obras novamente
+  // Só reencaixa se usuário não navegou manualmente
+if (!mapaUsuarioMoveu) mapaFitFeito = false;
   // Reset campos de lat/lon
   const latEl = document.getElementById('mapa-raio-lat');
   const lonEl = document.getElementById('mapa-raio-lon');
@@ -4368,8 +4369,8 @@ if (!mapaMesAtivo && GSHEETS_MESES && GSHEETS_MESES.length) {
   mapaMesAtivo = { ano: entry.ano, mes: entry.mes };
 }
 const ph2 = document.getElementById('mapa-placeholder'); if (ph2) ph2.style.display='none';
-mapaFitFeito = false;
-if (!mapaUsuarioMoveu) mapaUsuarioMoveu = false; // preserva zoom do usuário
+// Só reseta o zoom se usuário ainda não navegou pelo mapa
+if (!mapaUsuarioMoveu) mapaFitFeito = false;
 mapaFiltroAtivo = 'TODOS';
 mapaData = bancoDB.map(obj => {
   // Tenta todos os nomes possíveis de coluna de coordenadas
@@ -4429,8 +4430,7 @@ if (mt) {
     // Tenta nomes alternativos de colunas de coordenadas
     const aliasLat = ['LATITUDE','Latitude','latitude','LAT','lat','Lat'];
     const aliasLon = ['LONGITUDE','Longitude','longitude','LON','lon','Lon','LNG','lng','Lng'];
-    mapaFitFeito = false;
-    if (!mapaUsuarioMoveu) mapaUsuarioMoveu = false; // preserva zoom do usuário
+    if (!mapaUsuarioMoveu) mapaFitFeito = false;
     mapaFiltroAtivo = 'TODOS';
     mapaData = bancoDB.map(obj => {
       const latVal = aliasLat.map(k=>obj[k]).find(v=>v!=null&&v!=='');
@@ -4737,7 +4737,7 @@ _addedCount++;
 if (_errorCount > 0) {
   console.warn('[MAPA] forEach errors:', _errorCount, '/', filtered.length);
 }
-if (bounds.length > 1 && !mapaFitFeito && !mapaUsuarioMoveu) { try { mapaMap.fitBounds(bounds,{padding:[28,28]}); mapaFitFeito=true; } catch(e){} }
+if (bounds.length > 1 && !mapaFitFeito && !mapaUsuarioMoveu) { try { mapaMap.fitBounds(bounds,{padding:[28,28]}); mapaFitFeito=true; mapaUsuarioMoveu=false; } catch(e){} }
 // Atualiza destaque do raio DEPOIS de renderizar
 if (mapaRaioCentro) setTimeout(mapaRaioHighlight, 50);
 // Se raio ativo e sem resultados, não reseta o mapa — mantém a visão atual
