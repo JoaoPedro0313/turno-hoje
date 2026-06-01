@@ -16,8 +16,19 @@
   function checkVersion() {
     fetch(SELF_URL + '?_cb=' + Date.now(), { method: 'HEAD', cache: 'no-store' })
       .then(function(r) {
-        var etag = r else if (!stored) {
+        var etag = r.headers.get('etag') || r.headers.get('last-modified') || '';
+        if (!etag) return;
+        var stored = localStorage.getItem(VERSION_KEY);
+        if (!stored) {
+          // Primeira vez: apenas memoriza a versão atual.
           localStorage.setItem(VERSION_KEY, etag);
+        } else if (etag !== stored) {
+          // Há uma versão nova publicada. NÃO recarrega automaticamente para
+          // não interromper/“resetar” o usuário no meio do uso. Apenas memoriza
+          // e mostra um aviso discreto, se existir o elemento na página.
+          localStorage.setItem(VERSION_KEY, etag);
+          var aviso = document.getElementById('mapa-update-aviso');
+          if (aviso) aviso.style.display = '';
         }
       })
       .catch(function() {});
@@ -4769,13 +4780,20 @@ _addedCount++;
 if (_errorCount > 0) {
   console.warn('[MAPA] forEach errors:', _errorCount, '/', filtered.length);
 }
-// Auto-fitBounds: APENAS na primeira carga, nunca após o usuário navegar
-if (bounds.length > 1 && !mapaFitFeito && !mapaUsuarioMoveu) { try { mapaMap.fitBounds(bounds,{padding:[28,28]}); mapaFitFeito=true; } catch(e){} }
+// Auto-fitBounds: APENAS na PRIMEIRA renderização de marcadores. Depois disso,
+// nenhum re-render (em background ou não) reposiciona/rola — evita "resetar" a visão.
+if (bounds.length > 1 && !window._mapaFitInicialFeito && !mapaFitFeito && !mapaUsuarioMoveu) {
+  try { mapaMap.fitBounds(bounds,{padding:[28,28]}); mapaFitFeito=true; } catch(e){}
+}
+if (bounds.length > 0) window._mapaFitInicialFeito = true;
 // Atualiza destaque do raio DEPOIS de renderizar
 if (mapaRaioCentro) setTimeout(mapaRaioHighlight, 50);
-// Se raio ativo e sem resultados, não reseta o mapa — mantém a visão atual
+// Scroll até o mapa: só na primeiríssima carga, nunca em re-renders posteriores
 const mc = document.getElementById('mapa-container');
-if (mc && !mapaFitFeito) mc.scrollIntoView({behavior:'smooth',block:'center'});
+if (mc && !mapaFitFeito && !window._mapaScrollInicialFeito) {
+  window._mapaScrollInicialFeito = true;
+  mc.scrollIntoView({behavior:'smooth',block:'center'});
+}
 // Atualiza lista de obras
 mapaObrasListaFiltrados = filtered;
 if (typeof mapaObrasListaAtiva !== 'undefined' && mapaObrasListaAtiva) mapaRenderObrasList(filtered);
