@@ -4335,6 +4335,8 @@ mapaData = bancoDB.map(obj => {
   // Tenta todos os nomes possíveis de coluna de coordenadas
   const _latKeys = ['LATITUDE','LATITUDE SUL','LATITUDE (SUL)','LAT','COORD LAT','COORDENADA LAT'];
   const _lonKeys = ['LONGITUDE','LONGITUDE OESTE','LONGITUDE (OESTE)','LON','LNG','COORD LON','COORDENADA LON'];
+  const _latVal  = _latKeys.map(k=>obj[k]).find(v=>v!=null&&v!=='');
+  const _lonVal  = _lonKeys.map(k=>obj[k]).find(v=>v!=null&&v!=='');
   // Se LATITUDE tem um link, extrai lat+lon do link
   let lat, lon;
   const _linkFromLat = mapaParseCoordFromLink(_latVal, _lonVal);
@@ -4383,12 +4385,19 @@ if (mt) {
     mapaData = bancoDB.map(obj => {
       const latVal = aliasLat.map(k=>obj[k]).find(v=>v!=null&&v!=='');
       const lonVal = aliasLon.map(k=>obj[k]).find(v=>v!=null&&v!=='');
-      const lat2 = mapaParseCoord(latVal), lon2 = mapaParseCoord(lonVal);
+      let lat2 = mapaParseCoord(latVal), lon2 = mapaParseCoord(lonVal);
+      // Fallback: link no campo de lat ou em coluna dedicada
+      if (lat2===null || lon2===null) {
+        const _lk = ['LINK','LOCALIZAÇÃO','LOCALIZACAO','GOOGLE MAPS','MAPS'].map(k=>obj[k]).find(v=>v&&String(v).includes('google'));
+        const _lkLat = latVal && (String(latVal).includes('google')||String(latVal).startsWith('http')) ? latVal : null;
+        const _any = _lkLat || _lk;
+        if (_any) { const c=mapaExtrairCoordsDoLink(String(_any)); if(c){lat2=c.lat;lon2=c.lon;} }
+      }
       return { pep:obj['PEP OBRA']||'', titulo:obj['TÍTULO']||obj['TITULO']||'', status:obj['STATUS DA OBRA']||'',
         mun:obj['MUNICIPIO']||obj['MUNICÍPIO']||'', utd:obj['_UTD']||'', lat:lat2, lon:lon2,
         cava:obj['CAVA REALIZADA']||'', postR:obj['POSTES  REALIZADO']||obj['POSTES REALIZADO']||'',
         postI:obj['POSTES  À IMPLANTA']||obj['POSTES À IMPLANTA']||'', enc:obj['ENCARREGADO']||'',
-        mes:mesFromObra(obj)||'', temCoord:lat2!==null&&lon2!==null };
+        mes:mesFromObra(obj)||'', temCoord:lat2!==null&&lon2!==null, latLink:null, lonLink:null, linkUrl:null };
     });
     const comCoord2 = mapaData.filter(d=>d.temCoord).length;
     const colsFound = bancoDB.length > 0 ? Object.keys(bancoDB[0]).join(', ') : '—';
