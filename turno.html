@@ -364,8 +364,8 @@ function esc(s) {
 
 
 const GSHEETS_BASE = {
-  JACOBINA: 'https://docs.google.com/spreadsheets/d/142gvn8pNgJGTGDkidCfuOWMHJ2OCKpJd_FQU8zeo0x8/export?format=csv&gid=',
-  IRECE:    'https://docs.google.com/spreadsheets/d/14ImbZb8-OCBp78jDtd0QFkSLrMG5vXA7tzrM-x6KQVo/export?format=csv&gid='
+  JACOBINA: 'https://docs.google.com/spreadsheets/d/142gvn8pNgJGTGDkidCfuOWMHJ2OCKpJd_FQU8zeo0x8/gviz/tq?tqx=out:csv&gid=',
+  IRECE:    'https://docs.google.com/spreadsheets/d/14ImbZb8-OCBp78jDtd0QFkSLrMG5vXA7tzrM-x6KQVo/gviz/tq?tqx=out:csv&gid='
 };
 // Para adicionar novo mês: inserir { ano: AAAA, mes: M, gidJacobina: XXXXXX, gidIrece: XXXXXX }
 const GSHEETS_MESES = [
@@ -6146,7 +6146,7 @@ async function postoFetchCSV(sid, gid) {
   // Tenta URL de publicação (requer "Publicar na web" no Google Sheets)
   const urlPub    = `https://docs.google.com/spreadsheets/d/${sid}/pub?output=csv&gid=${gid}`;
   // Fallback: URL de exportação (requer apenas compartilhamento público)
-  const urlExport = `https://docs.google.com/spreadsheets/d/${sid}/export?format=csv&gid=${gid}`;
+  const urlExport = `https://docs.google.com/spreadsheets/d/${sid}/gviz/tq?tqx=out:csv&gid=${gid}`;
   for (const url of [urlPub, urlExport]) {
     try {
       const r = await fetch(url, {mode:'cors'});
