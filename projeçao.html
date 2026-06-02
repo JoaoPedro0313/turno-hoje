@@ -2224,7 +2224,7 @@ function renderTabs(){
   renderKpis();
   var r=pdaResult;
   var tabs=[
-    {id:'naoacessaram',label:'Não acessaram',n:r.naoAcessaram.length},
+    {id:'naoacessaram',label:'Não acessaram',n:r.naoAcessaram.filter(function(x){return !x.equipe;}).length},
     {id:'acessaram',label:'Acessaram',n:r.acessaram.length},
     {id:'semcadastro',label:'Sem cadastro',n:r.semCadastro.length}
   ];
@@ -2235,6 +2235,8 @@ function renderTabs(){
 function currentList(){
   if(!pdaResult) return [];
   var list= pdaTab==='acessaram'?pdaResult.acessaram : pdaTab==='semcadastro'?pdaResult.semCadastro : pdaResult.naoAcessaram;
+  /* Na aba "Não acessaram", ocultar quem pertence a alguma equipe */
+  if(pdaTab==='naoacessaram') list=list.filter(function(x){ return !x.equipe; });
   var q=norm($('pda-search').value).toLowerCase();
   if(q) list=list.filter(function(x){ return String(x.nome||'').toLowerCase().indexOf(q)>=0 || String(x.mat||'').indexOf(q)>=0; });
   if(pdaStatus!=='todos' && pdaTab!=='semcadastro') list=list.filter(function(x){ return pdaStatus==='ativo'?x.ativo:!x.ativo; });
