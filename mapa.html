@@ -3428,6 +3428,13 @@ const obj = { _UTD: utdLabel||'' };
 headers.forEach((h,idx) => { obj[h] = String(row[idx]||'').trim(); });
 if (obj['PEP OBRA']) data.push(obj);
 }
+// Detecta o mês declarado no topo da aba (ex.: "JUN/26"), olhando as linhas-título
+// que ficam ANTES do cabeçalho (PEP OBRA). Usado para validar se a aba bate com o mês.
+try {
+  const topo = rows.slice(0, headerIdx + 1).map(r => (r||[]).join(' ')).join(' ').toUpperCase();
+  const mm = topo.match(/\b(JAN|FEV|MAR|ABR|MAI|JUN|JUL|AGO|SET|OUT|NOV|DEZ)\s*\/\s*(\d{2})\b/);
+  data._mesPlanilha = mm ? (mm[1] + '/' + mm[2]) : null;
+} catch(e) { data._mesPlanilha = null; }
 return data;
 }
 let compDataAtual = null, compAllChanges = [], compActiveFilter = 'todos';
@@ -3989,7 +3996,7 @@ const MESES_PT = ['','JAN','FEV','MAR','ABR','MAI','JUN','JUL','AGO','SET','OUT'
 const MESES_ORDER = {'JAN':1,'FEV':2,'MAR':3,'ABR':4,'MAI':5,'JUN':6,'JUL':7,'AGO':8,'SET':9,'OUT':10,'NOV':11,'DEZ':12};
 // Lê o rótulo de mês declarado no topo de uma aba (ex.: "JUN/26"), se existir.
 function mapaMesDaPlanilha(csvText) {
-  const m = String(csvText || '').slice(0, 800).toUpperCase()
+  const m = String(csvText || '').toUpperCase()
     .match(/\b(JAN|FEV|MAR|ABR|MAI|JUN|JUL|AGO|SET|OUT|NOV|DEZ)\s*\/\s*(\d{2})\b/);
   return m ? (m[1] + '/' + m[2]) : null;
 }
@@ -4160,8 +4167,8 @@ function mapaCarregarMes(ano, mes) {
       // Verifica o mês REAL declarado em cada aba (célula do topo, ex.: "JUN/26").
       // Se a aba ainda estiver em outro mês (ex.: Irecê de Junho com conteúdo de Maio),
       // não usa as obras dela — assim o mapa nunca mostra mês errado.
-      const mesJac = mapaMesDaPlanilha(textJac);
-      const mesIrc = mapaMesDaPlanilha(textIrc);
+      const mesJac = (dataJac && dataJac._mesPlanilha) || mapaMesDaPlanilha(textJac);
+      const mesIrc = (dataIrc && dataIrc._mesPlanilha) || mapaMesDaPlanilha(textIrc);
       const avisosMes = [];
       if (entry.gidJacobina && mesJac && mesJac !== label) { avisosMes.push('Jacobina ainda em '+mesJac); dataJac = []; }
       if (entry.gidIrece    && mesIrc && mesIrc !== label) { avisosMes.push('Irecê ainda em '+mesIrc);    dataIrc = []; }
