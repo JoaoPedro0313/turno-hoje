@@ -1002,15 +1002,9 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);min-height:100vh;padd
 <div class="pda-wrap">
   <div class="pda-hdr">
     <h2>📲 Comparação PDA — Cadastro × Acesso</h2>
-    <p>O cadastro de funcionários já vem do banco. Suba só o <b>Relatório de Acesso</b> (CSV) — ele fica <b>salvo no banco e visível para todos os usuários</b>. O sistema cruza por matrícula: quem acessou, quem não acessou e acessos sem cadastro.</p>
+    <p>Dados carregados do banco e visíveis para todos os usuários. Para enviar ou atualizar o <b>Relatório de Acesso</b>, use <b>⚙️ Configurações → Relatório</b> (no topo da página).</p>
   </div>
 
-  <div class="pda-drop" id="pda-drop" onclick="document.getElementById('pda-file').click()">
-    <input type="file" id="pda-file" accept=".csv,text/csv" multiple hidden>
-    <span class="pda-drop-icon">📂</span>
-    <div class="pda-drop-text">Arraste o Relatório de Acesso aqui ou clique para selecionar</div>
-    <div class="pda-drop-sub">O cadastro Funcionário×PDA já está salvo no banco. (Para atualizá-lo, basta soltar um novo CSV de cadastro aqui.)</div>
-  </div>
   <div class="pda-files" id="pda-files"></div>
 
   <div id="pda-results" style="display:none;">
@@ -2134,7 +2128,6 @@ function onFiles(fileList){
   });
 }
 function renderFiles(){
-  var el=$('pda-files'); if(!el) return;
   var html='';
   html+=pdaCad
     ? '<div class="pda-file-chip ok"><span class="ic">👥</span><div>Cadastro<div class="meta">'+(pdaCad.source==='banco'?'banco · ':'')+pdaCad.rows.length+' funcionários</div></div></div>'
@@ -2142,7 +2135,8 @@ function renderFiles(){
   html+=pdaAcc
     ? '<div class="pda-file-chip ok"><span class="ic">📲</span><div>Acesso<div class="meta">'+(pdaAcc.source==='banco'?'banco · ':'')+pdaAcc.rows.length+' acessos'+(pdaAcc.updatedAt?' · '+esc(pdaAcc.updatedAt):'')+'</div></div></div>'
     : '<div class="pda-file-chip"><span class="ic">📲</span><div>Acesso<div class="meta">aguardando relatório…</div></div></div>';
-  el.innerHTML=html;
+  var a=$('pda-files'); if(a) a.innerHTML=html;
+  var b=$('pda-files-gear'); if(b) b.innerHTML=html;
 }
 function maybeCompare(){
   if(pdaCad && pdaAcc){ compute(); $('pda-results').style.display='block'; renderTabs(); pdaRender(); }
@@ -2412,13 +2406,31 @@ function loadAcessoFromBank(){
     })
     .catch(function(){});
 }
+window.pdaOnFiles=function(files){ onFiles(files); };
+window.pdaRefreshGearStatus=function(){ renderFiles(); };
+window.pdaOnDrop=function(e){ if(e&&e.preventDefault) e.preventDefault(); if(e.dataTransfer&&e.dataTransfer.files) onFiles(e.dataTransfer.files); };
+window.gearReportPaneHTML=function(){
+  return ''
+  + '<div class="gear-section-title" style="color:#2b6cb0;border-bottom:2px solid #bee3f8;">📲 Relatório de Acesso PDA</div>'
+  + '<div class="gear-card">'
+  + '<div style="font-size:0.74rem;color:#666;font-weight:700;margin-bottom:10px;line-height:1.45;">Envie o CSV do <b>Relatório de Acesso</b>. Ele é salvo no banco e a comparação fica visível para <b>todos os usuários</b> na aba Projeção.</div>'
+  + '<div class="pda-drop" id="pda-drop-gear" onclick="document.getElementById(\'pda-file-gear\').click()" ondragover="event.preventDefault();this.classList.add(\'dragover\')" ondragleave="this.classList.remove(\'dragover\')" ondrop="this.classList.remove(\'dragover\');window.pdaOnDrop(event)">'
+  + '<input type="file" id="pda-file-gear" accept=".csv,text/csv" multiple hidden onchange="window.pdaOnFiles(this.files)">'
+  + '<span class="pda-drop-icon">📂</span>'
+  + '<div class="pda-drop-text">Arraste o relatório aqui ou clique para selecionar</div>'
+  + '<div class="pda-drop-sub">CSV — salvo no banco para todos os usuários</div>'
+  + '</div>'
+  + '<div class="pda-files" id="pda-files-gear" style="margin-top:12px;"></div>'
+  + '</div>';
+};
 function pdaInit(){
   var drop=$('pda-drop'), file=$('pda-file');
-  if(!drop||!file) return;
-  file.addEventListener('change',function(e){ onFiles(e.target.files); });
-  ['dragenter','dragover'].forEach(function(ev){ drop.addEventListener(ev,function(e){ e.preventDefault(); drop.classList.add('dragover'); }); });
-  ['dragleave','drop'].forEach(function(ev){ drop.addEventListener(ev,function(e){ e.preventDefault(); drop.classList.remove('dragover'); }); });
-  drop.addEventListener('drop',function(e){ if(e.dataTransfer&&e.dataTransfer.files) onFiles(e.dataTransfer.files); });
+  if(drop&&file){
+    file.addEventListener('change',function(e){ onFiles(e.target.files); });
+    ['dragenter','dragover'].forEach(function(ev){ drop.addEventListener(ev,function(e){ e.preventDefault(); drop.classList.add('dragover'); }); });
+    ['dragleave','drop'].forEach(function(ev){ drop.addEventListener(ev,function(e){ e.preventDefault(); drop.classList.remove('dragover'); }); });
+    drop.addEventListener('drop',function(e){ if(e.dataTransfer&&e.dataTransfer.files) onFiles(e.dataTransfer.files); });
+  }
   renderFiles();
   loadCadastroFromBank();
   loadCargoFromBank();

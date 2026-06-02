@@ -14,6 +14,7 @@
   var hasEquipes  = typeof window.renderManageList === 'function' && typeof window.addTeam === 'function';
   var hasReconect = typeof window.dbReconectar === 'function';
   var hasPresence = typeof window.presenceSaveName === 'function';
+  var hasReport   = typeof window.gearReportPaneHTML === 'function';
 
   // ── CSS (estilos do gear + dark mode) ──
   var css = ''
@@ -64,6 +65,7 @@
   var tabs = [];
   if (hasEquipes)  tabs.push({ id: 'equipes', icon: '👥', label: 'Equipes' });
   if (hasPresence) tabs.push({ id: 'online',  icon: '🟢', label: 'Online' });
+  if (hasReport)   tabs.push({ id: 'relatorio', icon: '📲', label: 'Relatório' });
   tabs.push({ id: 'visual', icon: '🎨', label: 'Visual' });
   tabs.push({ id: 'dados',  icon: '🗄️', label: 'Dados' });
   var firstTab = tabs[0].id;
@@ -103,6 +105,11 @@
     + '</div>';
 
   // Painel Visual (dark mode + nome de presença, se houver)
+  var paneRelatorio = !hasReport ? '' :
+    '<div id="gear-content-relatorio" style="display:' + (firstTab === 'relatorio' ? '' : 'none') + ';">'
+    + window.gearReportPaneHTML()
+    + '</div>';
+
   var paneVisual =
     '<div id="gear-content-visual" style="display:' + (firstTab === 'visual' ? '' : 'none') + ';">'
     + '<div class="gear-section-title" style="color:#553c9a;border-bottom:2px solid #d6bcfa;">🎨 Aparência</div>'
@@ -154,7 +161,7 @@
     + '<div style="flex:1;"></div><div style="font-size:0.6rem;color:#bbb;font-weight:600;text-align:center;padding:8px 0;letter-spacing:0.5px;">OBRAS BA</div>'
     + '</div>'
     + '<div style="flex:1;overflow-y:auto;padding:20px;">'
-    + paneEquipes + paneOnline + paneVisual + paneDados
+    + paneEquipes + paneOnline + paneRelatorio + paneVisual + paneDados
     + '</div></div></div>';
 
   function mount() {
@@ -184,6 +191,7 @@
       if (pane) pane.style.display = (t.id === tab) ? '' : 'none';
     });
     if (tab === 'equipes') setTimeout(function () { if (typeof window.renderManageList === 'function') window.renderManageList(); }, 50);
+    if (tab === 'relatorio' && typeof window.pdaRefreshGearStatus === 'function') window.pdaRefreshGearStatus();
     if (tab === 'visual') {
       var inp = document.getElementById('presence-my-name');
       if (inp && typeof window.presenceGetMyName === 'function') inp.value = window.presenceGetMyName();
