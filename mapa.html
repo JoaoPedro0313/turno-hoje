@@ -3408,7 +3408,7 @@ let headerIdx = -1;
 for (let i=0; i<Math.min(rows.length,10); i++) {
 const r = rows[i].map(c=>String(c).trim().toUpperCase());
 if ((r.some(c=>c==='NOTA') && r.some(c=>c.includes('PEP'))) ||
-(r.some(c=>c==='PEP OBRA') && r.some(c=>c==='STATUS DA OBRA'))) { headerIdx=i; break; }
+(r.some(c=>c==='PEP OBRA') && (r.some(c=>c==='STATUS DA OBRA') || r.some(c=>c==='OBS STATUS')))) { headerIdx=i; break; }
 }
 if (headerIdx===-1) return null;
 const headers = rows[headerIdx].map(c => {
@@ -4536,7 +4536,7 @@ mapaData = bancoDB.map(obj => {
       if (coords) { _latFromLink = coords.lat; _lonFromLink = coords.lon; _linkRaw = String(_anyLink); }
     }
   }
-  return { pep:obj['PEP OBRA']||'', titulo:obj['TÍTULO']||obj['TITULO']||'', status:obj['STATUS DA OBRA']||'', mun:obj['MUNICIPIO']||obj['MUNICÍPIO']||'', utd:obj['_UTD']||'', lat, lon, cava:obj['CAVA REALIZADA']||'', postR:obj['POSTES  REALIZADO']||obj['POSTES REALIZADO']||'', postI:obj['POSTES  À IMPLANTA']||obj['POSTES À IMPLANTA']||'', enc:obj['ENCARREGADO']||'', pes:mapaPesDeObra(obj), mes:mesFromObra(obj)||'', temCoord:lat!==null&&lon!==null, latLink:_latFromLink, lonLink:_lonFromLink, linkUrl:_linkRaw };
+  return { pep:obj['PEP OBRA']||'', titulo:obj['TÍTULO']||obj['TITULO']||'', status:obj['STATUS DA OBRA']||obj['OBS STATUS']||'', mun:obj['MUNICIPIO']||obj['MUNICÍPIO']||'', utd:obj['_UTD']||'', lat, lon, cava:obj['CAVA REALIZADA']||'', postR:obj['POSTES  REALIZADO']||obj['POSTES REALIZADO']||'', postI:obj['POSTES  À IMPLANTA']||obj['POSTES À IMPLANTA']||'', enc:obj['ENCARREGADO']||'', pes:mapaPesDeObra(obj), mes:mesFromObra(obj)||'', temCoord:lat!==null&&lon!==null, latLink:_latFromLink, lonLink:_lonFromLink, linkUrl:_linkRaw };
 });
 const comCoord = mapaData.filter(d=>d.temCoord).length;
 const semCoord = mapaData.length - comCoord;
@@ -4560,7 +4560,7 @@ if (mt) {
         const _any = _lkLat || _lk;
         if (_any) { const c=mapaExtrairCoordsDoLink(String(_any)); if(c){lat2=c.lat;lon2=c.lon;} }
       }
-      return { pep:obj['PEP OBRA']||'', titulo:obj['TÍTULO']||obj['TITULO']||'', status:obj['STATUS DA OBRA']||'',
+      return { pep:obj['PEP OBRA']||'', titulo:obj['TÍTULO']||obj['TITULO']||'', status:obj['STATUS DA OBRA']||obj['OBS STATUS']||'',
         mun:obj['MUNICIPIO']||obj['MUNICÍPIO']||'', utd:obj['_UTD']||'', lat:lat2, lon:lon2,
         cava:obj['CAVA REALIZADA']||'', postR:obj['POSTES  REALIZADO']||obj['POSTES REALIZADO']||'',
         postI:obj['POSTES  À IMPLANTA']||obj['POSTES À IMPLANTA']||'', enc:obj['ENCARREGADO']||'',
