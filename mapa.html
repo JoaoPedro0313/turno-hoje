@@ -4196,9 +4196,9 @@ function mapaCarregarMes(ano, mes) {
         : '❌ Erro ao carregar '+label+': '+e.message;
       if (mt) { mt.textContent = msgErr; mt.style.color='#c53030'; }
       console.error('[mapaCarregarMes]', e);
-      // CORRIGIDO: fallback para o banco local se disponível
+      // CORRIGIDO: fallback para o banco local se disponível (sem ficar vazio)
       if (bancoDB && bancoDB.length) {
-        setTimeout(() => { try { mapaCarregarDoBanco(); } catch(e2) {} }, 500);
+        setTimeout(() => { try { window._mapaCarregarMesInterno = true; mapaCarregarDoBanco(); } catch(e2) {} }, 500);
       }
     }
   });
@@ -4455,6 +4455,13 @@ if (!bancoDB || !bancoDB.length) {
   const ph = document.getElementById('mapa-placeholder'); if (ph) ph.style.display='flex';
   const mc = document.getElementById('mapa-container'); if (mc) mc.style.display='none';
   return;
+}
+// PRIMEIRA carga: se nenhum mês foi escolhido ainda, abre DIRETO no último mês
+// (não renderiza o banco cumulativo, que mistura obras energizadas de vários meses).
+if (!window._mapaCarregarMesInterno && !mapaMesAtivo && !window._mapaMesAutoLoaded
+    && Array.isArray(GSHEETS_MESES) && GSHEETS_MESES.length) {
+  window._mapaMesAutoLoaded = true;
+  if (mapaCarregarUltimoMes()) return;
 }
 // BLOQUEIO TRIPLO: qualquer uma das 3 condições bloqueia o reload
 const _bloqueado = (window._mapaViewingSheets || window._mapaMesDoSheets || mapaMesAtivo)
