@@ -984,6 +984,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);min-height:100vh;padd
 .pda-seg button{border:1.5px solid #e2e8f0;background:#fff;color:#666;border-radius:8px;padding:7px 12px;font-family:'Barlow',sans-serif;font-size:0.72rem;font-weight:800;cursor:pointer;}
 .pda-seg button.active{background:#14a085;border-color:#14a085;color:#fff;}
 .pda-export{background:#2b6cb0;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-family:'Barlow',sans-serif;font-size:0.75rem;font-weight:800;cursor:pointer;}
+.pda-cargo-sel{border:1.5px solid #e2e8f0;border-radius:8px;padding:7px 10px;font-family:'Barlow',sans-serif;font-size:0.74rem;font-weight:700;color:#2d3748;background:#fff;outline:none;max-width:220px;cursor:pointer;}
+.pda-cargo-sel:focus{border-color:#14a085;}
 .pda-export:hover{background:#1a4a80;}
 .pda-table-wrap{overflow-x:auto;max-height:62vh;overflow-y:auto;}
 #pda-table{width:100%;border-collapse:collapse;font-size:0.8rem;}
@@ -1022,6 +1024,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);min-height:100vh;padd
           <button data-st="ativo" onclick="pdaSetStatus('ativo',this)">Ativos</button>
           <button data-st="inativo" onclick="pdaSetStatus('inativo',this)">Inativos</button>
         </div>
+        <select id="pda-cargo" class="pda-cargo-sel" onchange="pdaSetCargo(this.value)"><option value="todos">Todos os cargos</option></select>
         <button class="pda-export" onclick="pdaExport()">💾 Exportar lista</button>
       </div>
       <div class="pda-table-wrap"><table id="pda-table"><thead id="pda-thead"></thead><tbody id="pda-tbody"></tbody></table></div>
@@ -2059,12 +2062,14 @@ window.oplExportCSV = oplExportCSV;
 (function(){
 'use strict';
 let pdaCad=null, pdaAcc=null, pdaResult=null;
-let pdaTab='naoacessaram', pdaStatus='todos';
+let pdaTab='naoacessaram', pdaStatus='todos', pdaCargo='todos';
+var pdaCargoMap=null;
 const $=function(id){ return document.getElementById(id); };
 
 function stripBom(t){ return String(t==null?'':t).replace(/^\uFEFF/,''); }
 function norm(s){ return String(s==null?'':s).trim(); }
 function key(s){ return norm(s).replace(/^0+(?=\d)/,''); }
+function matKey(s){ s=norm(s); var m=s.match(/^0*(\d+)$/); return m?m[1]:s.toUpperCase(); }
 
 function parseCSV(text){
   text=stripBom(text);
@@ -2172,7 +2177,7 @@ function compute(){
     cadKeys[k]=1;
     var sit=get(r,['Situação','Situacao']);
     var ativo=/ativo/i.test(sit) && !/inativo/i.test(sit);
-    var base={nome:nome,mat:mat,situacao:sit,ativo:ativo,aparelho:get(r,['Aparelho']),carrega:get(r,['Carrega Placa'])};
+    var base={nome:nome,mat:mat,situacao:sit,ativo:ativo,aparelho:get(r,['Aparelho']),carrega:get(r,['Carrega Placa']),cargo:(pdaCargoMap&&pdaCargoMap[matKey(mat)])||get(r,['Cargo'])||''};
     if(accMap[k]){
       var a=accMap[k];
       base.ultimo=a.last; base.qtdAcessos=a.count; base.lastQtd=a.lastQtd; base.imeis=Object.keys(a.imeis); base.email=a.email;
@@ -2231,22 +2236,37 @@ function currentList(){
   var q=norm($('pda-search').value).toLowerCase();
   if(q) list=list.filter(function(x){ return String(x.nome||'').toLowerCase().indexOf(q)>=0 || String(x.mat||'').indexOf(q)>=0; });
   if(pdaStatus!=='todos' && pdaTab!=='semcadastro') list=list.filter(function(x){ return pdaStatus==='ativo'?x.ativo:!x.ativo; });
+  if(pdaCargo!=='todos' && pdaTab!=='semcadastro') list=list.filter(function(x){ return (x.cargo||'(sem cargo)')===pdaCargo; });
   return list;
+}
+function populateCargoSelect(){
+  var sel=$('pda-cargo'); if(!sel) return;
+  if(pdaTab==='semcadastro'){ sel.style.display='none'; return; }
+  sel.style.display='';
+  var tabList= pdaTab==='acessaram'?pdaResult.acessaram:pdaResult.naoAcessaram;
+  if(pdaStatus!=='todos') tabList=tabList.filter(function(x){return pdaStatus==='ativo'?x.ativo:!x.ativo;});
+  var set={}; tabList.forEach(function(x){ var c=x.cargo||'(sem cargo)'; set[c]=(set[c]||0)+1; });
+  if(pdaCargo!=='todos' && !set[pdaCargo]) pdaCargo='todos';
+  var opts=['<option value="todos">Todos os cargos</option>'].concat(
+    Object.keys(set).sort().map(function(c){ return '<option value="'+esc(c)+'">'+esc(c)+' ('+set[c]+')</option>'; }));
+  sel.innerHTML=opts.join('');
+  sel.value=pdaCargo;
 }
 function sb(x){ return '<span class="pda-sb '+(x.ativo?'ativo':'inativo')+'">'+esc(x.situacao||'—')+'</span>'; }
 function pdaRender(){
   if(!pdaResult) return;
   $('pda-status-seg').style.display = pdaTab==='semcadastro'?'none':'flex';
+  populateCargoSelect();
   var list=currentList(), cols, rowsHtml;
   if(pdaTab==='acessaram'){
-    cols=['Funcionário','Matrícula','Situação','Último acesso','Acessos','Aparelho acessado'];
-    rowsHtml=list.map(function(x){return '<tr><td class="main">'+esc(x.nome)+'</td><td>'+esc(x.mat)+'</td><td>'+sb(x)+'</td><td>'+fmtDate(x.ultimo)+'</td><td>'+x.qtdAcessos+'</td><td>'+(x.imeis.length?x.imeis.map(imeiShort).join(', '):'—')+'</td></tr>';}).join('');
+    cols=['Funcionário','Matrícula','Cargo','Situação','Último acesso','Acessos','Aparelho acessado'];
+    rowsHtml=list.map(function(x){return '<tr><td class="main">'+esc(x.nome)+'</td><td>'+esc(x.mat)+'</td><td>'+esc(x.cargo||'—')+'</td><td>'+sb(x)+'</td><td>'+fmtDate(x.ultimo)+'</td><td>'+x.qtdAcessos+'</td><td>'+(x.imeis.length?x.imeis.map(imeiShort).join(', '):'—')+'</td></tr>';}).join('');
   } else if(pdaTab==='semcadastro'){
     cols=['Nome','Matrícula','Último acesso','Acessos','IMEI'];
     rowsHtml=list.map(function(x){return '<tr><td class="main">'+esc(x.nome)+'</td><td>'+esc(x.mat)+'</td><td>'+fmtDate(x.ultimo)+'</td><td>'+x.qtdAcessos+'</td><td>'+(x.imeis[0]?esc(x.imeis[0]):'—')+'</td></tr>';}).join('');
   } else {
-    cols=['Funcionário','Matrícula','Situação','Carrega placa','Aparelho registrado'];
-    rowsHtml=list.map(function(x){return '<tr><td class="main">'+esc(x.nome)+'</td><td>'+esc(x.mat)+'</td><td>'+sb(x)+'</td><td>'+esc(x.carrega||'—')+'</td><td>'+aparelhoShort(x.aparelho)+'</td></tr>';}).join('');
+    cols=['Funcionário','Matrícula','Cargo','Situação','Carrega placa','Aparelho registrado'];
+    rowsHtml=list.map(function(x){return '<tr><td class="main">'+esc(x.nome)+'</td><td>'+esc(x.mat)+'</td><td>'+esc(x.cargo||'—')+'</td><td>'+sb(x)+'</td><td>'+esc(x.carrega||'—')+'</td><td>'+aparelhoShort(x.aparelho)+'</td></tr>';}).join('');
   }
   $('pda-thead').innerHTML='<tr>'+cols.map(function(c){return '<th>'+c+'</th>';}).join('')+'</tr>';
   $('pda-tbody').innerHTML=list.length?rowsHtml:'<tr><td class="pda-empty" colspan="'+cols.length+'">Nada para mostrar</td></tr>';
@@ -2254,13 +2274,14 @@ function pdaRender(){
 
 window.pdaSetTab=function(t){ pdaTab=t; renderTabs(); pdaRender(); };
 window.pdaSetStatus=function(s,btn){ pdaStatus=s; var seg=document.querySelectorAll('#pda-status-seg button'); for(var i=0;i<seg.length;i++) seg[i].classList.remove('active'); if(btn) btn.classList.add('active'); pdaRender(); };
+window.pdaSetCargo=function(c){ pdaCargo=c; pdaRender(); };
 window.pdaRender=pdaRender;
 window.pdaExport=function(){
   if(!pdaResult) return;
   var list=currentList(), headers, lines;
-  if(pdaTab==='acessaram'){ headers=['Funcionário','Matrícula','Situação','Último acesso','Acessos','IMEIs']; lines=list.map(function(x){return [x.nome,x.mat,x.situacao,fmtDate(x.ultimo),x.qtdAcessos,x.imeis.join(' ')];}); }
+  if(pdaTab==='acessaram'){ headers=['Funcionário','Matrícula','Cargo','Situação','Último acesso','Acessos','IMEIs']; lines=list.map(function(x){return [x.nome,x.mat,x.cargo,x.situacao,fmtDate(x.ultimo),x.qtdAcessos,x.imeis.join(' ')];}); }
   else if(pdaTab==='semcadastro'){ headers=['Nome','Matrícula','Último acesso','Acessos','IMEI']; lines=list.map(function(x){return [x.nome,x.mat,fmtDate(x.ultimo),x.qtdAcessos,x.imeis[0]||''];}); }
-  else { headers=['Funcionário','Matrícula','Situação','Carrega placa','Aparelho']; lines=list.map(function(x){return [x.nome,x.mat,x.situacao,x.carrega,x.aparelho];}); }
+  else { headers=['Funcionário','Matrícula','Cargo','Situação','Carrega placa','Aparelho']; lines=list.map(function(x){return [x.nome,x.mat,x.cargo,x.situacao,x.carrega,x.aparelho];}); }
   var csv=[headers].concat(lines).map(function(r){return r.map(function(c){return '"'+String(c==null?'':c).replace(/"/g,'""')+'"';}).join(';');}).join('\r\n');
   var blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8;'});
   var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='pda_'+pdaTab+'.csv'; a.click();
@@ -2286,6 +2307,20 @@ function loadCadastroFromBank(){
       } else { renderFiles(); }
     })
     .catch(function(){ renderFiles(); });
+}
+function loadCargoFromBank(){
+  if(!PDA_SKEY) return;
+  fetch(PDA_SUPA+'/rest/v1/turno_data?key=eq.funcionario_cargo&select=value',{headers:pdaSupaHeaders()})
+    .then(function(r){ return r.ok?r.json():null; })
+    .then(function(arr){
+      if(arr && arr[0] && arr[0].value && arr[0].value.data){
+        var map={}, lines=String(arr[0].value.data).split('\n');
+        for(var i=0;i<lines.length;i++){ var p=lines[i].split('|'); if(p.length<2) continue; map[p[0]]=p[1]; }
+        pdaCargoMap=map;
+        if(pdaResult){ compute(); renderTabs(); pdaRender(); }
+      }
+    })
+    .catch(function(){});
 }
 function compactFromRows(rows){
   return rows.map(function(r){
@@ -2313,6 +2348,7 @@ function pdaInit(){
   drop.addEventListener('drop',function(e){ if(e.dataTransfer&&e.dataTransfer.files) onFiles(e.dataTransfer.files); });
   renderFiles();
   loadCadastroFromBank();
+  loadCargoFromBank();
 }
 (function start(){
   if(window.Papa){ pdaInit(); return; }
