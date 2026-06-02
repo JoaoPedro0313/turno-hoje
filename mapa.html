@@ -6116,7 +6116,7 @@ uid: presenceUID,
 name: presenceMyName || 'Anônimo',
 page,
 last_seen: now,
-user_agent: navigator.userAgent.substring(0,80)
+user_agent: navigator.userAgent.substring(0,180)
 })
 });
 if (res.status === 400 || res.status === 404 || res.status === 401) {
@@ -6161,6 +6161,23 @@ if (document.getElementById('presence-modal').classList.contains('open')) {
 presenceRenderList();
 }
 }
+function presenceParseUA(ua) {
+ua = ua || '';
+let os = 'Sistema desconhecido', device = 'Computador', icon = '💻';
+if (/android/i.test(ua)) { os='Android'; device='Celular'; icon='📱'; }
+else if (/iphone/i.test(ua)) { os='iPhone'; device='Celular'; icon='📱'; }
+else if (/ipad/i.test(ua)) { os='iPad'; device='Tablet'; icon='📱'; }
+else if (/windows/i.test(ua)) { os='Windows'; }
+else if (/mac os x|macintosh/i.test(ua)) { os='Mac'; }
+else if (/linux/i.test(ua)) { os='Linux'; }
+let browser = '';
+if (/edg\//i.test(ua)) browser='Edge';
+else if (/opr\/|opera/i.test(ua)) browser='Opera';
+else if (/chrome|crios/i.test(ua)) browser='Chrome';
+else if (/firefox|fxios/i.test(ua)) browser='Firefox';
+else if (/safari/i.test(ua)) browser='Safari';
+return { os, device, browser, icon };
+}
 function presenceRenderList() {
 const sub = document.getElementById('presence-modal-sub');
 const list = document.getElementById('presence-list');
@@ -6173,26 +6190,35 @@ return;
 }
 const pageLabels = { TURNO:'📋 Turno', PROD:'📊 Produção', APR:'⚠️ APR', COMP:'⚡ Comparador', MAPA:'🗺️ Mapa', PROG:'📅 Programação' };
 const now = Date.now();
-list.innerHTML = presenceActive.map(u => {
+const porPagina = {};
+presenceActive.forEach(u => { const p = u.page || '—'; porPagina[p] = (porPagina[p]||0)+1; });
+const resumo = Object.entries(porPagina).sort((a,b)=>b[1]-a[1])
+.map(([p,n]) => `<span style="background:#f0fafa;color:#0d7377;border:1px solid #c0e8e5;border-radius:20px;padding:3px 10px;font-size:0.66rem;font-weight:800;">${(pageLabels[p]||p)} · ${n}</span>`).join('');
+const resumoHtml = `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;">${resumo}</div>`;
+const linhas = presenceActive.map(u => {
 const isMe = u.uid===presenceUID;
 const name = u.name || 'Anônimo';
-const initials = name.replace(/anônimo/i,'?').trim().charAt(0).toUpperCase();
+const initials = name.replace(/anônimo/i,'?').trim().charAt(0).toUpperCase() || '?';
 const lastSeenMs = now - new Date(u.last_seen).getTime();
 const lastSeenStr = lastSeenMs < 30000 ? 'agora mesmo' :
 lastSeenMs < 60000 ? Math.floor(lastSeenMs/1000) + 's atrás' :
 Math.floor(lastSeenMs/60000) + 'min atrás';
+let hora = '';
+try { hora = new Date(u.last_seen).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}); } catch(e) {}
 const pageLabel = pageLabels[u.page] || u.page || '—';
-const ua = u.user_agent || '';
-const device = /mobile|android|iphone/i.test(ua) ? '📱' : /tablet|ipad/i.test(ua) ? '📱' : '💻';
+const info = presenceParseUA(u.user_agent);
+const dispTxt = [info.device, info.os, info.browser].filter(Boolean).join(' · ');
 return `<div class="presence-user-row ${isMe?'me':''}">
 <div class="presence-avatar" style="${isMe?'background:linear-gradient(135deg,#276749,#38a169);':''}">${initials}</div>
 <div style="flex:1;min-width:0;">
-<div style="font-size:0.85rem;font-weight:800;color:#1a365d;">${name}${isMe?' <span style="background:#c6f6d5;color:#276749;font-size:0.6rem;padding:1px 7px;border-radius:10px;font-weight:800;">VOCÊ</span>':''}</div>
-<div style="font-size:0.68rem;font-weight:600;color:#888;margin-top:2px;">${device} ${pageLabel} · ${lastSeenStr}</div>
+<div style="font-size:0.85rem;font-weight:800;color:#1a365d;display:flex;align-items:center;gap:6px;flex-wrap:wrap;">${name}${isMe?' <span style="background:#c6f6d5;color:#276749;font-size:0.6rem;padding:1px 7px;border-radius:10px;font-weight:800;">VOCÊ</span>':''}<span style="background:#ebf4ff;color:#2b6cb0;font-size:0.62rem;padding:1px 8px;border-radius:5px;font-weight:800;">${pageLabel}</span></div>
+<div style="font-size:0.68rem;font-weight:600;color:#888;margin-top:3px;">${info.icon} ${dispTxt}</div>
+<div style="font-size:0.64rem;font-weight:600;color:#aaa;margin-top:1px;">visto ${lastSeenStr}${hora?' · '+hora:''}</div>
 </div>
-<div style="width:9px;height:9px;border-radius:50%;background:#38d996;box-shadow:0 0 6px #38d996;flex-shrink:0;"></div>
+<div style="width:9px;height:9px;border-radius:50%;background:#38d996;box-shadow:0 0 6px #38d996;flex-shrink:0;" title="online"></div>
 </div>`;
 }).join('');
+list.innerHTML = resumoHtml + linhas;
 }
 function presenceOpenModal() {
 {const _el=document.getElementById('presence-modal');if(_el)_el.classList.add('open');}
