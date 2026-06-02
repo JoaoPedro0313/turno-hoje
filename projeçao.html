@@ -1002,7 +1002,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);min-height:100vh;padd
 <div class="pda-wrap">
   <div class="pda-hdr">
     <h2>📲 Comparação PDA — Cadastro × Acesso</h2>
-    <p>O cadastro de funcionários já vem do banco. Suba só o <b>Relatório de Acesso</b> (CSV) e o sistema cruza por matrícula: quem acessou, quem não acessou e acessos sem cadastro.</p>
+    <p>O cadastro de funcionários já vem do banco. Suba só o <b>Relatório de Acesso</b> (CSV) — ele fica <b>salvo no banco e visível para todos os usuários</b>. O sistema cruza por matrícula: quem acessou, quem não acessou e acessos sem cadastro.</p>
   </div>
 
   <div class="pda-drop" id="pda-drop" onclick="document.getElementById('pda-file').click()">
@@ -2124,7 +2124,7 @@ function onFiles(fileList){
         var rows=parseCSV(r.result);
         var t=detectType(rows);
         if(t==='cadastro'){ pdaCad={name:f.name,source:'arquivo',rows:rows}; saveCadastroToBank(rows); }
-        else if(t==='acesso') pdaAcc={name:f.name,rows:rows};
+        else if(t==='acesso'){ pdaAcc={name:f.name,source:'arquivo',rows:rows}; saveAcessoToBank(rows); }
         else console.error('[PDA] tipo não reconhecido:', f.name);
       }catch(e){ console.error('[PDA] parse', e); }
       if(--pending===0){ renderFiles(); maybeCompare(); }
@@ -2140,7 +2140,7 @@ function renderFiles(){
     ? '<div class="pda-file-chip ok"><span class="ic">👥</span><div>Cadastro<div class="meta">'+(pdaCad.source==='banco'?'banco · ':'')+pdaCad.rows.length+' funcionários</div></div></div>'
     : '<div class="pda-file-chip"><span class="ic">👥</span><div>Cadastro<div class="meta">carregando do banco…</div></div></div>';
   html+=pdaAcc
-    ? '<div class="pda-file-chip ok"><span class="ic">📲</span><div>Acesso<div class="meta">'+pdaAcc.rows.length+' linhas</div></div></div>'
+    ? '<div class="pda-file-chip ok"><span class="ic">📲</span><div>Acesso<div class="meta">'+(pdaAcc.source==='banco'?'banco · ':'')+pdaAcc.rows.length+' acessos'+(pdaAcc.updatedAt?' · '+esc(pdaAcc.updatedAt):'')+'</div></div></div>'
     : '<div class="pda-file-chip"><span class="ic">📲</span><div>Acesso<div class="meta">aguardando relatório…</div></div></div>';
   el.innerHTML=html;
 }
@@ -2372,6 +2372,44 @@ function saveCadastroToBank(rows){
     .then(function(r){ if(!r.ok) console.error('[PDA] salvar cadastro', r.status); })
     .catch(function(e){ console.error('[PDA] salvar cadastro', e); });
 }
+function compactFromAcc(rows){
+  return rows.map(function(r){
+    var imei=get(r,['IMEI']);
+    var mat=get(r,['Matrícula','Matricula','Usuário','Usuario']);
+    var nome=get(r,['Nome']).replace(/[|\n]/g,' ');
+    var email=get(r,['E-mail','Email']);
+    var qtd=get(r,['Qtd. PDA','Qtd PDA','Qtd.PDA']);
+    var data=get(r,['Data de Acesso']);
+    return [imei,mat,nome,email,qtd,data].join('|');
+  }).join('\n');
+}
+function accRowsFromCompact(val){
+  var out=[], lines=String(val.data||'').split('\n');
+  for(var i=0;i<lines.length;i++){
+    var p=lines[i].split('|'); if(p.length<2) continue;
+    out.push({'IMEI':p[0]||'','Matrícula':p[1]||'','Nome':p[2]||'','E-mail':p[3]||'','Qtd. PDA':p[4]||'','Data de Acesso':p[5]||''});
+  }
+  return out;
+}
+function saveAcessoToBank(rows){
+  if(!PDA_SKEY) return;
+  var payload={v:1,fmt:'imei|mat|nome|email|qtd|data',updatedAt:new Date().toLocaleString('pt-BR'),count:rows.length,data:compactFromAcc(rows)};
+  fetch(PDA_SUPA+'/rest/v1/turno_data',{method:'POST',headers:pdaSupaHeaders({'Content-Type':'application/json','Prefer':'resolution=merge-duplicates'}),body:JSON.stringify({key:'pda_acesso',value:payload})})
+    .then(function(r){ if(!r.ok) console.error('[PDA] salvar acesso', r.status); })
+    .catch(function(e){ console.error('[PDA] salvar acesso', e); });
+}
+function loadAcessoFromBank(){
+  if(!PDA_SKEY) return;
+  fetch(PDA_SUPA+'/rest/v1/turno_data?key=eq.pda_acesso&select=value',{headers:pdaSupaHeaders()})
+    .then(function(r){ return r.ok?r.json():null; })
+    .then(function(arr){
+      if(arr && arr[0] && arr[0].value && arr[0].value.data){
+        pdaAcc={name:'(banco)',source:'banco',rows:accRowsFromCompact(arr[0].value),updatedAt:arr[0].value.updatedAt||''};
+        renderFiles(); maybeCompare();
+      }
+    })
+    .catch(function(){});
+}
 function pdaInit(){
   var drop=$('pda-drop'), file=$('pda-file');
   if(!drop||!file) return;
@@ -2383,6 +2421,7 @@ function pdaInit(){
   loadCadastroFromBank();
   loadCargoFromBank();
   loadEquipeFromBank();
+  loadAcessoFromBank();
 }
 (function start(){
   if(window.Papa){ pdaInit(); return; }
