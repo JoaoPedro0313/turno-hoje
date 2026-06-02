@@ -1000,14 +1000,14 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);min-height:100vh;padd
 <div class="pda-wrap">
   <div class="pda-hdr">
     <h2>📲 Comparação PDA — Cadastro × Acesso</h2>
-    <p>Suba os dois CSVs (cadastro Funcionário×PDA e Relatório de Acesso). O cruzamento é por matrícula: quem acessou, quem não acessou e acessos sem cadastro.</p>
+    <p>O cadastro de funcionários já vem do banco. Suba só o <b>Relatório de Acesso</b> (CSV) e o sistema cruza por matrícula: quem acessou, quem não acessou e acessos sem cadastro.</p>
   </div>
 
   <div class="pda-drop" id="pda-drop" onclick="document.getElementById('pda-file').click()">
     <input type="file" id="pda-file" accept=".csv,text/csv" multiple hidden>
     <span class="pda-drop-icon">📂</span>
-    <div class="pda-drop-text">Arraste os 2 CSVs aqui ou clique para selecionar</div>
-    <div class="pda-drop-sub">Cadastro (Funcionário × PDA) + Relatório de Acesso — em qualquer ordem</div>
+    <div class="pda-drop-text">Arraste o Relatório de Acesso aqui ou clique para selecionar</div>
+    <div class="pda-drop-sub">O cadastro Funcionário×PDA já está salvo no banco. (Para atualizá-lo, basta soltar um novo CSV de cadastro aqui.)</div>
   </div>
   <div class="pda-files" id="pda-files"></div>
 
@@ -2104,7 +2104,7 @@ function fmtDate(d){
   return p(d.getDate())+'/'+p(d.getMonth()+1)+'/'+d.getFullYear()+' '+p(d.getHours())+':'+p(d.getMinutes());
 }
 function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;'); }
-function aparelhoShort(s){ s=norm(s); var m=s.match(/-\s*(\d+)\s*$/); return m?('#'+m[1]):(s?(esc(s.slice(0,12))+'…'):'—'); }
+function aparelhoShort(s){ s=norm(s); if(!s) return '—'; if(/^\d+$/.test(s)) return '#'+s; var m=s.match(/-\s*(\d+)\s*$/); return m?('#'+m[1]):(esc(s.slice(0,12))+'…'); }
 function imeiShort(imei){ return '#'+String(imei).slice(0,6); }
 
 function onFiles(fileList){
@@ -2117,7 +2117,7 @@ function onFiles(fileList){
       try{
         var rows=parseCSV(r.result);
         var t=detectType(rows);
-        if(t==='cadastro') pdaCad={name:f.name,rows:rows};
+        if(t==='cadastro'){ pdaCad={name:f.name,source:'arquivo',rows:rows}; saveCadastroToBank(rows); }
         else if(t==='acesso') pdaAcc={name:f.name,rows:rows};
         else console.error('[PDA] tipo não reconhecido:', f.name);
       }catch(e){ console.error('[PDA] parse', e); }
@@ -2131,11 +2131,11 @@ function renderFiles(){
   var el=$('pda-files'); if(!el) return;
   var html='';
   html+=pdaCad
-    ? '<div class="pda-file-chip ok"><span class="ic">👥</span><div>Cadastro<div class="meta">'+pdaCad.rows.length+' linhas</div></div></div>'
-    : '<div class="pda-file-chip"><span class="ic">👥</span><div>Cadastro<div class="meta">aguardando…</div></div></div>';
+    ? '<div class="pda-file-chip ok"><span class="ic">👥</span><div>Cadastro<div class="meta">'+(pdaCad.source==='banco'?'banco · ':'')+pdaCad.rows.length+' funcionários</div></div></div>'
+    : '<div class="pda-file-chip"><span class="ic">👥</span><div>Cadastro<div class="meta">carregando do banco…</div></div></div>';
   html+=pdaAcc
     ? '<div class="pda-file-chip ok"><span class="ic">📲</span><div>Acesso<div class="meta">'+pdaAcc.rows.length+' linhas</div></div></div>'
-    : '<div class="pda-file-chip"><span class="ic">📲</span><div>Acesso<div class="meta">aguardando…</div></div></div>';
+    : '<div class="pda-file-chip"><span class="ic">📲</span><div>Acesso<div class="meta">aguardando relatório…</div></div></div>';
   el.innerHTML=html;
 }
 function maybeCompare(){
@@ -2266,6 +2266,44 @@ window.pdaExport=function(){
   var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='pda_'+pdaTab+'.csv'; a.click();
 };
 
+var PDA_SUPA='https://eqxejfoibebcbtsqymji.supabase.co';
+var PDA_SKEY=(typeof SUPA_KEY!=='undefined')?SUPA_KEY:'';
+function pdaSupaHeaders(extra){ var h={'apikey':PDA_SKEY,'Authorization':'Bearer '+PDA_SKEY}; if(extra) for(var k in extra) h[k]=extra[k]; return h; }
+function rowsFromCompact(val){
+  var out=[], lines=String(val.data||'').split('\n');
+  for(var i=0;i<lines.length;i++){ var p=lines[i].split('|'); if(p.length<2) continue;
+    out.push({'Login':p[0]||'','Funcionário':p[1]||'','Situação':p[2]||'','Aparelho':p[3]||'','Carrega Placa':p[4]||''}); }
+  return out;
+}
+function loadCadastroFromBank(){
+  if(!PDA_SKEY){ renderFiles(); return; }
+  fetch(PDA_SUPA+'/rest/v1/turno_data?key=eq.funcionario_pda&select=value',{headers:pdaSupaHeaders()})
+    .then(function(r){ return r.ok?r.json():null; })
+    .then(function(arr){
+      if(arr && arr[0] && arr[0].value && arr[0].value.data){
+        pdaCad={name:'(banco)',source:'banco',rows:rowsFromCompact(arr[0].value),updatedAt:arr[0].value.updatedAt||''};
+        renderFiles(); maybeCompare();
+      } else { renderFiles(); }
+    })
+    .catch(function(){ renderFiles(); });
+}
+function compactFromRows(rows){
+  return rows.map(function(r){
+    var mat=get(r,['Login','Matrícula','Matricula']);
+    var nome=get(r,['Funcionário','Funcionario']).replace(/[|\n]/g,' ');
+    var sit=get(r,['Situação','Situacao']);
+    var ap=get(r,['Aparelho']); var m=ap.match(/-\s*(\d+)\s*$/); ap=m?m[1]:(/^\d+$/.test(ap)?ap:'');
+    var carr=get(r,['Carrega Placa']);
+    return [mat,nome,sit,ap,carr].join('|');
+  }).join('\n');
+}
+function saveCadastroToBank(rows){
+  if(!PDA_SKEY) return;
+  var payload={v:1,fmt:'mat|nome|sit|ap|carr',updatedAt:new Date().toLocaleDateString('pt-BR'),count:rows.length,data:compactFromRows(rows)};
+  fetch(PDA_SUPA+'/rest/v1/turno_data',{method:'POST',headers:pdaSupaHeaders({'Content-Type':'application/json','Prefer':'resolution=merge-duplicates'}),body:JSON.stringify({key:'funcionario_pda',value:payload})})
+    .then(function(r){ if(!r.ok) console.error('[PDA] salvar cadastro', r.status); })
+    .catch(function(e){ console.error('[PDA] salvar cadastro', e); });
+}
 function pdaInit(){
   var drop=$('pda-drop'), file=$('pda-file');
   if(!drop||!file) return;
@@ -2274,6 +2312,7 @@ function pdaInit(){
   ['dragleave','drop'].forEach(function(ev){ drop.addEventListener(ev,function(e){ e.preventDefault(); drop.classList.remove('dragover'); }); });
   drop.addEventListener('drop',function(e){ if(e.dataTransfer&&e.dataTransfer.files) onFiles(e.dataTransfer.files); });
   renderFiles();
+  loadCadastroFromBank();
 }
 (function start(){
   if(window.Papa){ pdaInit(); return; }
