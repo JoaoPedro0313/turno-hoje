@@ -4841,8 +4841,9 @@ ${pesHtml}
 <button onclick="(function(){var url='https://www.google.com/maps?q=${d.lat},${d.lon}';if(navigator.share){navigator.share({title:'${d.titulo||d.pep}',text:'${d.mun||''}',url:url});}else if(navigator.clipboard){navigator.clipboard.writeText(url).then(function(){var b=event.target;var t=b.textContent;b.textContent='✅ Copiado!';b.style.background='#276749';setTimeout(function(){b.textContent=t;b.style.background='#f0fff4';},2000);});}})();" style="width:100%;padding:6px 0;background:#f0fff4;color:#276749;border:1.5px solid #c6f6d5;border-radius:6px;font-size:0.65rem;font-weight:800;cursor:pointer;font-family:'Barlow',sans-serif;margin-bottom:2px;">📤 Copiar localização</button>
 <button onclick="mapaAbrirCorrecao('${pepAttr}','${d.titulo||d.pep}','${d.mun||''}',${d.lat||0},${d.lon||0})" style="width:100%;padding:6px 0;background:#fff5f5;color:#c53030;border:1.5px solid #fdd;border-radius:6px;font-size:0.65rem;font-weight:800;cursor:pointer;font-family:Barlow,sans-serif;margin-bottom:2px;">📍 Corrigir Localização</button>
 ${rotaBtnHtml}</div>`;
-const iconHtml = '<div style="width:13px;height:13px;border-radius:50%;background:'+cor+';border:2.5px solid #fff;box-shadow:0 1px 5px rgba(0,0,0,0.45);cursor:pointer;"></div>';
-const icon = L.divIcon({className:'',html:iconHtml,iconSize:[13,13],iconAnchor:[6,6]});
+const iconHtml = '<div style="width:28px;height:28px;display:flex;align-items:center;justify-content:center;cursor:pointer;background:transparent;">'
+  + '<div style="width:13px;height:13px;border-radius:50%;background:'+cor+';border:2.5px solid #fff;box-shadow:0 1px 5px rgba(0,0,0,0.45);"></div></div>';
+const icon = L.divIcon({className:'',html:iconHtml,iconSize:[28,28],iconAnchor:[14,14]});
 const marker = L.marker([d.lat,d.lon],{icon}).addTo(mapaLayerGroup);
 marker.bindPopup(popup,{maxWidth:310});
 // Tooltip de hover: prévia rápida (nome + status) ao passar o mouse, some ao sair.
@@ -4853,7 +4854,7 @@ const tipHtml = `<div style="font-family:'Barlow',sans-serif;max-width:230px;">`
   + `<span style="background:${cor}22;color:${cor};padding:1px 8px;border-radius:4px;font-size:0.62rem;font-weight:800;">${d.status||'—'}</span>`
   + (d.mun?`<span style="font-size:0.62rem;color:#718096;font-weight:700;">📍 ${String(d.mun).replace(/</g,'&lt;')}</span>`:'')
   + `</div></div>`;
-marker.bindTooltip(tipHtml, {direction:'top', offset:[0,-8], opacity:1, sticky:false, className:'mapa-hover-tip'});
+marker.bindTooltip(tipHtml, {direction:'top', offset:[0,-12], opacity:1, sticky:false, className:'mapa-hover-tip'});
 // Só inclui no fitBounds se estiver dentro do Brasil (evita zoom mundial por coords inválidas)
 if (d.lat >= -34 && d.lat <= 6 && d.lon >= -74 && d.lon <= -28) {
   bounds.push([d.lat,d.lon]);
