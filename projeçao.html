@@ -965,35 +965,38 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);min-height:100vh;padd
 .pda-file-chip.ok{border-color:#c6f6d5;background:#f0fff4;color:#276749;}
 .pda-file-chip .ic{font-size:1.1rem;}
 .pda-file-chip .meta{color:#999;font-weight:600;font-size:0.66rem;}
-.pda-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin:18px 0;}
-.pda-kpi{background:#fff;border-radius:12px;padding:14px 16px;box-shadow:0 2px 12px rgba(0,0,0,.07);border-top:3px solid #0d7377;}
+.pda-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin:16px 0 22px;}
+.pda-kpi{background:#fff;border-radius:12px;padding:16px 18px;box-shadow:0 2px 12px rgba(0,0,0,0.07);border-top:3px solid #0d7377;}
 .pda-kpi.green{border-top-color:#14a085;}.pda-kpi.red{border-top-color:#e53e3e;}.pda-kpi.blue{border-top-color:#2b6cb0;}.pda-kpi.orange{border-top-color:#d97706;}
-.pda-kpi .v{font-size:1.7rem;font-weight:800;color:#1a365d;line-height:1;}
-.pda-kpi .l{font-size:0.6rem;font-weight:800;color:#888;text-transform:uppercase;letter-spacing:1px;margin-top:6px;}
-.pda-panel{background:#fff;border-radius:12px;box-shadow:0 2px 12px rgba(0,0,0,.07);overflow:hidden;}
-.pda-tabs{display:flex;border-bottom:1px solid #e8ecef;flex-wrap:wrap;}
-.pda-tab{padding:13px 18px;border:none;background:transparent;font-family:'Barlow',sans-serif;font-size:0.82rem;font-weight:800;color:#888;cursor:pointer;border-bottom:3px solid transparent;transition:all .15s;}
-.pda-tab:hover{color:#0d7377;background:#f9fbff;}
-.pda-tab.active{color:#0d7377;border-bottom-color:#0d7377;}
-.pda-tab .cnt{display:inline-block;background:#edf2f7;color:#555;font-size:0.64rem;padding:1px 8px;border-radius:10px;margin-left:6px;}
-.pda-tab.active .cnt{background:#0d7377;color:#fff;}
-.pda-toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:12px 18px;border-bottom:1px solid #edf0f2;background:#fafbfc;}
-.pda-search{flex:1;min-width:200px;border:1.5px solid #e2e8f0;border-radius:8px;padding:8px 12px;font-family:'Barlow',sans-serif;font-size:0.82rem;font-weight:600;outline:none;}
+.pda-kpi .v{font-size:2rem;font-weight:800;color:#2d3748;line-height:1;}
+.pda-kpi .l{font-size:0.65rem;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:1.5px;margin-top:5px;}
+.pda-panel{background:#fff;border-radius:12px;margin-bottom:24px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.07);}
+.pda-sec-header{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;background:#f0fafa;border-bottom:1px solid #c0e8e5;}
+.pda-sec-title{font-size:1rem;font-weight:800;color:#222;letter-spacing:0.5px;display:flex;align-items:center;gap:10px;}
+.pda-count{background:#0d7377;color:#fff;font-size:0.72rem;font-weight:800;padding:3px 10px;border-radius:5px;white-space:nowrap;}
+.pda-tabs{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:14px 20px 0;}
+.pda-tab{background:#fff;border:1.5px solid #e2e8f0;color:#666;padding:7px 16px;border-radius:8px;font-family:'Barlow',sans-serif;font-size:0.8rem;font-weight:800;cursor:pointer;transition:all .15s;}
+.pda-tab:hover{border-color:#14a085;color:#0d7377;}
+.pda-tab.active{background:#14a085;border-color:#14a085;color:#fff;}
+.pda-tab .cnt{display:inline-block;background:rgba(0,0,0,0.08);color:inherit;font-size:0.64rem;padding:1px 8px;border-radius:10px;margin-left:6px;}
+.pda-tab.active .cnt{background:rgba(255,255,255,0.25);color:#fff;}
+.pda-toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:14px 20px;border-bottom:1px solid #edf0f2;}
+.pda-search{border:1.5px solid #e2e8f0;border-radius:8px;padding:7px 14px;font-family:'Barlow',sans-serif;font-size:0.82rem;font-weight:600;color:#2d3748;outline:none;width:230px;margin-left:auto;}
 .pda-search:focus{border-color:#14a085;}
-.pda-seg{display:flex;gap:4px;}
-.pda-seg button{border:1.5px solid #e2e8f0;background:#fff;color:#666;border-radius:8px;padding:7px 12px;font-family:'Barlow',sans-serif;font-size:0.72rem;font-weight:800;cursor:pointer;}
+.pda-seg{display:flex;gap:6px;}
+.pda-seg button{border:1.5px solid #e2e8f0;background:#fff;color:#666;border-radius:8px;padding:6px 14px;font-family:'Barlow',sans-serif;font-size:0.75rem;font-weight:800;cursor:pointer;}
 .pda-seg button.active{background:#14a085;border-color:#14a085;color:#fff;}
-.pda-export{background:#2b6cb0;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-family:'Barlow',sans-serif;font-size:0.75rem;font-weight:800;cursor:pointer;}
-.pda-cargo-sel{border:1.5px solid #e2e8f0;border-radius:8px;padding:7px 10px;font-family:'Barlow',sans-serif;font-size:0.74rem;font-weight:700;color:#2d3748;background:#fff;outline:none;max-width:220px;cursor:pointer;}
+.pda-cargo-sel{border:1.5px solid #e2e8f0;border-radius:8px;padding:6px 10px;font-family:'Barlow',sans-serif;font-size:0.75rem;font-weight:700;color:#2d3748;background:#fff;outline:none;max-width:210px;cursor:pointer;}
 .pda-cargo-sel:focus{border-color:#14a085;}
+.pda-export{background:#2b6cb0;color:#fff;border:none;border-radius:8px;padding:7px 14px;font-family:'Barlow',sans-serif;font-size:0.75rem;font-weight:800;cursor:pointer;}
 .pda-export:hover{background:#1a4a80;}
 .pda-table-wrap{overflow-x:auto;max-height:62vh;overflow-y:auto;}
-#pda-table{width:100%;border-collapse:collapse;font-size:0.8rem;}
-#pda-table thead th{position:sticky;top:0;background:#f8fafc;padding:11px 14px;text-align:left;font-size:0.62rem;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:#888;white-space:nowrap;border-bottom:2px solid #e8ecef;z-index:1;}
-#pda-table tbody td{padding:10px 14px;border-bottom:1px solid #edf0f2;color:#2d3748;white-space:nowrap;}
+#pda-table{width:100%;border-collapse:collapse;font-size:0.82rem;}
+#pda-table thead th{position:sticky;top:0;background:#f8fafc;padding:12px 16px;text-align:left;font-size:0.68rem;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:#888;white-space:nowrap;border-bottom:2px solid #e8ecef;z-index:1;}
+#pda-table tbody td{padding:11px 16px;border-bottom:1px solid #edf0f2;color:#2d3748;white-space:nowrap;}
 #pda-table tbody tr:hover{background:#f9fbff;}
 #pda-table .main{font-weight:700;color:#1a365d;}
-.pda-sb{display:inline-block;padding:2px 8px;border-radius:5px;font-size:0.6rem;font-weight:800;text-transform:uppercase;}
+.pda-sb{display:inline-block;padding:3px 9px;border-radius:5px;font-size:0.65rem;font-weight:800;letter-spacing:0.5px;text-transform:uppercase;}
 .pda-sb.ativo{background:#d0f0ee;color:#0d7377;}
 .pda-sb.inativo{background:#fde8e8;color:#c53030;}
 .pda-empty{text-align:center;padding:40px;color:#aaa;font-weight:600;font-size:0.85rem;}
@@ -1010,9 +1013,12 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);min-height:100vh;padd
   <div id="pda-results" style="display:none;">
     <div class="pda-kpis" id="pda-kpis"></div>
     <div class="pda-panel">
+      <div class="pda-sec-header">
+        <div class="pda-sec-title">📲 Comparação por matrícula</div>
+        <span class="pda-count" id="pda-count">—</span>
+      </div>
       <div class="pda-tabs" id="pda-tabs"></div>
       <div class="pda-toolbar">
-        <input type="text" id="pda-search" class="pda-search" placeholder="🔎 Buscar por nome ou matrícula..." oninput="pdaRender()">
         <div class="pda-seg" id="pda-status-seg">
           <button data-st="todos" class="active" onclick="pdaSetStatus('todos',this)">Todos</button>
           <button data-st="ativo" onclick="pdaSetStatus('ativo',this)">Ativos</button>
@@ -1021,7 +1027,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);min-height:100vh;padd
         <select id="pda-uf" class="pda-cargo-sel" onchange="pdaSetUF(this.value)"><option value="todos">Todos os estados</option></select>
         <select id="pda-cargo" class="pda-cargo-sel" onchange="pdaSetCargo(this.value)"><option value="todos">Todos os cargos</option></select>
         <select id="pda-equipe" class="pda-cargo-sel" onchange="pdaSetEquipe(this.value)"><option value="todos">Todas as equipes</option></select>
-        <button class="pda-export" onclick="pdaExport()">💾 Exportar lista</button>
+        <input type="text" id="pda-search" class="pda-search" placeholder="🔎 Buscar nome ou matrícula..." oninput="pdaRender()">
+        <button class="pda-export" onclick="pdaExport()">💾 Exportar</button>
       </div>
       <div class="pda-table-wrap"><table id="pda-table"><thead id="pda-thead"></thead><tbody id="pda-tbody"></tbody></table></div>
     </div>
@@ -2288,6 +2295,7 @@ function pdaRender(){
   populateEquipeSelect();
   populateUFSelect();
   var list=currentList(), cols, rowsHtml;
+  var cnt=$('pda-count'); if(cnt) cnt.textContent=list.length+(list.length===1?' registro':' registros');
   if(pdaTab==='acessaram'){
     cols=['Funcionário','Matrícula','Cargo','Equipe','Situação','Último acesso','Acessos','Aparelho acessado'];
     rowsHtml=list.map(function(x){return '<tr><td class="main">'+esc(x.nome)+'</td><td>'+esc(x.mat)+'</td><td>'+esc(x.cargo||'—')+'</td><td>'+eqCell(x)+'</td><td>'+sb(x)+'</td><td>'+fmtDate(x.ultimo)+'</td><td>'+x.qtdAcessos+'</td><td>'+(x.imeis.length?x.imeis.map(imeiShort).join(', '):'—')+'</td></tr>';}).join('');
