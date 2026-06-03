@@ -1018,6 +1018,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);min-height:100vh;padd
           <button data-st="ativo" onclick="pdaSetStatus('ativo',this)">Ativos</button>
           <button data-st="inativo" onclick="pdaSetStatus('inativo',this)">Inativos</button>
         </div>
+        <select id="pda-uf" class="pda-cargo-sel" onchange="pdaSetUF(this.value)"><option value="todos">Todos os estados</option></select>
         <select id="pda-cargo" class="pda-cargo-sel" onchange="pdaSetCargo(this.value)"><option value="todos">Todos os cargos</option></select>
         <select id="pda-equipe" class="pda-cargo-sel" onchange="pdaSetEquipe(this.value)"><option value="todos">Todas as equipes</option></select>
         <button class="pda-export" onclick="pdaExport()">💾 Exportar lista</button>
@@ -2057,8 +2058,8 @@ window.oplExportCSV = oplExportCSV;
 (function(){
 'use strict';
 let pdaCad=null, pdaAcc=null, pdaResult=null;
-let pdaTab='naoacessaram', pdaStatus='todos', pdaCargo='todos', pdaEquipe='todos';
-var pdaCargoMap=null, pdaEqMap=null;
+let pdaTab='naoacessaram', pdaStatus='todos', pdaCargo='todos', pdaEquipe='todos', pdaUF='todos';
+var pdaCargoMap=null, pdaEqMap=null, pdaUFMap=null;
 const $=function(id){ return document.getElementById(id); };
 
 function stripBom(t){ return String(t==null?'':t).replace(/^\uFEFF/,''); }
@@ -2173,7 +2174,7 @@ function compute(){
     var sit=get(r,['Situação','Situacao']);
     var ativo=/ativo/i.test(sit) && !/inativo/i.test(sit);
     var ev=(pdaEqMap&&pdaEqMap[matKey(mat)])||null;
-    var base={nome:nome,mat:mat,situacao:sit,ativo:ativo,aparelho:get(r,['Aparelho']),carrega:get(r,['Carrega Placa']),cargo:(pdaCargoMap&&pdaCargoMap[matKey(mat)])||get(r,['Cargo'])||'',equipe:ev?ev.eq:'',funcaoEq:ev?ev.fn:'',encEq:ev?ev.enc:''};
+    var base={nome:nome,mat:mat,situacao:sit,ativo:ativo,aparelho:get(r,['Aparelho']),carrega:get(r,['Carrega Placa']),cargo:(pdaCargoMap&&pdaCargoMap[matKey(mat)])||get(r,['Cargo'])||'',equipe:ev?ev.eq:'',funcaoEq:ev?ev.fn:'',encEq:ev?ev.enc:'',uf:(pdaUFMap&&pdaUFMap[matKey(mat)])||''};
     if(accMap[k]){
       var a=accMap[k];
       base.ultimo=a.last; base.qtdAcessos=a.count; base.lastQtd=a.lastQtd; base.imeis=Object.keys(a.imeis); base.email=a.email;
@@ -2236,7 +2237,21 @@ function currentList(){
   if(pdaStatus!=='todos' && pdaTab!=='semcadastro') list=list.filter(function(x){ return pdaStatus==='ativo'?x.ativo:!x.ativo; });
   if(pdaCargo!=='todos' && pdaTab!=='semcadastro') list=list.filter(function(x){ return (x.cargo||'(sem cargo)')===pdaCargo; });
   if(pdaEquipe!=='todos' && pdaTab!=='semcadastro') list=list.filter(function(x){ return (x.equipe||'(sem equipe)')===pdaEquipe; });
+  if(pdaUF!=='todos' && pdaTab!=='semcadastro') list=list.filter(function(x){ return (x.uf||'(sem UF)')===pdaUF; });
   return list;
+}
+function populateUFSelect(){
+  var sel=$('pda-uf'); if(!sel) return;
+  if(pdaTab==='semcadastro'){ sel.style.display='none'; return; }
+  sel.style.display='';
+  var tabList= pdaTab==='acessaram'?pdaResult.acessaram:pdaResult.naoAcessaram;
+  if(pdaStatus!=='todos') tabList=tabList.filter(function(x){return pdaStatus==='ativo'?x.ativo:!x.ativo;});
+  var set={}; tabList.forEach(function(x){ var u=x.uf||'(sem UF)'; set[u]=(set[u]||0)+1; });
+  if(pdaUF!=='todos' && !set[pdaUF]) pdaUF='todos';
+  var opts=['<option value="todos">Todos os estados</option>'].concat(
+    Object.keys(set).sort().map(function(u){ return '<option value="'+esc(u)+'">'+esc(u)+' ('+set[u]+')</option>'; }));
+  sel.innerHTML=opts.join('');
+  sel.value=pdaUF;
 }
 function populateEquipeSelect(){
   var sel=$('pda-equipe'); if(!sel) return;
@@ -2265,12 +2280,13 @@ function populateCargoSelect(){
   sel.value=pdaCargo;
 }
 function sb(x){ return '<span class="pda-sb '+(x.ativo?'ativo':'inativo')+'">'+esc(x.situacao||'—')+'</span>'; }
-function eqCell(x){ if(!x.equipe) return '—'; var b=x.funcaoEq==='Encarregado'?' <span style="background:#fef3cd;color:#b97400;font-size:0.56rem;font-weight:800;padding:1px 5px;border-radius:4px;">ENC</span>':''; return esc(x.equipe)+b; }
+function eqCell(x){ var uf=x.uf?'<span style="background:#e6f0ff;color:#2b6cb0;font-size:0.56rem;font-weight:800;padding:1px 5px;border-radius:4px;margin-right:4px;">'+esc(x.uf)+'</span>':''; if(!x.equipe) return uf||'—'; var b=x.funcaoEq==='Encarregado'?' <span style="background:#fef3cd;color:#b97400;font-size:0.56rem;font-weight:800;padding:1px 5px;border-radius:4px;">ENC</span>':''; return uf+esc(x.equipe)+b; }
 function pdaRender(){
   if(!pdaResult) return;
   $('pda-status-seg').style.display = pdaTab==='semcadastro'?'none':'flex';
   populateCargoSelect();
   populateEquipeSelect();
+  populateUFSelect();
   var list=currentList(), cols, rowsHtml;
   if(pdaTab==='acessaram'){
     cols=['Funcionário','Matrícula','Cargo','Equipe','Situação','Último acesso','Acessos','Aparelho acessado'];
@@ -2290,13 +2306,14 @@ window.pdaSetTab=function(t){ pdaTab=t; renderTabs(); pdaRender(); };
 window.pdaSetStatus=function(s,btn){ pdaStatus=s; var seg=document.querySelectorAll('#pda-status-seg button'); for(var i=0;i<seg.length;i++) seg[i].classList.remove('active'); if(btn) btn.classList.add('active'); pdaRender(); };
 window.pdaSetCargo=function(c){ pdaCargo=c; pdaRender(); };
 window.pdaSetEquipe=function(e){ pdaEquipe=e; pdaRender(); };
+window.pdaSetUF=function(u){ pdaUF=u; pdaRender(); };
 window.pdaRender=pdaRender;
 window.pdaExport=function(){
   if(!pdaResult) return;
   var list=currentList(), headers, lines;
-  if(pdaTab==='acessaram'){ headers=['Funcionário','Matrícula','Cargo','Equipe','Função','Situação','Último acesso','Acessos','IMEIs']; lines=list.map(function(x){return [x.nome,x.mat,x.cargo,x.equipe,x.funcaoEq,x.situacao,fmtDate(x.ultimo),x.qtdAcessos,x.imeis.join(' ')];}); }
+  if(pdaTab==='acessaram'){ headers=['Funcionário','Matrícula','Estado','Cargo','Equipe','Função','Situação','Último acesso','Acessos','IMEIs']; lines=list.map(function(x){return [x.nome,x.mat,x.uf,x.cargo,x.equipe,x.funcaoEq,x.situacao,fmtDate(x.ultimo),x.qtdAcessos,x.imeis.join(' ')];}); }
   else if(pdaTab==='semcadastro'){ headers=['Nome','Matrícula','Último acesso','Acessos','IMEI']; lines=list.map(function(x){return [x.nome,x.mat,fmtDate(x.ultimo),x.qtdAcessos,x.imeis[0]||''];}); }
-  else { headers=['Funcionário','Matrícula','Cargo','Equipe','Função','Situação','Carrega placa','Aparelho']; lines=list.map(function(x){return [x.nome,x.mat,x.cargo,x.equipe,x.funcaoEq,x.situacao,x.carrega,x.aparelho];}); }
+  else { headers=['Funcionário','Matrícula','Estado','Cargo','Equipe','Função','Situação','Carrega placa','Aparelho']; lines=list.map(function(x){return [x.nome,x.mat,x.uf,x.cargo,x.equipe,x.funcaoEq,x.situacao,x.carrega,x.aparelho];}); }
   var csv=[headers].concat(lines).map(function(r){return r.map(function(c){return '"'+String(c==null?'':c).replace(/"/g,'""')+'"';}).join(';');}).join('\r\n');
   var blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8;'});
   var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='pda_'+pdaTab+'.csv'; a.click();
@@ -2346,6 +2363,20 @@ function loadEquipeFromBank(){
         var map={}, lines=String(arr[0].value.data).split('\n');
         for(var i=0;i<lines.length;i++){ var p=lines[i].split('|'); if(p.length<3) continue; map[p[0]]={eq:p[1]||'',fn:p[2]||'',tipo:p[3]||'',enc:p[4]||''}; }
         pdaEqMap=map;
+        if(pdaResult){ compute(); renderTabs(); pdaRender(); }
+      }
+    })
+    .catch(function(){});
+}
+function loadUFFromBank(){
+  if(!PDA_SKEY) return;
+  fetch(PDA_SUPA+'/rest/v1/turno_data?key=eq.funcionario_uf&select=value',{headers:pdaSupaHeaders()})
+    .then(function(r){ return r.ok?r.json():null; })
+    .then(function(arr){
+      if(arr && arr[0] && arr[0].value && arr[0].value.data){
+        var map={}, lines=String(arr[0].value.data).split('\n');
+        for(var i=0;i<lines.length;i++){ var p=lines[i].split('|'); if(p.length<2) continue; map[p[0]]=p[1]; }
+        pdaUFMap=map;
         if(pdaResult){ compute(); renderTabs(); pdaRender(); }
       }
     })
@@ -2435,6 +2466,7 @@ function pdaInit(){
   loadCadastroFromBank();
   loadCargoFromBank();
   loadEquipeFromBank();
+  loadUFFromBank();
   loadAcessoFromBank();
 }
 (function start(){
