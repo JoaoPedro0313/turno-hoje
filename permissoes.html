@@ -50,6 +50,7 @@ tbody td.c{text-align:center;}
 tbody tr:hover{background:#f9fbff;}
 .nm{font-weight:700;color:#1a365d;}
 .lg{color:#888;font-size:0.72rem;font-weight:700;}
+.cg{color:#555;font-size:0.76rem;font-weight:600;white-space:nowrap;}
 .ck{color:#14a085;font-weight:800;font-size:1rem;}
 .no{color:#e2e8f0;}
 .tot{font-weight:800;color:#0d7377;}
@@ -120,8 +121,8 @@ function load(){
       if(!arr||!arr[0]||!arr[0].value){$('perm-tbody').innerHTML='<tr><td class="empty">Nenhum dado de permissões no banco.</td></tr>';return;}
       var v=arr[0].value; TELAS=v.telas||[]; SHORT=TELAS.map(function(t){return SHORTMAP[t]||t;});
       USERS=String(v.data||'').split('\n').filter(Boolean).map(function(ln){
-        var p=ln.split('|'); var idxs=(p[2]||'').split(',').filter(function(x){return x!=='';}).map(Number);
-        return {login:p[0]||'',nome:p[1]||'',set:idxs};
+        var p=ln.split('|'); var idxs=(p[3]||'').split(',').filter(function(x){return x!=='';}).map(Number);
+        return {login:p[0]||'',nome:p[1]||'',cargo:p[2]||'',set:idxs};
       });
       renderKPIs(); permRender();
     })
@@ -141,7 +142,7 @@ function renderKPIs(){
 function filtered(){
   var q=($('perm-search').value||'').trim().toLowerCase();
   if(!q)return USERS;
-  return USERS.filter(function(u){return u.nome.toLowerCase().indexOf(q)>=0||u.login.toLowerCase().indexOf(q)>=0;});
+  return USERS.filter(function(u){return u.nome.toLowerCase().indexOf(q)>=0||u.login.toLowerCase().indexOf(q)>=0||(u.cargo||'').toLowerCase().indexOf(q)>=0;});
 }
 
 window.permSetView=function(v){view=v;['matriz','usuario','tela'].forEach(function(x){$('v-'+x).className='fbtn'+(x===v?' active':'');});permRender();};
@@ -152,24 +153,24 @@ window.permRender=function(){
   var list=filtered().slice().sort(function(a,b){return a.nome.toUpperCase()<b.nome.toUpperCase()?-1:1;});
   if(view==='matriz'){
     $('perm-title').textContent='🔐 Matriz — telas por usuário';
-    var h='<tr><th>Usuário</th><th>Login</th>';
+    var h='<tr><th>Usuário</th><th>Login</th><th>Cargo</th>';
     SHORT.forEach(function(s,i){h+='<th class="c" title="'+esc(TELAS[i])+'">'+esc(s)+'</th>';});
     h+='<th class="c">Total</th></tr>'; th.innerHTML=h;
     var rows=list.map(function(u){
       var tds=''; for(var i=0;i<TELAS.length;i++){tds+='<td class="c">'+(u.set.indexOf(i)>=0?'<span class="ck">✓</span>':'<span class="no">·</span>')+'</td>';}
-      return '<tr><td class="nm">'+esc(u.nome)+'</td><td class="lg">'+esc(u.login)+'</td>'+tds+'<td class="c tot">'+u.set.length+'</td></tr>';
+      return '<tr><td class="nm">'+esc(u.nome)+'</td><td class="lg">'+esc(u.login)+'</td><td class="cg">'+(u.cargo?esc(u.cargo):'<span class="no">—</span>')+'</td>'+tds+'<td class="c tot">'+u.set.length+'</td></tr>';
     }).join('');
-    tb.innerHTML=rows||'<tr><td class="empty" colspan="'+(TELAS.length+3)+'">Nenhum usuário.</td></tr>';
+    tb.innerHTML=rows||'<tr><td class="empty" colspan="'+(TELAS.length+4)+'">Nenhum usuário.</td></tr>';
     $('perm-count').textContent=list.length+' usuários';
   } else if(view==='usuario'){
     $('perm-title').textContent='🔐 Por usuário';
-    th.innerHTML='<tr><th>Usuário</th><th>Login</th><th class="c">Qtd</th><th>Telas</th></tr>';
+    th.innerHTML='<tr><th>Usuário</th><th>Login</th><th>Cargo</th><th class="c">Qtd</th><th>Telas</th></tr>';
     var rows=list.map(function(u){
       var tag=u.set.length===TELAS.length?'<span class="badge7">todas</span>':'<span class="badgep">'+u.set.length+'/'+TELAS.length+'</span>';
       var pills=u.set.map(function(i){return '<span class="pill">'+esc(TELAS[i])+'</span>';}).join('');
-      return '<tr><td class="nm">'+esc(u.nome)+'</td><td class="lg">'+esc(u.login)+'</td><td class="c">'+tag+'</td><td>'+pills+'</td></tr>';
+      return '<tr><td class="nm">'+esc(u.nome)+'</td><td class="lg">'+esc(u.login)+'</td><td class="cg">'+(u.cargo?esc(u.cargo):'<span class="no">—</span>')+'</td><td class="c">'+tag+'</td><td>'+pills+'</td></tr>';
     }).join('');
-    tb.innerHTML=rows||'<tr><td class="empty" colspan="4">Nenhum usuário.</td></tr>';
+    tb.innerHTML=rows||'<tr><td class="empty" colspan="5">Nenhum usuário.</td></tr>';
     $('perm-count').textContent=list.length+' usuários';
   } else {
     $('perm-title').textContent='🔐 Por tela';
@@ -188,10 +189,10 @@ window.permRender=function(){
 
 window.permExport=function(){
   var list=filtered().slice().sort(function(a,b){return a.nome.toUpperCase()<b.nome.toUpperCase()?-1:1;});
-  var sep=';', head=['Login','Usuario'].concat(TELAS).concat(['Total']);
+  var sep=';', head=['Login','Usuario','Cargo'].concat(TELAS).concat(['Total']);
   var lines=[head.join(sep)];
   list.forEach(function(u){
-    var row=[u.login,u.nome];
+    var row=[u.login,u.nome,u.cargo];
     for(var i=0;i<TELAS.length;i++)row.push(u.set.indexOf(i)>=0?'Sim':'Nao');
     row.push(u.set.length);
     lines.push(row.map(function(c){return '"'+String(c).replace(/"/g,'""')+'"';}).join(sep));
