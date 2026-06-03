@@ -2374,7 +2374,7 @@ function rowsFromCompact(val){
 }
 function loadCadastroFromBank(){
   if(!PDA_SKEY){ renderFiles(); return; }
-  fetch(PDA_SUPA+'/rest/v1/turno_data?key=eq.funcionario_pda&select=value&_t='+Date.now(),{headers:pdaSupaHeaders(),cache:'no-store'})
+  fetch(PDA_SUPA+'/rest/v1/turno_data?key=eq.funcionario_pda&select=value',{headers:pdaSupaHeaders(),cache:'no-store'})
     .then(function(r){ return r.ok?r.json():null; })
     .then(function(arr){
       if(arr && arr[0] && arr[0].value && arr[0].value.data){
@@ -2386,7 +2386,7 @@ function loadCadastroFromBank(){
 }
 function loadCargoFromBank(){
   if(!PDA_SKEY) return;
-  fetch(PDA_SUPA+'/rest/v1/turno_data?key=eq.funcionario_cargo&select=value&_t='+Date.now(),{headers:pdaSupaHeaders(),cache:'no-store'})
+  fetch(PDA_SUPA+'/rest/v1/turno_data?key=eq.funcionario_cargo&select=value',{headers:pdaSupaHeaders(),cache:'no-store'})
     .then(function(r){ return r.ok?r.json():null; })
     .then(function(arr){
       if(arr && arr[0] && arr[0].value && arr[0].value.data){
@@ -2400,7 +2400,7 @@ function loadCargoFromBank(){
 }
 function loadEquipeFromBank(){
   if(!PDA_SKEY) return;
-  fetch(PDA_SUPA+'/rest/v1/turno_data?key=eq.funcionario_equipe&select=value&_t='+Date.now(),{headers:pdaSupaHeaders(),cache:'no-store'})
+  fetch(PDA_SUPA+'/rest/v1/turno_data?key=eq.funcionario_equipe&select=value',{headers:pdaSupaHeaders(),cache:'no-store'})
     .then(function(r){ return r.ok?r.json():null; })
     .then(function(arr){
       if(arr && arr[0] && arr[0].value && arr[0].value.data){
@@ -2414,7 +2414,7 @@ function loadEquipeFromBank(){
 }
 function loadUFFromBank(){
   if(!PDA_SKEY) return;
-  fetch(PDA_SUPA+'/rest/v1/turno_data?key=eq.funcionario_uf&select=value&_t='+Date.now(),{headers:pdaSupaHeaders(),cache:'no-store'})
+  fetch(PDA_SUPA+'/rest/v1/turno_data?key=eq.funcionario_uf&select=value',{headers:pdaSupaHeaders(),cache:'no-store'})
     .then(function(r){ return r.ok?r.json():null; })
     .then(function(arr){
       if(arr && arr[0] && arr[0].value && arr[0].value.data){
@@ -2471,7 +2471,7 @@ function saveAcessoToBank(rows){
 }
 function loadAcessoFromBank(){
   if(!PDA_SKEY) return;
-  fetch(PDA_SUPA+'/rest/v1/turno_data?key=eq.pda_acesso&select=value&_t='+Date.now(),{headers:pdaSupaHeaders(),cache:'no-store'})
+  fetch(PDA_SUPA+'/rest/v1/turno_data?key=eq.pda_acesso&select=value',{headers:pdaSupaHeaders(),cache:'no-store'})
     .then(function(r){ return r.ok?r.json():null; })
     .then(function(arr){
       if(arr && arr[0] && arr[0].value && arr[0].value.data){
