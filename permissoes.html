@@ -30,6 +30,18 @@ body{font-family:'Barlow',sans-serif;background:#f0f4f5;color:#2d3748;padding-to
 .kpi .v{font-size:2rem;font-weight:800;color:#2d3748;line-height:1;}
 .kpi .l{font-size:0.65rem;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:1.5px;margin-top:5px;}
 .panel{background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.07);margin-bottom:24px;}
+.cols{display:grid;grid-template-columns:230px 1fr;gap:18px;align-items:start;margin-bottom:24px;}
+.side{background:#fff;border-radius:12px;box-shadow:0 2px 12px rgba(0,0,0,0.07);overflow:hidden;position:sticky;top:108px;}
+.side-h{background:#f0fafa;border-bottom:1px solid #c0e8e5;padding:13px 16px;font-size:0.78rem;font-weight:800;color:#0d7377;letter-spacing:0.5px;}
+.side-b{padding:14px 16px;}
+.fg{margin-bottom:15px;}
+.fg>label{display:block;font-size:0.62rem;font-weight:800;color:#9aa7ad;letter-spacing:1px;text-transform:uppercase;margin-bottom:7px;}
+.vlist{display:flex;flex-direction:column;gap:6px;}
+.vlist .fbtn{width:100%;text-align:left;}
+.side .search{width:100%;margin-left:0;}
+.side .exp{width:100%;padding:10px;}
+.main{background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.07);}
+@media(max-width:840px){.cols{grid-template-columns:1fr;}.side{position:static;}}
 .sec-h{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;background:#f0fafa;border-bottom:1px solid #c0e8e5;}
 .sec-t{font-size:1rem;font-weight:800;color:#222;letter-spacing:0.5px;display:flex;align-items:center;gap:10px;}
 .count{background:#0d7377;color:#fff;font-size:0.72rem;font-weight:800;padding:3px 10px;border-radius:5px;white-space:nowrap;}
@@ -84,19 +96,30 @@ tbody tr:hover{background:#f9fbff;}
 
 <div class="wrap">
   <div class="kpis" id="perm-kpis"></div>
-  <div class="panel">
-    <div class="sec-h">
-      <div class="sec-t" id="perm-title">🔐 Telas por usuário — Programação</div>
-      <span class="count" id="perm-count">—</span>
-    </div>
-    <div class="toolbar">
-      <button class="fbtn active" id="v-matriz" onclick="permSetView('matriz')">Matriz</button>
-      <button class="fbtn" id="v-usuario" onclick="permSetView('usuario')">Por usuário</button>
-      <button class="fbtn" id="v-tela" onclick="permSetView('tela')">Por tela</button>
-      <input type="text" class="search" id="perm-search" placeholder="🔎 buscar usuário ou login" oninput="permRender()">
-      <button class="exp" onclick="permExport()">💾 Exportar</button>
-    </div>
-    <div class="twrap"><table id="perm-table"><thead id="perm-thead"></thead><tbody id="perm-tbody"></tbody></table></div>
+  <div class="cols">
+    <aside class="side">
+      <div class="side-h">⚙ Visão & filtros</div>
+      <div class="side-b">
+        <div class="fg"><label>Visão</label>
+          <div class="vlist">
+            <button class="fbtn active" id="v-matriz" onclick="permSetView('matriz')">Matriz</button>
+            <button class="fbtn" id="v-usuario" onclick="permSetView('usuario')">Por usuário</button>
+            <button class="fbtn" id="v-tela" onclick="permSetView('tela')">Por tela</button>
+          </div>
+        </div>
+        <div class="fg"><label>Busca</label>
+          <input type="text" class="search" id="perm-search" placeholder="🔎 usuário, login ou cargo" oninput="permRender()">
+        </div>
+        <button class="exp" onclick="permExport()">💾 Exportar CSV</button>
+      </div>
+    </aside>
+    <section class="main">
+      <div class="sec-h">
+        <div class="sec-t" id="perm-title">🔐 Telas por usuário — Programação</div>
+        <span class="count" id="perm-count">—</span>
+      </div>
+      <div class="twrap"><table id="perm-table"><thead id="perm-thead"></thead><tbody id="perm-tbody"></tbody></table></div>
+    </section>
   </div>
 </div>
 
