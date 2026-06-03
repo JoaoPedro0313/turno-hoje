@@ -1000,6 +1000,21 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);min-height:100vh;padd
 .pda-sb.ativo{background:#d0f0ee;color:#0d7377;}
 .pda-sb.inativo{background:#fde8e8;color:#c53030;}
 .pda-empty{text-align:center;padding:40px;color:#aaa;font-weight:600;font-size:0.85rem;}
+.pda-cols{display:grid;grid-template-columns:250px 1fr;gap:18px;align-items:start;}
+.pda-side{background:#fff;border-radius:12px;box-shadow:0 2px 12px rgba(0,0,0,0.07);overflow:hidden;position:sticky;top:108px;}
+.pda-side-h{background:#f0fafa;border-bottom:1px solid #c0e8e5;padding:13px 16px;font-size:0.78rem;font-weight:800;color:#0d7377;letter-spacing:0.5px;display:flex;align-items:center;gap:8px;}
+.pda-side-b{padding:14px 16px;}
+.pda-fg{margin-bottom:15px;}
+.pda-fg>label{display:block;font-size:0.62rem;font-weight:800;color:#9aa7ad;letter-spacing:1px;text-transform:uppercase;margin-bottom:7px;}
+.pda-main{background:#fff;border-radius:12px;box-shadow:0 2px 12px rgba(0,0,0,0.07);overflow:hidden;}
+.pda-side .pda-tabs{flex-direction:column;padding:0;gap:6px;}
+.pda-side .pda-tab{width:100%;text-align:left;display:flex;align-items:center;justify-content:space-between;}
+.pda-side .pda-seg{display:flex;gap:5px;}
+.pda-side .pda-seg button{flex:1;padding:7px 0;}
+.pda-side .pda-cargo-sel{max-width:none;width:100%;}
+.pda-side .pda-search{width:100%;margin-left:0;}
+.pda-side .pda-export{width:100%;padding:10px;font-size:0.8rem;}
+@media(max-width:840px){.pda-cols{grid-template-columns:1fr;}.pda-side{position:static;}}
 </style>
 
 <div class="pda-wrap">
@@ -1012,25 +1027,42 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);min-height:100vh;padd
 
   <div id="pda-results" style="display:none;">
     <div class="pda-kpis" id="pda-kpis"></div>
-    <div class="pda-panel">
-      <div class="pda-sec-header">
-        <div class="pda-sec-title">📲 Comparação por matrícula</div>
-        <span class="pda-count" id="pda-count">—</span>
-      </div>
-      <div class="pda-tabs" id="pda-tabs"></div>
-      <div class="pda-toolbar">
-        <div class="pda-seg" id="pda-status-seg">
-          <button data-st="todos" class="active" onclick="pdaSetStatus('todos',this)">Todos</button>
-          <button data-st="ativo" onclick="pdaSetStatus('ativo',this)">Ativos</button>
-          <button data-st="inativo" onclick="pdaSetStatus('inativo',this)">Inativos</button>
+    <div class="pda-cols">
+      <aside class="pda-side">
+        <div class="pda-side-h">⚙ Filtros</div>
+        <div class="pda-side-b">
+          <div class="pda-fg"><label>Lista</label>
+            <div class="pda-tabs" id="pda-tabs"></div>
+          </div>
+          <div class="pda-fg" id="pda-fg-situacao"><label>Situação</label>
+            <div class="pda-seg" id="pda-status-seg">
+              <button data-st="todos" class="active" onclick="pdaSetStatus('todos',this)">Todos</button>
+              <button data-st="ativo" onclick="pdaSetStatus('ativo',this)">Ativos</button>
+              <button data-st="inativo" onclick="pdaSetStatus('inativo',this)">Inativos</button>
+            </div>
+          </div>
+          <div class="pda-fg" id="pda-fg-uf"><label>Estado</label>
+            <select id="pda-uf" class="pda-cargo-sel" onchange="pdaSetUF(this.value)"><option value="todos">Todos os estados</option></select>
+          </div>
+          <div class="pda-fg" id="pda-fg-cargo"><label>Cargo</label>
+            <select id="pda-cargo" class="pda-cargo-sel" onchange="pdaSetCargo(this.value)"><option value="todos">Todos os cargos</option></select>
+          </div>
+          <div class="pda-fg" id="pda-fg-equipe"><label>Equipe</label>
+            <select id="pda-equipe" class="pda-cargo-sel" onchange="pdaSetEquipe(this.value)"><option value="todos">Todas as equipes</option></select>
+          </div>
+          <div class="pda-fg"><label>Busca</label>
+            <input type="text" id="pda-search" class="pda-search" placeholder="🔎 nome ou matrícula" oninput="pdaRender()">
+          </div>
+          <button class="pda-export" onclick="pdaExport()">💾 Exportar lista</button>
         </div>
-        <select id="pda-uf" class="pda-cargo-sel" onchange="pdaSetUF(this.value)"><option value="todos">Todos os estados</option></select>
-        <select id="pda-cargo" class="pda-cargo-sel" onchange="pdaSetCargo(this.value)"><option value="todos">Todos os cargos</option></select>
-        <select id="pda-equipe" class="pda-cargo-sel" onchange="pdaSetEquipe(this.value)"><option value="todos">Todas as equipes</option></select>
-        <input type="text" id="pda-search" class="pda-search" placeholder="🔎 Buscar nome ou matrícula..." oninput="pdaRender()">
-        <button class="pda-export" onclick="pdaExport()">💾 Exportar</button>
-      </div>
-      <div class="pda-table-wrap"><table id="pda-table"><thead id="pda-thead"></thead><tbody id="pda-tbody"></tbody></table></div>
+      </aside>
+      <section class="pda-main">
+        <div class="pda-sec-header">
+          <div class="pda-sec-title" id="pda-sec-title">📲 Comparação por matrícula</div>
+          <span class="pda-count" id="pda-count">—</span>
+        </div>
+        <div class="pda-table-wrap"><table id="pda-table"><thead id="pda-thead"></thead><tbody id="pda-tbody"></tbody></table></div>
+      </section>
     </div>
   </div>
 </div>
@@ -2290,10 +2322,14 @@ function sb(x){ return '<span class="pda-sb '+(x.ativo?'ativo':'inativo')+'">'+e
 function eqCell(x){ var uf=x.uf?'<span style="background:#e6f0ff;color:#2b6cb0;font-size:0.56rem;font-weight:800;padding:1px 5px;border-radius:4px;margin-right:4px;">'+esc(x.uf)+'</span>':''; if(!x.equipe) return uf||'—'; var b=x.funcaoEq==='Encarregado'?' <span style="background:#fef3cd;color:#b97400;font-size:0.56rem;font-weight:800;padding:1px 5px;border-radius:4px;">ENC</span>':''; return uf+esc(x.equipe)+b; }
 function pdaRender(){
   if(!pdaResult) return;
-  $('pda-status-seg').style.display = pdaTab==='semcadastro'?'none':'flex';
+  var iscad = pdaTab!=='semcadastro';
+  ['pda-fg-situacao','pda-fg-uf','pda-fg-cargo','pda-fg-equipe'].forEach(function(id){ var el=$(id); if(el) el.style.display=iscad?'':'none'; });
+  var seg=$('pda-status-seg'); if(seg) seg.style.display=iscad?'flex':'none';
   populateCargoSelect();
   populateEquipeSelect();
   populateUFSelect();
+  var titles={naoacessaram:'📲 Não acessaram',acessaram:'📲 Acessaram',semcadastro:'📲 Acessos sem cadastro'};
+  var st=$('pda-sec-title'); if(st) st.textContent=titles[pdaTab]||'📲 Comparação';
   var list=currentList(), cols, rowsHtml;
   var cnt=$('pda-count'); if(cnt) cnt.textContent=list.length+(list.length===1?' registro':' registros');
   if(pdaTab==='acessaram'){
