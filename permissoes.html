@@ -74,6 +74,46 @@ tbody tr:hover{background:#f9fbff;}
 .empty{text-align:center;padding:40px;color:#aaa;font-weight:600;}
 @media(max-width:840px){.kpis{grid-template-columns:repeat(2,1fr);}.search{width:100%;margin-left:0;}}
 </style>
+<style id="sidemenu-css">
+.page-nav{display:none !important;}
+body{padding-top:60px !important;padding-left:232px;}
+.sm-side{position:fixed;top:52px;left:0;bottom:0;width:232px;z-index:110;background:#fff;border-right:1px solid #e6ebee;box-shadow:2px 0 12px rgba(0,0,0,.04);display:flex;flex-direction:column;transition:width .22s ease;font-family:'Barlow',sans-serif}
+.sm-top{display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid #eef2f4;overflow:hidden}
+.sm-logo{width:34px;height:34px;flex-shrink:0;object-fit:contain;display:block}
+.sm-logo-tx{font-weight:800;color:#0d7377;letter-spacing:1px;font-size:1rem;white-space:nowrap;line-height:1.05}
+.sm-logo-tx small{display:block;font-size:.5rem;letter-spacing:2px;color:#9aa6ab;font-weight:700}
+.sm-toggle{display:flex;justify-content:center;padding:7px 0;border-bottom:1px solid #eef2f4}
+.sm-toggle button{background:#f3f6f7;border:1px solid #e6ebee;color:#0d7377;width:38px;height:30px;border-radius:8px;cursor:pointer;font-size:.95rem;display:flex;align-items:center;justify-content:center}
+.sm-toggle button:hover{background:#e7f0f0}
+.sm-nav{flex:1;overflow-y:auto;overflow-x:hidden;padding:8px;display:flex;flex-direction:column;gap:3px}
+.sm-item{display:flex;align-items:center;gap:12px;padding:9px 11px;border-radius:10px;text-decoration:none;color:#54616a;transition:background .14s,color .14s;white-space:nowrap;cursor:pointer}
+.sm-item:hover{background:#eef4f4;color:#0d7377}
+.sm-ic{width:32px;height:32px;border-radius:9px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:1rem;background:#f1f5f6}
+.sm-tx{font-size:.84rem;font-weight:700}
+.sm-item.active{background:linear-gradient(135deg,#0d7377,#14a085);color:#fff;box-shadow:0 4px 12px rgba(13,115,119,.28)}
+.sm-item.active .sm-ic{background:rgba(255,255,255,.22)}
+.sm-foot{padding:9px 14px;border-top:1px solid #eef2f4;font-size:.6rem;color:#aab4b8;font-weight:700;white-space:nowrap;overflow:hidden}
+body.sm-collapsed{padding-left:64px;}
+body.sm-collapsed .sm-side{width:64px}
+body.sm-collapsed .sm-logo-tx,body.sm-collapsed .sm-tx,body.sm-collapsed .sm-foot{display:none}
+body.sm-collapsed .sm-top{justify-content:center;padding:12px 0}
+body.sm-collapsed .sm-item{justify-content:center;padding:9px 0}
+.bottom-bar{left:232px !important;}
+body.sm-collapsed .bottom-bar{left:64px !important;}
+@media (max-width:780px){
+  body{padding-left:64px !important;}
+  .sm-side{width:64px}
+  .sm-logo-tx,.sm-tx,.sm-foot{display:none}
+  .sm-top{justify-content:center;padding:12px 0}
+  .sm-item{justify-content:center;padding:9px 0}
+  body.sm-expanded .sm-side{width:228px;box-shadow:6px 0 24px rgba(0,0,0,.18)}
+  body.sm-expanded .sm-logo-tx,body.sm-expanded .sm-tx,body.sm-expanded .sm-foot{display:block}
+  body.sm-expanded .sm-tx{display:inline}
+  body.sm-expanded .sm-top{justify-content:flex-start;padding:12px 14px}
+  body.sm-expanded .sm-item{justify-content:flex-start;padding:9px 11px}
+  .bottom-bar,body.sm-collapsed .bottom-bar{left:64px !important;}
+}
+</style>
 </head>
 <body>
 <div class="top-bar"><div class="top-bar-inner">
@@ -246,6 +286,47 @@ function init(){
   permRender();
 }
 init();
+})();
+</script>
+<aside class="sm-side">
+  <div class="sm-top">
+    <img class="sm-logo" src="assets/logo-mariua.png" alt="Mariuá">
+    <div class="sm-logo-tx">MARIUÁ<small>Construção e Energia</small></div>
+  </div>
+  <div class="sm-toggle"><button type="button" onclick="smToggle()" title="Recolher / expandir">↔</button></div>
+  <nav class="sm-nav">
+    <a class="sm-item" href="index.html"><span class="sm-ic">🏠</span><span class="sm-tx">Início</span></a>
+    <a class="sm-item" href="turno.html"><span class="sm-ic">📋</span><span class="sm-tx">Turno</span></a>
+    <a class="sm-item" href="apr.html"><span class="sm-ic">📊</span><span class="sm-tx">RDO</span></a>
+    <a class="sm-item" href="comp.html"><span class="sm-ic">⚡</span><span class="sm-tx">Comparador</span></a>
+    <a class="sm-item" href="projeçao.html"><span class="sm-ic">📲</span><span class="sm-tx">PDA</span></a>
+    <a class="sm-item" href="mapa.html"><span class="sm-ic">🗺️</span><span class="sm-tx">Mapa</span></a>
+    <a class="sm-item" href="prog.html"><span class="sm-ic">📅</span><span class="sm-tx">Prog. Diária</span></a>
+    <a class="sm-item" href="permissoes.html"><span class="sm-ic">🔐</span><span class="sm-tx">Telas x Usuários</span></a>
+  </nav>
+  <div class="sm-foot">Mariuá · Sistema de Obras</div>
+</aside>
+<script>
+(function(){
+  function isMobile(){return window.matchMedia('(max-width:780px)').matches;}
+  window.smToggle=function(){
+    if(isMobile()) document.body.classList.toggle('sm-expanded');
+    else document.body.classList.toggle('sm-collapsed');
+    setTimeout(function(){
+      try{ if(window.mapaMap&&window.mapaMap.invalidateSize) window.mapaMap.invalidateSize(); }catch(e){}
+      try{ if(window.progMapaMap&&window.progMapaMap.invalidateSize) window.progMapaMap.invalidateSize(); }catch(e){}
+    },250);
+  };
+  try{
+    var cur=decodeURIComponent((location.pathname.split('/').pop()||'')).toLowerCase();
+    if(!cur) cur='index.html';
+    var items=document.querySelectorAll('.sm-item');
+    items.forEach(function(a){
+      var href=decodeURIComponent((a.getAttribute('href')||'')).toLowerCase();
+      if(href===cur) a.classList.add('active');
+      a.addEventListener('click',function(){document.body.classList.remove('sm-expanded');});
+    });
+  }catch(e){}
 })();
 </script>
 </body>
