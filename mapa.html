@@ -345,7 +345,7 @@
           style="padding:5px 12px;background:#f5f3ff;border:1.5px solid #d6bcfa;border-radius:7px;font-family:'Barlow',sans-serif;font-size:0.7rem;font-weight:800;color:#6b46c1;cursor:pointer;">
           🎯 Focar no raio
         </button>
-        <button onclick="mapaUsuarioMoveu=false;mapaFitFeito=false;if(mapaLayerGroup&&mapaMap){var b=[];mapaLayerGroup.eachLayer(function(l){if(l.getLatLng)b.push(l.getLatLng());});if(b.length){mapaMap.fitBounds(b,{padding:[30,30]});mapaFitFeito=true;mapaUsuarioMoveu=false;}}" title="Centralizar no mapa"
+        <button onclick="mapaUsuarioMoveu=false;mapaFitFeito=false;if(mapaLayerGroup&&mapaMap){var b=[];mapaLayerGroup.eachLayer(function(l){if(l.getLatLng)b.push(l.getLatLng());});if(b.length){mapaMap.fitBounds(b,{padding:[30,30],maxZoom:15});mapaFitFeito=true;mapaUsuarioMoveu=false;}}" title="Centralizar no mapa"
           style="padding:5px 12px;background:#f0fafa;border:1.5px solid #c0e8e5;border-radius:7px;font-family:'Barlow',sans-serif;font-size:0.7rem;font-weight:800;color:#0d7377;cursor:pointer;">
           📍 Ver todas as obras
         </button>
@@ -4602,7 +4602,7 @@ function mapaEnsureLeaflet(cb) {
   const tb = document.getElementById('mapa-map-toolbar'); if (tb) tb.style.display='flex';
   const doInit = () => {
     if (!mapaMap) {
-      mapaMap = L.map('mapa-container', {zoomControl:true});
+      mapaMap = L.map('mapa-container', {zoomControl:true, maxZoom:18});
       mapaMap.on('zoomstart movestart', function(e) {
         if (e.originalEvent) {
           mapaUsuarioMoveu = true;
@@ -4881,7 +4881,7 @@ if (_errorCount > 0) {
 // Auto-fitBounds: APENAS na PRIMEIRA renderização de marcadores. Depois disso,
 // nenhum re-render (em background ou não) reposiciona/rola — evita "resetar" a visão.
 if (bounds.length > 1 && !window._mapaFitInicialFeito && !mapaFitFeito && !mapaUsuarioMoveu) {
-  try { mapaMap.fitBounds(bounds,{padding:[28,28]}); mapaFitFeito=true; } catch(e){}
+  try { mapaMap.fitBounds(bounds,{padding:[28,28],maxZoom:15}); mapaFitFeito=true; mapaUsuarioMoveu=true; } catch(e){}
 }
 if (bounds.length > 0) window._mapaFitInicialFeito = true;
 // Atualiza destaque do raio DEPOIS de renderizar
