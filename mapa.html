@@ -3371,7 +3371,12 @@ function mapaParseCoord(s) {
   // Handle degree symbol: "11.30°" -> "11.30"
   v = v.replace(/°.*$/, '');
   const n = parseFloat(v);
-  return isNaN(n) ? null : n;
+  if (isNaN(n)) return null;
+  // Coordenada sem ponto decimal (ex.: "-11422167" = -11.422167): reescala
+  // dividindo por 10 até cair numa faixa de grau plausível (Brasil: |lat|<=34, |lon|<=74).
+  let nn = n, guard = 0;
+  while (Math.abs(nn) > 90 && guard < 12) { nn = nn / 10; guard++; }
+  return nn;
 }
 
 // Versão que retorna {lat, lon} quando a coluna LATITUDE tem um link
