@@ -100,6 +100,9 @@ tbody tr:hover{background:#f9fbff;}
     <aside class="side">
       <div class="side-h">⚙ Visão & filtros</div>
       <div class="side-b">
+        <div class="fg"><label>Pasta</label>
+          <select class="search" id="perm-folder" style="width:100%" onchange="permSetFolder(this.value)"></select>
+        </div>
         <div class="fg"><label>Visão</label>
           <div class="vlist">
             <button class="fbtn active" id="v-matriz" onclick="permSetView('matriz')">Matriz</button>
@@ -123,41 +126,50 @@ tbody tr:hover{background:#f9fbff;}
   </div>
 </div>
 
+<script src="telas_usuarios_data.js?v=1"></script>
 <script>
 (function(){
 'use strict';
-var SUPA='https://eqxejfoibebcbtsqymji.supabase.co';
-var SKEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVxeGVqZm9pYmViY2J0c3F5bWppIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE4NjUzMTEsImV4cCI6MjA4NzQ0MTMxMX0.lwf7_EJ6UchEOpzhW3cVKztxDGy78gaQblRvgiEwWh8';
-function H(){return {apikey:SKEY,Authorization:'Bearer '+SKEY};}
 function $(id){return document.getElementById(id);}
 function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
-var TELAS=[], SHORT=[], USERS=[], view='matriz';
-var SHORTMAP={'Painel Programação Obras':'Painel','Relatório Programação Obras':'Relatório','Reprogramação de Obras':'Reprog.','Despachar Obras Equipes':'Desp. Equipes','Retorno Programador':'Retorno','Pré-Inventário':'Pré-Inv.','Despachar Obras Civis':'Desp. Civis'};
+var D=window.TU_DATA||null;
+var TELAS=[], SHORT=[], USERS=[], view='matriz', FOLDER='Programa\u00e7\u00e3o';
+var SHORTMAP={'Painel Programa\u00e7\u00e3o Obras':'Painel','Relat\u00f3rio Programa\u00e7\u00e3o Obras':'Relat\u00f3rio','Reprograma\u00e7\u00e3o de Obras':'Reprog.','Despachar Obras Equipes':'Desp. Equipes','Retorno Programador':'Retorno','Pr\u00e9-Invent\u00e1rio':'Pr\u00e9-Inv.','Despachar Obras Civis':'Desp. Civis'};
 
 function clock(){var d=new Date();var t=$('page-time');if(t)t.textContent=d.toLocaleDateString('pt-BR')+' '+d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});}
 clock();setInterval(clock,30000);
 
-function load(){
-  fetch(SUPA+'/rest/v1/turno_data?key=eq.permissoes_programacao&select=value',{headers:H()})
-    .then(function(r){return r.ok?r.json():null;})
-    .then(function(arr){
-      if(!arr||!arr[0]||!arr[0].value){$('perm-tbody').innerHTML='<tr><td class="empty">Nenhum dado de permissões no banco.</td></tr>';return;}
-      var v=arr[0].value; TELAS=v.telas||[]; SHORT=TELAS.map(function(t){return SHORTMAP[t]||t;});
-      USERS=String(v.data||'').split('\n').filter(Boolean).map(function(ln){
-        var p=ln.split('|'); var idxs=(p[3]||'').split(',').filter(function(x){return x!=='';}).map(Number);
-        return {login:p[0]||'',nome:p[1]||'',cargo:p[2]||'',set:idxs};
-      });
-      renderKPIs(); permRender();
-    })
-    .catch(function(){$('perm-tbody').innerHTML='<tr><td class="empty">Erro ao carregar do banco.</td></tr>';});
+function shortName(t){return SHORTMAP[t]||t;}
+
+function buildFolderSelect(){
+  var sel=$('perm-folder'); if(!sel||!D)return;
+  var html='';
+  D.indice.forEach(function(it){
+    html+='<option value="'+esc(it.p)+'">'+esc(it.p)+' ('+it.nt+' telas \u00b7 '+it.nu+' usu.)</option>';
+  });
+  sel.innerHTML=html;
+  if(!D.pastas[FOLDER]) FOLDER=(D.indice[0]&&D.indice[0].p)||'';
+  sel.value=FOLDER;
+}
+
+function loadFolder(){
+  if(!D||!D.pastas[FOLDER]){TELAS=[];USERS=[];return;}
+  var pd=D.pastas[FOLDER];
+  TELAS=pd.t||[]; SHORT=TELAS.map(shortName);
+  USERS=String(pd.d||'').split('\n').filter(Boolean).map(function(ln){
+    var p=ln.split('|'); var uid=p[0];
+    var u=(D.users[uid]||['','']);
+    var idxs=(p[1]||'').split(',').filter(function(x){return x!=='';}).map(Number);
+    return {login:u[0]||'',nome:u[1]||'',cargo:D.cargos[uid]||'',set:idxs};
+  });
 }
 
 function renderKPIs(){
   var full=USERS.filter(function(u){return u.set.length===TELAS.length;}).length;
   var html='';
-  html+='<div class="kpi blue"><div class="v">'+USERS.length+'</div><div class="l">Usuários</div></div>';
+  html+='<div class="kpi blue"><div class="v">'+USERS.length+'</div><div class="l">Usu\u00e1rios</div></div>';
   html+='<div class="kpi"><div class="v">'+TELAS.length+'</div><div class="l">Telas</div></div>';
-  html+='<div class="kpi green"><div class="v">'+full+'</div><div class="l">Com todas as '+TELAS.length+'</div></div>';
+  html+='<div class="kpi green"><div class="v">'+full+'</div><div class="l">Com todas</div></div>';
   html+='<div class="kpi orange"><div class="v">'+(USERS.length-full)+'</div><div class="l">Acesso parcial</div></div>';
   $('perm-kpis').innerHTML=html;
 }
@@ -168,36 +180,37 @@ function filtered(){
   return USERS.filter(function(u){return u.nome.toLowerCase().indexOf(q)>=0||u.login.toLowerCase().indexOf(q)>=0||(u.cargo||'').toLowerCase().indexOf(q)>=0;});
 }
 
+window.permSetFolder=function(f){FOLDER=f;loadFolder();renderKPIs();permRender();};
 window.permSetView=function(v){view=v;['matriz','usuario','tela'].forEach(function(x){$('v-'+x).className='fbtn'+(x===v?' active':'');});permRender();};
 
 window.permRender=function(){
-  if(!TELAS.length)return;
   var th=$('perm-thead'), tb=$('perm-tbody');
+  if(!TELAS.length){th.innerHTML='';tb.innerHTML='<tr><td class="empty">Pasta sem dados.</td></tr>';$('perm-count').textContent='\u2014';return;}
   var list=filtered().slice().sort(function(a,b){return a.nome.toUpperCase()<b.nome.toUpperCase()?-1:1;});
   if(view==='matriz'){
-    $('perm-title').textContent='🔐 Matriz — telas por usuário';
-    var h='<tr><th>Usuário</th><th>Login</th><th>Cargo</th>';
+    $('perm-title').textContent='\ud83d\udd10 Matriz \u2014 '+FOLDER;
+    var h='<tr><th>Usu\u00e1rio</th><th>Login</th><th>Cargo</th>';
     SHORT.forEach(function(s,i){h+='<th class="c" title="'+esc(TELAS[i])+'">'+esc(s)+'</th>';});
     h+='<th class="c">Total</th></tr>'; th.innerHTML=h;
     var rows=list.map(function(u){
-      var tds=''; for(var i=0;i<TELAS.length;i++){tds+='<td class="c">'+(u.set.indexOf(i)>=0?'<span class="ck">✓</span>':'<span class="no">·</span>')+'</td>';}
-      return '<tr><td class="nm">'+esc(u.nome)+'</td><td class="lg">'+esc(u.login)+'</td><td class="cg">'+(u.cargo?esc(u.cargo):'<span class="no">—</span>')+'</td>'+tds+'<td class="c tot">'+u.set.length+'</td></tr>';
+      var tds=''; for(var i=0;i<TELAS.length;i++){tds+='<td class="c">'+(u.set.indexOf(i)>=0?'<span class="ck">\u2713</span>':'<span class="no">\u00b7</span>')+'</td>';}
+      return '<tr><td class="nm">'+esc(u.nome)+'</td><td class="lg">'+esc(u.login)+'</td><td class="cg">'+(u.cargo?esc(u.cargo):'<span class="no">\u2014</span>')+'</td>'+tds+'<td class="c tot">'+u.set.length+'</td></tr>';
     }).join('');
-    tb.innerHTML=rows||'<tr><td class="empty" colspan="'+(TELAS.length+4)+'">Nenhum usuário.</td></tr>';
-    $('perm-count').textContent=list.length+' usuários';
+    tb.innerHTML=rows||'<tr><td class="empty" colspan="'+(TELAS.length+4)+'">Nenhum usu\u00e1rio.</td></tr>';
+    $('perm-count').textContent=list.length+' usu\u00e1rios';
   } else if(view==='usuario'){
-    $('perm-title').textContent='🔐 Por usuário';
-    th.innerHTML='<tr><th>Usuário</th><th>Login</th><th>Cargo</th><th class="c">Qtd</th><th>Telas</th></tr>';
+    $('perm-title').textContent='\ud83d\udd10 Por usu\u00e1rio \u2014 '+FOLDER;
+    th.innerHTML='<tr><th>Usu\u00e1rio</th><th>Login</th><th>Cargo</th><th class="c">Qtd</th><th>Telas</th></tr>';
     var rows=list.map(function(u){
       var tag=u.set.length===TELAS.length?'<span class="badge7">todas</span>':'<span class="badgep">'+u.set.length+'/'+TELAS.length+'</span>';
       var pills=u.set.map(function(i){return '<span class="pill">'+esc(TELAS[i])+'</span>';}).join('');
-      return '<tr><td class="nm">'+esc(u.nome)+'</td><td class="lg">'+esc(u.login)+'</td><td class="cg">'+(u.cargo?esc(u.cargo):'<span class="no">—</span>')+'</td><td class="c">'+tag+'</td><td>'+pills+'</td></tr>';
+      return '<tr><td class="nm">'+esc(u.nome)+'</td><td class="lg">'+esc(u.login)+'</td><td class="cg">'+(u.cargo?esc(u.cargo):'<span class="no">\u2014</span>')+'</td><td class="c">'+tag+'</td><td>'+pills+'</td></tr>';
     }).join('');
-    tb.innerHTML=rows||'<tr><td class="empty" colspan="5">Nenhum usuário.</td></tr>';
-    $('perm-count').textContent=list.length+' usuários';
+    tb.innerHTML=rows||'<tr><td class="empty" colspan="5">Nenhum usu\u00e1rio.</td></tr>';
+    $('perm-count').textContent=list.length+' usu\u00e1rios';
   } else {
-    $('perm-title').textContent='🔐 Por tela';
-    th.innerHTML='<tr><th>Tela</th><th class="c">Usuários</th><th>Adesão</th></tr>';
+    $('perm-title').textContent='\ud83d\udd10 Por tela \u2014 '+FOLDER;
+    th.innerHTML='<tr><th>Tela</th><th class="c">Usu\u00e1rios</th><th>Ades\u00e3o</th></tr>';
     var counts=TELAS.map(function(_,i){return list.filter(function(u){return u.set.indexOf(i)>=0;}).length;});
     var order=TELAS.map(function(t,i){return {t:t,n:counts[i]};}).sort(function(a,b){return b.n-a.n;});
     var tot=list.length||1;
@@ -221,10 +234,18 @@ window.permExport=function(){
     lines.push(row.map(function(c){return '"'+String(c).replace(/"/g,'""')+'"';}).join(sep));
   });
   var blob=new Blob(['\ufeff'+lines.join('\n')],{type:'text/csv;charset=utf-8;'});
-  var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='permissoes_programacao.csv';a.click();
+  var safe=FOLDER.normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-zA-Z0-9]+/g,'_');
+  var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='telas_usuarios_'+safe+'.csv';a.click();
 };
 
-load();
+function init(){
+  if(!D){$('perm-tbody').innerHTML='<tr><td class="empty">Dados n\u00e3o carregados (telas_usuarios_data.js).</td></tr>';return;}
+  buildFolderSelect();
+  loadFolder();
+  renderKPIs();
+  permRender();
+}
+init();
 })();
 </script>
 </body>
