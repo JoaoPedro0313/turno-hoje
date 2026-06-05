@@ -64,7 +64,7 @@
   // ── Abas (sidebar) e painéis, conforme capacidade ──
   var tabs = [];
   if (hasEquipes)  tabs.push({ id: 'equipes', icon: '👥', label: 'Equipes' });
-  if (hasPresence) tabs.push({ id: 'online',  icon: '🟢', label: 'Online' });
+  tabs.push({ id: 'online',  icon: '🟢', label: 'Online' });
   if (hasReport)   tabs.push({ id: 'relatorio', icon: '📲', label: 'Relatório' });
   tabs.push({ id: 'visual', icon: '🎨', label: 'Visual' });
   tabs.push({ id: 'dados',  icon: '🗄️', label: 'Dados' });
@@ -94,14 +94,22 @@
     + '</div>';
 
   // Painel Online
-  var paneOnline = !hasPresence ? '' :
+  var paneOnline =
     '<div id="gear-content-online" style="display:' + (firstTab === 'online' ? '' : 'none') + ';">'
-    + '<div class="gear-section-title" style="color:#276749;border-bottom:2px solid #c6f6d5;">🟢 Quem está Online</div>'
+    + (hasPresence ?
+        '<div class="gear-section-title" style="color:#276749;border-bottom:2px solid #c6f6d5;">🟢 Quem está Online</div>'
+        + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">'
+        + '<div id="gear-presence-count" style="font-size:0.78rem;font-weight:700;color:#555;"></div>'
+        + '<button onclick="gearRefreshPresence()" style="padding:5px 14px;background:#f0fff4;border:1.5px solid #c6f6d5;border-radius:8px;font-family:\'Barlow\',sans-serif;font-size:0.7rem;font-weight:800;color:#276749;cursor:pointer;">🔄 Atualizar</button>'
+        + '</div>'
+        + '<div id="gear-presence-list" style="background:#f8fafc;border-radius:12px;border:1px solid #e2e8f0;overflow:hidden;min-height:60px;margin-bottom:22px;"><div style="text-align:center;padding:20px;color:#aaa;font-size:0.82rem;font-weight:600;">Carregando...</div></div>'
+      : '')
+    + '<div class="gear-section-title" style="color:#0d7377;border-bottom:2px solid #c0e8e5;">📋 Todos que já acessaram</div>'
     + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">'
-    + '<div id="gear-presence-count" style="font-size:0.78rem;font-weight:700;color:#555;"></div>'
-    + '<button onclick="gearRefreshPresence()" style="padding:5px 14px;background:#f0fff4;border:1.5px solid #c6f6d5;border-radius:8px;font-family:\'Barlow\',sans-serif;font-size:0.7rem;font-weight:800;color:#276749;cursor:pointer;">🔄 Atualizar</button>'
+    + '<div id="gear-acessos-count" style="font-size:0.78rem;font-weight:700;color:#555;"></div>'
+    + '<button onclick="gearLoadAcessos()" style="padding:5px 14px;background:#f0fafa;border:1.5px solid #c0e8e5;border-radius:8px;font-family:\'Barlow\',sans-serif;font-size:0.7rem;font-weight:800;color:#0d7377;cursor:pointer;">🔄 Atualizar</button>'
     + '</div>'
-    + '<div id="gear-presence-list" style="background:#f8fafc;border-radius:12px;border:1px solid #e2e8f0;overflow:hidden;min-height:60px;"><div style="text-align:center;padding:20px;color:#aaa;font-size:0.82rem;font-weight:600;">Carregando...</div></div>'
+    + '<div id="gear-acessos-list" style="background:#f8fafc;border-radius:12px;border:1px solid #e2e8f0;overflow:hidden;min-height:60px;max-height:340px;overflow-y:auto;"><div style="text-align:center;padding:20px;color:#aaa;font-size:0.82rem;font-weight:600;">Carregando...</div></div>'
     + '</div>';
 
   // Painel Visual (dark mode + nome de presença, se houver)
@@ -191,6 +199,7 @@
       if (pane) pane.style.display = (t.id === tab) ? '' : 'none';
     });
     if (tab === 'equipes') setTimeout(function () { if (typeof window.renderManageList === 'function') window.renderManageList(); }, 50);
+    if (tab === 'online') { if (typeof window.gearRefreshPresence === 'function') window.gearRefreshPresence(); if (typeof window.gearLoadAcessos === 'function') window.gearLoadAcessos(); }
     if (tab === 'relatorio' && typeof window.pdaRefreshGearStatus === 'function') window.pdaRefreshGearStatus();
     if (tab === 'visual') {
       var inp = document.getElementById('presence-my-name');
@@ -242,6 +251,40 @@
         + '<div style="width:8px;height:8px;border-radius:50%;background:#38d996;box-shadow:0 0 5px #38d996;flex-shrink:0;"></div></div>';
     }).join('');
   }
+
+  // ── Lista de TODOS que já acessaram (tabela dispositivos) ──
+  var GEAR_SUPA_URL = 'https://eqxejfoibebcbtsqymji.supabase.co';
+  var GEAR_SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVxeGVqZm9pYmViY2J0c3F5bWppIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE4NjUzMTEsImV4cCI6MjA4NzQ0MTMxMX0.lwf7_EJ6UchEOpzhW3cVKztxDGy78gaQblRvgiEwWh8';
+  function gearFmtData(iso) {
+    if (!iso) return '—';
+    try {
+      var d = new Date(iso), p = function (n) { return (n < 10 ? '0' : '') + n; };
+      return p(d.getDate()) + '/' + p(d.getMonth() + 1) + ' ' + p(d.getHours()) + ':' + p(d.getMinutes());
+    } catch (e) { return '—'; }
+  }
+  window.gearLoadAcessos = function () {
+    var listEl = document.getElementById('gear-acessos-list');
+    var countEl = document.getElementById('gear-acessos-count');
+    if (!listEl) return;
+    fetch(GEAR_SUPA_URL + '/rest/v1/dispositivos?select=nome,criado_em,ultimo_em,user_agent&order=ultimo_em.desc', {
+      headers: { 'apikey': GEAR_SUPA_KEY, 'Authorization': 'Bearer ' + GEAR_SUPA_KEY }
+    }).then(function (r) { return r.json(); }).then(function (rows) {
+      if (!Array.isArray(rows)) rows = [];
+      if (countEl) countEl.textContent = rows.length + ' aparelho' + (rows.length !== 1 ? 's' : '') + ' já acessaram';
+      if (!rows.length) { listEl.innerHTML = '<div style="text-align:center;padding:18px;color:#aaa;font-size:0.8rem;font-weight:600;">Ninguém acessou ainda</div>'; return; }
+      listEl.innerHTML = rows.map(function (u) {
+        var name = (u.nome || 'Anônimo').trim();
+        var initials = name.charAt(0).toUpperCase() || '?';
+        var device = /mobile|android|iphone/i.test(u.user_agent || '') ? '📱' : '💻';
+        return '<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid #e2e8f0;background:#fff;">'
+          + '<div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#0d7377,#14a085);color:#fff;font-size:0.82rem;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">' + initials + '</div>'
+          + '<div style="flex:1;min-width:0;"><div style="font-size:0.82rem;font-weight:800;color:#1a365d;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + device + ' ' + name + '</div>'
+          + '<div style="font-size:0.64rem;font-weight:600;color:#888;margin-top:1px;">último: ' + gearFmtData(u.ultimo_em) + ' · 1º acesso: ' + gearFmtData(u.criado_em) + '</div></div></div>';
+      }).join('');
+    }).catch(function () {
+      if (listEl) listEl.innerHTML = '<div style="text-align:center;padding:18px;color:#c53030;font-size:0.8rem;font-weight:600;">Erro ao carregar (sem conexão?)</div>';
+    });
+  };
 
   // ── Inicialização (após todas as funções definidas) ──
   if (document.body) mount();
