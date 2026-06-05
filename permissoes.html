@@ -167,9 +167,9 @@ body.sm-collapsed .bottom-bar{left:64px !important;}
         <span class="count" id="perm-count">—</span>
       </div>
       <div class="ac-picks" id="perm-fg-acesso" style="display:none">
-        <div class="ac-pick"><label>Estado / UF</label><select id="ac-uf" onchange="acOnTop()"></select></div>
-        <div class="ac-pick"><label>Base</label><select id="ac-base" onchange="acOnTop()"></select></div>
-        <div class="ac-pick"><label>Função (cargo)</label><select id="ac-func" onchange="acOnTop()"></select></div>
+        <div class="ac-pick"><label>Estado / UF</label><select id="ac-uf" onchange="acOnUF()"></select></div>
+        <div class="ac-pick"><label>Base</label><select id="ac-base" onchange="acOnBase()"></select></div>
+        <div class="ac-pick"><label>Função (cargo)</label><select id="ac-func" onchange="acOnFunc()"></select></div>
         <div class="ac-pick"><label>Usuário</label><select id="ac-user" onchange="acRender()"></select></div>
       </div>
       <div class="twrap"><table id="perm-table"><thead id="perm-thead"></thead><tbody id="perm-tbody"></tbody></table></div>
@@ -482,7 +482,10 @@ function acNodeU(name,n,d,uid){
   var ic=d===1?'\ud83d\udcc1':'\ud83d\udcc2';
   return '<details class="tw-folder tw-d'+d+'" open><summary><span class="tw-ic">'+ic+'</span>'+esc(name)+'<span class="tw-n">'+acCntU(n,uid)+' telas</span></summary><div class="tw-children">'+inner+'</div></details>';
 }
-window.acOnTop=function(){acFillBases();acFillFuncs();acFillUsers();acRender();};
+window.acOnUF=function(){acFillBases();acFillFuncs();acFillUsers();acRender();};
+window.acOnBase=function(){acFillFuncs();acFillUsers();acRender();};
+window.acOnFunc=function(){acFillUsers();acRender();};
+window.acOnTop=window.acOnUF;
 window.acRender=function(){
   if(!TREE){$('perm-utree').innerHTML='<div class="empty">\u00c1rvore n\u00e3o carregada.</div>';return;}
   $('perm-title').textContent='\ud83d\udc64 Acesso por usu\u00e1rio';
