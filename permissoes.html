@@ -171,6 +171,7 @@ body.sm-collapsed .bottom-bar{left:64px !important;}
         <div class="ac-pick"><label>Base</label><select id="ac-base" onchange="acOnBase()"></select></div>
         <div class="ac-pick"><label>Função (cargo)</label><select id="ac-func" onchange="acOnFunc()"></select></div>
         <div class="ac-pick"><label>Usuário</label><select id="ac-user" onchange="acRender()"></select></div>
+        <div class="ac-pick ac-full"><label>Buscar subpasta ou tela</label><input id="ac-search" type="text" placeholder="🔎 digite parte do nome da pasta ou tela" oninput="acRender()"></div>
       </div>
       <div class="twrap"><table id="perm-table"><thead id="perm-thead"></thead><tbody id="perm-tbody"></tbody></table></div>
       <div class="tree" id="perm-tree" style="display:none"></div>
@@ -212,6 +213,9 @@ body.sm-collapsed .bottom-bar{left:64px !important;}
 .ac-pick label{font-size:.72rem;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.04em}
 .ac-pick select{padding:11px 12px;border:1px solid #cbd5e1;border-radius:10px;font-size:1rem;background:#fff;font-family:inherit;width:100%;box-sizing:border-box}
 .ac-pick select:focus{outline:none;border-color:#0d9488;box-shadow:0 0 0 3px rgba(13,148,136,.12)}
+.ac-pick.ac-full{flex-basis:100%;min-width:100%}
+.ac-pick input{padding:11px 12px;border:1px solid #cbd5e1;border-radius:10px;font-size:1rem;background:#fff;font-family:inherit;width:100%;box-sizing:border-box}
+.ac-pick input:focus{outline:none;border-color:#0d9488;box-shadow:0 0 0 3px rgba(13,148,136,.12)}
 .who{background:#fff;border:1px solid #b2f5ea;border-left:5px solid #0d9488;border-radius:12px;padding:12px 14px;margin:4px 0 12px;font-family:'Barlow',system-ui,sans-serif}
 .who .nm{font-size:1.15rem;font-weight:800;color:#0f3a33}
 .who .meta{font-size:.82rem;color:#6b7280;margin-top:2px}
@@ -472,11 +476,13 @@ function acFillUsers(){
   $('ac-user').innerHTML=order.length?order.map(function(o){return '<option value="'+o.i+'">'+esc(o.nome)+(o.login?' \u2014 '+esc(o.login):'')+'</option>';}).join(''):'<option value="">(nenhum)</option>';
 }
 function acCntU(n,uid){var c=0;if(n.t)for(var t in n.t){if((','+n.t[t]+',').indexOf(','+uid+',')>=0)c++;}if(n.c)for(var k in n.c)c+=acCntU(n.c[k],uid);return c;}
-function acNodeU(name,n,d,uid){
+function acNodeU(name,n,d,uid,q){
+  var nameHit = !q || name.toLowerCase().indexOf(q)>=0;
   var inner='';
-  if(n.c)Object.keys(n.c).sort(function(a,b){return a.localeCompare(b,'pt');}).forEach(function(k){inner+=acNodeU(k,n.c[k],d+1,uid);});
+  if(n.c)Object.keys(n.c).sort(function(a,b){return a.localeCompare(b,'pt');}).forEach(function(k){inner+=acNodeU(k,n.c[k],d+1,uid,nameHit?'':q);});
   if(n.t)Object.keys(n.t).sort(function(a,b){return a.localeCompare(b,'pt');}).forEach(function(t){
     if((','+n.t[t]+',').indexOf(','+uid+',')<0)return;
+    if(q && !nameHit && t.toLowerCase().indexOf(q)<0)return;
     inner+='<div class="tw-tela"><span class="tw-ic">\ud83d\udcc4</span>'+esc(t)+'</div>';});
   if(!inner)return '';
   var ic=d===1?'\ud83d\udcc1':'\ud83d\udcc2';
@@ -492,11 +498,12 @@ window.acRender=function(){
   var v=$('ac-user').value;
   if(!v){$('perm-who').innerHTML='';$('perm-utree').innerHTML='<div class="empty">Nenhum usu\u00e1rio com esses filtros.</div>';$('perm-count').textContent='\u2014';return;}
   var uid=+v, u=TREE.users[uid]||['',''], cg=TREE.cargos[uid]||'', uf=(TREE.uf&&TREE.uf[uid])||'', ba=(TREE.base&&TREE.base[uid])||'';
+  var sb=$('ac-search'); var q=sb?(sb.value||'').trim().toLowerCase():'';
   var ms=Object.keys(TREE.tree).sort(function(a,b){if(a.charAt(0)==='(')return 1;if(b.charAt(0)==='(')return -1;return a.localeCompare(b,'pt');});
   var h='',tot=0,nmod=0;
-  ms.forEach(function(m){var part=acNodeU(m,TREE.tree[m],1,uid);if(part){h+=part;nmod++;}tot+=acCntU(TREE.tree[m],uid);});
+  ms.forEach(function(m){var part=acNodeU(m,TREE.tree[m],1,uid,q);if(part)h+=part;if(acCntU(TREE.tree[m],uid)>0)nmod++;tot+=acCntU(TREE.tree[m],uid);});
   $('perm-who').innerHTML='<div class="nm">'+esc(u[1]||u[0])+(uf?'<span class="uf">\ud83d\udccd '+esc(uf)+(ba?' \u00b7 '+esc(ba):'')+'</span>':(ba?'<span class="uf">\ud83d\udccd '+esc(ba)+'</span>':''))+(cg?'<span class="cg">'+esc(cg)+'</span>':'')+'</div><div class="meta">login: <b>'+esc(u[0])+'</b> \u00b7 acesso a <b>'+tot+'</b> telas em <b>'+nmod+'</b> m\u00f3dulos</div>';
-  $('perm-utree').innerHTML=h||'<div class="empty">Sem acesso registrado.</div>';
+  $('perm-utree').innerHTML=h||'<div class="empty">'+(q?'Nada encontrado para \u201c'+esc(q)+'\u201d.':'Sem acesso registrado.')+'</div>';
   $('perm-count').textContent=tot+' telas';
 }; 
 var _acInit=false;
