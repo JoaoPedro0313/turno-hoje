@@ -155,6 +155,8 @@ body.sm-collapsed .bottom-bar{left:64px !important;}
         <div class="fg" id="perm-fg-acesso" style="display:none">
           <label>Estado / UF</label>
           <select class="search" id="ac-uf" style="width:100%" onchange="acOnTop()"></select>
+          <label style="margin-top:8px">Base</label>
+          <select class="search" id="ac-base" style="width:100%" onchange="acOnTop()"></select>
           <label style="margin-top:8px">Função (cargo)</label>
           <select class="search" id="ac-func" style="width:100%" onchange="acOnTop()"></select>
           <label style="margin-top:8px">Usuário</label>
@@ -180,7 +182,7 @@ body.sm-collapsed .bottom-bar{left:64px !important;}
 </div>
 
 <script src="telas_usuarios_data.js?v=1"></script>
-<script src="telas_usuarios_arvore.js?v=1"></script>
+<script src="telas_usuarios_arvore.js?v=2"></script>
 <style id="tree-css">
 .tree{font:14px/1.4 'Barlow',system-ui,sans-serif;padding:4px 2px 24px}
 .tree details{margin:0}
@@ -435,25 +437,33 @@ window.renderTree=function(){
 
 
 /* ===== Visão Acesso (por usuário: UF -> Função -> Usuário) ===== */
-var AC_SEMF='(sem fun\u00e7\u00e3o)', AC_SEMUF='(sem UF)';
+var AC_SEMF='(sem fun\u00e7\u00e3o)', AC_SEMUF='(sem UF)', AC_SEMBASE='(sem base)';
 function acUfunc(i){return (TREE&&TREE.cargos[i])||AC_SEMF;}
 function acUuf(i){return (TREE&&TREE.uf&&TREE.uf[i])||AC_SEMUF;}
+function acBase(i){return (TREE&&TREE.base&&TREE.base[i])||AC_SEMBASE;}
 function acFillUF(){
   var c={}; TREE.users.forEach(function(u,i){var f=acUuf(i);c[f]=(c[f]||0)+1;});
   var ks=Object.keys(c).sort(function(a,b){if(a===AC_SEMUF)return 1;if(b===AC_SEMUF)return -1;return a.localeCompare(b);});
   $('ac-uf').innerHTML='<option value="">Todos ('+TREE.users.length+')</option>'+ks.map(function(f){return '<option value="'+esc(f)+'">'+esc(f)+' ('+c[f]+')</option>';}).join('');
 }
-function acFillFuncs(){
+function acFillBases(){
   var uf=$('ac-uf').value, c={};
-  TREE.users.forEach(function(u,i){if(uf&&acUuf(i)!==uf)return;var f=acUfunc(i);c[f]=(c[f]||0)+1;});
+  TREE.users.forEach(function(u,i){if(uf&&acUuf(i)!==uf)return;var b=acBase(i);c[b]=(c[b]||0)+1;});
+  var ks=Object.keys(c).sort(function(a,b){if(a===AC_SEMBASE)return 1;if(b===AC_SEMBASE)return -1;return a.localeCompare(b,'pt');});
+  var tot=0; for(var k in c)tot+=c[k];
+  $('ac-base').innerHTML='<option value="">Todas as bases ('+tot+')</option>'+ks.map(function(b){return '<option value="'+esc(b)+'">'+esc(b)+' ('+c[b]+')</option>';}).join('');
+}
+function acFillFuncs(){
+  var uf=$('ac-uf').value, ba=$('ac-base').value, c={};
+  TREE.users.forEach(function(u,i){if(uf&&acUuf(i)!==uf)return;if(ba&&acBase(i)!==ba)return;var f=acUfunc(i);c[f]=(c[f]||0)+1;});
   var ks=Object.keys(c).sort(function(a,b){if(a===AC_SEMF)return 1;if(b===AC_SEMF)return -1;return a.localeCompare(b,'pt');});
   var tot=0; for(var k in c)tot+=c[k];
   $('ac-func').innerHTML='<option value="">Todas as fun\u00e7\u00f5es ('+tot+')</option>'+ks.map(function(f){return '<option value="'+esc(f)+'">'+esc(f)+' ('+c[f]+')</option>';}).join('');
 }
 function acFillUsers(){
-  var uf=$('ac-uf').value, f=$('ac-func').value;
-  var order=TREE.users.map(function(u,i){return {i:i,nome:u[1]||u[0]||('#'+i),login:u[0]||'',f:acUfunc(i),uf:acUuf(i)};})
-    .filter(function(o){return (!uf||o.uf===uf)&&(!f||o.f===f);})
+  var uf=$('ac-uf').value, ba=$('ac-base').value, f=$('ac-func').value;
+  var order=TREE.users.map(function(u,i){return {i:i,nome:u[1]||u[0]||('#'+i),login:u[0]||'',f:acUfunc(i),uf:acUuf(i),base:acBase(i)};})
+    .filter(function(o){return (!uf||o.uf===uf)&&(!ba||o.base===ba)&&(!f||o.f===f);})
     .sort(function(a,b){return a.nome.toUpperCase()<b.nome.toUpperCase()?-1:1;});
   $('ac-user').innerHTML=order.length?order.map(function(o){return '<option value="'+o.i+'">'+esc(o.nome)+(o.login?' \u2014 '+esc(o.login):'')+'</option>';}).join(''):'<option value="">(nenhum)</option>';
 }
@@ -468,24 +478,24 @@ function acNodeU(name,n,d,uid){
   var ic=d===1?'\ud83d\udcc1':'\ud83d\udcc2';
   return '<details class="tw-folder tw-d'+d+'" open><summary><span class="tw-ic">'+ic+'</span>'+esc(name)+'<span class="tw-n">'+acCntU(n,uid)+' telas</span></summary><div class="tw-children">'+inner+'</div></details>';
 }
-window.acOnTop=function(){acFillFuncs();acFillUsers();acRender();};
+window.acOnTop=function(){acFillBases();acFillFuncs();acFillUsers();acRender();};
 window.acRender=function(){
   if(!TREE){$('perm-utree').innerHTML='<div class="empty">\u00c1rvore n\u00e3o carregada.</div>';return;}
   $('perm-title').textContent='\ud83d\udc64 Acesso por usu\u00e1rio';
   var v=$('ac-user').value;
   if(!v){$('perm-who').innerHTML='';$('perm-utree').innerHTML='<div class="empty">Nenhum usu\u00e1rio com esses filtros.</div>';$('perm-count').textContent='\u2014';return;}
-  var uid=+v, u=TREE.users[uid]||['',''], cg=TREE.cargos[uid]||'', uf=(TREE.uf&&TREE.uf[uid])||'';
+  var uid=+v, u=TREE.users[uid]||['',''], cg=TREE.cargos[uid]||'', uf=(TREE.uf&&TREE.uf[uid])||'', ba=(TREE.base&&TREE.base[uid])||'';
   var ms=Object.keys(TREE.tree).sort(function(a,b){if(a.charAt(0)==='(')return 1;if(b.charAt(0)==='(')return -1;return a.localeCompare(b,'pt');});
   var h='',tot=0,nmod=0;
   ms.forEach(function(m){var part=acNodeU(m,TREE.tree[m],1,uid);if(part){h+=part;nmod++;}tot+=acCntU(TREE.tree[m],uid);});
-  $('perm-who').innerHTML='<div class="nm">'+esc(u[1]||u[0])+(uf?'<span class="uf">\ud83d\udccd '+esc(uf)+'</span>':'')+(cg?'<span class="cg">'+esc(cg)+'</span>':'')+'</div><div class="meta">login: <b>'+esc(u[0])+'</b> \u00b7 acesso a <b>'+tot+'</b> telas em <b>'+nmod+'</b> m\u00f3dulos</div>';
+  $('perm-who').innerHTML='<div class="nm">'+esc(u[1]||u[0])+(uf?'<span class="uf">\ud83d\udccd '+esc(uf)+(ba?' \u00b7 '+esc(ba):'')+'</span>':(ba?'<span class="uf">\ud83d\udccd '+esc(ba)+'</span>':''))+(cg?'<span class="cg">'+esc(cg)+'</span>':'')+'</div><div class="meta">login: <b>'+esc(u[0])+'</b> \u00b7 acesso a <b>'+tot+'</b> telas em <b>'+nmod+'</b> m\u00f3dulos</div>';
   $('perm-utree').innerHTML=h||'<div class="empty">Sem acesso registrado.</div>';
   $('perm-count').textContent=tot+' telas';
 }; 
 var _acInit=false;
 function acInit(){
   if(!TREE){$('perm-utree').innerHTML='<div class="empty">\u00c1rvore n\u00e3o carregada (telas_usuarios_arvore.js).</div>';return;}
-  if(!_acInit){_acInit=true;acFillUF();acFillFuncs();acFillUsers();}
+  if(!_acInit){_acInit=true;acFillUF();acFillBases();acFillFuncs();acFillUsers();}
   acRender();
 }
 
