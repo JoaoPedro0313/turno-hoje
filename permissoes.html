@@ -145,23 +145,16 @@ body.sm-collapsed .bottom-bar{left:64px !important;}
         </div>
         <div class="fg"><label>Visão</label>
           <div class="vlist">
-            <button class="fbtn active" id="v-matriz" onclick="permSetView('matriz')">Matriz</button>
-            <button class="fbtn" id="v-usuario" onclick="permSetView('usuario')">Por usuário</button>
-            <button class="fbtn" id="v-tela" onclick="permSetView('tela')">Por tela</button>
-            <button class="fbtn" id="v-arvore" onclick="permSetView('arvore')">🌳 Árvore</button>
-            <button class="fbtn" id="v-acesso" onclick="permSetView('acesso')">👤 Acesso</button>
+            <button class="fbtn active" id="v-acesso" onclick="permSetView('acesso')">👤 Por usuário</button>
+            <button class="fbtn" id="v-arvore" onclick="permSetView('arvore')">🌳 Por tela</button>
           </div>
         </div>
-        <div class="fg" id="perm-fg-acesso" style="display:none">
-          <label>Estado / UF</label>
-          <select class="search" id="ac-uf" style="width:100%" onchange="acOnTop()"></select>
-          <label style="margin-top:8px">Base</label>
-          <select class="search" id="ac-base" style="width:100%" onchange="acOnTop()"></select>
-          <label style="margin-top:8px">Função (cargo)</label>
-          <select class="search" id="ac-func" style="width:100%" onchange="acOnTop()"></select>
-          <label style="margin-top:8px">Usuário</label>
-          <select class="search" id="ac-user" style="width:100%" onchange="acRender()"></select>
+        <div style="display:none">
+          <button id="v-matriz" onclick="permSetView('matriz')"></button>
+          <button id="v-usuario" onclick="permSetView('usuario')"></button>
+          <button id="v-tela" onclick="permSetView('tela')"></button>
         </div>
+        <div class="fg" id="perm-fg-pasta-spacer" style="display:none"></div>
         <div class="fg" id="perm-fg-busca"><label>Busca</label>
           <input type="text" class="search" id="perm-search" placeholder="🔎 usuário, login ou cargo" oninput="permRender()">
         </div>
@@ -172,6 +165,12 @@ body.sm-collapsed .bottom-bar{left:64px !important;}
       <div class="sec-h">
         <div class="sec-t" id="perm-title">🔐 Telas por usuário — Programação</div>
         <span class="count" id="perm-count">—</span>
+      </div>
+      <div class="ac-picks" id="perm-fg-acesso" style="display:none">
+        <div class="ac-pick"><label>Estado / UF</label><select id="ac-uf" onchange="acOnTop()"></select></div>
+        <div class="ac-pick"><label>Base</label><select id="ac-base" onchange="acOnTop()"></select></div>
+        <div class="ac-pick"><label>Função (cargo)</label><select id="ac-func" onchange="acOnTop()"></select></div>
+        <div class="ac-pick"><label>Usuário</label><select id="ac-user" onchange="acRender()"></select></div>
       </div>
       <div class="twrap"><table id="perm-table"><thead id="perm-thead"></thead><tbody id="perm-tbody"></tbody></table></div>
       <div class="tree" id="perm-tree" style="display:none"></div>
@@ -208,6 +207,11 @@ body.sm-collapsed .bottom-bar{left:64px !important;}
 .tree .tw-empty,.tree .empty{color:#9ca3af;font-style:italic;padding:8px 10px}
 #perm-utree .tw-tela{padding:5px 10px;display:flex;align-items:center;gap:7px;font-weight:500;color:#374151}
 #perm-utree .tw-tela .tw-ic{flex:0 0 auto}
+.ac-picks{display:flex;gap:10px;flex-wrap:wrap;margin:0 0 12px;font-family:'Barlow',system-ui,sans-serif}
+.ac-pick{display:flex;flex-direction:column;gap:6px;flex:1;min-width:150px}
+.ac-pick label{font-size:.72rem;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.04em}
+.ac-pick select{padding:11px 12px;border:1px solid #cbd5e1;border-radius:10px;font-size:1rem;background:#fff;font-family:inherit;width:100%;box-sizing:border-box}
+.ac-pick select:focus{outline:none;border-color:#0d9488;box-shadow:0 0 0 3px rgba(13,148,136,.12)}
 .who{background:#fff;border:1px solid #b2f5ea;border-left:5px solid #0d9488;border-radius:12px;padding:12px 14px;margin:4px 0 12px;font-family:'Barlow',system-ui,sans-serif}
 .who .nm{font-size:1.15rem;font-weight:800;color:#0f3a33}
 .who .meta{font-size:.82rem;color:#6b7280;margin-top:2px}
