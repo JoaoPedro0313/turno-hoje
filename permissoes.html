@@ -140,7 +140,7 @@ body.sm-collapsed .bottom-bar{left:64px !important;}
     <aside class="side">
       <div class="side-h">⚙ Visão & filtros</div>
       <div class="side-b">
-        <div class="fg"><label>Pasta</label>
+        <div class="fg" id="perm-fg-pasta"><label>Pasta</label>
           <select class="search" id="perm-folder" style="width:100%" onchange="permSetFolder(this.value)"></select>
         </div>
         <div class="fg"><label>Visão</label>
@@ -148,12 +148,22 @@ body.sm-collapsed .bottom-bar{left:64px !important;}
             <button class="fbtn active" id="v-matriz" onclick="permSetView('matriz')">Matriz</button>
             <button class="fbtn" id="v-usuario" onclick="permSetView('usuario')">Por usuário</button>
             <button class="fbtn" id="v-tela" onclick="permSetView('tela')">Por tela</button>
+            <button class="fbtn" id="v-arvore" onclick="permSetView('arvore')">🌳 Árvore</button>
+            <button class="fbtn" id="v-acesso" onclick="permSetView('acesso')">👤 Acesso</button>
           </div>
         </div>
-        <div class="fg"><label>Busca</label>
+        <div class="fg" id="perm-fg-acesso" style="display:none">
+          <label>Estado / UF</label>
+          <select class="search" id="ac-uf" style="width:100%" onchange="acOnTop()"></select>
+          <label style="margin-top:8px">Função (cargo)</label>
+          <select class="search" id="ac-func" style="width:100%" onchange="acOnTop()"></select>
+          <label style="margin-top:8px">Usuário</label>
+          <select class="search" id="ac-user" style="width:100%" onchange="acRender()"></select>
+        </div>
+        <div class="fg" id="perm-fg-busca"><label>Busca</label>
           <input type="text" class="search" id="perm-search" placeholder="🔎 usuário, login ou cargo" oninput="permRender()">
         </div>
-        <button class="exp" onclick="permExport()">💾 Exportar CSV</button>
+        <button class="exp" id="perm-exp" onclick="permExport()">💾 Exportar CSV</button>
       </div>
     </aside>
     <section class="main">
@@ -162,11 +172,47 @@ body.sm-collapsed .bottom-bar{left:64px !important;}
         <span class="count" id="perm-count">—</span>
       </div>
       <div class="twrap"><table id="perm-table"><thead id="perm-thead"></thead><tbody id="perm-tbody"></tbody></table></div>
+      <div class="tree" id="perm-tree" style="display:none"></div>
+      <div class="who" id="perm-who" style="display:none"></div>
+      <div class="tree" id="perm-utree" style="display:none"></div>
     </section>
   </div>
 </div>
 
 <script src="telas_usuarios_data.js?v=1"></script>
+<script src="telas_usuarios_arvore.js?v=1"></script>
+<style id="tree-css">
+.tree{font:14px/1.4 'Barlow',system-ui,sans-serif;padding:4px 2px 24px}
+.tree details{margin:0}
+.tree summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:7px;padding:7px 10px;border-radius:8px;user-select:none}
+.tree summary::-webkit-details-marker{display:none}
+.tree summary::before{content:'\25B8';font-size:.8em;color:#0d9488;transition:transform .12s;flex:0 0 auto}
+.tree details[open]>summary::before{transform:rotate(90deg)}
+.tree .tw-folder>summary{font-weight:700;color:#0f3a33}
+.tree .tw-d1>summary{font-size:1.04rem;background:linear-gradient(90deg,#e6fffa,#f0fdf9);border:1px solid #b2f5ea;margin-top:8px}
+.tree .tw-d2>summary{color:#155e54}
+.tree .tw-d3>summary{color:#2c7a7b;font-weight:600}
+.tree .tw-children{margin-left:16px;border-left:2px solid #e2f5f1;padding-left:6px}
+.tree .tw-tela>summary{font-weight:500;color:#374151}
+.tree .tw-tela>summary:hover{background:#f0fdf9}
+.tree .tw-ic{flex:0 0 auto}
+.tree .tw-n{margin-left:auto;font-size:.72rem;font-weight:700;color:#0d9488;background:#e6fffa;border-radius:20px;padding:1px 9px;border:1px solid #b2f5ea}
+.tree .tw-tela .tw-n{color:#92400e;background:#fffaf0;border-color:#feebc8}
+.tree .tw-users{margin:2px 0 8px 30px;display:flex;flex-direction:column;gap:2px}
+.tree .tw-u{font-size:.82rem;padding:3px 8px;border-radius:6px;background:#fafafa;border:1px solid #f0f0f0}
+.tree .tw-u b{color:#1f2937;font-weight:600}
+.tree .tw-lg{color:#0d9488;font-size:.74rem;margin-left:6px;font-weight:600}
+.tree .tw-cg{color:#92400e;font-size:.72rem;margin-left:6px;background:#fffaf0;padding:0 6px;border-radius:10px}
+.tree .tw-empty,.tree .empty{color:#9ca3af;font-style:italic;padding:8px 10px}
+#perm-utree .tw-tela{padding:5px 10px;display:flex;align-items:center;gap:7px;font-weight:500;color:#374151}
+#perm-utree .tw-tela .tw-ic{flex:0 0 auto}
+.who{background:#fff;border:1px solid #b2f5ea;border-left:5px solid #0d9488;border-radius:12px;padding:12px 14px;margin:4px 0 12px;font-family:'Barlow',system-ui,sans-serif}
+.who .nm{font-size:1.15rem;font-weight:800;color:#0f3a33}
+.who .meta{font-size:.82rem;color:#6b7280;margin-top:2px}
+.who .meta b{color:#0d9488}
+.who .cg{display:inline-block;background:#fffaf0;border:1px solid #feebc8;color:#92400e;border-radius:20px;padding:1px 10px;font-size:.74rem;font-weight:700;margin-left:6px}
+.who .uf{display:inline-block;background:#ebf8ff;border:1px solid #bee3f8;color:#2b6cb0;border-radius:20px;padding:1px 10px;font-size:.74rem;font-weight:800;margin-left:6px}
+</style>
 <script>
 (function(){
 'use strict';
@@ -221,9 +267,26 @@ function filtered(){
 }
 
 window.permSetFolder=function(f){FOLDER=f;loadFolder();renderKPIs();permRender();};
-window.permSetView=function(v){view=v;['matriz','usuario','tela'].forEach(function(x){$('v-'+x).className='fbtn'+(x===v?' active':'');});permRender();};
+window.permSetView=function(v){
+  view=v;
+  ['matriz','usuario','tela','arvore','acesso'].forEach(function(x){var b=$('v-'+x);if(b)b.className='fbtn'+(x===v?' active':'');});
+  var isTree=(v==='arvore'), isAc=(v==='acesso');
+  var fg=$('perm-fg-pasta'); if(fg)fg.style.display=(isTree||isAc)?'none':'';
+  var fga=$('perm-fg-acesso'); if(fga)fga.style.display=isAc?'':'none';
+  var fgb=$('perm-fg-busca'); if(fgb)fgb.style.display=isAc?'none':'';
+  var ex=$('perm-exp'); if(ex)ex.style.display=(isTree||isAc)?'none':'';
+  var tw=document.querySelector('.twrap'); if(tw)tw.style.display=(isTree||isAc)?'none':'';
+  var tr=$('perm-tree'); if(tr)tr.style.display=isTree?'':'none';
+  var wh=$('perm-who'); if(wh)wh.style.display=isAc?'':'none';
+  var ut=$('perm-utree'); if(ut)ut.style.display=isAc?'':'none';
+  var sb=$('perm-search'); if(sb)sb.placeholder=isTree?'\ud83d\udd0e tela, pasta, usu\u00e1rio ou cargo':'\ud83d\udd0e usu\u00e1rio, login ou cargo';
+  if(isTree){renderTreeKPIs();renderTree();}
+  else if(isAc){acInit();}
+  else{renderKPIs();permRender();}
+};
 
 window.permRender=function(){
+  if(view==='arvore'){renderTree();return;}
   var th=$('perm-thead'), tb=$('perm-tbody');
   if(!TELAS.length){th.innerHTML='';tb.innerHTML='<tr><td class="empty">Pasta sem dados.</td></tr>';$('perm-count').textContent='\u2014';return;}
   var list=filtered().slice().sort(function(a,b){return a.nome.toUpperCase()<b.nome.toUpperCase()?-1:1;});
@@ -277,6 +340,155 @@ window.permExport=function(){
   var safe=FOLDER.normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-zA-Z0-9]+/g,'_');
   var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='telas_usuarios_'+safe+'.csv';a.click();
 };
+
+/* ===== Visão Árvore (mãe → sub → tela → usuários) ===== */
+var TREE=window.TU_TREE||null;
+var _telaSeq=0,_telaStore={},_treeBound=false;
+
+function treeCountTelas(node){
+  var c=0;
+  if(node.t)c+=Object.keys(node.t).length;
+  if(node.c)for(var k in node.c)c+=treeCountTelas(node.c[k]);
+  return c;
+}
+function buildUserList(uids){
+  var ids=String(uids||'').split(',').filter(Boolean).map(Number);
+  if(!ids.length)return '<div class="tw-empty">Nenhum usu\u00e1rio.</div>';
+  var arr=ids.map(function(id){var u=TREE.users[id]||['',''];return {login:u[0]||'',nome:u[1]||'',cargo:TREE.cargos[id]||''};});
+  arr.sort(function(a,b){return a.nome.toUpperCase()<b.nome.toUpperCase()?-1:1;});
+  return arr.map(function(u){return '<div class="tw-u"><b>'+esc(u.nome)+'</b>'+(u.login?'<span class="tw-lg">'+esc(u.login)+'</span>':'')+(u.cargo?'<span class="tw-cg">'+esc(u.cargo)+'</span>':'')+'</div>';}).join('');
+}
+function nodeMatches(node,q){
+  if(node.t){for(var t in node.t){if(t.toLowerCase().indexOf(q)>=0)return true;
+    var ids=String(node.t[t]).split(',');
+    for(var i=0;i<ids.length;i++){var id=ids[i];if(!id)continue;var u=TREE.users[id]||['',''];var cg=TREE.cargos[id]||'';
+      if((u[0]||'').toLowerCase().indexOf(q)>=0||(u[1]||'').toLowerCase().indexOf(q)>=0||cg.toLowerCase().indexOf(q)>=0)return true;}}}
+  if(node.c)for(var k in node.c){if(k.toLowerCase().indexOf(q)>=0)return true;if(nodeMatches(node.c[k],q))return true;}
+  return false;
+}
+function renderNode(name,node,depth,q){
+  var nameHit=name.toLowerCase().indexOf(q)>=0;
+  var inner='';
+  if(node.c){
+    Object.keys(node.c).sort(function(a,b){return a.localeCompare(b,'pt');}).forEach(function(k){
+      inner+=renderNode(k,node.c[k],depth+1,q);
+    });
+  }
+  if(node.t){
+    Object.keys(node.t).sort(function(a,b){return a.localeCompare(b,'pt');}).forEach(function(t){
+      var uids=node.t[t];
+      if(q && !nameHit){
+        var hit=t.toLowerCase().indexOf(q)>=0;
+        if(!hit){var ids=String(uids).split(',');for(var i=0;i<ids.length&&!hit;i++){var id=ids[i];if(!id)continue;var u=TREE.users[id]||['',''];var cg=TREE.cargos[id]||'';if((u[0]||'').toLowerCase().indexOf(q)>=0||(u[1]||'').toLowerCase().indexOf(q)>=0||cg.toLowerCase().indexOf(q)>=0)hit=true;}}
+        if(!hit)return;
+      }
+      var nU=String(uids||'').split(',').filter(Boolean).length;
+      var sid='tl'+(_telaSeq++); _telaStore[sid]=uids;
+      inner+='<details class="tw-tela"'+(q?' open':'')+'><summary><span class="tw-ic">\ud83d\udcc4</span>'+esc(t)+'<span class="tw-n">'+nU+'</span></summary><div class="tw-users" data-sid="'+sid+'" data-loaded="0"></div></details>';
+    });
+  }
+  if(q && !nameHit && !inner)return '';
+  var icon=depth===1?'\ud83d\udcc1':'\ud83d\udcc2';
+  return '<details class="tw-folder tw-d'+depth+'"'+(q?' open':'')+'><summary><span class="tw-ic">'+icon+'</span>'+esc(name)+'<span class="tw-n">'+treeCountTelas(node)+' telas</span></summary><div class="tw-children">'+inner+'</div></details>';
+}
+function renderTreeKPIs(){
+  if(!TREE)return;
+  var maes=Object.keys(TREE.tree).length, telas=0;
+  for(var m in TREE.tree)telas+=treeCountTelas(TREE.tree[m]);
+  var h='';
+  h+='<div class="kpi blue"><div class="v">'+maes+'</div><div class="l">M\u00f3dulos</div></div>';
+  h+='<div class="kpi"><div class="v">'+telas+'</div><div class="l">Telas</div></div>';
+  h+='<div class="kpi green"><div class="v">'+TREE.users.length+'</div><div class="l">Usu\u00e1rios</div></div>';
+  h+='<div class="kpi orange"><div class="v">'+Object.keys(TREE.cargos).length+'</div><div class="l">Cargos</div></div>';
+  $('perm-kpis').innerHTML=h;
+}
+window.renderTree=function(){
+  var box=$('perm-tree'); if(!box)return;
+  if(!TREE){box.innerHTML='<div class="empty">\u00c1rvore n\u00e3o carregada (telas_usuarios_arvore.js).</div>';$('perm-count').textContent='\u2014';$('perm-title').textContent='\ud83c\udf33 \u00c1rvore de permiss\u00f5es';return;}
+  $('perm-title').textContent='\ud83c\udf33 \u00c1rvore de permiss\u00f5es \u2014 todas as pastas';
+  var q=($('perm-search').value||'').trim().toLowerCase();
+  _telaSeq=0; _telaStore={};
+  var maes=Object.keys(TREE.tree).sort(function(a,b){
+    if(a.charAt(0)==='(')return 1; if(b.charAt(0)==='(')return -1;
+    return a.localeCompare(b,'pt');
+  });
+  var html='';
+  maes.forEach(function(m){html+=renderNode(m,TREE.tree[m],1,q);});
+  box.innerHTML=html||'<div class="empty">Nada encontrado.</div>';
+  $('perm-count').textContent=(q?'busca: ':'')+ _telaSeq +' telas';
+  if(q){
+    box.querySelectorAll('.tw-tela[open] .tw-users[data-loaded="0"]').forEach(function(u){
+      u.innerHTML=buildUserList(_telaStore[u.getAttribute('data-sid')]); u.setAttribute('data-loaded','1');
+    });
+  }
+  if(!_treeBound){
+    _treeBound=true;
+    box.addEventListener('toggle',function(e){
+      var d=e.target;
+      if(d.classList&&d.classList.contains('tw-tela')&&d.open){
+        var u=d.querySelector('.tw-users');
+        if(u&&u.getAttribute('data-loaded')==='0'){u.innerHTML=buildUserList(_telaStore[u.getAttribute('data-sid')]);u.setAttribute('data-loaded','1');}
+      }
+    },true);
+  }
+};
+
+
+/* ===== Visão Acesso (por usuário: UF -> Função -> Usuário) ===== */
+var AC_SEMF='(sem fun\u00e7\u00e3o)', AC_SEMUF='(sem UF)';
+function acUfunc(i){return (TREE&&TREE.cargos[i])||AC_SEMF;}
+function acUuf(i){return (TREE&&TREE.uf&&TREE.uf[i])||AC_SEMUF;}
+function acFillUF(){
+  var c={}; TREE.users.forEach(function(u,i){var f=acUuf(i);c[f]=(c[f]||0)+1;});
+  var ks=Object.keys(c).sort(function(a,b){if(a===AC_SEMUF)return 1;if(b===AC_SEMUF)return -1;return a.localeCompare(b);});
+  $('ac-uf').innerHTML='<option value="">Todos ('+TREE.users.length+')</option>'+ks.map(function(f){return '<option value="'+esc(f)+'">'+esc(f)+' ('+c[f]+')</option>';}).join('');
+}
+function acFillFuncs(){
+  var uf=$('ac-uf').value, c={};
+  TREE.users.forEach(function(u,i){if(uf&&acUuf(i)!==uf)return;var f=acUfunc(i);c[f]=(c[f]||0)+1;});
+  var ks=Object.keys(c).sort(function(a,b){if(a===AC_SEMF)return 1;if(b===AC_SEMF)return -1;return a.localeCompare(b,'pt');});
+  var tot=0; for(var k in c)tot+=c[k];
+  $('ac-func').innerHTML='<option value="">Todas as fun\u00e7\u00f5es ('+tot+')</option>'+ks.map(function(f){return '<option value="'+esc(f)+'">'+esc(f)+' ('+c[f]+')</option>';}).join('');
+}
+function acFillUsers(){
+  var uf=$('ac-uf').value, f=$('ac-func').value;
+  var order=TREE.users.map(function(u,i){return {i:i,nome:u[1]||u[0]||('#'+i),login:u[0]||'',f:acUfunc(i),uf:acUuf(i)};})
+    .filter(function(o){return (!uf||o.uf===uf)&&(!f||o.f===f);})
+    .sort(function(a,b){return a.nome.toUpperCase()<b.nome.toUpperCase()?-1:1;});
+  $('ac-user').innerHTML=order.length?order.map(function(o){return '<option value="'+o.i+'">'+esc(o.nome)+(o.login?' \u2014 '+esc(o.login):'')+'</option>';}).join(''):'<option value="">(nenhum)</option>';
+}
+function acCntU(n,uid){var c=0;if(n.t)for(var t in n.t){if((','+n.t[t]+',').indexOf(','+uid+',')>=0)c++;}if(n.c)for(var k in n.c)c+=acCntU(n.c[k],uid);return c;}
+function acNodeU(name,n,d,uid){
+  var inner='';
+  if(n.c)Object.keys(n.c).sort(function(a,b){return a.localeCompare(b,'pt');}).forEach(function(k){inner+=acNodeU(k,n.c[k],d+1,uid);});
+  if(n.t)Object.keys(n.t).sort(function(a,b){return a.localeCompare(b,'pt');}).forEach(function(t){
+    if((','+n.t[t]+',').indexOf(','+uid+',')<0)return;
+    inner+='<div class="tw-tela"><span class="tw-ic">\ud83d\udcc4</span>'+esc(t)+'</div>';});
+  if(!inner)return '';
+  var ic=d===1?'\ud83d\udcc1':'\ud83d\udcc2';
+  return '<details class="tw-folder tw-d'+d+'" open><summary><span class="tw-ic">'+ic+'</span>'+esc(name)+'<span class="tw-n">'+acCntU(n,uid)+' telas</span></summary><div class="tw-children">'+inner+'</div></details>';
+}
+window.acOnTop=function(){acFillFuncs();acFillUsers();acRender();};
+window.acRender=function(){
+  if(!TREE){$('perm-utree').innerHTML='<div class="empty">\u00c1rvore n\u00e3o carregada.</div>';return;}
+  $('perm-title').textContent='\ud83d\udc64 Acesso por usu\u00e1rio';
+  var v=$('ac-user').value;
+  if(!v){$('perm-who').innerHTML='';$('perm-utree').innerHTML='<div class="empty">Nenhum usu\u00e1rio com esses filtros.</div>';$('perm-count').textContent='\u2014';return;}
+  var uid=+v, u=TREE.users[uid]||['',''], cg=TREE.cargos[uid]||'', uf=(TREE.uf&&TREE.uf[uid])||'';
+  var ms=Object.keys(TREE.tree).sort(function(a,b){if(a.charAt(0)==='(')return 1;if(b.charAt(0)==='(')return -1;return a.localeCompare(b,'pt');});
+  var h='',tot=0,nmod=0;
+  ms.forEach(function(m){var part=acNodeU(m,TREE.tree[m],1,uid);if(part){h+=part;nmod++;}tot+=acCntU(TREE.tree[m],uid);});
+  $('perm-who').innerHTML='<div class="nm">'+esc(u[1]||u[0])+(uf?'<span class="uf">\ud83d\udccd '+esc(uf)+'</span>':'')+(cg?'<span class="cg">'+esc(cg)+'</span>':'')+'</div><div class="meta">login: <b>'+esc(u[0])+'</b> \u00b7 acesso a <b>'+tot+'</b> telas em <b>'+nmod+'</b> m\u00f3dulos</div>';
+  $('perm-utree').innerHTML=h||'<div class="empty">Sem acesso registrado.</div>';
+  $('perm-count').textContent=tot+' telas';
+}; 
+var _acInit=false;
+function acInit(){
+  if(!TREE){$('perm-utree').innerHTML='<div class="empty">\u00c1rvore n\u00e3o carregada (telas_usuarios_arvore.js).</div>';return;}
+  if(!_acInit){_acInit=true;acFillUF();acFillFuncs();acFillUsers();}
+  acRender();
+}
+
 
 function init(){
   if(!D){$('perm-tbody').innerHTML='<tr><td class="empty">Dados n\u00e3o carregados (telas_usuarios_data.js).</td></tr>';return;}
