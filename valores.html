@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Valores — Mariuá</title>
+<title>Financeiro — Mariuá</title>
 <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;600;700;800;900&display=swap" rel="stylesheet">
 <style>
   :root{--teal:#0d7377;--teal2:#14a085}
@@ -89,7 +89,7 @@ body.sm-collapsed .bottom-bar{left:64px !important;}
   <div id="login-view">
     <div class="card">
       <div class="logo">🔆 MARIUÁ</div>
-      <h1 id="login-title">Acesso restrito — Valores</h1>
+      <h1 id="login-title">Acesso restrito — Financeiro</h1>
       <div id="form-login">
         <label>E-mail</label>
         <input id="email" type="email" placeholder="seu@email.com" autocomplete="username">
@@ -111,7 +111,7 @@ body.sm-collapsed .bottom-bar{left:64px !important;}
   <!-- ===== APP (VALORES) ===== -->
   <div id="app-view" style="display:none">
     <header>
-      <b>💰 Valores</b>
+      <b>💰 Financeiro</b>
       <div style="display:flex;align-items:center;gap:12px">
         <span class="who" id="who"></span>
         <button class="btn out" onclick="sair()">Sair</button>
@@ -206,7 +206,7 @@ async function sair(){ await sb.auth.signOut(); location.reload(); }
     <a class="sm-item" href="mapa.html"><span class="sm-ic">🗺️</span><span class="sm-tx">Mapa</span></a>
     <a class="sm-item" href="prog.html"><span class="sm-ic">📅</span><span class="sm-tx">Prog. Diária</span></a>
     <a class="sm-item" href="permissoes.html"><span class="sm-ic">🔐</span><span class="sm-tx">Telas x Usuários</span></a>
-    <a class="sm-item" href="valores.html"><span class="sm-ic">💰</span><span class="sm-tx">Valores</span></a>
+    <a class="sm-item" href="valores.html"><span class="sm-ic">💰</span><span class="sm-tx">Financeiro</span></a>
   </nav>
   <div class="sm-foot">Mariuá · Sistema de Obras</div>
 </aside>
