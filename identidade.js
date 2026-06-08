@@ -103,4 +103,40 @@
 
   // permite trocar de identidade depois:  mariuaTrocarUsuario()
   window.mariuaTrocarUsuario = function(){ try{ localStorage.removeItem(LS_USER); }catch(e){} abrirModal(); };
+
+  // avatar clicável -> mostra quem está usando o aparelho e permite trocar
+  window.mariuaPerfil = function(){
+    var nome = lsGet(LS_USER);
+    if(!nome || !nome.trim()){ abrirModal(); return; }
+    nome = nome.trim();
+    if (document.getElementById('mariua-perfil-ov')) return;
+    var ini = nome.charAt(0).toUpperCase();
+    var safe = nome.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    var ov = document.createElement('div'); ov.id = 'mariua-perfil-ov';
+    ov.innerHTML =
+      '<div id="mariua-perfil-card">' +
+        '<div id="mariua-perfil-av">' + ini + '</div>' +
+        '<div id="mariua-perfil-nome">' + safe + '</div>' +
+        '<div id="mariua-perfil-sub">Identificação deste aparelho</div>' +
+        '<button id="mariua-perfil-trocar">Trocar nome</button>' +
+        '<button id="mariua-perfil-fechar">Fechar</button>' +
+      '</div>';
+    if(!document.getElementById('mariua-perfil-css')){
+      var css = document.createElement('style'); css.id='mariua-perfil-css';
+      css.textContent =
+        '#mariua-perfil-ov{position:fixed;inset:0;z-index:100000;background:rgba(7,40,38,.55);backdrop-filter:blur(3px);display:flex;align-items:center;justify-content:center;padding:18px;font-family:Barlow,system-ui,sans-serif}' +
+        '#mariua-perfil-card{background:#fff;border-radius:18px;max-width:320px;width:100%;padding:26px 22px;box-shadow:0 20px 60px rgba(0,0,0,.3);text-align:center}' +
+        '#mariua-perfil-av{width:64px;height:64px;border-radius:50%;margin:0 auto 12px;background:linear-gradient(135deg,#0d7377,#14a085);color:#fff;font-size:1.6rem;font-weight:800;display:flex;align-items:center;justify-content:center}' +
+        '#mariua-perfil-nome{font-size:1.25rem;font-weight:800;color:#0f3a33}' +
+        '#mariua-perfil-sub{font-size:.8rem;color:#6b7280;margin:4px 0 18px}' +
+        '#mariua-perfil-trocar{width:100%;padding:12px;font-size:1rem;font-weight:800;color:#fff;background:linear-gradient(90deg,#0d7377,#14a085);border:0;border-radius:11px;cursor:pointer;font-family:inherit}' +
+        '#mariua-perfil-fechar{width:100%;padding:11px;margin-top:8px;font-size:.95rem;font-weight:700;color:#0d7377;background:#f0fafa;border:1.5px solid #c0e8e5;border-radius:11px;cursor:pointer;font-family:inherit}';
+      document.head.appendChild(css);
+    }
+    document.body.appendChild(ov);
+    function close(){ if(ov.parentNode) ov.parentNode.removeChild(ov); }
+    document.getElementById('mariua-perfil-trocar').onclick = function(){ close(); window.mariuaTrocarUsuario(); };
+    document.getElementById('mariua-perfil-fechar').onclick = close;
+    ov.addEventListener('click', function(e){ if(e.target===ov) close(); });
+  };
 })();

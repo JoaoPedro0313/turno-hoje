@@ -283,9 +283,7 @@ window.presenceOpenModal = function() { if(window._presenceOpenModal) window._pr
     <div class="top-bar-right">
       <div class="db-badge local" id="db-badge" onclick="if(window.dbBadgeClick)window.dbBadgeClick()" title="Clique para reconectar" style="cursor:pointer;"><span class="db-dot"></span><span id="db-text">Dados locais</span></div>
       <button onclick="if(window.abrirGear)window.abrirGear()" title="Configurações" style="background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);color:#fff;width:30px;height:30px;border-radius:8px;cursor:pointer;font-size:1rem;display:inline-flex;align-items:center;justify-content:center;transition:all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.28)'" onmouseout="this.style.background='rgba(255,255,255,0.15)'">⚙️</button>
-      <button class="presence-btn" id="presence-btn" onclick="if(window.presenceOpenModal)window.presenceOpenModal()" title="Ver quem está online">
-        <span class="presence-dot"></span><span id="presence-count-label">1 online</span>
-      </button>
+      <button id="user-avatar" onclick="if(window.mariuaPerfil)window.mariuaPerfil()" title="Quem está usando" style="display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;margin-left:6px;border-radius:50%;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.35);color:#fff;cursor:pointer;flex-shrink:0;padding:0;"><svg width="19" height="19" viewBox="0 0 24 24" fill="currentColor"><path d="M12 12c2.5 0 4.5-2 4.5-4.5S14.5 3 12 3 7.5 5 7.5 7.5 9.5 12 12 12zm0 2.2c-3 0-9 1.5-9 4.5V21h18v-2.3c0-3-6-4.5-9-4.5z"/></svg></button>
     </div>
   </div>
   <div id="diag-panel" style="display:none;position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:#1a202c;color:#e2e8f0;padding:16px 22px;border-radius:14px;font-family:monospace;font-size:0.75rem;z-index:9999;max-width:520px;width:92%;box-shadow:0 8px 40px rgba(0,0,0,0.6);">
@@ -6450,7 +6448,7 @@ function gerarImagemBA() {
     <a class="sm-item" href="turno.html"><span class="sm-ic">📋</span><span class="sm-tx">Turno</span></a>
     <a class="sm-item" href="apr.html"><span class="sm-ic">📊</span><span class="sm-tx">RDO</span></a>
     <a class="sm-item" href="comp.html"><span class="sm-ic">⚡</span><span class="sm-tx">Comparador</span></a>
-    <a class="sm-item" href="projeçao.html"><span class="sm-ic">📲</span><span class="sm-tx">PDA</span></a>
+    
     <a class="sm-item" href="mapa.html"><span class="sm-ic">🗺️</span><span class="sm-tx">Mapa</span></a>
     <a class="sm-item" href="prog.html"><span class="sm-ic">📅</span><span class="sm-tx">Prog. Diária</span></a>
     <a class="sm-item" href="permissoes.html"><span class="sm-ic">🔐</span><span class="sm-tx">Telas x Usuários</span></a>
@@ -6480,6 +6478,6 @@ function gerarImagemBA() {
   }catch(e){}
 })();
 </script>
-<script src="identidade.js?v=1"></script>
+<script src="identidade.js?v=2"></script>
 </body>
 </html>
