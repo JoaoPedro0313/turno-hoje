@@ -35,6 +35,20 @@
   td.v{font-weight:800;color:var(--teal);text-align:right;white-space:nowrap}
   .form-row{display:flex;gap:8px;flex-wrap:wrap;background:#fff;padding:14px;border-radius:12px;margin-bottom:14px;box-shadow:0 2px 10px rgba(0,0,0,.06)}
   .form-row input{margin:0;flex:1;min-width:120px}
+  .tabs{display:flex;gap:8px;margin-bottom:14px}
+  .tab{padding:9px 18px;border:0;border-radius:10px;background:#e2e8f0;color:#475569;font-weight:800;cursor:pointer;font-size:.9rem;font-family:inherit}
+  .tab.active{background:linear-gradient(90deg,var(--teal),var(--teal2));color:#fff}
+  .adminbox{background:#fff;border-radius:14px;padding:20px 22px;box-shadow:0 2px 10px rgba(0,0,0,.06);margin-bottom:16px;max-width:480px}
+  .adminbox h2{font-size:1.05rem;margin:0 0 4px;color:#0f3a33}
+  .adminbox p{font-size:.83rem;color:#6b7280;margin:0 0 14px}
+  .adminbox label{display:block;margin-top:8px}
+  .adminbox input[type=text],.adminbox input[type=email],.adminbox input[type=password],.adminbox input:not([type]){width:100%}
+  .adminbox .chk{display:flex;align-items:center;gap:8px;margin:12px 0 4px;font-size:.9rem;font-weight:700;color:#334155;text-transform:none;letter-spacing:0}
+  .adminbox .chk input{width:auto;margin:0}
+  .amsg{font-size:.85rem;font-weight:700;margin-top:10px;min-height:18px}
+  .amsg.err{color:#c53030}.amsg.ok{color:#276749}
+  .gest-row{display:flex;align-items:center;justify-content:space-between;padding:9px 4px;border-bottom:1px solid #eef2f7;font-size:.88rem}
+  .gest-row:last-child{border-bottom:0}
 </style>
 <style id="sidemenu-css">
 .page-nav{display:none !important;}
@@ -118,17 +132,41 @@ body.sm-collapsed .bottom-bar{left:64px !important;}
       </div>
     </header>
     <div class="wrap">
-      <div class="form-row">
-        <input id="f-desc" placeholder="Descrição">
-        <input id="f-obra" placeholder="Obra / categoria">
-        <input id="f-data" type="date">
-        <input id="f-valor" type="number" step="0.01" placeholder="Valor R$" style="max-width:140px">
-        <button class="btn add" onclick="addValor()">+ Adicionar</button>
+      <div class="tabs">
+        <button class="tab active" id="tab-lanc" onclick="abaFin('lanc')">Lançamentos</button>
+        <button class="tab" id="tab-admin" onclick="abaFin('admin')">⚙️ Admin</button>
       </div>
-      <table>
-        <thead><tr><th>Data</th><th>Descrição</th><th>Obra/Categoria</th><th style="text-align:right">Valor</th></tr></thead>
-        <tbody id="tbody"><tr><td colspan="4" style="text-align:center;color:#aaa">Carregando…</td></tr></tbody>
-      </table>
+
+      <div id="pane-lanc">
+        <div class="form-row">
+          <input id="f-desc" placeholder="Descrição">
+          <input id="f-obra" placeholder="Obra / categoria">
+          <input id="f-data" type="date">
+          <input id="f-valor" type="number" step="0.01" placeholder="Valor R$" style="max-width:140px">
+          <button class="btn add" onclick="addValor()">+ Adicionar</button>
+        </div>
+        <table>
+          <thead><tr><th>Data</th><th>Descrição</th><th>Obra/Categoria</th><th style="text-align:right">Valor</th></tr></thead>
+          <tbody id="tbody"><tr><td colspan="4" style="text-align:center;color:#aaa">Carregando…</td></tr></tbody>
+        </table>
+      </div>
+
+      <div id="pane-admin" style="display:none">
+        <div class="adminbox">
+          <h2>Criar novo usuário</h2>
+          <p>Crie um login (e-mail + senha) para outra pessoa acessar o sistema.</p>
+          <label>Nome</label><input id="u-nome" placeholder="Nome da pessoa">
+          <label>E-mail</label><input id="u-email" type="email" placeholder="email@dominio.com">
+          <label>Senha</label><input id="u-senha" type="password" placeholder="mínimo 6 caracteres">
+          <label class="chk"><input id="u-gestor" type="checkbox" checked> Pode ver o Financeiro (gestor)</label>
+          <button class="btn add" onclick="criarUsuario()">Criar usuário</button>
+          <div id="u-msg" class="amsg"></div>
+        </div>
+        <div class="adminbox">
+          <h2>Quem tem acesso ao Financeiro</h2>
+          <div id="gest-list">Carregando…</div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -187,6 +225,33 @@ async function addValor(){
   carregarValores();
 }
 async function sair(){ await sb.auth.signOut(); location.reload(); }
+
+// ===== Abas / Admin =====
+window.abaFin=function(qual){
+  $('tab-lanc').classList.toggle('active', qual==='lanc');
+  $('tab-admin').classList.toggle('active', qual==='admin');
+  $('pane-lanc').style.display = qual==='lanc'?'':'none';
+  $('pane-admin').style.display = qual==='admin'?'':'none';
+  if(qual==='admin') carregarGestores();
+};
+async function criarUsuario(){
+  const m=$('u-msg');
+  const nome=$('u-nome').value.trim(), email=$('u-email').value.trim(), senha=$('u-senha').value, gestor=$('u-gestor').checked;
+  if(!email || senha.length<6){ m.className='amsg err'; m.textContent='Preencha e-mail e uma senha de pelo menos 6 caracteres.'; return; }
+  m.className='amsg'; m.textContent='Criando…';
+  const {data,error}=await sb.rpc('admin_criar_usuario',{p_email:email,p_senha:senha,p_nome:nome||null,p_gestor:gestor});
+  if(error){ m.className='amsg err'; m.textContent='Erro: '+error.message; return; }
+  m.className='amsg ok'; m.textContent='✅ Usuário criado! Ele já pode entrar com esse e-mail e senha.';
+  $('u-nome').value=''; $('u-email').value=''; $('u-senha').value='';
+  carregarGestores();
+}
+async function carregarGestores(){
+  const el=$('gest-list'); if(!el) return;
+  const {data,error}=await sb.from('gestores').select('email,nome,criado_em').order('criado_em');
+  if(error){ el.innerHTML='<div style="color:#c53030">Sem acesso à lista.</div>'; return; }
+  if(!data.length){ el.innerHTML='<div style="color:#aaa">Ninguém cadastrado.</div>'; return; }
+  el.innerHTML=data.map(g=>'<div class="gest-row"><span><b>'+(g.nome||'(sem nome)')+'</b> · '+g.email+'</span></div>').join('');
+}
 
 // ao abrir: se já estiver logado, entra direto
 (async()=>{ try{ const {data:{session}}=await sb.auth.getSession(); if(session){ checarGestorEEntrar(); } }catch(e){} })();
