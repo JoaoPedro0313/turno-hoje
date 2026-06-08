@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Valores — Mariuá</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root{--teal:#0d7377;--teal2:#14a085}
+  *{box-sizing:border-box;font-family:'Barlow',system-ui,sans-serif}
+  body{margin:0;background:#f1f5f9;color:#1a365d}
+  .wrap{max-width:920px;margin:0 auto;padding:18px}
+  /* LOGIN */
+  #login-view{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:18px}
+  .card{background:#fff;border-radius:18px;box-shadow:0 20px 60px rgba(0,0,0,.12);padding:30px 26px;max-width:380px;width:100%}
+  .logo{font-weight:900;color:var(--teal);letter-spacing:.04em;text-align:center;margin-bottom:6px}
+  h1{font-size:1.35rem;text-align:center;margin:6px 0 18px}
+  label{font-size:.72rem;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.04em}
+  input{width:100%;padding:12px 13px;border:1.5px solid #cbd5e1;border-radius:11px;font-size:1rem;margin:5px 0 14px}
+  input:focus{outline:none;border-color:var(--teal);box-shadow:0 0 0 3px rgba(13,115,119,.15)}
+  button.main{width:100%;padding:13px;border:0;border-radius:11px;background:linear-gradient(90deg,var(--teal),var(--teal2));color:#fff;font-weight:800;font-size:1.02rem;cursor:pointer}
+  .link{background:none;border:0;color:var(--teal);font-weight:700;cursor:pointer;font-size:.85rem;margin-top:10px;text-decoration:underline}
+  .msg{font-size:.85rem;font-weight:700;text-align:center;margin-top:10px;min-height:18px}
+  .msg.err{color:#c53030}.msg.ok{color:#276749}
+  .back{display:block;text-align:center;margin-top:14px;font-size:.8rem;color:#94a3b8;text-decoration:none}
+  /* APP */
+  header{background:linear-gradient(90deg,var(--teal),var(--teal2));color:#fff;padding:14px 18px;display:flex;align-items:center;justify-content:space-between}
+  header b{font-size:1.1rem}
+  .who{font-size:.8rem;opacity:.95}
+  .btn{padding:8px 14px;border:0;border-radius:9px;font-weight:800;cursor:pointer;font-size:.85rem}
+  .btn.add{background:var(--teal);color:#fff}.btn.out{background:rgba(255,255,255,.2);color:#fff}
+  table{width:100%;border-collapse:collapse;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 10px rgba(0,0,0,.06)}
+  th,td{padding:11px 12px;text-align:left;font-size:.9rem;border-bottom:1px solid #eef2f7}
+  th{background:#f8fafc;font-size:.72rem;text-transform:uppercase;color:#64748b}
+  td.v{font-weight:800;color:var(--teal);text-align:right;white-space:nowrap}
+  .form-row{display:flex;gap:8px;flex-wrap:wrap;background:#fff;padding:14px;border-radius:12px;margin-bottom:14px;box-shadow:0 2px 10px rgba(0,0,0,.06)}
+  .form-row input{margin:0;flex:1;min-width:120px}
+</style>
+</head>
+<body>
+  <!-- ===== LOGIN ===== -->
+  <div id="login-view">
+    <div class="card">
+      <div class="logo">🔆 MARIUÁ</div>
+      <h1 id="login-title">Acesso restrito — Valores</h1>
+      <div id="form-login">
+        <label>E-mail</label>
+        <input id="email" type="email" placeholder="seu@email.com" autocomplete="username">
+        <label>Senha</label>
+        <input id="senha" type="password" placeholder="••••••••" autocomplete="current-password">
+        <button class="main" onclick="entrar()">Entrar</button>
+        <div style="text-align:center"><button class="link" onclick="esqueci()">Esqueci minha senha</button></div>
+      </div>
+      <div id="form-reset" style="display:none">
+        <label>Nova senha</label>
+        <input id="nova-senha" type="password" placeholder="nova senha (mín. 6)">
+        <button class="main" onclick="definirNovaSenha()">Salvar nova senha</button>
+      </div>
+      <div id="msg" class="msg"></div>
+      <a class="back" href="index.html">← Voltar ao sistema</a>
+    </div>
+  </div>
+
+  <!-- ===== APP (VALORES) ===== -->
+  <div id="app-view" style="display:none">
+    <header>
+      <b>💰 Valores</b>
+      <div style="display:flex;align-items:center;gap:12px">
+        <span class="who" id="who"></span>
+        <button class="btn out" onclick="sair()">Sair</button>
+      </div>
+    </header>
+    <div class="wrap">
+      <div class="form-row">
+        <input id="f-desc" placeholder="Descrição">
+        <input id="f-obra" placeholder="Obra / categoria">
+        <input id="f-data" type="date">
+        <input id="f-valor" type="number" step="0.01" placeholder="Valor R$" style="max-width:140px">
+        <button class="btn add" onclick="addValor()">+ Adicionar</button>
+      </div>
+      <table>
+        <thead><tr><th>Data</th><th>Descrição</th><th>Obra/Categoria</th><th style="text-align:right">Valor</th></tr></thead>
+        <tbody id="tbody"><tr><td colspan="4" style="text-align:center;color:#aaa">Carregando…</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+const SUPA_URL='https://eqxejfoibebcbtsqymji.supabase.co';
+const SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVxeGVqZm9pYmViY2J0c3F5bWppIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE4NjUzMTEsImV4cCI6MjA4NzQ0MTMxMX0.lwf7_EJ6UchEOpzhW3cVKztxDGy78gaQblRvgiEwWh8';
+const sb=supabase.createClient(SUPA_URL,SUPA_KEY);
+const $=id=>document.getElementById(id);
+function setMsg(t,ok){const m=$('msg');m.textContent=t||'';m.className='msg '+(ok?'ok':'err');}
+
+// recuperação de senha (quando a pessoa volta do e-mail)
+sb.auth.onAuthStateChange((ev)=>{ if(ev==='PASSWORD_RECOVERY'){ $('login-title').textContent='Definir nova senha'; $('form-login').style.display='none'; $('form-reset').style.display='block'; }});
+
+async function entrar(){
+  setMsg('Entrando…',true);
+  const {error}=await sb.auth.signInWithPassword({email:$('email').value.trim(),password:$('senha').value});
+  if(error){setMsg('E-mail ou senha inválidos.');return;}
+  checarGestorEEntrar();
+}
+async function checarGestorEEntrar(){
+  const {data,error}=await sb.rpc('is_gestor');
+  if(error||data!==true){ setMsg('Seu usuário não tem permissão de gestor.'); await sb.auth.signOut(); return; }
+  const {data:{user}}=await sb.auth.getUser();
+  $('who').textContent=user?user.email:'';
+  $('login-view').style.display='none'; $('app-view').style.display='block';
+  carregarValores();
+}
+async function esqueci(){
+  const email=$('email').value.trim(); if(!email){setMsg('Digite seu e-mail primeiro.');return;}
+  const {error}=await sb.auth.resetPasswordForEmail(email,{redirectTo:location.origin+location.pathname});
+  setMsg(error?'Erro ao enviar.':'Enviamos um link de redefinição para seu e-mail.',!error);
+}
+async function definirNovaSenha(){
+  const {error}=await sb.auth.updateUser({password:$('nova-senha').value});
+  if(error){setMsg('Erro: '+error.message);return;}
+  setMsg('Senha alterada! Entrando…',true); checarGestorEEntrar();
+}
+async function carregarValores(){
+  const {data,error}=await sb.from('valores').select('*').order('data_ref',{ascending:false}).order('id',{ascending:false});
+  const tb=$('tbody');
+  if(error){tb.innerHTML='<tr><td colspan="4" style="text-align:center;color:#c53030">Sem acesso aos dados</td></tr>';return;}
+  if(!data.length){tb.innerHTML='<tr><td colspan="4" style="text-align:center;color:#aaa">Nenhum valor cadastrado</td></tr>';return;}
+  tb.innerHTML=data.map(v=>{
+    const d=v.data_ref?v.data_ref.split('-').reverse().join('/'):'—';
+    const val=(v.valor==null)?'—':Number(v.valor).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+    return '<tr><td>'+d+'</td><td>'+(v.descricao||'')+'</td><td>'+(v.obra||'')+'</td><td class="v">'+val+'</td></tr>';
+  }).join('');
+}
+async function addValor(){
+  const reg={descricao:$('f-desc').value.trim(),obra:$('f-obra').value.trim(),data_ref:$('f-data').value||null,valor:$('f-valor').value?Number($('f-valor').value):null};
+  if(!reg.descricao&&!reg.valor){return;}
+  const {error}=await sb.from('valores').insert(reg);
+  if(error){alert('Erro ao salvar: '+error.message);return;}
+  $('f-desc').value='';$('f-obra').value='';$('f-data').value='';$('f-valor').value='';
+  carregarValores();
+}
+async function sair(){ await sb.auth.signOut(); location.reload(); }
+
+// ao abrir: se já estiver logado, entra direto
+(async()=>{ try{ const {data:{session}}=await sb.auth.getSession(); if(session){ checarGestorEEntrar(); } }catch(e){} })();
+</script>
+</body>
+</html>
