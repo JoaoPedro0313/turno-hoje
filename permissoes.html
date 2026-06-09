@@ -179,7 +179,14 @@ body.sm-collapsed .bottom-bar{left:64px !important;}
       <div class="who" id="perm-who" style="display:none"></div>
       <div class="tree" id="perm-utree" style="display:none"></div>
       <div id="perm-portela" style="display:none">
-        <input type="text" id="pt-search" class="search" placeholder="🔎 digite o nome da tela (ex: Consulta Turno, RDO, Abastecimento…)" oninput="ptRender()" style="width:100%;box-sizing:border-box;margin-bottom:10px">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+          <input type="text" id="pt-search" class="search" placeholder="🔎 digite o nome de uma tela ou subpasta…" oninput="ptRender()" style="flex:1;min-width:220px;box-sizing:border-box">
+          <select id="pt-tipo" class="search" onchange="ptRender()" style="max-width:210px">
+            <option value="">Telas e subpastas</option>
+            <option value="tela">Só telas</option>
+            <option value="pasta">Só subpastas</option>
+          </select>
+        </div>
         <label class="pt-sup-toggle"><input type="checkbox" id="pt-sup" onchange="ptRender()"> Incluir contas de suporte (NW/SV)</label>
         <div id="pt-results"></div>
       </div>
@@ -241,6 +248,9 @@ body.sm-collapsed .bottom-bar{left:64px !important;}
 .pt-sup-toggle{display:flex;align-items:center;gap:7px;font-size:.82rem;font-weight:700;color:#475569;margin-bottom:12px;cursor:pointer}
 .pt-sup-toggle input{width:auto;margin:0}
 .pt-supn{background:#f3e8ff;color:#6b21a8;font-size:.66rem;font-weight:800;padding:1px 7px;border-radius:20px;margin-left:5px}
+.pt-pasta>summary{background:#fffbeb}
+.pt-pasta{border-color:#fde68a}
+.pt-telas{font-size:.7rem;color:#92400e;background:#fef3c7;padding:1px 8px;border-radius:12px;font-weight:700}
 .pt-lg{margin-left:auto;font-size:.72rem;color:#94a3b8;font-weight:600}
 .pt-empty{padding:8px 0;color:#94a3b8;font-size:.85rem}
 .who{background:#fff;border:1px solid #b2f5ea;border-left:5px solid #0d9488;border-radius:12px;padding:12px 14px;margin:4px 0 12px;font-family:'Barlow',system-ui,sans-serif}
@@ -328,24 +338,36 @@ var PT_INDEX=null;
 function ptBuild(){
   if(PT_INDEX) return PT_INDEX;
   PT_INDEX=[];
-  function walk(node, path){
+  function walk(name, node, path){
+    var here=path.concat(name);
+    var set={}, ntelas=0;
     if(node.t)Object.keys(node.t).forEach(function(tela){
-      var uids=(node.t[tela]||'').split(',').filter(Boolean).map(Number);
-      PT_INDEX.push({tela:tela, path:path.slice(), uids:uids});
+      var arr=(node.t[tela]||'').split(',').filter(Boolean);
+      arr.forEach(function(x){set[x]=1;}); ntelas++;
+      PT_INDEX.push({tipo:'tela', nome:tela, path:here.slice(), uids:arr.map(Number)});
     });
-    if(node.c)Object.keys(node.c).forEach(function(k){ walk(node.c[k], path.concat(k)); });
+    if(node.c)Object.keys(node.c).forEach(function(k){
+      var ch=walk(k, node.c[k], here);
+      for(var u in ch.set)set[u]=1; ntelas+=ch.ntelas;
+    });
+    PT_INDEX.push({tipo:'pasta', nome:name, path:path.slice(), uids:Object.keys(set).map(Number), telas:ntelas});
+    return {set:set, ntelas:ntelas};
   }
-  Object.keys(TREE.tree).forEach(function(m){ walk(TREE.tree[m], [m]); });
+  Object.keys(TREE.tree).forEach(function(m){ walk(m, TREE.tree[m], []); });
   return PT_INDEX;
 }
 window.ptRender=function(){
   var sb=$('pt-search'); var q=sb?(sb.value||'').trim().toLowerCase():'';
+  var tipo=$('pt-tipo')?$('pt-tipo').value:'';
   var box=$('pt-results'); if(!box) return;
-  if(q.length<2){ box.innerHTML='<div class="empty">Digite ao menos 2 letras do nome da tela para ver quem tem acesso.</div>'; return; }
+  if(q.length<2){ box.innerHTML='<div class="empty">Digite ao menos 2 letras do nome de uma tela ou subpasta para ver quem tem acesso.</div>'; return; }
   var idx=ptBuild();
-  var hits=idx.filter(function(r){ return r.tela.toLowerCase().indexOf(q)>=0; });
-  hits.sort(function(a,b){ return a.tela.localeCompare(b.tela,'pt') || b.uids.length-a.uids.length; });
-  if(!hits.length){ box.innerHTML='<div class="empty">Nenhuma tela encontrada para \u201c'+esc(q)+'\u201d.</div>'; return; }
+  var hits=idx.filter(function(r){ return (!tipo||r.tipo===tipo) && r.nome.toLowerCase().indexOf(q)>=0; });
+  hits.sort(function(a,b){
+    if(a.tipo!==b.tipo) return a.tipo==='pasta'?-1:1;       // subpastas primeiro
+    return a.nome.localeCompare(b.nome,'pt') || b.uids.length-a.uids.length;
+  });
+  if(!hits.length){ box.innerHTML='<div class="empty">Nada encontrado para \u201c'+esc(q)+'\u201d.</div>'; return; }
   var shown=hits.slice(0,40);
   var incSup = !!($('pt-sup') && $('pt-sup').checked);
   box.innerHTML=shown.map(function(r){
@@ -357,10 +379,14 @@ window.ptRender=function(){
       var sup=/^(NW|SV)/i.test(u[0]||'');
       return '<div class="pt-u"><span class="pt-un">'+esc(u[1]||u[0])+'</span>'+(sup?'<span class="pt-sup">\ud83d\udee0\ufe0f suporte</span>':'')+(loc?'<span class="pt-loc">\ud83d\udccd '+esc(loc)+'</span>':'')+(cg?'<span class="pt-cg">'+esc(cg)+'</span>':'')+'<span class="pt-lg">'+esc(u[0])+'</span></div>';
     }).join('') || '<div class="pt-empty">'+(nSup?'Apenas contas de suporte t\u00eam acesso (marque \u201cIncluir suporte\u201d para ver).':'Nenhum usu\u00e1rio com acesso.')+'</div>';
+    var isPasta=r.tipo==='pasta';
+    var icon=isPasta?'\ud83d\udcc1':'\ud83d\udcc4';
+    var pathStr=r.path.join(' \u203a ');
+    var telasLbl=isPasta?'<span class="pt-telas">'+r.telas+' tela'+(r.telas!==1?'s':'')+'</span>':'';
     var nlbl=uids.length+' usu\u00e1rio'+(uids.length!==1?'s':'')+(nSup?' <span class="pt-supn">+'+nSup+' suporte</span>':'');
-    return '<details class="pt-card"'+(shown.length===1?' open':'')+'><summary><span class="pt-tela">\ud83d\udcc4 '+esc(r.tela)+'</span><span class="pt-path">'+esc(r.path.join(' \u203a '))+'</span><span class="pt-n">'+nlbl+'</span></summary><div class="pt-users">'+users+'</div></details>';
+    return '<details class="pt-card'+(isPasta?' pt-pasta':'')+'"'+(shown.length===1?' open':'')+'><summary><span class="pt-tela">'+icon+' '+esc(r.nome)+'</span>'+(pathStr?'<span class="pt-path">'+esc(pathStr)+'</span>':'')+telasLbl+'<span class="pt-n">'+nlbl+'</span></summary><div class="pt-users">'+users+'</div></details>';
   }).join('');
-  if(hits.length>shown.length) box.innerHTML+='<div class="empty">+ '+(hits.length-shown.length)+' telas. Refine a busca.</div>';
+  if(hits.length>shown.length) box.innerHTML+='<div class="empty">+ '+(hits.length-shown.length)+' resultados. Refine a busca.</div>';
 };
 
 window.permRender=function(){
