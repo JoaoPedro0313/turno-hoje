@@ -225,6 +225,7 @@ async function checarGestorEEntrar(){
   $('who').textContent=user?user.email:'';
   $('login-view').style.display='none'; $('app-view').style.display='block';
   carregarValores();
+  if(location.hash==='#admin' && window.abaFin){ abaFin('admin'); }
 }
 async function esqueci(){
   const email=$('email').value.trim(); if(!email){setMsg('Digite seu e-mail primeiro.');return;}
@@ -352,6 +353,7 @@ async function carregarGestores(){
     <a class="sm-item" href="prog.html"><span class="sm-ic">📅</span><span class="sm-tx">Prog. Diária</span></a>
     <a class="sm-item" href="permissoes.html"><span class="sm-ic">🔐</span><span class="sm-tx">Telas x Usuários</span></a>
     <a class="sm-item" href="valores.html"><span class="sm-ic">💰</span><span class="sm-tx">Financeiro</span></a>
+    <a class="sm-item" href="valores.html#admin"><span class="sm-ic">⚙️</span><span class="sm-tx">Admin</span></a>
   </nav>
   <div class="sm-foot">Mariuá · Sistema de Obras</div>
 </aside>
