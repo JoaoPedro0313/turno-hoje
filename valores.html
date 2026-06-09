@@ -35,6 +35,25 @@
   td.v{font-weight:800;color:var(--teal);text-align:right;white-space:nowrap}
   .form-row{display:flex;gap:8px;flex-wrap:wrap;background:#fff;padding:14px;border-radius:12px;margin-bottom:14px;box-shadow:0 2px 10px rgba(0,0,0,.06)}
   .form-row input{margin:0;flex:1;min-width:120px}
+  .fin-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:14px}
+  .fin-kpi{background:#fff;border-radius:12px;padding:14px 16px;box-shadow:0 2px 10px rgba(0,0,0,.06);border-left:4px solid var(--teal)}
+  .fin-kpi .k-lbl{font-size:.7rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.03em}
+  .fin-kpi .k-val{font-size:1.45rem;font-weight:900;color:#0f3a33;margin-top:2px}
+  .fin-kpi .k-sub{font-size:.72rem;color:#94a3b8;margin-top:2px}
+  .fin-card{background:#fff;border-radius:12px;padding:16px;box-shadow:0 2px 10px rgba(0,0,0,.06);margin-bottom:14px}
+  .fin-card-h{font-size:.8rem;font-weight:800;color:#0f3a33;text-transform:uppercase;letter-spacing:.03em;margin-bottom:12px}
+  .fin-chart{display:flex;flex-direction:column;gap:10px}
+  .fin-brow{display:flex;align-items:center;gap:10px;font-size:.85rem}
+  .fin-brow .b-nm{width:90px;font-weight:700;color:#334155;flex-shrink:0}
+  .fin-brow .b-track{flex:1;background:#eef2f7;border-radius:8px;height:22px;overflow:hidden}
+  .fin-brow .b-fill{height:100%;border-radius:8px;background:linear-gradient(90deg,var(--teal),var(--teal2));min-width:2px}
+  .fin-brow .b-val{width:120px;text-align:right;font-weight:800;color:#0f3a33;flex-shrink:0}
+  .fin-bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+  .fin-bar select,.fin-bar input{padding:9px 12px;border:1.5px solid #cbd5e1;border-radius:10px;font-size:.9rem;font-family:inherit}
+  .fin-bar input{flex:1;min-width:140px}
+  .fin-bar .add{margin-left:auto}
+  tr.grp td{background:#f0fafa;font-weight:800;color:#0f3a33;border-top:2px solid #d6f0ec}
+  tr.sub td{background:#fafdfd;font-weight:700;color:#0d7377;font-size:.85rem}
   .tabs{display:flex;gap:8px;margin-bottom:14px}
   .tab{padding:9px 18px;border:0;border-radius:10px;background:#e2e8f0;color:#475569;font-weight:800;cursor:pointer;font-size:.9rem;font-family:inherit}
   .tab.active{background:linear-gradient(90deg,var(--teal),var(--teal2));color:#fff}
@@ -138,14 +157,24 @@ body.sm-collapsed .bottom-bar{left:64px !important;}
       </div>
 
       <div id="pane-lanc">
-        <div class="form-row">
+        <div id="fin-kpis" class="fin-kpis"></div>
+        <div class="fin-card">
+          <div class="fin-card-h">Distribuição por fornecedor</div>
+          <div id="fin-chart" class="fin-chart"></div>
+        </div>
+        <div class="fin-bar">
+          <select id="fin-forn-filtro" onchange="finRender()"><option value="">Todos os fornecedores</option></select>
+          <input id="fin-busca" placeholder="🔎 buscar item…" oninput="finRender()">
+          <button class="btn add" id="fin-toggle-form" onclick="finToggleForm()">+ Novo lançamento</button>
+        </div>
+        <div class="form-row" id="fin-form" style="display:none">
           <input id="f-forn" placeholder="Fornecedor" style="max-width:130px">
           <input id="f-desc" placeholder="Descrição / item">
           <input id="f-qtd" type="number" step="0.01" placeholder="Qtd" style="max-width:78px">
           <input id="f-unit" type="number" step="0.01" placeholder="Unitário R$" style="max-width:120px">
           <input id="f-data" type="date" style="max-width:150px">
           <input id="f-valor" type="number" step="0.01" placeholder="Total R$" style="max-width:120px">
-          <button class="btn add" onclick="addValor()">+ Adicionar</button>
+          <button class="btn add" onclick="addValor()">Salvar</button>
         </div>
         <table>
           <thead><tr><th>Data</th><th>Fornecedor</th><th>Item</th><th style="text-align:right">Qtd</th><th style="text-align:right">Unit.</th><th style="text-align:right">Total</th></tr></thead>
@@ -207,21 +236,57 @@ async function definirNovaSenha(){
   if(error){setMsg('Erro: '+error.message);return;}
   setMsg('Senha alterada! Entrando…',true); checarGestorEEntrar();
 }
+var FIN_DATA=[];
+const finMoney=n=>(n==null||n==='')?'':Number(n).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+const finNum=n=>(n==null||n==='')?'':Number(n).toLocaleString('pt-BR');
 async function carregarValores(){
   const {data,error}=await sb.from('valores').select('*').order('fornecedor',{ascending:true}).order('data_ref',{ascending:false}).order('id',{ascending:false});
-  const tb=$('tbody');
-  if(error){tb.innerHTML='<tr><td colspan="6" style="text-align:center;color:#c53030">Sem acesso aos dados</td></tr>';return;}
-  if(!data.length){tb.innerHTML='<tr><td colspan="6" style="text-align:center;color:#aaa">Nenhum valor cadastrado</td></tr>';return;}
-  const money=n=>(n==null||n==='')?'':Number(n).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
-  const num=n=>(n==null||n==='')?'':Number(n).toLocaleString('pt-BR');
-  let total=0;
-  let rows=data.map(v=>{
-    const d=v.data_ref?v.data_ref.split('-').reverse().join('/'):'—';
-    total+=Number(v.valor||0);
-    return '<tr><td>'+d+'</td><td>'+(v.fornecedor||'')+'</td><td>'+(v.descricao||'')+'</td><td style="text-align:right">'+num(v.quantidade)+'</td><td style="text-align:right">'+money(v.valor_unitario)+'</td><td class="v">'+money(v.valor)+'</td></tr>';
+  if(error){ $('tbody').innerHTML='<tr><td colspan="6" style="text-align:center;color:#c53030">Sem acesso aos dados</td></tr>'; return; }
+  FIN_DATA=data||[];
+  var forns=Array.from(new Set(FIN_DATA.map(v=>v.fornecedor||'(sem)'))).sort();
+  var sel=$('fin-forn-filtro'); var cur=sel?sel.value:'';
+  if(sel){ sel.innerHTML='<option value="">Todos os fornecedores</option>'+forns.map(f=>'<option value="'+f.replace(/"/g,'&quot;')+'">'+f+'</option>').join(''); sel.value=cur; }
+  finRender();
+}
+function finToggleForm(){ var f=$('fin-form'); if(f)f.style.display=(f.style.display==='none'?'flex':'none'); }
+function finRender(){
+  var fForn=$('fin-forn-filtro')?$('fin-forn-filtro').value:'';
+  var q=($('fin-busca')&&$('fin-busca').value?$('fin-busca').value:'').trim().toLowerCase();
+  var rows=FIN_DATA.filter(function(v){ return (!fForn||(v.fornecedor||'(sem)')===fForn) && (!q||(v.descricao||'').toLowerCase().indexOf(q)>=0); });
+  finKpis(); finChart(); finTabela(rows);
+}
+function finKpis(){
+  var total=FIN_DATA.reduce(function(s,v){return s+Number(v.valor||0);},0);
+  var porF={}; FIN_DATA.forEach(function(v){var f=v.fornecedor||'(sem)';porF[f]=(porF[f]||0)+Number(v.valor||0);});
+  var html='<div class="fin-kpi"><div class="k-lbl">Total geral</div><div class="k-val">'+finMoney(total)+'</div><div class="k-sub">'+FIN_DATA.length+' lançamentos</div></div>';
+  Object.keys(porF).sort().forEach(function(f){ var pct=total?(porF[f]/total*100):0; html+='<div class="fin-kpi"><div class="k-lbl">'+f+'</div><div class="k-val">'+finMoney(porF[f])+'</div><div class="k-sub">'+pct.toFixed(1)+'% do total</div></div>'; });
+  if($('fin-kpis'))$('fin-kpis').innerHTML=html;
+}
+function finChart(){
+  var porF={}; FIN_DATA.forEach(function(v){var f=v.fornecedor||'(sem)';porF[f]=(porF[f]||0)+Number(v.valor||0);});
+  var vals=Object.keys(porF).map(function(k){return porF[k];}); var max=Math.max.apply(null,[1].concat(vals));
+  var html=Object.keys(porF).sort(function(a,b){return porF[b]-porF[a];}).map(function(f){
+    var w=(porF[f]/max*100);
+    return '<div class="fin-brow"><span class="b-nm">'+f+'</span><span class="b-track"><span class="b-fill" style="width:'+w+'%"></span></span><span class="b-val">'+finMoney(porF[f])+'</span></div>';
   }).join('');
-  rows+='<tr style="font-weight:800;background:#f0fafa"><td colspan="5" style="text-align:right">Total</td><td class="v">'+money(total)+'</td></tr>';
-  tb.innerHTML=rows;
+  if($('fin-chart'))$('fin-chart').innerHTML=html||'<div style="color:#aaa">Sem dados</div>';
+}
+function finTabela(rows){
+  var tb=$('tbody'); if(!tb)return;
+  if(!rows.length){ tb.innerHTML='<tr><td colspan="6" style="text-align:center;color:#aaa">Nenhum lançamento</td></tr>'; return; }
+  var grupos={}; rows.forEach(function(v){var f=v.fornecedor||'(sem)';(grupos[f]=grupos[f]||[]).push(v);});
+  var html=''; var totalGeral=0;
+  Object.keys(grupos).sort().forEach(function(f){
+    var arr=grupos[f]; var sub=arr.reduce(function(s,v){return s+Number(v.valor||0);},0); totalGeral+=sub;
+    html+='<tr class="grp"><td colspan="6">'+f+' · '+arr.length+' item(ns)</td></tr>';
+    arr.forEach(function(v){
+      var d=v.data_ref?v.data_ref.split('-').reverse().join('/'):'—';
+      html+='<tr><td>'+d+'</td><td>'+(v.fornecedor||'')+'</td><td>'+(v.descricao||'')+'</td><td style="text-align:right">'+finNum(v.quantidade)+'</td><td style="text-align:right">'+finMoney(v.valor_unitario)+'</td><td class="v">'+finMoney(v.valor)+'</td></tr>';
+    });
+    html+='<tr class="sub"><td colspan="5" style="text-align:right">Subtotal '+f+'</td><td class="v">'+finMoney(sub)+'</td></tr>';
+  });
+  html+='<tr style="font-weight:900;background:#e6fffa"><td colspan="5" style="text-align:right">TOTAL</td><td class="v">'+finMoney(totalGeral)+'</td></tr>';
+  tb.innerHTML=html;
 }
 async function addValor(){
   const reg={
