@@ -335,6 +335,7 @@ window.permSetView=function(v){
 };
 
 var PT_INDEX=null;
+function ptNorm(s){return (s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();}
 function ptBuild(){
   if(PT_INDEX) return PT_INDEX;
   PT_INDEX=[];
@@ -357,12 +358,12 @@ function ptBuild(){
   return PT_INDEX;
 }
 window.ptRender=function(){
-  var sb=$('pt-search'); var q=sb?(sb.value||'').trim().toLowerCase():'';
+  var sb=$('pt-search'); var q=sb?ptNorm(sb.value).trim():'';
   var tipo=$('pt-tipo')?$('pt-tipo').value:'';
   var box=$('pt-results'); if(!box) return;
   if(q.length<2){ box.innerHTML='<div class="empty">Digite ao menos 2 letras do nome de uma tela ou subpasta para ver quem tem acesso.</div>'; return; }
   var idx=ptBuild();
-  var hits=idx.filter(function(r){ return (!tipo||r.tipo===tipo) && r.nome.toLowerCase().indexOf(q)>=0; });
+  var hits=idx.filter(function(r){ return (!tipo||r.tipo===tipo) && ptNorm(r.nome).indexOf(q)>=0; });
   hits.sort(function(a,b){
     if(a.tipo!==b.tipo) return a.tipo==='pasta'?-1:1;       // subpastas primeiro
     return a.nome.localeCompare(b.nome,'pt') || b.uids.length-a.uids.length;
@@ -578,12 +579,12 @@ function acFillUsers(){
 }
 function acCntU(n,uid){var c=0;if(n.t)for(var t in n.t){if((','+n.t[t]+',').indexOf(','+uid+',')>=0)c++;}if(n.c)for(var k in n.c)c+=acCntU(n.c[k],uid);return c;}
 function acNodeU(name,n,d,uid,q){
-  var nameHit = !q || name.toLowerCase().indexOf(q)>=0;
+  var nameHit = !q || ptNorm(name).indexOf(q)>=0;
   var inner='';
   if(n.c)Object.keys(n.c).sort(function(a,b){return a.localeCompare(b,'pt');}).forEach(function(k){inner+=acNodeU(k,n.c[k],d+1,uid,nameHit?'':q);});
   if(n.t)Object.keys(n.t).sort(function(a,b){return a.localeCompare(b,'pt');}).forEach(function(t){
     if((','+n.t[t]+',').indexOf(','+uid+',')<0)return;
-    if(q && !nameHit && t.toLowerCase().indexOf(q)<0)return;
+    if(q && !nameHit && ptNorm(t).indexOf(q)<0)return;
     inner+='<div class="tw-tela"><span class="tw-ic">\ud83d\udcc4</span>'+esc(t)+'</div>';});
   if(!inner)return '';
   var ic=d===1?'\ud83d\udcc1':'\ud83d\udcc2';
@@ -599,7 +600,7 @@ window.acRender=function(){
   var v=$('ac-user').value;
   if(!v){$('perm-who').innerHTML='';$('perm-utree').innerHTML='<div class="empty">Nenhum usu\u00e1rio com esses filtros.</div>';$('perm-count').textContent='\u2014';return;}
   var uid=+v, u=TREE.users[uid]||['',''], cg=TREE.cargos[uid]||'', uf=(TREE.uf&&TREE.uf[uid])||'', ba=(TREE.base&&TREE.base[uid])||'';
-  var sb=$('ac-search'); var q=sb?(sb.value||'').trim().toLowerCase():'';
+  var sb=$('ac-search'); var q=sb?ptNorm(sb.value).trim():'';
   var ms=Object.keys(TREE.tree).sort(function(a,b){if(a.charAt(0)==='(')return 1;if(b.charAt(0)==='(')return -1;return a.localeCompare(b,'pt');});
   var h='',tot=0,nmod=0;
   ms.forEach(function(m){var part=acNodeU(m,TREE.tree[m],1,uid,q);if(part)h+=part;if(acCntU(TREE.tree[m],uid)>0)nmod++;tot+=acCntU(TREE.tree[m],uid);});
