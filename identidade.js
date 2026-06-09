@@ -105,38 +105,57 @@
   window.mariuaTrocarUsuario = function(){ try{ localStorage.removeItem(LS_USER); }catch(e){} abrirModal(); };
 
   // avatar clicável -> mostra quem está usando o aparelho e permite trocar
+  // abre a configuração disponível na página (varia conforme a tela)
+  window.mariuaTemConfig = function(){
+    return (typeof window.abrirGear === 'function') ||
+           !!document.getElementById('gear-modal') ||
+           !!document.getElementById('rdo-gear-modal');
+  };
+  window.mariuaConfig = function(){
+    if(typeof window.abrirGear === 'function'){ window.abrirGear(); return; }
+    var gm=document.getElementById('gear-modal');
+    if(gm){ gm.style.display='flex'; if(typeof renderManageList==='function'){ setTimeout(renderManageList,100); } return; }
+    var rm=document.getElementById('rdo-gear-modal');
+    if(rm){ rm.style.display='flex'; return; }
+  };
+
   window.mariuaPerfil = function(){
     var nome = lsGet(LS_USER);
     if(!nome || !nome.trim()){ abrirModal(); return; }
     nome = nome.trim();
-    if (document.getElementById('mariua-perfil-ov')) return;
+    var ex = document.getElementById('mariua-perfil-ov');
+    if(ex){ ex.parentNode.removeChild(ex); return; } // toggle: fecha se já aberto
     var ini = nome.charAt(0).toUpperCase();
     var safe = nome.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    var temCfg = window.mariuaTemConfig();
     var ov = document.createElement('div'); ov.id = 'mariua-perfil-ov';
     ov.innerHTML =
-      '<div id="mariua-perfil-card">' +
-        '<div id="mariua-perfil-av">' + ini + '</div>' +
-        '<div id="mariua-perfil-nome">' + safe + '</div>' +
-        '<div id="mariua-perfil-sub">Identificação deste aparelho</div>' +
-        '<button id="mariua-perfil-trocar">Trocar nome</button>' +
-        '<button id="mariua-perfil-fechar">Fechar</button>' +
+      '<div id="mariua-perfil-menu">' +
+        '<div class="mp-head"><div class="mp-av">' + ini + '</div>' +
+          '<div class="mp-nm">' + safe + '<span>Identificação deste aparelho</span></div></div>' +
+        (temCfg ? '<button class="mp-item" id="mariua-perfil-config"><span class="mp-ic">⚙️</span>Configurações</button>' : '') +
+        '<button class="mp-item" id="mariua-perfil-trocar"><span class="mp-ic">✏️</span>Trocar nome</button>' +
       '</div>';
     if(!document.getElementById('mariua-perfil-css')){
       var css = document.createElement('style'); css.id='mariua-perfil-css';
       css.textContent =
-        '#mariua-perfil-ov{position:fixed;inset:0;z-index:100000;background:rgba(7,40,38,.55);backdrop-filter:blur(3px);display:flex;align-items:center;justify-content:center;padding:18px;font-family:Barlow,system-ui,sans-serif}' +
-        '#mariua-perfil-card{background:#fff;border-radius:18px;max-width:320px;width:100%;padding:26px 22px;box-shadow:0 20px 60px rgba(0,0,0,.3);text-align:center}' +
-        '#mariua-perfil-av{width:64px;height:64px;border-radius:50%;margin:0 auto 12px;background:linear-gradient(135deg,#0d7377,#14a085);color:#fff;font-size:1.6rem;font-weight:800;display:flex;align-items:center;justify-content:center}' +
-        '#mariua-perfil-nome{font-size:1.25rem;font-weight:800;color:#0f3a33}' +
-        '#mariua-perfil-sub{font-size:.8rem;color:#6b7280;margin:4px 0 18px}' +
-        '#mariua-perfil-trocar{width:100%;padding:12px;font-size:1rem;font-weight:800;color:#fff;background:linear-gradient(90deg,#0d7377,#14a085);border:0;border-radius:11px;cursor:pointer;font-family:inherit}' +
-        '#mariua-perfil-fechar{width:100%;padding:11px;margin-top:8px;font-size:.95rem;font-weight:700;color:#0d7377;background:#f0fafa;border:1.5px solid #c0e8e5;border-radius:11px;cursor:pointer;font-family:inherit}';
+        '#mariua-perfil-ov{position:fixed;inset:0;z-index:100000;font-family:Barlow,system-ui,sans-serif}' +
+        '#mariua-perfil-menu{position:absolute;top:58px;right:12px;background:#fff;border-radius:14px;width:236px;box-shadow:0 16px 48px rgba(0,0,0,.22);padding:6px;animation:mpIn .12s ease-out}' +
+        '@keyframes mpIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}' +
+        '.mp-head{display:flex;align-items:center;gap:10px;padding:10px 10px 12px;border-bottom:1px solid #eef2f7;margin-bottom:6px}' +
+        '.mp-av{width:42px;height:42px;border-radius:50%;background:linear-gradient(135deg,#0d7377,#14a085);color:#fff;font-size:1.1rem;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0}' +
+        '.mp-nm{font-size:1rem;font-weight:800;color:#0f3a33;line-height:1.25}' +
+        '.mp-nm span{display:block;font-size:.7rem;font-weight:600;color:#94a3b8}' +
+        '.mp-item{display:flex;align-items:center;gap:11px;width:100%;padding:11px 12px;border:0;background:none;font-family:inherit;font-size:.95rem;font-weight:700;color:#334155;cursor:pointer;border-radius:9px;text-align:left}' +
+        '.mp-item:hover{background:#f0fafa;color:#0d7377}' +
+        '.mp-ic{font-size:1.05rem;width:20px;text-align:center;flex-shrink:0}';
       document.head.appendChild(css);
     }
     document.body.appendChild(ov);
     function close(){ if(ov.parentNode) ov.parentNode.removeChild(ov); }
-    document.getElementById('mariua-perfil-trocar').onclick = function(){ close(); window.mariuaTrocarUsuario(); };
-    document.getElementById('mariua-perfil-fechar').onclick = close;
     ov.addEventListener('click', function(e){ if(e.target===ov) close(); });
+    var cfg = document.getElementById('mariua-perfil-config');
+    if(cfg) cfg.onclick = function(){ close(); window.mariuaConfig(); };
+    document.getElementById('mariua-perfil-trocar').onclick = function(){ close(); window.mariuaTrocarUsuario(); };
   };
 })();
