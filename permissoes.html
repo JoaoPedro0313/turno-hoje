@@ -179,7 +179,8 @@ body.sm-collapsed .bottom-bar{left:64px !important;}
       <div class="who" id="perm-who" style="display:none"></div>
       <div class="tree" id="perm-utree" style="display:none"></div>
       <div id="perm-portela" style="display:none">
-        <input type="text" id="pt-search" class="search" placeholder="🔎 digite o nome da tela (ex: Consulta Turno, RDO, Abastecimento…)" oninput="ptRender()" style="width:100%;box-sizing:border-box;margin-bottom:12px">
+        <input type="text" id="pt-search" class="search" placeholder="🔎 digite o nome da tela (ex: Consulta Turno, RDO, Abastecimento…)" oninput="ptRender()" style="width:100%;box-sizing:border-box;margin-bottom:10px">
+        <label class="pt-sup-toggle"><input type="checkbox" id="pt-sup" onchange="ptRender()"> Incluir contas de suporte (NW/SV)</label>
         <div id="pt-results"></div>
       </div>
     </section>
@@ -237,6 +238,9 @@ body.sm-collapsed .bottom-bar{left:64px !important;}
 .pt-loc{font-size:.72rem;color:#0d7377;font-weight:700;background:#e6fffa;padding:1px 8px;border-radius:12px}
 .pt-cg{font-size:.72rem;color:#9a3412;background:#fff4e6;padding:1px 8px;border-radius:12px;font-weight:700}
 .pt-sup{font-size:.7rem;color:#6b21a8;background:#f3e8ff;padding:1px 8px;border-radius:12px;font-weight:800}
+.pt-sup-toggle{display:flex;align-items:center;gap:7px;font-size:.82rem;font-weight:700;color:#475569;margin-bottom:12px;cursor:pointer}
+.pt-sup-toggle input{width:auto;margin:0}
+.pt-supn{background:#f3e8ff;color:#6b21a8;font-size:.66rem;font-weight:800;padding:1px 7px;border-radius:20px;margin-left:5px}
 .pt-lg{margin-left:auto;font-size:.72rem;color:#94a3b8;font-weight:600}
 .pt-empty{padding:8px 0;color:#94a3b8;font-size:.85rem}
 .who{background:#fff;border:1px solid #b2f5ea;border-left:5px solid #0d9488;border-radius:12px;padding:12px 14px;margin:4px 0 12px;font-family:'Barlow',system-ui,sans-serif}
@@ -343,14 +347,18 @@ window.ptRender=function(){
   hits.sort(function(a,b){ return a.tela.localeCompare(b.tela,'pt') || b.uids.length-a.uids.length; });
   if(!hits.length){ box.innerHTML='<div class="empty">Nenhuma tela encontrada para \u201c'+esc(q)+'\u201d.</div>'; return; }
   var shown=hits.slice(0,40);
+  var incSup = !!($('pt-sup') && $('pt-sup').checked);
   box.innerHTML=shown.map(function(r){
-    var users=r.uids.map(function(uid){
+    var uids = incSup ? r.uids : r.uids.filter(function(uid){ var lg=(TREE.users[uid]&&TREE.users[uid][0])||''; return !/^(NW|SV)/i.test(lg); });
+    var nSup = r.uids.length - uids.length;
+    var users=uids.map(function(uid){
       var u=TREE.users[uid]||['','']; var cg=TREE.cargos[uid]||''; var uf=(TREE.uf&&TREE.uf[uid])||''; var ba=(TREE.base&&TREE.base[uid])||'';
       var loc=uf?(uf+(ba?' \u00b7 '+ba:'')):(ba||'');
       var sup=/^(NW|SV)/i.test(u[0]||'');
       return '<div class="pt-u"><span class="pt-un">'+esc(u[1]||u[0])+'</span>'+(sup?'<span class="pt-sup">\ud83d\udee0\ufe0f suporte</span>':'')+(loc?'<span class="pt-loc">\ud83d\udccd '+esc(loc)+'</span>':'')+(cg?'<span class="pt-cg">'+esc(cg)+'</span>':'')+'<span class="pt-lg">'+esc(u[0])+'</span></div>';
-    }).join('') || '<div class="pt-empty">Nenhum usu\u00e1rio com acesso.</div>';
-    return '<details class="pt-card"'+(shown.length===1?' open':'')+'><summary><span class="pt-tela">\ud83d\udcc4 '+esc(r.tela)+'</span><span class="pt-path">'+esc(r.path.join(' \u203a '))+'</span><span class="pt-n">'+r.uids.length+' usu\u00e1rio'+(r.uids.length!==1?'s':'')+'</span></summary><div class="pt-users">'+users+'</div></details>';
+    }).join('') || '<div class="pt-empty">'+(nSup?'Apenas contas de suporte t\u00eam acesso (marque \u201cIncluir suporte\u201d para ver).':'Nenhum usu\u00e1rio com acesso.')+'</div>';
+    var nlbl=uids.length+' usu\u00e1rio'+(uids.length!==1?'s':'')+(nSup?' <span class="pt-supn">+'+nSup+' suporte</span>':'');
+    return '<details class="pt-card"'+(shown.length===1?' open':'')+'><summary><span class="pt-tela">\ud83d\udcc4 '+esc(r.tela)+'</span><span class="pt-path">'+esc(r.path.join(' \u203a '))+'</span><span class="pt-n">'+nlbl+'</span></summary><div class="pt-users">'+users+'</div></details>';
   }).join('');
   if(hits.length>shown.length) box.innerHTML+='<div class="empty">+ '+(hits.length-shown.length)+' telas. Refine a busca.</div>';
 };
