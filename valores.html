@@ -144,14 +144,14 @@ body.sm-collapsed .bottom-bar{left:64px !important;}
   <!-- ===== APP (VALORES) ===== -->
   <div id="app-view" style="display:none">
     <header>
-      <b>💰 Financeiro</b>
+      <b id="fin-title">💰 Financeiro</b>
       <div style="display:flex;align-items:center;gap:12px">
         <span class="who" id="who"></span>
         <button class="btn out" onclick="sair()">Sair</button>
       </div>
     </header>
     <div class="wrap">
-      <div class="tabs">
+      <div class="tabs" style="display:none">
         <button class="tab active" id="tab-lanc" onclick="abaFin('lanc')">Lançamentos</button>
         <button class="tab" id="tab-admin" onclick="abaFin('admin')">⚙️ Admin</button>
       </div>
@@ -225,7 +225,7 @@ async function checarGestorEEntrar(){
   $('who').textContent=user?user.email:'';
   $('login-view').style.display='none'; $('app-view').style.display='block';
   carregarValores();
-  if(location.hash==='#admin' && window.abaFin){ abaFin('admin'); }
+  finModo();
 }
 async function esqueci(){
   const email=$('email').value.trim(); if(!email){setMsg('Digite seu e-mail primeiro.');return;}
@@ -335,6 +335,14 @@ async function carregarGestores(){
 }
 
 // ao abrir: se já estiver logado, entra direto
+function finModo(){
+  var admin=(location.hash==='#admin');
+  if($('pane-lanc'))$('pane-lanc').style.display=admin?'none':'';
+  if($('pane-admin'))$('pane-admin').style.display=admin?'':'none';
+  var t=$('fin-title'); if(t)t.innerHTML=admin?'⚙️ Admin':'💰 Financeiro';
+  if(admin && $('app-view') && $('app-view').style.display!=='none' && window.carregarGestores){ carregarGestores(); }
+}
+window.addEventListener('hashchange', finModo);
 (async()=>{ try{ const {data:{session}}=await sb.auth.getSession(); if(session){ checarGestorEEntrar(); } }catch(e){} })();
 </script>
 <aside class="sm-side">
