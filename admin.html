@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Financeiro — Mariuá</title>
+<title>Admin — Mariuá</title>
 <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;600;700;800;900&display=swap" rel="stylesheet">
 <style>
   :root{--teal:#0d7377;--teal2:#14a085}
@@ -122,7 +122,7 @@ body.sm-collapsed .bottom-bar{left:64px !important;}
   <div id="login-view">
     <div class="card">
       <div class="logo">🔆 MARIUÁ</div>
-      <h1 id="login-title">Acesso restrito — Financeiro</h1>
+      <h1 id="login-title">Acesso restrito — Admin</h1>
       <div id="form-login">
         <label>E-mail</label>
         <input id="email" type="email" placeholder="seu@email.com" autocomplete="username">
@@ -141,42 +141,32 @@ body.sm-collapsed .bottom-bar{left:64px !important;}
     </div>
   </div>
 
-  <!-- ===== APP (VALORES) ===== -->
+  <!-- ===== APP (ADMIN) ===== -->
   <div id="app-view" style="display:none">
     <header>
-      <b>💰 Financeiro</b>
+      <b>⚙️ Admin</b>
       <div style="display:flex;align-items:center;gap:12px">
         <span class="who" id="who"></span>
         <button class="btn out" onclick="sair()">Sair</button>
       </div>
     </header>
     <div class="wrap">
-      <div id="pane-lanc">
-        <div id="fin-kpis" class="fin-kpis"></div>
-        <div class="fin-card">
-          <div class="fin-card-h">Distribuição por fornecedor</div>
-          <div id="fin-chart" class="fin-chart"></div>
+      <div id="pane-admin">
+        <div class="adminbox">
+          <h2>Criar novo usuário</h2>
+          <p>Crie um login (e-mail + senha) para outra pessoa acessar o sistema.</p>
+          <label>Nome</label><input id="u-nome" placeholder="Nome da pessoa">
+          <label>E-mail</label><input id="u-email" type="email" placeholder="email@dominio.com">
+          <label>Senha</label><input id="u-senha" type="password" placeholder="mínimo 6 caracteres">
+          <label class="chk"><input id="u-gestor" type="checkbox" checked> Pode ver o Financeiro (gestor)</label>
+          <button class="btn add" onclick="criarUsuario()">Criar usuário</button>
+          <div id="u-msg" class="amsg"></div>
         </div>
-        <div class="fin-bar">
-          <select id="fin-forn-filtro" onchange="finRender()"><option value="">Todos os fornecedores</option></select>
-          <input id="fin-busca" placeholder="🔎 buscar item…" oninput="finRender()">
-          <button class="btn add" id="fin-toggle-form" onclick="finToggleForm()">+ Novo lançamento</button>
+        <div class="adminbox">
+          <h2>Quem tem acesso ao Financeiro</h2>
+          <div id="gest-list">Carregando…</div>
         </div>
-        <div class="form-row" id="fin-form" style="display:none">
-          <input id="f-forn" placeholder="Fornecedor" style="max-width:130px">
-          <input id="f-desc" placeholder="Descrição / item">
-          <input id="f-qtd" type="number" step="0.01" placeholder="Qtd" style="max-width:78px">
-          <input id="f-unit" type="number" step="0.01" placeholder="Unitário R$" style="max-width:120px">
-          <input id="f-data" type="date" style="max-width:150px">
-          <input id="f-valor" type="number" step="0.01" placeholder="Total R$" style="max-width:120px">
-          <button class="btn add" onclick="addValor()">Salvar</button>
-        </div>
-        <table>
-          <thead><tr><th>Data</th><th>Fornecedor</th><th>Item</th><th style="text-align:right">Qtd</th><th style="text-align:right">Unit.</th><th style="text-align:right">Total</th></tr></thead>
-          <tbody id="tbody"><tr><td colspan="6" style="text-align:center;color:#aaa">Carregando…</td></tr></tbody>
-        </table>
       </div>
-
     </div>
   </div>
 
@@ -203,7 +193,7 @@ async function checarGestorEEntrar(){
   const {data:{user}}=await sb.auth.getUser();
   $('who').textContent=user?user.email:'';
   $('login-view').style.display='none'; $('app-view').style.display='block';
-  carregarValores();
+  carregarGestores();
 }
 async function esqueci(){
   const email=$('email').value.trim(); if(!email){setMsg('Digite seu e-mail primeiro.');return;}
@@ -285,6 +275,32 @@ async function addValor(){
 }
 async function sair(){ await sb.auth.signOut(); location.reload(); }
 
+// ===== Abas / Admin =====
+window.abaFin=function(qual){
+  $('tab-lanc').classList.toggle('active', qual==='lanc');
+  $('tab-admin').classList.toggle('active', qual==='admin');
+  $('pane-lanc').style.display = qual==='lanc'?'':'none';
+  $('pane-admin').style.display = qual==='admin'?'':'none';
+  if(qual==='admin') carregarGestores();
+};
+async function criarUsuario(){
+  const m=$('u-msg');
+  const nome=$('u-nome').value.trim(), email=$('u-email').value.trim(), senha=$('u-senha').value, gestor=$('u-gestor').checked;
+  if(!email || senha.length<6){ m.className='amsg err'; m.textContent='Preencha e-mail e uma senha de pelo menos 6 caracteres.'; return; }
+  m.className='amsg'; m.textContent='Criando…';
+  const {data,error}=await sb.rpc('admin_criar_usuario',{p_email:email,p_senha:senha,p_nome:nome||null,p_gestor:gestor});
+  if(error){ m.className='amsg err'; m.textContent='Erro: '+error.message; return; }
+  m.className='amsg ok'; m.textContent='✅ Usuário criado! Ele já pode entrar com esse e-mail e senha.';
+  $('u-nome').value=''; $('u-email').value=''; $('u-senha').value='';
+  carregarGestores();
+}
+async function carregarGestores(){
+  const el=$('gest-list'); if(!el) return;
+  const {data,error}=await sb.from('gestores').select('email,nome,criado_em').order('criado_em');
+  if(error){ el.innerHTML='<div style="color:#c53030">Sem acesso à lista.</div>'; return; }
+  if(!data.length){ el.innerHTML='<div style="color:#aaa">Ninguém cadastrado.</div>'; return; }
+  el.innerHTML=data.map(g=>'<div class="gest-row"><span><b>'+(g.nome||'(sem nome)')+'</b> · '+g.email+'</span></div>').join('');
+}
 
 // ao abrir: se já estiver logado, entra direto
 (async()=>{ try{ const {data:{session}}=await sb.auth.getSession(); if(session){ checarGestorEEntrar(); } }catch(e){} })();
