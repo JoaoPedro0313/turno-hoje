@@ -30,8 +30,11 @@
   header{background:linear-gradient(90deg,var(--teal),var(--teal2));color:#fff;padding:14px 18px;display:flex;align-items:center;justify-content:space-between}
   header b{font-size:1.1rem}
   .who{font-size:.8rem;opacity:.95}
-  .btn{padding:8px 14px;border:0;border-radius:9px;font-weight:800;cursor:pointer;font-size:.85rem}
-  .btn.add{background:var(--teal);color:#fff}.btn.out{background:rgba(255,255,255,.2);color:#fff}
+  .btn{padding:10px 20px;border:0;border-radius:999px;font-weight:800;cursor:pointer;font-size:.85rem;transition:transform .12s ease,box-shadow .12s ease,filter .12s ease;letter-spacing:.01em}
+  .btn:hover{transform:translateY(-1px)}.btn:active{transform:translateY(0)}
+  .btn.add{background:linear-gradient(135deg,var(--teal),var(--teal2));color:#fff;box-shadow:0 4px 12px rgba(13,115,119,.30)}
+  .btn.add:hover{box-shadow:0 7px 20px rgba(13,115,119,.42);filter:brightness(1.06)}
+  .btn.out{background:rgba(255,255,255,.2);color:#fff}.btn.out:hover{background:rgba(255,255,255,.34)}
   table{width:100%;border-collapse:collapse;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 10px rgba(0,0,0,.06)}
   th,td{padding:11px 12px;text-align:left;font-size:.9rem;border-bottom:1px solid #eef2f7}
   th{background:#f8fafc;font-size:.72rem;text-transform:uppercase;color:#64748b}
@@ -52,7 +55,8 @@
   .fin-brow .b-fill{height:100%;border-radius:8px;background:linear-gradient(90deg,var(--teal),var(--teal2));min-width:2px}
   .fin-brow .b-val{width:120px;text-align:right;font-weight:800;color:#0f3a33;flex-shrink:0}
   .fin-bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
-  .fin-bar select,.fin-bar input{padding:9px 12px;border:1.5px solid #cbd5e1;border-radius:10px;font-size:.9rem;font-family:inherit}
+  .fin-bar select,.fin-bar input{padding:10px 16px;border:1.5px solid #cbd5e1;border-radius:999px;font-size:.9rem;font-family:inherit;background:#fff;transition:border-color .12s,box-shadow .12s}
+  .fin-bar select:focus,.fin-bar input:focus{outline:none;border-color:var(--teal);box-shadow:0 0 0 3px rgba(13,115,119,.15)}
   .fin-bar input{flex:1;min-width:140px}
   .fin-bar .add{margin-left:auto}
   tr.grp td{background:#f0fafa;font-weight:800;color:#0f3a33;border-top:2px solid #d6f0ec}
