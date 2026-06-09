@@ -160,6 +160,8 @@ body.sm-collapsed .bottom-bar{left:64px !important;}
           <input type="text" class="search" id="perm-search" placeholder="🔎 usuário, login ou cargo" oninput="permRender()">
         </div>
         <button class="exp" id="perm-exp" onclick="permExport()">💾 Exportar CSV</button>
+        <button class="exp" id="perm-upd-btn" onclick="ptAbrirUpload()" style="margin-top:8px;background:#0d9488;color:#fff;border-color:#0d9488">📤 Atualizar dados (GPM)</button>
+        <div id="pt-updated" style="font-size:.68rem;color:#94a3b8;margin-top:6px;text-align:center;line-height:1.3"></div>
       </div>
     </aside>
     <section class="main">
@@ -616,11 +618,143 @@ function acInit(){
 }
 
 
+/* ===== Atualizar permissões pelo export do GPM (Tela;Login;Usuario;Pasta) ===== */
+var PT_URL='https://eqxejfoibebcbtsqymji.supabase.co';
+var PT_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVxeGVqZm9pYmViY2J0c3F5bWppIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE4NjUzMTEsImV4cCI6MjA4NzQ0MTMxMX0.lwf7_EJ6UchEOpzhW3cVKztxDGy78gaQblRvgiEwWh8';
+
+function ptParseCSV(txt){
+  var rows=[], lines=txt.split(/\r?\n/);
+  for(var i=0;i<lines.length;i++){ var ln=lines[i]; if(!ln.trim())continue;
+    var parts=[],cur='',q=false;
+    for(var j=0;j<ln.length;j++){ var ch=ln[j]; if(ch==='"')q=!q; else if(ch===';'&&!q){parts.push(cur);cur='';} else cur+=ch; }
+    parts.push(cur);
+    rows.push(parts.map(function(s){return s.replace(/^\uFEFF/,'').trim();}));
+  }
+  return rows;
+}
+function ptRebuild(txt, baseTU){
+  var rows=ptParseCSV(txt);
+  if(rows.length<2) throw new Error('Arquivo vazio ou sem dados.');
+  var head=rows[0].map(function(h){return ptNorm(h);});
+  var iT=head.indexOf('tela'), iL=head.indexOf('login'), iN=head.indexOf('usuario'), iP=head.indexOf('pasta');
+  if(iT<0||iL<0) throw new Error('Cabeçalho esperado: Tela;Login;Usuario;Pasta');
+  var byTP={}, byT={};
+  (function walkAll(){
+    Object.keys(baseTU.tree).forEach(function(m){ (function w(name,node,here){
+      if(node.t)Object.keys(node.t).forEach(function(t){ byTP[(t+'|'+name).toLowerCase()]=here; var k=t.toLowerCase(); (byT[k]=byT[k]||[]).push(here); });
+      if(node.c)Object.keys(node.c).forEach(function(k){ w(k,node.c[k],here.concat(k)); });
+    })(m,baseTU.tree[m],[m]); });
+  })();
+  var baseByLogin={};
+  baseTU.users.forEach(function(u,i){ baseByLogin[(u[0]||'').toUpperCase()]={c:(baseTU.cargos||{})[i]||'',u:(baseTU.uf||{})[i]||'',b:(baseTU.base||{})[i]||''}; });
+  var l2u={}, users=[], cargos={}, uf={}, base={};
+  function uidFor(login,nome){ var key=(login||'').toUpperCase(); if(!key)return -1;
+    if(l2u[key]==null){ var id=users.length; l2u[key]=id; users.push([login,nome||login]);
+      var b=baseByLogin[key]; if(b){ if(b.c)cargos[id]=b.c; if(b.u)uf[id]=b.u; if(b.b)base[id]=b.b; } }
+    return l2u[key];
+  }
+  var acc={}, sem=0;
+  for(var r=1;r<rows.length;r++){ var row=rows[r]; var tela=row[iT], login=row[iL], nome=iN>=0?row[iN]:'', pasta=iP>=0?row[iP]:'';
+    if(!tela||!login)continue;
+    var cam=byTP[(tela+'|'+pasta).toLowerCase()] || (byT[tela.toLowerCase()]&&byT[tela.toLowerCase()][0]);
+    if(!cam){ cam=['(Novas / não classificadas)']; sem++; }
+    var uid=uidFor(login,nome); if(uid<0)continue;
+    var key=cam.join('\u0001')+'\u0002'+tela; var a=acc[key]; if(!a)a=acc[key]={cam:cam,tela:tela,uids:{}}; a.uids[uid]=1;
+  }
+  var tree={};
+  Object.keys(acc).forEach(function(k){ var a=acc[k], node=tree;
+    for(var i=0;i<a.cam.length;i++){ var seg=a.cam[i];
+      if(i===0){ node[seg]=node[seg]||{c:{},t:{}}; node=node[seg]; }
+      else { node.c=node.c||{}; node.c[seg]=node.c[seg]||{c:{},t:{}}; node=node.c[seg]; } }
+    node.t=node.t||{}; node.t[a.tela]=Object.keys(a.uids).join(',');
+  });
+  var d=new Date(), dd=('0'+d.getDate()).slice(-2)+'/'+('0'+(d.getMonth()+1)).slice(-2)+'/'+d.getFullYear();
+  var nTelas=0,nAtrib=0; Object.keys(acc).forEach(function(k){ nTelas++; nAtrib+=Object.keys(acc[k].uids).length; });
+  return { tu:{v:3,updatedAt:dd,users:users,cargos:cargos,uf:uf,base:base,tree:tree}, stats:{linhas:rows.length-1,usuarios:users.length,telas:nTelas,atrib:nAtrib,sem:sem} };
+}
+function ptCarregarRemota(done){
+  try{
+    fetch(PT_URL+'/rest/v1/permissoes_tree?id=eq.1&select=tree,updated_at,updated_by',{headers:{apikey:PT_KEY,Authorization:'Bearer '+PT_KEY}})
+      .then(function(r){return r.ok?r.json():[];})
+      .then(function(rows){ if(rows&&rows[0]&&rows[0].tree){ window.TU_TREE=rows[0].tree; TREE=window.TU_TREE; PT_INDEX=null; window.__ptInfo={updated_at:rows[0].updated_at,updated_by:rows[0].updated_by}; } })
+      .catch(function(){}).then(function(){ done&&done(); });
+  }catch(e){ done&&done(); }
+}
+function ptMostrarData(){ var el=$('pt-updated'); if(!el)return;
+  var info=window.__ptInfo;
+  if(info&&info.updated_at){ var d=new Date(info.updated_at); el.textContent='Atualizado em '+('0'+d.getDate()).slice(-2)+'/'+('0'+(d.getMonth()+1)).slice(-2)+'/'+d.getFullYear()+(info.updated_by?(' por '+info.updated_by):''); }
+  else if(TREE&&TREE.updatedAt){ el.textContent='Dados de '+TREE.updatedAt; }
+}
+function ptSalvar(tu, onok, onerr){
+  var quem=(window.MARIUA_USER||'')+'';
+  var body=JSON.stringify({id:1,tree:tu,updated_at:new Date().toISOString(),updated_by:quem});
+  fetch(PT_URL+'/rest/v1/permissoes_tree?on_conflict=id',{method:'POST',headers:{apikey:PT_KEY,Authorization:'Bearer '+PT_KEY,'Content-Type':'application/json',Prefer:'resolution=merge-duplicates,return=minimal'},body:body})
+    .then(function(r){ if(r.ok){onok();} else { r.text().then(function(t){onerr(t||('HTTP '+r.status));}); } })
+    .catch(function(e){ onerr(e.message); });
+}
+window.ptAbrirUpload=function(){
+  if(document.getElementById('pt-up-ov'))return;
+  var ov=document.createElement('div'); ov.id='pt-up-ov';
+  ov.innerHTML='<div id="pt-up-card">'
+   +'<div class="pt-up-h"><b>📤 Atualizar permissões</b><button id="pt-up-x">✕</button></div>'
+   +'<p class="pt-up-d">Exporte o relatório de permissões do <b>GPM</b> (colunas <b>Tela;Login;Usuario;Pasta</b>) e selecione o arquivo <b>.csv</b>. O sistema recalcula quem acessa cada tela e <b>atualiza para todos</b>.</p>'
+   +'<input type="file" id="pt-up-file" accept=".csv,text/csv">'
+   +'<div id="pt-up-status" class="pt-up-st"></div>'
+   +'<div class="pt-up-acts"><button id="pt-up-pub" disabled>Publicar para todos</button></div>'
+   +'</div>';
+  if(!document.getElementById('pt-up-css')){ var st=document.createElement('style'); st.id='pt-up-css'; st.textContent=
+    '#pt-up-ov{position:fixed;inset:0;z-index:100001;background:rgba(7,40,38,.55);display:flex;align-items:center;justify-content:center;padding:18px;font-family:Barlow,system-ui,sans-serif}'
+   +'#pt-up-card{background:#fff;border-radius:16px;max-width:460px;width:100%;padding:22px;box-shadow:0 20px 60px rgba(0,0,0,.3)}'
+   +'.pt-up-h{display:flex;justify-content:space-between;align-items:center;font-size:1.1rem;color:#0f3a33}'
+   +'#pt-up-x{border:0;background:#eef2f7;width:30px;height:30px;border-radius:8px;cursor:pointer;font-weight:800;color:#64748b}'
+   +'.pt-up-d{font-size:.85rem;color:#475569;line-height:1.45;margin:10px 0 14px}'
+   +'#pt-up-file{width:100%;font-size:.9rem;margin-bottom:12px}'
+   +'.pt-up-st{font-size:.85rem;font-weight:600;min-height:20px;margin-bottom:12px;line-height:1.5}'
+   +'.pt-up-st .ok{color:#276749}.pt-up-st .err{color:#c53030}.pt-up-st .muted{color:#64748b}'
+   +'.pt-up-acts{display:flex;justify-content:flex-end}'
+   +'#pt-up-pub{padding:11px 20px;border:0;border-radius:10px;background:linear-gradient(90deg,#0d7377,#14a085);color:#fff;font-weight:800;cursor:pointer;font-family:inherit}'
+   +'#pt-up-pub:disabled{opacity:.45;cursor:default}';
+    document.head.appendChild(st); }
+  document.body.appendChild(ov);
+  var pend=null;
+  function close(){ if(ov.parentNode)ov.parentNode.removeChild(ov); }
+  ov.addEventListener('click',function(e){ if(e.target===ov)close(); });
+  document.getElementById('pt-up-x').onclick=close;
+  document.getElementById('pt-up-file').onchange=function(e){
+    var f=e.target.files&&e.target.files[0]; if(!f)return;
+    var stEl=document.getElementById('pt-up-status'); stEl.innerHTML='<span class="muted">Processando…</span>';
+    document.getElementById('pt-up-pub').disabled=true; pend=null;
+    var rd=new FileReader();
+    rd.onload=function(){ try{
+        var res=ptRebuild(rd.result, TREE); pend=res.tu;
+        var s=res.stats;
+        stEl.innerHTML='<span class="ok">✓ Arquivo lido.</span><br>'+s.linhas+' linhas · <b>'+s.usuarios+'</b> usuários · <b>'+s.telas+'</b> telas · '+s.atrib+' atribuições'+(s.sem?('<br><span class="muted">'+s.sem+' linha(s) sem pasta correspondente foram para “Novas”.</span>'):'');
+        document.getElementById('pt-up-pub').disabled=false;
+      }catch(err){ stEl.innerHTML='<span class="err">Erro: '+(err.message||err)+'</span>'; }
+    };
+    rd.onerror=function(){ stEl.innerHTML='<span class="err">Não foi possível ler o arquivo.</span>'; };
+    rd.readAsText(f,'UTF-8');
+  };
+  document.getElementById('pt-up-pub').onclick=function(){
+    if(!pend)return; var stEl=document.getElementById('pt-up-status'); var btn=this;
+    btn.disabled=true; stEl.innerHTML='<span class="muted">Publicando…</span>';
+    ptSalvar(pend, function(){
+      window.TU_TREE=pend; TREE=pend; PT_INDEX=null; window.__ptInfo={updated_at:new Date().toISOString(),updated_by:(window.MARIUA_USER||'')+''};
+      stEl.innerHTML='<span class="ok">✓ Publicado! Os dados foram atualizados para todos.</span>';
+      try{ renderKPIs&&renderKPIs(); window.permSetView('acesso'); ptMostrarData(); }catch(e){}
+      setTimeout(close,1200);
+    }, function(msg){ btn.disabled=false; stEl.innerHTML='<span class="err">Erro ao publicar: '+msg+'</span>'; });
+  };
+};
+
 function init(){
   if(!D){$('perm-tbody').innerHTML='<tr><td class="empty">Dados n\u00e3o carregados (telas_usuarios_data.js).</td></tr>';}
   else{ buildFolderSelect(); loadFolder(); renderKPIs(); permRender(); }
-  // abre direto na vis\u00e3o Acesso (por usu\u00e1rio: UF -> Base -> Fun\u00e7\u00e3o -> Usu\u00e1rio)
-  try{ if(window.TU_TREE) window.permSetView('acesso'); }catch(e){}
+  // tenta carregar a versão atualizada do banco; depois abre a visão Acesso
+  ptCarregarRemota(function(){
+    try{ if(window.TU_TREE){ TREE=window.TU_TREE; window.permSetView('acesso'); } }catch(e){}
+    ptMostrarData();
+  });
 }
 init();
 })();
