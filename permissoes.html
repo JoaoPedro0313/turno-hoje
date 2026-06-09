@@ -236,6 +236,7 @@ body.sm-collapsed .bottom-bar{left:64px !important;}
 .pt-un{font-weight:700;color:#1a365d;font-size:.9rem}
 .pt-loc{font-size:.72rem;color:#0d7377;font-weight:700;background:#e6fffa;padding:1px 8px;border-radius:12px}
 .pt-cg{font-size:.72rem;color:#9a3412;background:#fff4e6;padding:1px 8px;border-radius:12px;font-weight:700}
+.pt-sup{font-size:.7rem;color:#6b21a8;background:#f3e8ff;padding:1px 8px;border-radius:12px;font-weight:800}
 .pt-lg{margin-left:auto;font-size:.72rem;color:#94a3b8;font-weight:600}
 .pt-empty{padding:8px 0;color:#94a3b8;font-size:.85rem}
 .who{background:#fff;border:1px solid #b2f5ea;border-left:5px solid #0d9488;border-radius:12px;padding:12px 14px;margin:4px 0 12px;font-family:'Barlow',system-ui,sans-serif}
@@ -346,7 +347,8 @@ window.ptRender=function(){
     var users=r.uids.map(function(uid){
       var u=TREE.users[uid]||['','']; var cg=TREE.cargos[uid]||''; var uf=(TREE.uf&&TREE.uf[uid])||''; var ba=(TREE.base&&TREE.base[uid])||'';
       var loc=uf?(uf+(ba?' \u00b7 '+ba:'')):(ba||'');
-      return '<div class="pt-u"><span class="pt-un">'+esc(u[1]||u[0])+'</span>'+(loc?'<span class="pt-loc">\ud83d\udccd '+esc(loc)+'</span>':'')+(cg?'<span class="pt-cg">'+esc(cg)+'</span>':'')+'<span class="pt-lg">'+esc(u[0])+'</span></div>';
+      var sup=/^(NW|SV)/i.test(u[0]||'');
+      return '<div class="pt-u"><span class="pt-un">'+esc(u[1]||u[0])+'</span>'+(sup?'<span class="pt-sup">\ud83d\udee0\ufe0f suporte</span>':'')+(loc?'<span class="pt-loc">\ud83d\udccd '+esc(loc)+'</span>':'')+(cg?'<span class="pt-cg">'+esc(cg)+'</span>':'')+'<span class="pt-lg">'+esc(u[0])+'</span></div>';
     }).join('') || '<div class="pt-empty">Nenhum usu\u00e1rio com acesso.</div>';
     return '<details class="pt-card"'+(shown.length===1?' open':'')+'><summary><span class="pt-tela">\ud83d\udcc4 '+esc(r.tela)+'</span><span class="pt-path">'+esc(r.path.join(' \u203a '))+'</span><span class="pt-n">'+r.uids.length+' usu\u00e1rio'+(r.uids.length!==1?'s':'')+'</span></summary><div class="pt-users">'+users+'</div></details>';
   }).join('');
@@ -507,21 +509,28 @@ var AC_SEMF='(sem fun\u00e7\u00e3o)', AC_SEMUF='(sem UF)', AC_SEMBASE='(sem base
 function acUfunc(i){return (TREE&&TREE.cargos[i])||AC_SEMF;}
 function acUuf(i){return (TREE&&TREE.uf&&TREE.uf[i])||AC_SEMUF;}
 function acBase(i){return (TREE&&TREE.base&&TREE.base[i])||AC_SEMBASE;}
+function acSup(i){var lg=(TREE&&TREE.users[i]&&TREE.users[i][0])||'';return /^(NW|SV)/i.test(lg);}
+// contas de suporte (NW/SV) ficam fora dos filtros comuns; só aparecem ao escolher "Suporte"
+function acMatchUF(i,uf){ if(uf==='__SUP__')return acSup(i); if(acSup(i))return false; if(!uf)return true; return acUuf(i)===uf; }
 function acFillUF(){
-  var c={}; TREE.users.forEach(function(u,i){var f=acUuf(i);c[f]=(c[f]||0)+1;});
+  var c={}, sup=0;
+  TREE.users.forEach(function(u,i){if(acSup(i)){sup++;return;}var f=acUuf(i);c[f]=(c[f]||0)+1;});
   var ks=Object.keys(c).sort(function(a,b){if(a===AC_SEMUF)return 1;if(b===AC_SEMUF)return -1;return a.localeCompare(b);});
-  $('ac-uf').innerHTML='<option value="">Todos ('+TREE.users.length+')</option>'+ks.map(function(f){return '<option value="'+esc(f)+'">'+esc(f)+' ('+c[f]+')</option>';}).join('');
+  var tot=0; for(var k in c)tot+=c[k];
+  var opts='<option value="">Todos ('+tot+')</option>'+ks.map(function(f){return '<option value="'+esc(f)+'">'+esc(f)+' ('+c[f]+')</option>';}).join('');
+  if(sup>0)opts+='<option value="__SUP__">\ud83d\udee0\ufe0f Suporte ('+sup+')</option>';
+  $('ac-uf').innerHTML=opts;
 }
 function acFillBases(){
   var uf=$('ac-uf').value, c={};
-  TREE.users.forEach(function(u,i){if(uf&&acUuf(i)!==uf)return;var b=acBase(i);c[b]=(c[b]||0)+1;});
+  TREE.users.forEach(function(u,i){if(!acMatchUF(i,uf))return;var b=acBase(i);c[b]=(c[b]||0)+1;});
   var ks=Object.keys(c).sort(function(a,b){if(a===AC_SEMBASE)return 1;if(b===AC_SEMBASE)return -1;return a.localeCompare(b,'pt');});
   var tot=0; for(var k in c)tot+=c[k];
   $('ac-base').innerHTML='<option value="">Todas as bases ('+tot+')</option>'+ks.map(function(b){return '<option value="'+esc(b)+'">'+esc(b)+' ('+c[b]+')</option>';}).join('');
 }
 function acFillFuncs(){
   var uf=$('ac-uf').value, ba=$('ac-base').value, c={};
-  TREE.users.forEach(function(u,i){if(uf&&acUuf(i)!==uf)return;if(ba&&acBase(i)!==ba)return;var f=acUfunc(i);c[f]=(c[f]||0)+1;});
+  TREE.users.forEach(function(u,i){if(!acMatchUF(i,uf))return;if(ba&&acBase(i)!==ba)return;var f=acUfunc(i);c[f]=(c[f]||0)+1;});
   var ks=Object.keys(c).sort(function(a,b){if(a===AC_SEMF)return 1;if(b===AC_SEMF)return -1;return a.localeCompare(b,'pt');});
   var tot=0; for(var k in c)tot+=c[k];
   $('ac-func').innerHTML='<option value="">Todas as fun\u00e7\u00f5es ('+tot+')</option>'+ks.map(function(f){return '<option value="'+esc(f)+'">'+esc(f)+' ('+c[f]+')</option>';}).join('');
@@ -529,7 +538,7 @@ function acFillFuncs(){
 function acFillUsers(){
   var uf=$('ac-uf').value, ba=$('ac-base').value, f=$('ac-func').value;
   var order=TREE.users.map(function(u,i){return {i:i,nome:u[1]||u[0]||('#'+i),login:u[0]||'',f:acUfunc(i),uf:acUuf(i),base:acBase(i)};})
-    .filter(function(o){return (!uf||o.uf===uf)&&(!ba||o.base===ba)&&(!f||o.f===f);})
+    .filter(function(o){return acMatchUF(o.i,uf)&&(!ba||o.base===ba)&&(!f||o.f===f);})
     .sort(function(a,b){return a.nome.toUpperCase()<b.nome.toUpperCase()?-1:1;});
   $('ac-user').innerHTML=order.length?order.map(function(o){return '<option value="'+o.i+'">'+esc(o.nome)+(o.login?' \u2014 '+esc(o.login):'')+'</option>';}).join(''):'<option value="">(nenhum)</option>';
 }
