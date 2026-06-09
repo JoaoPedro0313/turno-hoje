@@ -147,6 +147,7 @@ body.sm-collapsed .bottom-bar{left:64px !important;}
           <div class="vlist">
             <button class="fbtn active" id="v-acesso" onclick="permSetView('acesso')">👤 Por usuário</button>
             <button class="fbtn" id="v-arvore" onclick="permSetView('arvore')">🌳 Por tela</button>
+            <button class="fbtn" id="v-portela" onclick="permSetView('portela')">🔎 Quem acessa uma tela</button>
           </div>
         </div>
         <div style="display:none">
@@ -177,6 +178,10 @@ body.sm-collapsed .bottom-bar{left:64px !important;}
       <div class="tree" id="perm-tree" style="display:none"></div>
       <div class="who" id="perm-who" style="display:none"></div>
       <div class="tree" id="perm-utree" style="display:none"></div>
+      <div id="perm-portela" style="display:none">
+        <input type="text" id="pt-search" class="search" placeholder="🔎 digite o nome da tela (ex: Consulta Turno, RDO, Abastecimento…)" oninput="ptRender()" style="width:100%;box-sizing:border-box;margin-bottom:12px">
+        <div id="pt-results"></div>
+      </div>
     </section>
   </div>
 </div>
@@ -218,6 +223,21 @@ body.sm-collapsed .bottom-bar{left:64px !important;}
 .ac-pick input:focus{outline:none;border-color:#0d9488;box-shadow:0 0 0 3px rgba(13,148,136,.12)}
 #ac-search{border:1.5px solid #0d9488 !important}
 #ac-search:focus{outline:none !important;border-color:#0d9488 !important;box-shadow:0 0 0 3px rgba(13,148,136,.20) !important}
+#pt-results .empty{padding:20px;text-align:center;color:#94a3b8;font-weight:600}
+.pt-card{background:#fff;border:1px solid #e2e8f0;border-radius:12px;margin-bottom:10px;overflow:hidden}
+.pt-card>summary{list-style:none;cursor:pointer;padding:12px 14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:#f8fafc}
+.pt-card>summary::-webkit-details-marker{display:none}
+.pt-tela{font-weight:800;color:#0f3a33}
+.pt-path{font-size:.74rem;color:#64748b;font-weight:600}
+.pt-n{margin-left:auto;background:#0d9488;color:#fff;font-size:.72rem;font-weight:800;padding:2px 10px;border-radius:20px;white-space:nowrap}
+.pt-users{padding:4px 14px 10px}
+.pt-u{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 0;border-bottom:1px solid #f1f5f9}
+.pt-u:last-child{border-bottom:0}
+.pt-un{font-weight:700;color:#1a365d;font-size:.9rem}
+.pt-loc{font-size:.72rem;color:#0d7377;font-weight:700;background:#e6fffa;padding:1px 8px;border-radius:12px}
+.pt-cg{font-size:.72rem;color:#9a3412;background:#fff4e6;padding:1px 8px;border-radius:12px;font-weight:700}
+.pt-lg{margin-left:auto;font-size:.72rem;color:#94a3b8;font-weight:600}
+.pt-empty{padding:8px 0;color:#94a3b8;font-size:.85rem}
 .who{background:#fff;border:1px solid #b2f5ea;border-left:5px solid #0d9488;border-radius:12px;padding:12px 14px;margin:4px 0 12px;font-family:'Barlow',system-ui,sans-serif}
 .who .nm{font-size:1.15rem;font-weight:800;color:#0f3a33}
 .who .meta{font-size:.82rem;color:#6b7280;margin-top:2px}
@@ -281,20 +301,56 @@ function filtered(){
 window.permSetFolder=function(f){FOLDER=f;loadFolder();renderKPIs();permRender();};
 window.permSetView=function(v){
   view=v;
-  ['matriz','usuario','tela','arvore','acesso'].forEach(function(x){var b=$('v-'+x);if(b)b.className='fbtn'+(x===v?' active':'');});
-  var isTree=(v==='arvore'), isAc=(v==='acesso');
-  var fg=$('perm-fg-pasta'); if(fg)fg.style.display=(isTree||isAc)?'none':'';
+  ['matriz','usuario','tela','arvore','acesso','portela'].forEach(function(x){var b=$('v-'+x);if(b)b.className='fbtn'+(x===v?' active':'');});
+  var isTree=(v==='arvore'), isAc=(v==='acesso'), isPt=(v==='portela');
+  var fg=$('perm-fg-pasta'); if(fg)fg.style.display=(isTree||isAc||isPt)?'none':'';
   var fga=$('perm-fg-acesso'); if(fga)fga.style.display=isAc?'':'none';
-  var fgb=$('perm-fg-busca'); if(fgb)fgb.style.display=isAc?'none':'';
-  var ex=$('perm-exp'); if(ex)ex.style.display=(isTree||isAc)?'none':'';
-  var tw=document.querySelector('.twrap'); if(tw)tw.style.display=(isTree||isAc)?'none':'';
+  var fgb=$('perm-fg-busca'); if(fgb)fgb.style.display=(isAc||isPt)?'none':'';
+  var ex=$('perm-exp'); if(ex)ex.style.display=(isTree||isAc||isPt)?'none':'';
+  var tw=document.querySelector('.twrap'); if(tw)tw.style.display=(isTree||isAc||isPt)?'none':'';
   var tr=$('perm-tree'); if(tr)tr.style.display=isTree?'':'none';
   var wh=$('perm-who'); if(wh)wh.style.display=isAc?'':'none';
   var ut=$('perm-utree'); if(ut)ut.style.display=isAc?'':'none';
+  var pt=$('perm-portela'); if(pt)pt.style.display=isPt?'':'none';
   var sb=$('perm-search'); if(sb)sb.placeholder=isTree?'\ud83d\udd0e tela, pasta, usu\u00e1rio ou cargo':'\ud83d\udd0e usu\u00e1rio, login ou cargo';
   if(isTree){renderTreeKPIs();renderTree();}
   else if(isAc){acInit();}
+  else if(isPt){ptRender();}
   else{renderKPIs();permRender();}
+};
+
+var PT_INDEX=null;
+function ptBuild(){
+  if(PT_INDEX) return PT_INDEX;
+  PT_INDEX=[];
+  function walk(node, path){
+    if(node.t)Object.keys(node.t).forEach(function(tela){
+      var uids=(node.t[tela]||'').split(',').filter(Boolean).map(Number);
+      PT_INDEX.push({tela:tela, path:path.slice(), uids:uids});
+    });
+    if(node.c)Object.keys(node.c).forEach(function(k){ walk(node.c[k], path.concat(k)); });
+  }
+  Object.keys(TREE.tree).forEach(function(m){ walk(TREE.tree[m], [m]); });
+  return PT_INDEX;
+}
+window.ptRender=function(){
+  var sb=$('pt-search'); var q=sb?(sb.value||'').trim().toLowerCase():'';
+  var box=$('pt-results'); if(!box) return;
+  if(q.length<2){ box.innerHTML='<div class="empty">Digite ao menos 2 letras do nome da tela para ver quem tem acesso.</div>'; return; }
+  var idx=ptBuild();
+  var hits=idx.filter(function(r){ return r.tela.toLowerCase().indexOf(q)>=0; });
+  hits.sort(function(a,b){ return a.tela.localeCompare(b.tela,'pt') || b.uids.length-a.uids.length; });
+  if(!hits.length){ box.innerHTML='<div class="empty">Nenhuma tela encontrada para \u201c'+esc(q)+'\u201d.</div>'; return; }
+  var shown=hits.slice(0,40);
+  box.innerHTML=shown.map(function(r){
+    var users=r.uids.map(function(uid){
+      var u=TREE.users[uid]||['','']; var cg=TREE.cargos[uid]||''; var uf=(TREE.uf&&TREE.uf[uid])||''; var ba=(TREE.base&&TREE.base[uid])||'';
+      var loc=uf?(uf+(ba?' \u00b7 '+ba:'')):(ba||'');
+      return '<div class="pt-u"><span class="pt-un">'+esc(u[1]||u[0])+'</span>'+(loc?'<span class="pt-loc">\ud83d\udccd '+esc(loc)+'</span>':'')+(cg?'<span class="pt-cg">'+esc(cg)+'</span>':'')+'<span class="pt-lg">'+esc(u[0])+'</span></div>';
+    }).join('') || '<div class="pt-empty">Nenhum usu\u00e1rio com acesso.</div>';
+    return '<details class="pt-card"'+(shown.length===1?' open':'')+'><summary><span class="pt-tela">\ud83d\udcc4 '+esc(r.tela)+'</span><span class="pt-path">'+esc(r.path.join(' \u203a '))+'</span><span class="pt-n">'+r.uids.length+' usu\u00e1rio'+(r.uids.length!==1?'s':'')+'</span></summary><div class="pt-users">'+users+'</div></details>';
+  }).join('');
+  if(hits.length>shown.length) box.innerHTML+='<div class="empty">+ '+(hits.length-shown.length)+' telas. Refine a busca.</div>';
 };
 
 window.permRender=function(){
