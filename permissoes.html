@@ -173,7 +173,12 @@ body.sm-collapsed .bottom-bar{left:64px !important;}
         <div class="ac-pick"><label>Estado / UF</label><select id="ac-uf" onchange="acOnUF()"></select></div>
         <div class="ac-pick"><label>Base</label><select id="ac-base" onchange="acOnBase()"></select></div>
         <div class="ac-pick"><label>Função (cargo)</label><select id="ac-func" onchange="acOnFunc()"></select></div>
-        <div class="ac-pick"><label>Usuário</label><select id="ac-user" onchange="acRender()"></select></div>
+        <div class="ac-pick"><label>Usuário</label>
+          <div class="ac-user-wrap">
+            <input id="ac-user-busca" placeholder="🔎 buscar por nome ou login…" oninput="acFillUsers();acRender();" autocomplete="off">
+            <select id="ac-user" onchange="acRender()"></select>
+          </div>
+        </div>
         <div class="ac-pick ac-full"><label>Buscar subpasta ou tela</label><input id="ac-search" type="text" placeholder="🔎 digite parte do nome da pasta ou tela" oninput="acRender()"></div>
       </div>
       <div class="twrap"><table id="perm-table"><thead id="perm-thead"></thead><tbody id="perm-tbody"></tbody></table></div>
@@ -226,8 +231,9 @@ body.sm-collapsed .bottom-bar{left:64px !important;}
 .ac-picks{display:flex;gap:10px;flex-wrap:wrap;margin:0 0 12px;font-family:'Barlow',system-ui,sans-serif}
 .ac-pick{display:flex;flex-direction:column;gap:6px;flex:1;min-width:150px}
 .ac-pick label{font-size:.72rem;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.04em}
-.ac-pick select{padding:11px 12px;border:1px solid #cbd5e1;border-radius:10px;font-size:1rem;background:#fff;font-family:inherit;width:100%;box-sizing:border-box}
-.ac-pick select:focus{outline:none;border-color:#0d9488;box-shadow:0 0 0 3px rgba(13,148,136,.12)}
+.ac-pick select,.ac-pick input{padding:11px 12px;border:1px solid #cbd5e1;border-radius:10px;font-size:1rem;background:#fff;font-family:inherit;width:100%;box-sizing:border-box}
+.ac-pick select:focus,.ac-pick input:focus{outline:none;border-color:#0d9488;box-shadow:0 0 0 3px rgba(13,148,136,.12)}
+.ac-pick .ac-user-wrap{display:flex;flex-direction:column;gap:6px}
 .ac-pick.ac-full{flex-basis:100%;min-width:100%}
 .ac-pick input{padding:11px 12px;border:1px solid #cbd5e1;border-radius:10px;font-size:1rem;background:#fff;font-family:inherit;width:100%;box-sizing:border-box}
 .ac-pick input:focus{outline:none;border-color:#0d9488;box-shadow:0 0 0 3px rgba(13,148,136,.12)}
@@ -574,10 +580,14 @@ function acFillFuncs(){
 }
 function acFillUsers(){
   var uf=$('ac-uf').value, ba=$('ac-base').value, f=$('ac-func').value;
+  var qb=$('ac-user-busca'); var q=qb?ptNorm(qb.value).trim():'';
+  var prev=$('ac-user').value;
   var order=TREE.users.map(function(u,i){return {i:i,nome:u[1]||u[0]||('#'+i),login:u[0]||'',f:acUfunc(i),uf:acUuf(i),base:acBase(i)};})
-    .filter(function(o){return acMatchUF(o.i,uf)&&(!ba||o.base===ba)&&(!f||o.f===f);})
+    .filter(function(o){return acMatchUF(o.i,uf)&&(!ba||o.base===ba)&&(!f||o.f===f)
+      &&(!q||ptNorm(o.nome).indexOf(q)>=0||ptNorm(o.login).indexOf(q)>=0);})
     .sort(function(a,b){return a.nome.toUpperCase()<b.nome.toUpperCase()?-1:1;});
   $('ac-user').innerHTML=order.length?order.map(function(o){return '<option value="'+o.i+'">'+esc(o.nome)+(o.login?' \u2014 '+esc(o.login):'')+'</option>';}).join(''):'<option value="">(nenhum)</option>';
+  if(prev&&order.some(function(o){return String(o.i)===prev;})) $('ac-user').value=prev;
 }
 function acCntU(n,uid){var c=0;if(n.t)for(var t in n.t){if((','+n.t[t]+',').indexOf(','+uid+',')>=0)c++;}if(n.c)for(var k in n.c)c+=acCntU(n.c[k],uid);return c;}
 function acNodeU(name,n,d,uid,q){
