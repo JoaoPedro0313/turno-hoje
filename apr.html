@@ -692,16 +692,13 @@ function rdoKeyForDate(date) {
   return 'rdo_dia_' + p[0] + '-' + p[1] + '-' + p[2];
 }
 
-function rdoSetBadge(estado){
-  var b=document.getElementById('db-badge'), t=document.getElementById('db-text');
-  if(!b||!t) return;
-  b.classList.remove('local','online','offline','syncing');
-  if(estado==='online'){ b.classList.add('online'); t.textContent='Banco'; }
-  else if(estado==='offline'){ b.classList.add('offline'); t.textContent='Sem conexão'; }
-  else if(estado==='syncing'){ b.classList.add('syncing'); t.textContent='Sincronizando…'; }
-  else { b.classList.add('local'); t.textContent='Dados locais'; }
+function setDbStatus(status, msg) {
+  var b = document.getElementById('db-badge');
+  if (b) b.className = 'db-badge ' + status;
+  var t = document.getElementById('db-text');
+  if (t) t.textContent = msg;
 }
-window.dbBadgeClick=function(){ rdoSetBadge('syncing'); rdoCarregarBanco(); };
+window.dbBadgeClick = function(){ setDbStatus('syncing', 'Reconectando...'); rdoCarregarBanco(); };
 async function rdoUpsert(key, payload){
   // GET decide entre PATCH (existe) e POST (novo) — confiável, não depende do status do PATCH
   var existe=false;
@@ -724,13 +721,16 @@ async function rdoUpsert(key, payload){
 async function rdoSalvarBanco() {
   if (!rdoDate && Object.keys(rdoData).length === 0) return;
   var payload = { lancou: rdoData, date: rdoDate, savedAt: new Date().toISOString() };
+  setDbStatus('syncing', 'Salvando...');
   try {
     await rdoUpsert('rdo_atual', payload);                          // estado atual (sempre recuperável)
     if (rdoDate) await rdoUpsert(rdoKeyForDate(rdoDate), payload);  // histórico por dia
-    rdoSetBadge('online');
+    setDbStatus('online', 'Salvo!');
+    setTimeout(function(){ setDbStatus('online', 'Banco online'); }, 1500);
     rdoShowMsg('✅ Salvo no banco!', 'success');
   } catch(e) {
-    rdoSetBadge('offline');
+    setDbStatus('local', 'Salvo local');
+    setTimeout(function(){ setDbStatus('local', 'Dados locais'); }, 2000);
     rdoShowMsg('⚠️ Salvo localmente (sem conexão)', 'success');
   }
   try { localStorage.setItem('rdo_atual', JSON.stringify(payload)); } catch(e2) {}
@@ -749,12 +749,14 @@ async function rdoCarregarBanco() {
       var dl = document.getElementById('rdo-date-label');
       if (dl) dl.textContent = rdoDate ? '📅 ' + rdoDate : '';
       rdoRender();
-      rdoSetBadge('online');
+      setDbStatus('online', 'Banco online ✓');
       rdoShowMsg('✅ RDO carregado do banco!', 'success');
       return;
     }
   } catch(e) {}
-  rdoSetBadge(bancoOk ? 'online' : 'offline');
+  var temLocal=false; try{ temLocal=!!localStorage.getItem('rdo_atual'); }catch(_){}
+  setDbStatus(bancoOk ? 'online' : (temLocal ? 'local' : 'offline'),
+              bancoOk ? 'Banco online ✓' : (temLocal ? 'Dados locais' : 'Sem conexão'));
   // Fallback: localStorage
   try {
     var local = JSON.parse(localStorage.getItem('rdo_atual'));
