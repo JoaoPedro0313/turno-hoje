@@ -61,6 +61,8 @@
   .fin-bar .add{margin-left:auto}
   .btn.ghost{background:#eef2f7;color:#334155}.btn.ghost:hover{background:#e2e8f0}
   .fin-bar .ghost{margin-left:auto}
+  .fin-bar .lmp,.fin-lmp{padding:10px 16px;background:#f1f5f9;color:#64748b;border:1.5px solid #e2e8f0;border-radius:999px;cursor:pointer;font-size:.85rem;font-weight:700;font-family:inherit;transition:all .12s}
+  .fin-lmp:hover{background:#e2e8f0;color:#334155}
   .fin-bar .add{margin-left:8px}
   /* modal importar */
   .imp-ov{position:fixed;inset:0;background:rgba(15,23,42,.5);z-index:300;display:flex;align-items:center;justify-content:center;padding:18px}
@@ -185,7 +187,16 @@ body.sm-collapsed .bottom-bar{left:64px !important;}
         </div>
         <div class="fin-bar">
           <select id="fin-forn-filtro" onchange="finRender()"><option value="">Todos os fornecedores</option></select>
+          <select id="fin-mes" onchange="finRender()"><option value="">Todos os meses</option></select>
+          <select id="fin-ord" onchange="finRender()">
+            <option value="data-desc">↓ Mais recentes</option>
+            <option value="data-asc">↑ Mais antigas</option>
+            <option value="valor-desc">Maior valor</option>
+            <option value="valor-asc">Menor valor</option>
+            <option value="forn">Fornecedor (A-Z)</option>
+          </select>
           <input id="fin-busca" placeholder="🔎 buscar item…" oninput="finRender()">
+          <button class="fin-lmp" type="button" onclick="finLimparFiltros()" title="Limpar filtros">✕ Limpar</button>
           <button class="btn ghost" onclick="finAbrirImport()">📤 Importar arquivo</button>
           <button class="btn add" id="fin-toggle-form" onclick="finToggleForm()">+ Novo lançamento</button>
         </div>
@@ -255,24 +266,50 @@ async function carregarValores(){
   var forns=Array.from(new Set(FIN_DATA.map(v=>v.fornecedor||'(sem)'))).sort();
   var sel=$('fin-forn-filtro'); var cur=sel?sel.value:'';
   if(sel){ sel.innerHTML='<option value="">Todos os fornecedores</option>'+forns.map(f=>'<option value="'+f.replace(/"/g,'&quot;')+'">'+f+'</option>').join(''); sel.value=cur; }
+  var meses=Array.from(new Set(FIN_DATA.map(v=>(v.data_ref||'').slice(0,7)).filter(Boolean))).sort().reverse();
+  var selM=$('fin-mes'); var curM=selM?selM.value:'';
+  if(selM){ selM.innerHTML='<option value="">Todos os meses</option>'+meses.map(function(m){var p=m.split('-');return '<option value="'+m+'">'+p[1]+'/'+p[0]+'</option>';}).join(''); selM.value=curM; }
   finRender();
 }
 function finToggleForm(){ var f=$('fin-form'); if(f)f.style.display=(f.style.display==='none'?'flex':'none'); }
 function finRender(){
   var fForn=$('fin-forn-filtro')?$('fin-forn-filtro').value:'';
+  var fMes=$('fin-mes')?$('fin-mes').value:'';
+  var ord=$('fin-ord')?$('fin-ord').value:'data-desc';
   var q=($('fin-busca')&&$('fin-busca').value?$('fin-busca').value:'').trim().toLowerCase();
-  var rows=FIN_DATA.filter(function(v){ return (!fForn||(v.fornecedor||'(sem)')===fForn) && (!q||(v.descricao||'').toLowerCase().indexOf(q)>=0); });
-  finKpis(); finChart(); finTabela(rows);
+  var rows=FIN_DATA.filter(function(v){
+    return (!fForn||(v.fornecedor||'(sem)')===fForn)
+        && (!fMes||(v.data_ref||'').slice(0,7)===fMes)
+        && (!q||(v.descricao||'').toLowerCase().indexOf(q)>=0);
+  });
+  rows.sort(function(a,b){
+    if(ord==='valor-desc') return Number(b.valor||0)-Number(a.valor||0);
+    if(ord==='valor-asc')  return Number(a.valor||0)-Number(b.valor||0);
+    if(ord==='forn')       return (a.fornecedor||'').localeCompare(b.fornecedor||'');
+    var da=a.data_ref||'', db=b.data_ref||'';
+    if(ord==='data-asc')   return da<db?-1:da>db?1:0;
+    return da>db?-1:da<db?1:0; // data-desc (padrão)
+  });
+  finKpis(rows); finChart(rows); finTabela(rows);
 }
-function finKpis(){
-  var total=FIN_DATA.reduce(function(s,v){return s+Number(v.valor||0);},0);
-  var porF={}; FIN_DATA.forEach(function(v){var f=v.fornecedor||'(sem)';porF[f]=(porF[f]||0)+Number(v.valor||0);});
-  var html='<div class="fin-kpi"><div class="k-lbl">Total geral</div><div class="k-val">'+finMoney(total)+'</div><div class="k-sub">'+FIN_DATA.length+' lançamentos</div></div>';
+function finLimparFiltros(){
+  if($('fin-forn-filtro'))$('fin-forn-filtro').value='';
+  if($('fin-mes'))$('fin-mes').value='';
+  if($('fin-ord'))$('fin-ord').value='data-desc';
+  if($('fin-busca'))$('fin-busca').value='';
+  finRender();
+}
+function finKpis(rows){
+  rows=rows||FIN_DATA;
+  var total=rows.reduce(function(s,v){return s+Number(v.valor||0);},0);
+  var porF={}; rows.forEach(function(v){var f=v.fornecedor||'(sem)';porF[f]=(porF[f]||0)+Number(v.valor||0);});
+  var html='<div class="fin-kpi"><div class="k-lbl">Total geral</div><div class="k-val">'+finMoney(total)+'</div><div class="k-sub">'+rows.length+' lançamentos</div></div>';
   Object.keys(porF).sort().forEach(function(f){ var pct=total?(porF[f]/total*100):0; html+='<div class="fin-kpi"><div class="k-lbl">'+f+'</div><div class="k-val">'+finMoney(porF[f])+'</div><div class="k-sub">'+pct.toFixed(1)+'% do total</div></div>'; });
   if($('fin-kpis'))$('fin-kpis').innerHTML=html;
 }
-function finChart(){
-  var porF={}; FIN_DATA.forEach(function(v){var f=v.fornecedor||'(sem)';porF[f]=(porF[f]||0)+Number(v.valor||0);});
+function finChart(rows){
+  rows=rows||FIN_DATA;
+  var porF={}; rows.forEach(function(v){var f=v.fornecedor||'(sem)';porF[f]=(porF[f]||0)+Number(v.valor||0);});
   var vals=Object.keys(porF).map(function(k){return porF[k];}); var max=Math.max.apply(null,[1].concat(vals));
   var html=Object.keys(porF).sort(function(a,b){return porF[b]-porF[a];}).map(function(f){
     var w=(porF[f]/max*100);
