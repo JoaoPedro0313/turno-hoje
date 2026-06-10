@@ -59,6 +59,25 @@
   .fin-bar select:focus,.fin-bar input:focus{outline:none;border-color:var(--teal);box-shadow:0 0 0 3px rgba(13,115,119,.15)}
   .fin-bar input{flex:1;min-width:140px}
   .fin-bar .add{margin-left:auto}
+  .btn.ghost{background:#eef2f7;color:#334155}.btn.ghost:hover{background:#e2e8f0}
+  .fin-bar .ghost{margin-left:auto}
+  .fin-bar .add{margin-left:8px}
+  /* modal importar */
+  .imp-ov{position:fixed;inset:0;background:rgba(15,23,42,.5);z-index:300;display:flex;align-items:center;justify-content:center;padding:18px}
+  .imp-box{background:#fff;border-radius:16px;max-width:760px;width:100%;max-height:88vh;overflow:auto;padding:24px 26px;box-shadow:0 24px 70px rgba(0,0,0,.3)}
+  .imp-box h2{margin:0 0 4px;color:#0f3a33;font-size:1.2rem}
+  .imp-box p{margin:0 0 14px;color:#6b7280;font-size:.86rem}
+  .imp-file{border:2px dashed #cbd5e1;border-radius:12px;padding:18px;text-align:center;background:#f8fafc;margin-bottom:14px}
+  .imp-map{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:8px 0 14px}
+  .imp-map label{display:block;font-size:.7rem;font-weight:800;color:#64748b;text-transform:uppercase;letter-spacing:.03em;margin-bottom:3px}
+  .imp-map select{width:100%;padding:8px 10px;border:1.5px solid #cbd5e1;border-radius:9px;font-family:inherit;font-size:.85rem}
+  .imp-prev{border:1px solid #eef2f7;border-radius:10px;overflow:auto;max-height:280px;margin-bottom:14px}
+  .imp-prev table{width:100%;border-collapse:collapse;font-size:.82rem}
+  .imp-prev th{background:#f0fafa;color:#0f3a33;position:sticky;top:0}
+  .imp-prev th,.imp-prev td{padding:7px 9px;border-bottom:1px solid #eef2f7;text-align:left;white-space:nowrap}
+  .imp-actions{display:flex;gap:10px;justify-content:flex-end;align-items:center;flex-wrap:wrap}
+  .imp-msg{font-size:.85rem;font-weight:700;margin-top:10px;min-height:18px}
+  .imp-msg.err{color:#c53030}.imp-msg.ok{color:#276749}
   tr.grp td{background:#f0fafa;font-weight:800;color:#0f3a33;border-top:2px solid #d6f0ec}
   tr.sub td{background:#fafdfd;font-weight:700;color:#0d7377;font-size:.85rem}
   .tabs{display:flex;gap:8px;margin-bottom:14px}
@@ -167,6 +186,7 @@ body.sm-collapsed .bottom-bar{left:64px !important;}
         <div class="fin-bar">
           <select id="fin-forn-filtro" onchange="finRender()"><option value="">Todos os fornecedores</option></select>
           <input id="fin-busca" placeholder="🔎 buscar item…" oninput="finRender()">
+          <button class="btn ghost" onclick="finAbrirImport()">📤 Importar arquivo</button>
           <button class="btn add" id="fin-toggle-form" onclick="finToggleForm()">+ Novo lançamento</button>
         </div>
         <div class="form-row" id="fin-form" style="display:none">
@@ -188,6 +208,7 @@ body.sm-collapsed .bottom-bar{left:64px !important;}
   </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script>
 const SUPA_URL='https://eqxejfoibebcbtsqymji.supabase.co';
 const SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVxeGVqZm9pYmViY2J0c3F5bWppIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE4NjUzMTEsImV4cCI6MjA4NzQ0MTMxMX0.lwf7_EJ6UchEOpzhW3cVKztxDGy78gaQblRvgiEwWh8';
@@ -290,6 +311,106 @@ async function addValor(){
   ['f-forn','f-desc','f-qtd','f-unit','f-data','f-valor'].forEach(id=>$(id).value='');
   carregarValores();
 }
+// ===== Importar arquivo (CSV/XLSX) =====
+var IMP_COLS=[], IMP_ROWS=[];
+function finAbrirImport(){
+  finMsg(''); $('imp-map').style.display='none'; $('imp-map').innerHTML='';
+  $('imp-prev').style.display='none'; $('imp-prev').innerHTML='';
+  $('imp-go').style.display='none'; $('imp-file').value=''; IMP_COLS=[]; IMP_ROWS=[];
+  $('imp-ov').style.display='flex';
+}
+function finFecharImport(){ $('imp-ov').style.display='none'; }
+function finMsg(t,ok){ var m=$('imp-msg'); m.textContent=t||''; m.className='imp-msg '+(ok?'ok':(t?'err':'')); }
+function finNorm(s){ return (s==null?'':String(s)).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim(); }
+function finParseNum(v){
+  if(v==null||v==='') return null;
+  if(typeof v==='number') return v;
+  var s=String(v).replace(/[^0-9.,-]/g,'').trim(); if(!s) return null;
+  if(s.indexOf(',')>=0 && s.indexOf('.')>=0){ s=s.replace(/\./g,'').replace(',','.'); }
+  else if(s.indexOf(',')>=0){ s=s.replace(',','.'); }
+  var n=parseFloat(s); return isNaN(n)?null:n;
+}
+function finParseData(v){
+  if(v==null||v==='') return null; var s=String(v).trim();
+  var m=s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
+  if(m){ var y=m[3]; if(y.length===2)y='20'+y; return y+'-'+('0'+m[2]).slice(-2)+'-'+('0'+m[1]).slice(-2); }
+  m=s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if(m) return m[1]+'-'+('0'+m[2]).slice(-2)+'-'+('0'+m[3]).slice(-2);
+  return null;
+}
+function finLerArquivo(ev){
+  var f=ev.target.files&&ev.target.files[0]; if(!f) return;
+  if(typeof XLSX==='undefined'){ finMsg('Leitor de planilha não carregou. Recarregue a página e tente de novo.',false); return; }
+  var r=new FileReader();
+  r.onload=function(e){
+    try{
+      var wb=XLSX.read(e.target.result,{type:'array',cellDates:false});
+      var ws=wb.Sheets[wb.SheetNames[0]];
+      var mat=XLSX.utils.sheet_to_json(ws,{header:1,raw:false,defval:''});
+      mat=mat.filter(function(row){ return row.some(function(c){return String(c).trim()!=='';}); });
+      if(mat.length<2){ finMsg('Arquivo sem dados (precisa de cabeçalho + pelo menos 1 linha).',false); return; }
+      IMP_COLS=mat[0].map(function(c){return String(c).trim();});
+      IMP_ROWS=mat.slice(1);
+      finRenderMap();
+    }catch(x){ finMsg('Não consegui ler o arquivo: '+x.message,false); }
+  };
+  r.readAsArrayBuffer(f);
+}
+function finAutoMap(){
+  var map={data:'',fornecedor:'',descricao:'',quantidade:'',valor_unitario:'',valor:''};
+  IMP_COLS.forEach(function(c,i){
+    var n=finNorm(c);
+    if(map.data===''&&/(data|dt|venc)/.test(n)) map.data=String(i);
+    if(map.fornecedor===''&&/(forn|empresa|cliente)/.test(n)) map.fornecedor=String(i);
+    if(map.descricao===''&&/(item|descri|produto|servi)/.test(n)) map.descricao=String(i);
+    if(map.quantidade===''&&/(qtd|quant)/.test(n)) map.quantidade=String(i);
+    if(map.valor_unitario===''&&/(unit|preco|prec)/.test(n)) map.valor_unitario=String(i);
+    if(map.valor===''&&/(total|subtotal|montante)/.test(n)) map.valor=String(i);
+  });
+  if(map.valor===''){ IMP_COLS.forEach(function(c,i){ if(map.valor===''&&finNorm(c)==='valor') map.valor=String(i); }); }
+  return map;
+}
+function finOpts(sel){
+  var o='<option value="">— ignorar —</option>';
+  IMP_COLS.forEach(function(c,i){ o+='<option value="'+i+'"'+(String(i)===sel?' selected':'')+'>'+(c||('coluna '+(i+1)))+'</option>'; });
+  return o;
+}
+function finRenderMap(){
+  var m=finAutoMap();
+  var campos=[['data','Data'],['fornecedor','Fornecedor'],['descricao','Item / descrição'],['quantidade','Qtd'],['valor_unitario','Unitário'],['valor','Total']];
+  var html=campos.map(function(c){ return '<div><label>'+c[1]+'</label><select id="imp-c-'+c[0]+'" onchange="finPreview()">'+finOpts(m[c[0]])+'</select></div>'; }).join('');
+  var mp=$('imp-map'); mp.style.display='grid'; mp.innerHTML=html;
+  finPreview();
+}
+function finColIdx(campo){ var el=$('imp-c-'+campo); var v=el?el.value:''; return v===''?-1:parseInt(v,10); }
+function finLinhaMapeada(row){
+  function g(campo){ var i=finColIdx(campo); return i<0?'':row[i]; }
+  var qtd=finParseNum(g('quantidade')), unit=finParseNum(g('valor_unitario')), total=finParseNum(g('valor'));
+  if(total==null && qtd!=null && unit!=null) total=qtd*unit;
+  return { data_ref:finParseData(g('data')), fornecedor:(String(g('fornecedor')).trim()||null), descricao:String(g('descricao')).trim(), quantidade:qtd, valor_unitario:unit, valor:total };
+}
+function finRegsValidos(){ return IMP_ROWS.map(finLinhaMapeada).filter(function(r){ return r.descricao||r.valor!=null; }); }
+function finPreview(){
+  var money=function(n){return (n==null)?'':Number(n).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});};
+  var regs=finRegsValidos();
+  var head='<tr><th>Data</th><th>Fornecedor</th><th>Item</th><th>Qtd</th><th>Unit.</th><th>Total</th></tr>';
+  var body=regs.slice(0,10).map(function(r){ return '<tr><td>'+(r.data_ref?r.data_ref.split('-').reverse().join('/'):'—')+'</td><td>'+(r.fornecedor||'')+'</td><td>'+(r.descricao||'')+'</td><td>'+(r.quantidade==null?'':r.quantidade)+'</td><td>'+money(r.valor_unitario)+'</td><td>'+money(r.valor)+'</td></tr>'; }).join('');
+  var pv=$('imp-prev'); pv.style.display='block'; pv.innerHTML='<table>'+head+body+'</table>';
+  $('imp-go').style.display=regs.length?'inline-block':'none';
+  $('imp-go').textContent='Importar '+regs.length+' lançamento'+(regs.length===1?'':'s');
+  finMsg(regs.length?(regs.length+' linha(s) prontas — confira a prévia (10 primeiras).'):'Nenhuma linha válida com esse mapeamento. Confira as colunas.', regs.length>0);
+}
+async function finImportar(){
+  var regs=finRegsValidos();
+  if(!regs.length){ finMsg('Nada para importar.',false); return; }
+  $('imp-go').disabled=true; finMsg('Importando '+regs.length+'…',true);
+  const {error}=await sb.from('valores').insert(regs);
+  $('imp-go').disabled=false;
+  if(error){ finMsg('Erro ao importar: '+error.message,false); return; }
+  finMsg('✅ '+regs.length+' lançamento(s) importado(s)!',true);
+  await carregarValores();
+  setTimeout(finFecharImport,1000);
+}
 async function sair(){ await sb.auth.signOut(); location.reload(); }
 
 
@@ -339,5 +460,21 @@ async function sair(){ await sb.auth.signOut(); location.reload(); }
   }catch(e){}
 })();
 </script>
+<div id="imp-ov" class="imp-ov" style="display:none">
+  <div class="imp-box">
+    <h2>📤 Importar lançamentos</h2>
+    <p>Selecione um arquivo <b>CSV</b> ou <b>Excel (.xlsx)</b>. A primeira linha precisa ser o cabeçalho com os nomes das colunas. Depois confira o mapeamento e a prévia antes de salvar.</p>
+    <div class="imp-file">
+      <input type="file" id="imp-file" accept=".csv,.xlsx,.xls" onchange="finLerArquivo(event)">
+    </div>
+    <div id="imp-map" class="imp-map" style="display:none"></div>
+    <div id="imp-prev" class="imp-prev" style="display:none"></div>
+    <div class="imp-actions">
+      <button class="btn ghost" onclick="finFecharImport()">Cancelar</button>
+      <button class="btn add" id="imp-go" style="display:none" onclick="finImportar()">Importar</button>
+    </div>
+    <div id="imp-msg" class="imp-msg"></div>
+  </div>
+</div>
 </body>
 </html>
