@@ -209,6 +209,8 @@ body.sm-collapsed .bottom-bar{left:64px !important;}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
+<script>if(window.pdfjsLib){ pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js'; }</script>
 <script>
 const SUPA_URL='https://eqxejfoibebcbtsqymji.supabase.co';
 const SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVxeGVqZm9pYmViY2J0c3F5bWppIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE4NjUzMTEsImV4cCI6MjA4NzQ0MTMxMX0.lwf7_EJ6UchEOpzhW3cVKztxDGy78gaQblRvgiEwWh8';
@@ -312,11 +314,11 @@ async function addValor(){
   carregarValores();
 }
 // ===== Importar arquivo (CSV/XLSX) =====
-var IMP_COLS=[], IMP_ROWS=[];
+var IMP_COLS=[], IMP_ROWS=[], IMP_AUTO=null, IMP_TIPO='';
 function finAbrirImport(){
   finMsg(''); $('imp-map').style.display='none'; $('imp-map').innerHTML='';
   $('imp-prev').style.display='none'; $('imp-prev').innerHTML='';
-  $('imp-go').style.display='none'; $('imp-file').value=''; IMP_COLS=[]; IMP_ROWS=[];
+  $('imp-go').style.display='none'; $('imp-file').value=''; IMP_COLS=[]; IMP_ROWS=[]; IMP_AUTO=null; IMP_TIPO='';
   $('imp-ov').style.display='flex';
 }
 function finFecharImport(){ $('imp-ov').style.display='none'; }
@@ -340,21 +342,102 @@ function finParseData(v){
 }
 function finLerArquivo(ev){
   var f=ev.target.files&&ev.target.files[0]; if(!f) return;
-  if(typeof XLSX==='undefined'){ finMsg('Leitor de planilha não carregou. Recarregue a página e tente de novo.',false); return; }
+  IMP_AUTO=null; IMP_TIPO='';
+  var nome=(f.name||'').toLowerCase();
+  if(nome.endsWith('.pdf')){ finLerPDF(f); return; }
+  if(typeof XLSX==='undefined'){ finMsg('Leitor de planilha não carregou. Recarregue a página.',false); return; }
   var r=new FileReader();
   r.onload=function(e){
     try{
       var wb=XLSX.read(e.target.result,{type:'array',cellDates:false});
+      // 1) tenta reconhecer a planilha do Jupiter
+      var jup=finDetectarJupiter(wb);
+      if(jup && jup.length){ IMP_AUTO=jup; IMP_TIPO='Planilha Jupiter'; finPreview(); return; }
+      // 2) genérico: 1ª aba, cabeçalho na 1ª linha
       var ws=wb.Sheets[wb.SheetNames[0]];
       var mat=XLSX.utils.sheet_to_json(ws,{header:1,raw:false,defval:''});
       mat=mat.filter(function(row){ return row.some(function(c){return String(c).trim()!=='';}); });
-      if(mat.length<2){ finMsg('Arquivo sem dados (precisa de cabeçalho + pelo menos 1 linha).',false); return; }
+      if(mat.length<2){ finMsg('Arquivo sem dados (precisa de cabeçalho + 1 linha).',false); return; }
       IMP_COLS=mat[0].map(function(c){return String(c).trim();});
       IMP_ROWS=mat.slice(1);
       finRenderMap();
     }catch(x){ finMsg('Não consegui ler o arquivo: '+x.message,false); }
   };
   r.readAsArrayBuffer(f);
+}
+// Reconhece a planilha mensal do Jupiter (aba MARIUA: cabeçalho QTDE/DIAS/PRODUTO/UNIT.)
+function finDetectarJupiter(wb){
+  for(var i=0;i<wb.SheetNames.length;i++){
+    var mat=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[i]],{header:1,raw:false,defval:''});
+    var hi=-1;
+    for(var r=0;r<Math.min(mat.length,15);r++){
+      var lin=(mat[r]||[]).map(finNorm);
+      if(lin.indexOf('produto')>=0 && lin.indexOf('qtde')>=0 && lin.indexOf('dias')>=0){ hi=r; break; }
+    }
+    if(hi<0) continue;
+    var periodo=null;
+    for(var r2=0;r2<hi;r2++){
+      var m=(mat[r2]||[]).join(' ').match(/(\d{1,2}\/\d{1,2}\/\d{2,4})\s*A\s*(\d{1,2}\/\d{1,2}\/\d{2,4})/i);
+      if(m){ periodo=m[2]; break; }
+    }
+    var head=mat[hi].map(finNorm);
+    var iQ=head.indexOf('qtde'), iD=head.indexOf('dias'), iP=head.indexOf('produto');
+    var iU=head.indexOf('unit.'); if(iU<0) iU=head.indexOf('unit');
+    var regs=[];
+    for(var r3=hi+1;r3<mat.length;r3++){
+      var prod=String(mat[r3][iP]||'').trim();
+      var q=finParseNum(mat[r3][iQ]), u=finParseNum(mat[r3][iU]);
+      var dias=String(mat[r3][iD]||'').trim();
+      if(!prod || q==null || u==null) continue;
+      regs.push({ data_ref:finParseData(periodo), fornecedor:'Jupiter',
+        descricao:prod+' – rastreamento ('+dias+' dias)', quantidade:q, valor_unitario:u, valor:q*u });
+    }
+    if(regs.length) return regs;
+  }
+  return null;
+}
+// Lê PDF (fatura GPM) com pdf.js
+async function finLerPDF(f){
+  if(typeof pdfjsLib==='undefined'){ finMsg('Leitor de PDF não carregou. Recarregue a página.',false); return; }
+  finMsg('Lendo PDF…',true);
+  try{
+    var buf=await f.arrayBuffer();
+    var pdf=await pdfjsLib.getDocument({data:buf}).promise;
+    var linhas=[];
+    for(var p=1;p<=pdf.numPages;p++){
+      var page=await pdf.getPage(p);
+      var tc=await page.getTextContent();
+      var byY={};
+      tc.items.forEach(function(it){
+        var y=Math.round(it.transform[5]);
+        (byY[y]=byY[y]||[]).push({x:it.transform[4],s:it.str});
+      });
+      Object.keys(byY).map(Number).sort(function(a,b){return b-a;}).forEach(function(y){
+        var ln=byY[y].sort(function(a,b){return a.x-b.x;}).map(function(o){return o.s;}).join(' ').replace(/\s+/g,' ').trim();
+        if(ln) linhas.push(ln);
+      });
+    }
+    var regs=finParseGPM(linhas);
+    if(regs && regs.length){ IMP_AUTO=regs; IMP_TIPO='Fatura GPM (PDF)'; finPreview(); }
+    else finMsg('Não reconheci os itens nesse PDF. Se não for a fatura da GPM, use CSV/Excel.',false);
+  }catch(x){ finMsg('Não consegui ler o PDF: '+x.message,false); }
+}
+// Extrai itens da fatura GPM a partir das linhas de texto
+function finParseGPM(linhas){
+  var data=null;
+  for(var i=0;i<linhas.length;i++){ var m=linhas[i].match(/(\d{2}\/\d{2}\/\d{4})/); if(m){ data=m[1]; break; } }
+  var regs=[];
+  for(var j=0;j<linhas.length;j++){
+    var ln=linhas[j];
+    if(/valor l[ií]quido|^total\b|condi[cç][aã]o|forma de pagamento|vencimento/i.test(finNorm(ln))) continue;
+    var m=ln.match(/^(\d{1,4})\s+(.+?)\s+([\d.]+,\d{2})\s+([\d.]+,\d{2})$/);
+    if(m){
+      var q=finParseNum(m[1]), u=finParseNum(m[3]), sub=finParseNum(m[4]);
+      var desc=m[2].trim();
+      if(desc && q!=null && sub!=null) regs.push({ data_ref:finParseData(data), fornecedor:'GPM', descricao:desc, quantidade:q, valor_unitario:u, valor:sub });
+    }
+  }
+  return regs;
 }
 function finAutoMap(){
   var map={data:'',fornecedor:'',descricao:'',quantidade:'',valor_unitario:'',valor:''};
@@ -389,16 +472,18 @@ function finLinhaMapeada(row){
   if(total==null && qtd!=null && unit!=null) total=qtd*unit;
   return { data_ref:finParseData(g('data')), fornecedor:(String(g('fornecedor')).trim()||null), descricao:String(g('descricao')).trim(), quantidade:qtd, valor_unitario:unit, valor:total };
 }
-function finRegsValidos(){ return IMP_ROWS.map(finLinhaMapeada).filter(function(r){ return r.descricao||r.valor!=null; }); }
+function finRegsValidos(){ if(IMP_AUTO) return IMP_AUTO; return IMP_ROWS.map(finLinhaMapeada).filter(function(r){ return r.descricao||r.valor!=null; }); }
 function finPreview(){
   var money=function(n){return (n==null)?'':Number(n).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});};
   var regs=finRegsValidos();
+  if(IMP_AUTO){ $('imp-map').style.display='none'; }
   var head='<tr><th>Data</th><th>Fornecedor</th><th>Item</th><th>Qtd</th><th>Unit.</th><th>Total</th></tr>';
-  var body=regs.slice(0,10).map(function(r){ return '<tr><td>'+(r.data_ref?r.data_ref.split('-').reverse().join('/'):'—')+'</td><td>'+(r.fornecedor||'')+'</td><td>'+(r.descricao||'')+'</td><td>'+(r.quantidade==null?'':r.quantidade)+'</td><td>'+money(r.valor_unitario)+'</td><td>'+money(r.valor)+'</td></tr>'; }).join('');
+  var body=regs.slice(0,12).map(function(r){ return '<tr><td>'+(r.data_ref?r.data_ref.split('-').reverse().join('/'):'—')+'</td><td>'+(r.fornecedor||'')+'</td><td>'+(r.descricao||'')+'</td><td>'+(r.quantidade==null?'':r.quantidade)+'</td><td>'+money(r.valor_unitario)+'</td><td>'+money(r.valor)+'</td></tr>'; }).join('');
   var pv=$('imp-prev'); pv.style.display='block'; pv.innerHTML='<table>'+head+body+'</table>';
   $('imp-go').style.display=regs.length?'inline-block':'none';
   $('imp-go').textContent='Importar '+regs.length+' lançamento'+(regs.length===1?'':'s');
-  finMsg(regs.length?(regs.length+' linha(s) prontas — confira a prévia (10 primeiras).'):'Nenhuma linha válida com esse mapeamento. Confira as colunas.', regs.length>0);
+  var pref=IMP_TIPO?('✓ '+IMP_TIPO+' reconhecida. '):'';
+  finMsg(regs.length?(pref+regs.length+' linha(s) prontas — confira a prévia.'):(IMP_TIPO?'Reconheci o tipo mas não achei itens.':'Nenhuma linha válida com esse mapeamento. Confira as colunas.'), regs.length>0);
 }
 async function finImportar(){
   var regs=finRegsValidos();
