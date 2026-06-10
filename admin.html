@@ -67,6 +67,34 @@
   .adminbox input[type=text],.adminbox input[type=email],.adminbox input[type=password],.adminbox input:not([type]){width:100%}
   .adminbox .chk{display:flex;align-items:center;gap:8px;margin:12px 0 4px;font-size:.9rem;font-weight:700;color:#334155;text-transform:none;letter-spacing:0}
   .adminbox .chk input{width:auto;margin:0}
+  /* Tabela de gerenciamento de usuários */
+  .utbl{width:100%;border-collapse:collapse;font-size:.82rem;min-width:860px}
+  .utbl thead th{position:sticky;top:0;background:#f8fafc;text-align:left;padding:10px 12px;font-size:.66rem;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:#94a3b8;border-bottom:2px solid #e8edf2;white-space:nowrap}
+  .utbl tbody td{padding:10px 12px;border-bottom:1px solid #eef2f6;color:#334155;vertical-align:middle;white-space:nowrap}
+  .utbl tbody tr:hover{background:#f9fbfd}
+  .utbl .u-nome{font-weight:700;color:#1f2d3d}
+  .utbl .u-cod{color:#94a3b8;font-weight:700}
+  .u-sit{display:inline-flex;align-items:center;gap:5px;font-weight:800;font-size:.78rem}
+  .u-sit.on{color:#16a34a}.u-sit.off{color:#c53030}
+  .u-tag{font-size:.58rem;font-weight:800;padding:2px 7px;border-radius:20px;text-transform:uppercase;letter-spacing:.4px;margin-left:6px}
+  .u-tag.g{background:#d0f0ee;color:#0d7377}
+  .u-act{display:inline-flex;align-items:center;gap:8px}
+  .u-ic{background:none;border:none;cursor:pointer;font-size:1rem;padding:2px;border-radius:6px;line-height:1}
+  .u-ic:hover{background:#eef2f6}
+  .u-sw{position:relative;width:38px;height:20px;border-radius:20px;border:none;cursor:pointer;background:#cbd5e1;transition:background .15s;flex-shrink:0}
+  .u-sw.on{background:#16a34a}
+  .u-sw::after{content:'';position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#fff;transition:left .15s;box-shadow:0 1px 3px rgba(0,0,0,.3)}
+  .u-sw.on::after{left:20px}
+  /* Modal editar usuário */
+  .uovl{display:none;position:fixed;inset:0;background:rgba(10,20,30,.6);z-index:600;align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(3px)}
+  .uovl.open{display:flex}
+  .ubox{background:#fff;border-radius:16px;width:100%;max-width:380px;box-shadow:0 24px 70px rgba(0,0,0,.28);overflow:hidden}
+  .ubox-h{background:linear-gradient(135deg,#0b5e62,#0d7377);padding:14px 20px;color:#fff;font-weight:800;display:flex;align-items:center;justify-content:space-between}
+  .ubox-b{padding:18px 20px}
+  .ubox-b label{display:block;font-size:.7rem;font-weight:800;color:#64748b;text-transform:uppercase;letter-spacing:.5px;margin:10px 0 4px}
+  .ubox-b input{width:100%;padding:9px 12px;border:1.5px solid #e2e8f0;border-radius:9px;font-family:'Barlow',sans-serif;font-size:.9rem;box-sizing:border-box}
+  .ubox-b .chk{display:flex;align-items:center;gap:8px;margin-top:12px;font-weight:700;color:#334155;font-size:.88rem}
+  .ubox-b .chk input{width:auto}
   .amsg{font-size:.85rem;font-weight:700;margin-top:10px;min-height:18px}
   .amsg.err{color:#c53030}.amsg.ok{color:#276749}
   .gest-row{display:flex;align-items:center;justify-content:space-between;padding:9px 4px;border-bottom:1px solid #eef2f7;font-size:.88rem}
@@ -161,14 +189,43 @@ body.sm-collapsed .bottom-bar{left:64px !important;}
           <label>Nome</label><input id="u-nome" placeholder="Nome da pessoa">
           <label>E-mail</label><input id="u-email" type="email" placeholder="email@dominio.com">
           <label>Senha</label><input id="u-senha" type="password" placeholder="mínimo 6 caracteres">
+          <label>Telefone</label><input id="u-tel" placeholder="(00) 00000-0000">
+          <label>Vigência (opcional)</label><input id="u-vig" type="date">
           <label class="chk"><input id="u-gestor" type="checkbox" checked> Pode ver o Financeiro (gestor)</label>
           <button class="btn add" onclick="criarUsuario()">Criar usuário</button>
           <div id="u-msg" class="amsg"></div>
         </div>
-        <div class="adminbox">
-          <h2>Usuários do sistema</h2>
-          <div id="gest-list">Carregando…</div>
+        <div class="adminbox" style="max-width:none;">
+          <h2>Gerenciamento de usuários</h2>
+          <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;">
+            <table class="utbl">
+              <thead><tr>
+                <th>Ações</th><th>Cód.</th><th>Nome</th><th>Login</th>
+                <th>Data de inclusão</th><th>E-mail</th><th>Telefone</th>
+                <th>Vigência</th><th>Situação</th>
+              </tr></thead>
+              <tbody id="gest-list"><tr><td colspan="9" style="text-align:center;color:#aaa;padding:18px;">Carregando…</td></tr></tbody>
+            </table>
+          </div>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: editar usuário -->
+  <div class="uovl" id="user-edit-ovl">
+    <div class="ubox">
+      <div class="ubox-h"><span>Editar usuário · <span id="ed-titulo"></span></span>
+        <button onclick="fecharEdicao()" style="background:rgba(255,255,255,.15);border:none;color:#fff;width:28px;height:28px;border-radius:7px;cursor:pointer;font-weight:800;">✕</button>
+      </div>
+      <div class="ubox-b">
+        <input id="ed-email" type="hidden">
+        <label>Nome</label><input id="ed-nome" placeholder="Nome da pessoa">
+        <label>Telefone</label><input id="ed-tel" placeholder="(00) 00000-0000">
+        <label>Vigência</label><input id="ed-vig" type="date">
+        <label class="chk"><input id="ed-gestor" type="checkbox"> Pode ver o Financeiro (gestor)</label>
+        <div id="ed-msg" style="font-size:.78rem;font-weight:700;min-height:16px;margin-top:10px;"></div>
+        <button class="btn add" style="width:100%;margin-top:6px;" onclick="salvarEdicao()">Salvar alterações</button>
       </div>
     </div>
   </div>
@@ -289,25 +346,71 @@ window.abaFin=function(qual){
 async function criarUsuario(){
   const m=$('u-msg');
   const nome=$('u-nome').value.trim(), email=$('u-email').value.trim(), senha=$('u-senha').value, gestor=$('u-gestor').checked;
+  const tel=$('u-tel').value.trim(), vig=$('u-vig').value||null;
   if(!email || senha.length<6){ m.className='amsg err'; m.textContent='Preencha e-mail e uma senha de pelo menos 6 caracteres.'; return; }
   m.className='amsg'; m.textContent='Criando…';
-  const {data,error}=await sb.rpc('admin_criar_usuario',{p_email:email,p_senha:senha,p_nome:nome||null,p_gestor:gestor});
+  const {data,error}=await sb.rpc('admin_criar_usuario',{p_email:email,p_senha:senha,p_nome:nome||null,p_gestor:gestor,p_telefone:tel||null,p_vigencia:vig});
   if(error){ m.className='amsg err'; m.textContent='Erro: '+error.message; return; }
   m.className='amsg ok'; m.textContent='✅ Usuário criado! Ele já pode entrar com esse e-mail e senha.';
-  $('u-nome').value=''; $('u-email').value=''; $('u-senha').value='';
+  $('u-nome').value=''; $('u-email').value=''; $('u-senha').value=''; $('u-tel').value=''; $('u-vig').value='';
   carregarGestores();
 }
+function fmtData(s){ if(!s) return '—'; try{ var d=new Date(s); return d.toLocaleDateString('pt-BR'); }catch(e){ return s; } }
+function escapeHtml(s){ return String(s||'').replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
+window.USERS=[];
 async function carregarGestores(){
   const el=$('gest-list'); if(!el) return;
   const {data,error}=await sb.rpc('admin_listar_usuarios');
-  if(error){ el.innerHTML='<div style="color:#c53030">Sem acesso à lista.</div>'; return; }
-  if(!data||!data.length){ el.innerHTML='<div style="color:#aaa">Ninguém cadastrado.</div>'; return; }
+  if(error){ el.innerHTML='<tr><td colspan="9" style="color:#c53030;padding:14px;">Sem acesso à lista.</td></tr>'; return; }
+  if(!data||!data.length){ el.innerHTML='<tr><td colspan="9" style="color:#aaa;padding:14px;">Ninguém cadastrado.</td></tr>'; return; }
+  window.USERS=data;
   el.innerHTML=data.map(function(u){
-    var selo = u.gestor
-      ? '<span style="font-size:0.6rem;font-weight:800;color:#0d7377;background:#d0f0ee;padding:3px 9px;border-radius:20px;text-transform:uppercase;letter-spacing:0.5px;white-space:nowrap;">Gestor</span>'
-      : '<span style="font-size:0.6rem;font-weight:800;color:#666;background:#eef1f4;padding:3px 9px;border-radius:20px;text-transform:uppercase;letter-spacing:0.5px;white-space:nowrap;">Usuário</span>';
-    return '<div class="gest-row" style="display:flex;align-items:center;justify-content:space-between;gap:10px;"><span><b>'+(u.nome||'(sem nome)')+'</b> · '+u.email+'</span>'+selo+'</div>';
+    var sit = u.ativo
+      ? '<span class="u-sit on">● Ativo</span>'
+      : '<span class="u-sit off">● Inativo</span>';
+    var tagG = u.gestor ? '<span class="u-tag g">Gestor</span>' : '';
+    return '<tr>'
+      + '<td><span class="u-act">'
+        + '<button class="u-ic" title="Editar" onclick="editarUsuario(\''+u.email+'\')">✏️</button>'
+        + '<button class="u-sw'+(u.ativo?' on':'')+'" title="'+(u.ativo?'Desativar':'Ativar')+'" onclick="toggleAtivo(\''+u.email+'\','+(u.ativo?'false':'true')+')"></button>'
+      + '</span></td>'
+      + '<td class="u-cod">'+u.cod+'</td>'
+      + '<td class="u-nome">'+escapeHtml(u.nome||'(sem nome)')+tagG+'</td>'
+      + '<td>'+escapeHtml(u.login_codigo||'—')+'</td>'
+      + '<td>'+fmtData(u.criado_em)+'</td>'
+      + '<td>'+escapeHtml(u.email)+'</td>'
+      + '<td>'+escapeHtml(u.telefone||'—')+'</td>'
+      + '<td>'+(u.data_vigencia?fmtData(u.data_vigencia):'—')+'</td>'
+      + '<td>'+sit+'</td>'
+      + '</tr>';
   }).join('');
+}
+async function toggleAtivo(email, ativo){
+  const {error}=await sb.rpc('admin_set_ativo',{p_email:email,p_ativo:ativo});
+  if(error){ alert('Erro: '+error.message); return; }
+  carregarGestores();
+}
+function editarUsuario(email){
+  var u=(window.USERS||[]).find(function(x){return x.email===email;}); if(!u) return;
+  $('ed-email').value=u.email;
+  $('ed-nome').value=u.nome||'';
+  $('ed-tel').value=u.telefone||'';
+  $('ed-vig').value=u.data_vigencia||'';
+  $('ed-gestor').checked=!!u.gestor;
+  $('ed-titulo').textContent=u.login_codigo||u.email;
+  $('ed-msg').textContent='';
+  $('user-edit-ovl').classList.add('open');
+}
+function fecharEdicao(){ $('user-edit-ovl').classList.remove('open'); }
+async function salvarEdicao(){
+  var email=$('ed-email').value;
+  var nome=$('ed-nome').value.trim(), tel=$('ed-tel').value.trim(), vig=$('ed-vig').value||null, gestor=$('ed-gestor').checked;
+  var msg=$('ed-msg'); msg.style.color='#64748b'; msg.textContent='Salvando…';
+  var r1=await sb.rpc('admin_atualizar_usuario',{p_email:email,p_nome:nome||null,p_telefone:tel||null,p_vigencia:vig});
+  if(r1.error){ msg.style.color='#c53030'; msg.textContent='Erro: '+r1.error.message; return; }
+  var r2=await sb.rpc('admin_definir_gestor',{p_email:email,p_gestor:gestor});
+  if(r2.error){ msg.style.color='#c53030'; msg.textContent='Erro: '+r2.error.message; return; }
+  fecharEdicao(); carregarGestores();
 }
 
 // ao abrir: se já estiver logado, entra direto
