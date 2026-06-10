@@ -667,6 +667,11 @@ function rdoFilter(list) {
   });
 }
 
+// lista mestre: equipes cadastradas + quaisquer equipes vindas do arquivo importado que não estejam na lista fixa
+function rdoTodasEquipes(){
+  var extras = Object.keys(rdoData).filter(function(e){ return e && RDO_EQUIPES.indexOf(e)<0; });
+  return RDO_EQUIPES.concat(extras);
+}
 const RDO_BASE_NOME = { irc:'Irecê', jac:'Jacobina', pa:'P.Alegre', ita:'Itajubá', aju:'Aracaju' };
 function rdoDisplayName(n) {
   var nome = (n||'').replace(/-IRC$|-JAC$|-PA$|-ITA$|-AJU$/, '');
@@ -746,8 +751,9 @@ async function rdoCarregarBanco() {
 
 function rdoRender() {
   const lancouSet = Object.keys(rdoData);
-  const lancou = rdoFilter(RDO_EQUIPES.filter(function(e) { return lancouSet.includes(e); }));
-  const nao    = rdoFilter(RDO_EQUIPES.filter(function(e) { return !lancouSet.includes(e); }));
+  const TODAS = rdoTodasEquipes();
+  const lancou = rdoFilter(TODAS.filter(function(e) { return lancouSet.includes(e); }));
+  const nao    = rdoFilter(TODAS.filter(function(e) { return !lancouSet.includes(e); }));
 
   // counts set in buildCard section below
 
@@ -905,8 +911,8 @@ function rdoRelatorio() {
   const body  = document.getElementById('rdo-rel-body');
   if (!modal || !body) return;
 
-  const lancouList = rdoFilter(RDO_EQUIPES.filter(function(e){ return Object.keys(rdoData).includes(e); }));
-  const naoList    = rdoFilter(RDO_EQUIPES.filter(function(e){ return !Object.keys(rdoData).includes(e); }));
+  const lancouList = rdoFilter(rdoTodasEquipes().filter(function(e){ return Object.keys(rdoData).includes(e); }));
+  const naoList    = rdoFilter(rdoTodasEquipes().filter(function(e){ return !Object.keys(rdoData).includes(e); }));
   const total      = lancouList.length + naoList.length;
   const pct        = total > 0 ? Math.round(lancouList.length / total * 100) : 0;
 
