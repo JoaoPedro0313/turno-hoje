@@ -548,9 +548,9 @@ async function sair(){ await sb.auth.signOut(); location.reload(); }
 <div id="imp-ov" class="imp-ov" style="display:none">
   <div class="imp-box">
     <h2>📤 Importar lançamentos</h2>
-    <p>Selecione um arquivo <b>CSV</b> ou <b>Excel (.xlsx)</b>. A primeira linha precisa ser o cabeçalho com os nomes das colunas. Depois confira o mapeamento e a prévia antes de salvar.</p>
+    <p>Selecione um arquivo <b>CSV</b>, <b>Excel (.xlsx)</b> ou <b>PDF</b>. Faturas da <b>GPM</b> (PDF) e planilhas <b>Jupiter</b> são reconhecidas automaticamente. Para CSV/Excel comum, a primeira linha precisa ser o cabeçalho; depois confira o mapeamento e a prévia antes de salvar.</p>
     <div class="imp-file">
-      <input type="file" id="imp-file" accept=".csv,.xlsx,.xls" onchange="finLerArquivo(event)">
+      <input type="file" id="imp-file" accept=".csv,.xlsx,.xls,.pdf" onchange="finLerArquivo(event)">
     </div>
     <div id="imp-map" class="imp-map" style="display:none"></div>
     <div id="imp-prev" class="imp-prev" style="display:none"></div>
