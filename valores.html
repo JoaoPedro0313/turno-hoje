@@ -294,7 +294,7 @@ const finMoney=n=>(n==null||n==='')?'':Number(n).toLocaleString('pt-BR',{style:'
 const finNum=n=>(n==null||n==='')?'':Number(n).toLocaleString('pt-BR');
 async function carregarValores(){
   const {data,error}=await sb.from('valores').select('*').order('fornecedor',{ascending:true}).order('data_ref',{ascending:false}).order('id',{ascending:false});
-  if(error){ $('tbody').innerHTML='<tr><td colspan="6" style="text-align:center;color:#c53030">Sem acesso aos dados</td></tr>'; return; }
+  if(error){ var fb=$('fin-faturas'); if(fb)fb.innerHTML='<div style="text-align:center;color:#c53030;padding:30px;grid-column:1/-1">Sem acesso aos dados</div>'; return; }
   FIN_DATA=data||[];
   var forns=Array.from(new Set(FIN_DATA.map(v=>v.fornecedor||'(sem)'))).sort();
   var sel=$('fin-forn-filtro'); var cur=sel?sel.value:'';
