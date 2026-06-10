@@ -692,6 +692,16 @@ function rdoKeyForDate(date) {
   return 'rdo_dia_' + p[0] + '-' + p[1] + '-' + p[2];
 }
 
+function rdoSetBadge(estado){
+  var b=document.getElementById('db-badge'), t=document.getElementById('db-text');
+  if(!b||!t) return;
+  b.classList.remove('local','online','offline','syncing');
+  if(estado==='online'){ b.classList.add('online'); t.textContent='Banco'; }
+  else if(estado==='offline'){ b.classList.add('offline'); t.textContent='Sem conexão'; }
+  else if(estado==='syncing'){ b.classList.add('syncing'); t.textContent='Sincronizando…'; }
+  else { b.classList.add('local'); t.textContent='Dados locais'; }
+}
+window.dbBadgeClick=function(){ rdoSetBadge('syncing'); rdoCarregarBanco(); };
 async function rdoUpsert(key, payload){
   // GET decide entre PATCH (existe) e POST (novo) — confiável, não depende do status do PATCH
   var existe=false;
@@ -717,8 +727,10 @@ async function rdoSalvarBanco() {
   try {
     await rdoUpsert('rdo_atual', payload);                          // estado atual (sempre recuperável)
     if (rdoDate) await rdoUpsert(rdoKeyForDate(rdoDate), payload);  // histórico por dia
+    rdoSetBadge('online');
     rdoShowMsg('✅ Salvo no banco!', 'success');
   } catch(e) {
+    rdoSetBadge('offline');
     rdoShowMsg('⚠️ Salvo localmente (sem conexão)', 'success');
   }
   try { localStorage.setItem('rdo_atual', JSON.stringify(payload)); } catch(e2) {}
@@ -726,19 +738,23 @@ async function rdoSalvarBanco() {
 
 async function rdoCarregarBanco() {
   // carrega o último RDO salvo (chave fixa), independente da data de hoje
+  var bancoOk=false;
   try {
     var r = await fetch(SUPA_URL + '/rest/v1/turno_data?select=key,value&key=eq.rdo_atual', { headers: SUPA_HEADERS });
     var data = await r.json();
+    bancoOk = true;
     if (data && data.length && data[0].value && data[0].value.lancou) {
       rdoData = data[0].value.lancou;
       rdoDate = data[0].value.date || '';
       var dl = document.getElementById('rdo-date-label');
       if (dl) dl.textContent = rdoDate ? '📅 ' + rdoDate : '';
       rdoRender();
+      rdoSetBadge('online');
       rdoShowMsg('✅ RDO carregado do banco!', 'success');
       return;
     }
   } catch(e) {}
+  rdoSetBadge(bancoOk ? 'online' : 'offline');
   // Fallback: localStorage
   try {
     var local = JSON.parse(localStorage.getItem('rdo_atual'));
