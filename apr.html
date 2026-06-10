@@ -692,58 +692,58 @@ function rdoKeyForDate(date) {
   return 'rdo_dia_' + p[0] + '-' + p[1] + '-' + p[2];
 }
 
+async function rdoUpsert(key, payload){
+  // GET decide entre PATCH (existe) e POST (novo) — confiável, não depende do status do PATCH
+  var existe=false;
+  try{
+    var g=await fetch(SUPA_URL+'/rest/v1/turno_data?select=key&key=eq.'+encodeURIComponent(key), {headers:SUPA_HEADERS});
+    var ex=await g.json(); existe = Array.isArray(ex) && ex.length>0;
+  }catch(e){}
+  if(existe){
+    await fetch(SUPA_URL+'/rest/v1/turno_data?key=eq.'+encodeURIComponent(key), {
+      method:'PATCH', headers:Object.assign({},SUPA_HEADERS,{'Prefer':'return=minimal'}),
+      body:JSON.stringify({ value: payload })
+    });
+  }else{
+    await fetch(SUPA_URL+'/rest/v1/turno_data', {
+      method:'POST', headers:Object.assign({},SUPA_HEADERS,{'Prefer':'return=minimal'}),
+      body:JSON.stringify({ key: key, value: payload })
+    });
+  }
+}
 async function rdoSalvarBanco() {
   if (!rdoDate && Object.keys(rdoData).length === 0) return;
-  var key = rdoKeyForDate(rdoDate);
   var payload = { lancou: rdoData, date: rdoDate, savedAt: new Date().toISOString() };
   try {
-    var r = await fetch(SUPA_URL + '/rest/v1/turno_data?key=eq.' + key, {
-      method: 'PATCH',
-      headers: Object.assign({}, SUPA_HEADERS, {'Prefer':'return=minimal'}),
-      body: JSON.stringify({ key: key, value: payload })
-    });
-    if (r.status === 404 || (r.status === 204 && r.headers.get('content-range') === '*/0')) {
-      await fetch(SUPA_URL + '/rest/v1/turno_data', {
-        method: 'POST',
-        headers: Object.assign({}, SUPA_HEADERS, {'Prefer':'return=minimal'}),
-        body: JSON.stringify({ key: key, value: payload })
-      });
-    }
+    await rdoUpsert('rdo_atual', payload);                          // estado atual (sempre recuperável)
+    if (rdoDate) await rdoUpsert(rdoKeyForDate(rdoDate), payload);  // histórico por dia
     rdoShowMsg('✅ Salvo no banco!', 'success');
   } catch(e) {
     rdoShowMsg('⚠️ Salvo localmente (sem conexão)', 'success');
   }
-  // Also save locally
-  try { localStorage.setItem(key, JSON.stringify(payload)); } catch(e2) {}
+  try { localStorage.setItem('rdo_atual', JSON.stringify(payload)); } catch(e2) {}
 }
 
 async function rdoCarregarBanco() {
-  var now = new Date();
-  var dd = String(now.getDate()).padStart(2,'0');
-  var mm = String(now.getMonth()+1).padStart(2,'0');
-  var yyyy = now.getFullYear();
-  var today = dd+'/'+mm+'/'+yyyy;
-  var key = rdoKeyForDate(today);
+  // carrega o último RDO salvo (chave fixa), independente da data de hoje
   try {
-    var r = await fetch(SUPA_URL + '/rest/v1/turno_data?select=key,value&key=eq.' + key, {
-      headers: SUPA_HEADERS
-    });
+    var r = await fetch(SUPA_URL + '/rest/v1/turno_data?select=key,value&key=eq.rdo_atual', { headers: SUPA_HEADERS });
     var data = await r.json();
     if (data && data.length && data[0].value && data[0].value.lancou) {
       rdoData = data[0].value.lancou;
-      rdoDate = data[0].value.date || today;
+      rdoDate = data[0].value.date || '';
       var dl = document.getElementById('rdo-date-label');
       if (dl) dl.textContent = rdoDate ? '📅 ' + rdoDate : '';
       rdoRender();
-      rdoShowMsg('✅ RDO de hoje carregado do banco!', 'success');
+      rdoShowMsg('✅ RDO carregado do banco!', 'success');
       return;
     }
   } catch(e) {}
   // Fallback: localStorage
   try {
-    var local = JSON.parse(localStorage.getItem(key));
+    var local = JSON.parse(localStorage.getItem('rdo_atual'));
     if (local && local.lancou) {
-      rdoData = local.lancou; rdoDate = local.date || today;
+      rdoData = local.lancou; rdoDate = local.date || '';
       rdoRender();
     }
   } catch(e2) {}
