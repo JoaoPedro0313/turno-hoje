@@ -188,6 +188,11 @@ body.sm-collapsed .bottom-bar{left:64px !important;}
           <p>Crie um login (e-mail + senha) para outra pessoa acessar o sistema.</p>
           <label>Nome</label><input id="u-nome" placeholder="Nome da pessoa">
           <label>E-mail</label><input id="u-email" type="email" placeholder="email@dominio.com">
+          <label>Matrícula (funcionário)</label>
+          <input id="u-mat" placeholder="ex.: 27680">
+          <input id="u-func-busca" placeholder="🔍 buscar funcionário por nome…" list="u-func-list" oninput="buscarFuncU(this.value)" onchange="escolherFuncU(this.value)" style="margin-top:6px;">
+          <datalist id="u-func-list"></datalist>
+          <div id="u-func-atual" style="font-size:.72rem;color:#0d7377;font-weight:700;margin-top:2px;min-height:14px;"></div>
           <label>Senha</label><input id="u-senha" type="password" placeholder="mínimo 6 caracteres">
           <label>Telefone</label><input id="u-tel" placeholder="(00) 00000-0000">
           <label>Vigência (opcional)</label><input id="u-vig" type="date">
@@ -200,7 +205,7 @@ body.sm-collapsed .bottom-bar{left:64px !important;}
           <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;">
             <table class="utbl">
               <thead><tr>
-                <th>Ações</th><th>Cód.</th><th>Nome</th><th>Login</th>
+                <th>Ações</th><th>Cód.</th><th>Nome</th><th>Matrícula</th>
                 <th>Data de inclusão</th><th>E-mail</th><th>Telefone</th>
                 <th>Vigência</th><th>Situação</th>
               </tr></thead>
@@ -221,6 +226,11 @@ body.sm-collapsed .bottom-bar{left:64px !important;}
       <div class="ubox-b">
         <input id="ed-email" type="hidden">
         <label>Nome</label><input id="ed-nome" placeholder="Nome da pessoa">
+        <label>Matrícula (vínculo com funcionário)</label>
+        <input id="ed-mat" placeholder="ex.: 27680" oninput="atualizarFuncAtual(this.value)">
+        <input id="ed-func-busca" placeholder="🔍 buscar funcionário por nome…" list="ed-func-list" oninput="buscarFunc(this.value)" onchange="escolherFunc(this.value)" style="margin-top:6px;">
+        <datalist id="ed-func-list"></datalist>
+        <div id="ed-func-atual" style="font-size:.72rem;color:#0d7377;font-weight:700;margin-top:4px;min-height:14px;"></div>
         <label>Telefone</label><input id="ed-tel" placeholder="(00) 00000-0000">
         <label>Vigência</label><input id="ed-vig" type="date">
         <label class="chk"><input id="ed-gestor" type="checkbox"> Pode ver o Financeiro (gestor)</label>
@@ -346,14 +356,34 @@ window.abaFin=function(qual){
 async function criarUsuario(){
   const m=$('u-msg');
   const nome=$('u-nome').value.trim(), email=$('u-email').value.trim(), senha=$('u-senha').value, gestor=$('u-gestor').checked;
-  const tel=$('u-tel').value.trim(), vig=$('u-vig').value||null;
+  const tel=$('u-tel').value.trim(), vig=$('u-vig').value||null, mat=$('u-mat').value.trim();
   if(!email || senha.length<6){ m.className='amsg err'; m.textContent='Preencha e-mail e uma senha de pelo menos 6 caracteres.'; return; }
   m.className='amsg'; m.textContent='Criando…';
-  const {data,error}=await sb.rpc('admin_criar_usuario',{p_email:email,p_senha:senha,p_nome:nome||null,p_gestor:gestor,p_telefone:tel||null,p_vigencia:vig});
+  const {data,error}=await sb.rpc('admin_criar_usuario',{p_email:email,p_senha:senha,p_nome:nome||null,p_gestor:gestor,p_telefone:tel||null,p_vigencia:vig,p_matricula:mat||null});
   if(error){ m.className='amsg err'; m.textContent='Erro: '+error.message; return; }
   m.className='amsg ok'; m.textContent='✅ Usuário criado! Ele já pode entrar com esse e-mail e senha.';
   $('u-nome').value=''; $('u-email').value=''; $('u-senha').value=''; $('u-tel').value=''; $('u-vig').value='';
+  $('u-mat').value=''; $('u-func-busca').value=''; $('u-func-atual').textContent='';
   carregarGestores();
+}
+// busca de funcionário no formulário de criar
+let _funcTU;
+async function buscarFuncU(termo){
+  clearTimeout(_funcTU);
+  if(!termo||termo.length<2) return;
+  _funcTU=setTimeout(async function(){
+    const {data,error}=await sb.rpc('admin_buscar_funcionarios',{p_termo:termo});
+    if(error||!data) return;
+    const dl=$('u-func-list'); if(!dl) return;
+    dl.innerHTML=data.map(function(f){
+      window.FUNC_CACHE=window.FUNC_CACHE||{}; window.FUNC_CACHE[f.matricula]=f.nome;
+      return '<option value="'+f.matricula+' — '+escapeHtml(f.nome)+(f.situacao!=='ATIVO'?' ('+f.situacao+')':'')+'">';
+    }).join('');
+  },250);
+}
+function escolherFuncU(val){
+  var mt=(val||'').split(' — ')[0].trim();
+  if(/^\w+$/.test(mt)){ $('u-mat').value=mt; var n=(window.FUNC_CACHE||{})[mt]; $('u-func-atual').textContent=n?('✓ '+n):('Matrícula '+mt); }
 }
 function fmtData(s){ if(!s) return '—'; try{ var d=new Date(s); return d.toLocaleDateString('pt-BR'); }catch(e){ return s; } }
 function escapeHtml(s){ return String(s||'').replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
@@ -376,7 +406,9 @@ async function carregarGestores(){
       + '</span></td>'
       + '<td class="u-cod">'+u.cod+'</td>'
       + '<td class="u-nome">'+escapeHtml(u.nome||'(sem nome)')+tagG+'</td>'
-      + '<td>'+escapeHtml(u.login_codigo||'—')+'</td>'
+      + '<td>'+(u.matricula
+            ? '<b>'+escapeHtml(u.matricula)+'</b>'+(u.func_nome?'<br><span style="font-size:.66rem;color:#94a3b8;font-weight:600;">'+escapeHtml(u.func_nome)+'</span>':'')
+            : '<span style="color:#cbd5e1;font-weight:700;">— vincular —</span>')+'</td>'
       + '<td>'+fmtData(u.criado_em)+'</td>'
       + '<td>'+escapeHtml(u.email)+'</td>'
       + '<td>'+escapeHtml(u.telefone||'—')+'</td>'
@@ -394,19 +426,49 @@ function editarUsuario(email){
   var u=(window.USERS||[]).find(function(x){return x.email===email;}); if(!u) return;
   $('ed-email').value=u.email;
   $('ed-nome').value=u.nome||'';
+  $('ed-mat').value=u.matricula||'';
+  $('ed-func-busca').value='';
+  $('ed-func-atual').textContent=u.func_nome?('✓ '+u.func_nome):(u.matricula?'Matrícula não encontrada no cadastro':'');
   $('ed-tel').value=u.telefone||'';
   $('ed-vig').value=u.data_vigencia||'';
   $('ed-gestor').checked=!!u.gestor;
-  $('ed-titulo').textContent=u.login_codigo||u.email;
+  $('ed-titulo').textContent=u.matricula||u.email;
   $('ed-msg').textContent='';
   $('user-edit-ovl').classList.add('open');
 }
 function fecharEdicao(){ $('user-edit-ovl').classList.remove('open'); }
+// busca de funcionário para vincular
+window.FUNC_CACHE={};
+let _funcT;
+async function buscarFunc(termo){
+  clearTimeout(_funcT);
+  if(!termo||termo.length<2) return;
+  _funcT=setTimeout(async function(){
+    const {data,error}=await sb.rpc('admin_buscar_funcionarios',{p_termo:termo});
+    if(error||!data) return;
+    const dl=$('ed-func-list'); if(!dl) return;
+    window.FUNC_CACHE={};
+    dl.innerHTML=data.map(function(f){
+      window.FUNC_CACHE[f.matricula]=f.nome;
+      return '<option value="'+f.matricula+' — '+escapeHtml(f.nome)+(f.situacao!=='ATIVO'?' ('+f.situacao+')':'')+'">';
+    }).join('');
+  },250);
+}
+function escolherFunc(val){
+  var m=(val||'').split(' — ')[0].trim();
+  if(/^\w+$/.test(m)){ $('ed-mat').value=m; atualizarFuncAtual(m); }
+}
+function atualizarFuncAtual(mat){
+  mat=(mat||'').trim();
+  var nome=window.FUNC_CACHE[mat];
+  $('ed-func-atual').textContent = mat ? (nome?('✓ '+nome):'Vai vincular à matrícula '+mat) : '';
+}
 async function salvarEdicao(){
   var email=$('ed-email').value;
-  var nome=$('ed-nome').value.trim(), tel=$('ed-tel').value.trim(), vig=$('ed-vig').value||null, gestor=$('ed-gestor').checked;
+  var nome=$('ed-nome').value.trim(), tel=$('ed-tel').value.trim(), vig=$('ed-vig').value||null;
+  var mat=$('ed-mat').value.trim(), gestor=$('ed-gestor').checked;
   var msg=$('ed-msg'); msg.style.color='#64748b'; msg.textContent='Salvando…';
-  var r1=await sb.rpc('admin_atualizar_usuario',{p_email:email,p_nome:nome||null,p_telefone:tel||null,p_vigencia:vig});
+  var r1=await sb.rpc('admin_atualizar_usuario',{p_email:email,p_nome:nome||null,p_telefone:tel||null,p_vigencia:vig,p_matricula:mat||null});
   if(r1.error){ msg.style.color='#c53030'; msg.textContent='Erro: '+r1.error.message; return; }
   var r2=await sb.rpc('admin_definir_gestor',{p_email:email,p_gestor:gestor});
   if(r2.error){ msg.style.color='#c53030'; msg.textContent='Erro: '+r2.error.message; return; }
