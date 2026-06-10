@@ -439,7 +439,15 @@ function finChartLinha(rows){
       var pts=s.vals.map(function(v,i){ return X(i).toFixed(1)+','+Y(v).toFixed(1); });
       paths+='<polyline points="'+pts.join(' ')+'" fill="none" stroke="'+s.cor+'" stroke-width="'+(s.total?3:2)+'" stroke-linejoin="round" stroke-linecap="round" opacity="'+(s.total?1:.9)+'"/>';
     }
-    s.vals.forEach(function(v,i){ paths+='<circle cx="'+X(i).toFixed(1)+'" cy="'+Y(v).toFixed(1)+'" r="'+(s.total?4:3.2)+'" fill="#fff" stroke="'+s.cor+'" stroke-width="2"><title>'+s.nome+' · '+m2br(keys[i])+' · '+finMoney(v)+'</title></circle>'; });
+    s.vals.forEach(function(v,i){
+      var cx=X(i), cy=Y(v);
+      paths+='<circle cx="'+cx.toFixed(1)+'" cy="'+cy.toFixed(1)+'" r="'+(s.total?4:3.2)+'" fill="#fff" stroke="'+s.cor+'" stroke-width="2"><title>'+s.nome+' · '+m2br(keys[i])+' · '+finMoney(v)+'</title></circle>';
+      if(s.total){
+        var ly=cy<(mT+20)?cy+15:cy-9;
+        var anc=i===0?'start':(i===n-1?'end':'middle');
+        paths+='<text x="'+cx.toFixed(1)+'" y="'+ly.toFixed(1)+'" text-anchor="'+anc+'" font-size="10" font-weight="800" fill="'+s.cor+'">'+finMoneyK(v)+'</text>';
+      }
+    });
   });
   function m2br(k){ var p=k.split('-'); return p[1]+'/'+p[0]; }
   var svg='<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:auto;display:block" xmlns="http://www.w3.org/2000/svg">'+grid+medLine+trendLine+paths+xlabels+'</svg>';
