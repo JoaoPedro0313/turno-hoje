@@ -66,6 +66,8 @@
   .fin-chart{display:flex;flex-direction:column;gap:10px}
   .fin-graphs{display:grid;grid-template-columns:1.7fr 1fr;gap:14px;margin-bottom:14px;align-items:start}
   @media(max-width:820px){ .fin-graphs{grid-template-columns:1fr} }
+  .fin-graphs2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;align-items:start}
+  @media(max-width:820px){ .fin-graphs2{grid-template-columns:1fr} }
   .fin-mes-chart{display:flex;align-items:flex-end;gap:12px;padding:10px 4px 0;min-height:196px}
   .fin-mes-col{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;min-width:0}
   .fin-mes-tot{font-size:.68rem;font-weight:800;color:#0f3a33;margin-bottom:5px;white-space:nowrap}
@@ -218,10 +220,7 @@ body.sm-collapsed .bottom-bar{left:64px !important;}
             <div id="fin-chart" class="fin-chart"></div>
           </div>
         </div>
-        <div class="fin-card">
-          <div class="fin-card-h">Evolução dos gastos por mês</div>
-          <div id="fin-chart-linha"></div>
-        </div>
+        <div id="fin-linhas-forn" class="fin-graphs2"></div>
         <div class="fin-bar">
           <select id="fin-forn-filtro" onchange="finRender()"><option value="">Todos os fornecedores</option></select>
           <select id="fin-mes" onchange="finRender()"><option value="">Todos os meses</option></select>
@@ -388,72 +387,60 @@ function finChartMes(rows){
   var leg=fornList.map(function(f){ return '<span class="fin-leg"><i style="background:'+finCorForn(f)+'"></i>'+f+'</span>'; }).join('');
   box.innerHTML='<div class="fin-mes-chart">'+cols+'</div><div class="fin-legbar">'+leg+'</div>';
 }
-// Gráfico de linha: evolução do gasto por mês (linha por fornecedor + Total)
-function finChartLinha(rows){
-  rows=rows||FIN_DATA;
-  var box=$('fin-chart-linha'); if(!box) return;
-  var meses={}, forns={};
-  rows.forEach(function(v){
-    var mes=(v.data_ref||'').slice(0,7); if(!mes) return;
-    var f=v.fornecedor||'(sem)';
-    (meses[mes]=meses[mes]||{})[f]=(meses[mes][f]||0)+Number(v.valor||0);
-    forns[f]=1;
-  });
-  var keys=Object.keys(meses).sort();
-  if(!keys.length){ box.innerHTML='<div style="color:#aaa;padding:20px 0;text-align:center">Sem lançamentos com data para montar o gráfico</div>'; return; }
-  var fornList=Object.keys(forns).sort();
-  var totVals=keys.map(function(m){ return fornList.reduce(function(s,f){return s+(meses[m][f]||0);},0); });
-  var series=[{nome:'Total da despesa', cor:'#0d7377', vals:totVals, total:true}];
-  var max=Math.max.apply(null,[1].concat(totVals)), maxY=max*1.12;
-  var W=900,H=215, mL=56,mR=18,mT=14,mB=30, pW=W-mL-mR, pH=H-mT-mB, n=keys.length;
-  function X(i){ return n===1 ? mL+pW/2 : mL + i*(pW/(n-1)); }
-  function Y(val){ return mT + pH - (val/maxY)*pH; }
+// SVG genérico de linha (com média, tendência, valores por mês) para uma série
+function finSvgLinha(keys, vals, cor){
+  var n=keys.length;
+  if(!n) return '<div style="color:#aaa;padding:18px 0;text-align:center">Sem dados</div>';
+  var max=Math.max.apply(null,[1].concat(vals)), maxY=(max*1.15)||1;
+  var W=560,H=210, mL=50,mR=14,mT=18,mB=26, pW=W-mL-mR, pH=H-mT-mB;
+  var X=function(i){ return n===1?mL+pW/2:mL+i*(pW/(n-1)); };
+  var Y=function(v){ return mT+pH-(v/maxY)*pH; };
   var grid='';
-  for(var g=0; g<=4; g++){ var gv=maxY*g/4, gy=Y(gv);
+  for(var g=0; g<=3; g++){ var gv=maxY*g/3, gy=Y(gv);
     grid+='<line x1="'+mL+'" y1="'+gy.toFixed(1)+'" x2="'+(W-mR)+'" y2="'+gy.toFixed(1)+'" stroke="#eef2f7" stroke-width="1"/>';
-    grid+='<text x="'+(mL-8)+'" y="'+(gy+4).toFixed(1)+'" text-anchor="end" font-size="11" fill="#94a3b8" font-weight="600">'+finMoneyK(gv)+'</text>';
+    grid+='<text x="'+(mL-7)+'" y="'+(gy+4).toFixed(1)+'" text-anchor="end" font-size="10" fill="#94a3b8" font-weight="600">'+finMoneyK(gv)+'</text>';
   }
-  var mediaL=totVals.reduce(function(a,b){return a+b;},0)/(totVals.length||1);
-  var mly=Y(mediaL);
-  var medLine='<line x1="'+mL+'" y1="'+mly.toFixed(1)+'" x2="'+(W-mR)+'" y2="'+mly.toFixed(1)+'" stroke="#64748b" stroke-width="1.5" stroke-dasharray="6 4"/>'
-    +'<text x="'+(W-mR)+'" y="'+(mly-5).toFixed(1)+'" text-anchor="end" font-size="10.5" fill="#475569" font-weight="800">média '+finMoneyK(mediaL)+'/mês</text>';
-  // linha de tendência (crescimento): regressão linear sobre os totais mensais
-  var trendLine='', trendLeg='';
+  var media=vals.reduce(function(a,b){return a+b;},0)/(n||1), mly=Y(media);
+  var medLine='<line x1="'+mL+'" y1="'+mly.toFixed(1)+'" x2="'+(W-mR)+'" y2="'+mly.toFixed(1)+'" stroke="#94a3b8" stroke-width="1.3" stroke-dasharray="5 4"/>';
+  var trendLine='';
   if(n>=2){
-    var sx=0,sy=0,sxy=0,sxx=0;
-    totVals.forEach(function(y,i){ sx+=i; sy+=y; sxy+=i*y; sxx+=i*i; });
-    var den=(n*sxx - sx*sx);
-    var slope=den?(n*sxy - sx*sy)/den:0;
-    var inter=(sy - slope*sx)/n;
-    var clampV=function(v){ return Math.max(0,Math.min(maxY,v)); };
-    var tcor=slope>0?'#dc2626':(slope<0?'#16a34a':'#64748b');
-    var seta=slope>0?'▲':(slope<0?'▼':'■');
-    trendLine='<line x1="'+X(0).toFixed(1)+'" y1="'+Y(clampV(inter)).toFixed(1)+'" x2="'+X(n-1).toFixed(1)+'" y2="'+Y(clampV(inter+slope*(n-1))).toFixed(1)+'" stroke="'+tcor+'" stroke-width="2.5" stroke-linecap="round" opacity="0.92"><title>Tendência '+(slope>=0?'+':'-')+finMoney(Math.abs(slope))+'/mês</title></line>';
-    trendLeg='<span class="fin-leg"><i style="background:'+tcor+'"></i>Tendência '+seta+' '+finMoneyK(Math.abs(slope))+'/mês</span>';
+    var sx=0,sy=0,sxy=0,sxx=0; vals.forEach(function(y,i){sx+=i;sy+=y;sxy+=i*y;sxx+=i*i;});
+    var den=n*sxx-sx*sx, slope=den?(n*sxy-sx*sy)/den:0, inter=(sy-slope*sx)/n;
+    var cl=function(v){return Math.max(0,Math.min(maxY,v));};
+    var tc=slope>0?'#dc2626':(slope<0?'#16a34a':'#94a3b8');
+    trendLine='<line x1="'+X(0).toFixed(1)+'" y1="'+Y(cl(inter)).toFixed(1)+'" x2="'+X(n-1).toFixed(1)+'" y2="'+Y(cl(inter+slope*(n-1))).toFixed(1)+'" stroke="'+tc+'" stroke-width="2" opacity=".85"><title>Tendência '+(slope>=0?'+':'-')+finMoney(Math.abs(slope))+'/mês</title></line>';
   }
   var xlabels='';
-  keys.forEach(function(m,i){ var mm=m.split('-'); xlabels+='<text x="'+X(i).toFixed(1)+'" y="'+(H-12)+'" text-anchor="middle" font-size="11" fill="#64748b" font-weight="700">'+mm[1]+'/'+mm[0].slice(2)+'</text>'; });
-  var paths='';
-  series.forEach(function(s){
-    if(n>1){
-      var pts=s.vals.map(function(v,i){ return X(i).toFixed(1)+','+Y(v).toFixed(1); });
-      paths+='<polyline points="'+pts.join(' ')+'" fill="none" stroke="'+s.cor+'" stroke-width="'+(s.total?3:2)+'" stroke-linejoin="round" stroke-linecap="round" opacity="'+(s.total?1:.9)+'"/>';
-    }
-    s.vals.forEach(function(v,i){
-      var cx=X(i), cy=Y(v);
-      paths+='<circle cx="'+cx.toFixed(1)+'" cy="'+cy.toFixed(1)+'" r="'+(s.total?4:3.2)+'" fill="#fff" stroke="'+s.cor+'" stroke-width="2"><title>'+s.nome+' · '+m2br(keys[i])+' · '+finMoney(v)+'</title></circle>';
-      if(s.total){
-        var ly=cy<(mT+20)?cy+15:cy-9;
-        var anc=i===0?'start':(i===n-1?'end':'middle');
-        paths+='<text x="'+cx.toFixed(1)+'" y="'+ly.toFixed(1)+'" text-anchor="'+anc+'" font-size="10" font-weight="800" fill="'+s.cor+'">'+finMoneyK(v)+'</text>';
-      }
-    });
+  keys.forEach(function(m,i){ var p=m.split('-'); xlabels+='<text x="'+X(i).toFixed(1)+'" y="'+(H-9)+'" text-anchor="middle" font-size="10" fill="#64748b" font-weight="700">'+(p[1]+'/'+p[0].slice(2))+'</text>'; });
+  var line='';
+  if(n>1){ var pts=vals.map(function(v,i){ return X(i).toFixed(1)+','+Y(v).toFixed(1); }); line='<polyline points="'+pts.join(' ')+'" fill="none" stroke="'+cor+'" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>'; }
+  vals.forEach(function(v,i){
+    var cx=X(i), cy=Y(v);
+    line+='<circle cx="'+cx.toFixed(1)+'" cy="'+cy.toFixed(1)+'" r="3.5" fill="#fff" stroke="'+cor+'" stroke-width="2"><title>'+(keys[i].split('-').reverse().join('/'))+' · '+finMoney(v)+'</title></circle>';
+    var ly=cy<(mT+18)?cy+14:cy-8, anc=i===0?'start':(i===n-1?'end':'middle');
+    line+='<text x="'+cx.toFixed(1)+'" y="'+ly.toFixed(1)+'" text-anchor="'+anc+'" font-size="9.5" font-weight="800" fill="'+cor+'">'+finMoneyK(v)+'</text>';
   });
-  function m2br(k){ var p=k.split('-'); return p[1]+'/'+p[0]; }
-  var svg='<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:auto;display:block" xmlns="http://www.w3.org/2000/svg">'+grid+medLine+trendLine+paths+xlabels+'</svg>';
-  var leg=series.map(function(s){ return '<span class="fin-leg"><i style="background:'+s.cor+'"></i>'+s.nome+'</span>'; }).join('')
-    +'<span class="fin-leg"><i style="background:#94a3b8"></i>Média mensal</span>'+trendLeg;
-  box.innerHTML=svg+'<div class="fin-legbar">'+leg+'</div>';
+  return '<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:auto;display:block;max-height:240px" xmlns="http://www.w3.org/2000/svg">'+grid+medLine+trendLine+line+xlabels+'</svg>';
+}
+// Dois (ou N) gráficos de linha — um por fornecedor
+function finChartLinha(rows){
+  rows=rows||FIN_DATA;
+  var box=$('fin-linhas-forn'); if(!box) return;
+  var meses={}, forns={};
+  rows.forEach(function(v){ var mes=(v.data_ref||'').slice(0,7); if(!mes)return; var f=v.fornecedor||'(sem)'; (meses[mes]=meses[mes]||{})[f]=(meses[mes][f]||0)+Number(v.valor||0); forns[f]=1; });
+  var keys=Object.keys(meses).sort();
+  if(!keys.length){ box.innerHTML='<div class="fin-card"><div style="color:#aaa;text-align:center;padding:24px">Sem lançamentos com data para montar os gráficos</div></div>'; return; }
+  var fornList=Object.keys(forns).sort();
+  box.innerHTML=fornList.map(function(f){
+    var vals=keys.map(function(m){ return meses[m][f]||0; });
+    var media=vals.reduce(function(a,b){return a+b;},0)/keys.length;
+    var cor=finCorForn(f);
+    return '<div class="fin-card"><div class="fin-card-h">'
+      +'<span class="fat-dot" style="display:inline-block;vertical-align:middle;background:'+cor+'"></span> '
+      +finEsc(f)+' — evolução'
+      +'<small style="text-transform:none;letter-spacing:0;color:#94a3b8;font-weight:700"> · média '+finMoneyK(media)+'/mês</small>'
+      +'</div>'+finSvgLinha(keys, vals, cor)+'</div>';
+  }).join('');
 }
 function finEsc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function finTabela(rows){
