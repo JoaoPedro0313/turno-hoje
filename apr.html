@@ -505,9 +505,10 @@ box-shadow:0 2px 8px rgba(0,0,0,0.08)}
 </div>
 
 <!-- Data carregada (o upload do arquivo agora fica em ⚙️ Configurações) -->
-<div class="rdo-upload-bar" style="justify-content:flex-end;">
+<!-- Upload e data ocultos no topo: upload fica em ⚙️ Configurações. Elementos mantidos no DOM apenas para o JS. -->
+<div class="rdo-upload-bar" style="display:none;">
   <input type="file" id="rdo-file-input" accept=".csv" style="display:none" onchange="rdoImportar(this.files[0]);this.value=''">
-  <div id="rdo-date-label" style="font-size:0.72rem;font-weight:700;color:#555;white-space:nowrap;"></div>
+  <div id="rdo-date-label"></div>
   <div id="rdo-msg" class="rdo-msg"></div>
 </div>
 
