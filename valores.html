@@ -355,6 +355,7 @@ var IMP_COLS=[], IMP_ROWS=[], IMP_AUTO=null, IMP_TIPO='';
 function finAbrirImport(){
   finMsg(''); $('imp-map').style.display='none'; $('imp-map').innerHTML='';
   $('imp-prev').style.display='none'; $('imp-prev').innerHTML='';
+  var w=$('imp-warn'); if(w){ w.style.display='none'; w.textContent=''; }
   $('imp-go').style.display='none'; $('imp-file').value=''; IMP_COLS=[]; IMP_ROWS=[]; IMP_AUTO=null; IMP_TIPO='';
   $('imp-ov').style.display='flex';
 }
@@ -427,7 +428,8 @@ function finDetectarJupiter(wb){
       var dias=String(mat[r3][iD]||'').trim();
       if(!prod || q==null || u==null) continue;
       regs.push({ data_ref:finParseData(periodo), fornecedor:'Jupiter',
-        descricao:prod+' – rastreamento ('+dias+' dias)', quantidade:q, valor_unitario:u, valor:q*u });
+        descricao:prod+' – rastreamento ('+dias+' dias)', quantidade:q, valor_unitario:u, valor:q*u,
+        observacao:periodo?('Jupiter ref '+periodo):null });
     }
     if(regs.length) return regs;
   }
@@ -463,6 +465,9 @@ async function finLerPDF(f){
 function finParseGPM(linhas){
   var data=null;
   for(var i=0;i<linhas.length;i++){ var m=linhas[i].match(/(\d{2}\/\d{2}\/\d{4})/); if(m){ data=m[1]; break; } }
+  var venda=null;
+  for(var k=0;k<linhas.length;k++){ var mv=linhas[k].match(/venda\s+(\d{3,})/i); if(mv){ venda=mv[1]; break; } }
+  var obs=venda?('Venda '+venda):null;
   var regs=[];
   for(var j=0;j<linhas.length;j++){
     var ln=linhas[j];
@@ -471,7 +476,7 @@ function finParseGPM(linhas){
     if(m){
       var q=finParseNum(m[1]), u=finParseNum(m[3]), sub=finParseNum(m[4]);
       var desc=m[2].trim();
-      if(desc && q!=null && sub!=null) regs.push({ data_ref:finParseData(data), fornecedor:'GPM', descricao:desc, quantidade:q, valor_unitario:u, valor:sub });
+      if(desc && q!=null && sub!=null) regs.push({ data_ref:finParseData(data), fornecedor:'GPM', descricao:desc, quantidade:q, valor_unitario:u, valor:sub, observacao:obs });
     }
   }
   return regs;
@@ -510,10 +515,30 @@ function finLinhaMapeada(row){
   return { data_ref:finParseData(g('data')), fornecedor:(String(g('fornecedor')).trim()||null), descricao:String(g('descricao')).trim(), quantidade:qtd, valor_unitario:unit, valor:total };
 }
 function finRegsValidos(){ if(IMP_AUTO) return IMP_AUTO; return IMP_ROWS.map(finLinhaMapeada).filter(function(r){ return r.descricao||r.valor!=null; }); }
+function finVerificarDup(regs){
+  if(!regs||!regs.length||typeof FIN_DATA==='undefined'||!FIN_DATA.length) return '';
+  // 1) mesmo número de venda / referência (observação)
+  var obss={}; regs.forEach(function(r){ if(r.observacao) obss[r.observacao]=1; });
+  for(var key in obss){
+    var achou=FIN_DATA.filter(function(v){ return (v.observacao||'')===key; });
+    if(achou.length) return '⚠️ "'+key+'" já consta no sistema ('+achou.length+' item(ns)). Importar de novo vai duplicar.';
+  }
+  // 2) mesmo fornecedor + mês
+  var pares={};
+  regs.forEach(function(r){ var mes=(r.data_ref||'').slice(0,7); if(r.fornecedor&&mes) pares[r.fornecedor+'|'+mes]=1; });
+  for(var p in pares){
+    var sp=p.split('|'), forn=sp[0], mes=sp[1];
+    var ja=FIN_DATA.filter(function(v){ return (v.fornecedor||'')===forn && (v.data_ref||'').slice(0,7)===mes; });
+    if(ja.length){ var mm=mes.split('-'); return '⚠️ Já há '+ja.length+' lançamento(s) da '+forn+' em '+mm[1]+'/'+mm[0]+'. Importar de novo pode duplicar.'; }
+  }
+  return '';
+}
 function finPreview(){
   var money=function(n){return (n==null)?'':Number(n).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});};
   var regs=finRegsValidos();
   if(IMP_AUTO){ $('imp-map').style.display='none'; }
+  var warn=finVerificarDup(regs);
+  var w=$('imp-warn'); if(w){ w.style.display=warn?'block':'none'; w.textContent=warn; }
   var head='<tr><th>Data</th><th>Fornecedor</th><th>Item</th><th>Qtd</th><th>Unit.</th><th>Total</th></tr>';
   var body=regs.slice(0,12).map(function(r){ return '<tr><td>'+(r.data_ref?r.data_ref.split('-').reverse().join('/'):'—')+'</td><td>'+(r.fornecedor||'')+'</td><td>'+(r.descricao||'')+'</td><td>'+(r.quantidade==null?'':r.quantidade)+'</td><td>'+money(r.valor_unitario)+'</td><td>'+money(r.valor)+'</td></tr>'; }).join('');
   var pv=$('imp-prev'); pv.style.display='block'; pv.innerHTML='<table>'+head+body+'</table>';
@@ -525,6 +550,8 @@ function finPreview(){
 async function finImportar(){
   var regs=finRegsValidos();
   if(!regs.length){ finMsg('Nada para importar.',false); return; }
+  var warn=finVerificarDup(regs);
+  if(warn && !confirm(warn.replace(/^⚠️\s*/,'')+'\n\nDeseja importar mesmo assim?')) { finMsg('Importação cancelada.',false); return; }
   $('imp-go').disabled=true; finMsg('Importando '+regs.length+'…',true);
   const {error}=await sb.from('valores').insert(regs);
   $('imp-go').disabled=false;
@@ -590,6 +617,7 @@ async function sair(){ await sb.auth.signOut(); location.reload(); }
       <input type="file" id="imp-file" accept=".csv,.xlsx,.xls,.pdf" onchange="finLerArquivo(event)">
     </div>
     <div id="imp-map" class="imp-map" style="display:none"></div>
+    <div id="imp-warn" style="display:none;background:#fffbeb;border:1.5px solid #fde68a;color:#92660a;font-size:.85rem;font-weight:700;padding:10px 14px;border-radius:10px;margin-bottom:12px"></div>
     <div id="imp-prev" class="imp-prev" style="display:none"></div>
     <div class="imp-actions">
       <button class="btn ghost" onclick="finFecharImport()">Cancelar</button>
