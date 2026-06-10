@@ -699,32 +699,28 @@ function setDbStatus(status, msg) {
   if (t) t.textContent = msg;
 }
 window.dbBadgeClick = function(){ setDbStatus('syncing', 'Reconectando...'); rdoCarregarBanco(); };
-async function rdoUpsert(key, payload){
-  // GET decide entre PATCH (existe) e POST (novo) — confiável, não depende do status do PATCH
-  var existe=false;
-  try{
-    var g=await fetch(SUPA_URL+'/rest/v1/turno_data?select=key&key=eq.'+encodeURIComponent(key), {headers:SUPA_HEADERS});
-    var ex=await g.json(); existe = Array.isArray(ex) && ex.length>0;
-  }catch(e){}
-  if(existe){
-    await fetch(SUPA_URL+'/rest/v1/turno_data?key=eq.'+encodeURIComponent(key), {
-      method:'PATCH', headers:Object.assign({},SUPA_HEADERS,{'Prefer':'return=minimal'}),
-      body:JSON.stringify({ value: payload })
-    });
-  }else{
-    await fetch(SUPA_URL+'/rest/v1/turno_data', {
-      method:'POST', headers:Object.assign({},SUPA_HEADERS,{'Prefer':'return=minimal'}),
-      body:JSON.stringify({ key: key, value: payload })
-    });
-  }
-}
 async function rdoSalvarBanco() {
   if (!rdoDate && Object.keys(rdoData).length === 0) return;
   var payload = { lancou: rdoData, date: rdoDate, savedAt: new Date().toISOString() };
-  setDbStatus('syncing', 'Salvando...');
+  try { localStorage.setItem('rdo_atual', JSON.stringify(payload)); } catch(e0) {}
   try {
-    await rdoUpsert('rdo_atual', payload);                          // estado atual (sempre recuperável)
-    if (rdoDate) await rdoUpsert(rdoKeyForDate(rdoDate), payload);  // histórico por dia
+    setDbStatus('syncing', 'Salvando...');
+    // upsert atômico igual ao turno: POST com resolution=merge-duplicates
+    var res = await fetch(SUPA_URL + '/rest/v1/turno_data', {
+      method: 'POST',
+      headers: Object.assign({}, SUPA_HEADERS, {'Prefer':'resolution=merge-duplicates,return=representation'}),
+      body: JSON.stringify({ key: 'rdo_atual', value: payload })
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    if (rdoDate) {
+      var histKey = rdoKeyForDate(rdoDate);   // rdo_dia_<data> (histórico, igual ao turno_hist_<data>)
+      fetch(SUPA_URL + '/rest/v1/turno_data', {
+        method: 'POST',
+        headers: Object.assign({}, SUPA_HEADERS, {'Prefer':'resolution=merge-duplicates'}),
+        body: JSON.stringify({ key: histKey, value: payload })
+      }).catch(function(){});
+      try { localStorage.setItem(histKey, JSON.stringify(payload)); } catch(e1) {}
+    }
     setDbStatus('online', 'Salvo!');
     setTimeout(function(){ setDbStatus('online', 'Banco online'); }, 1500);
     rdoShowMsg('✅ Salvo no banco!', 'success');
@@ -733,7 +729,6 @@ async function rdoSalvarBanco() {
     setTimeout(function(){ setDbStatus('local', 'Dados locais'); }, 2000);
     rdoShowMsg('⚠️ Salvo localmente (sem conexão)', 'success');
   }
-  try { localStorage.setItem('rdo_atual', JSON.stringify(payload)); } catch(e2) {}
 }
 
 async function rdoCarregarBanco() {
