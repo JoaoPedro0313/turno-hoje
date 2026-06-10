@@ -202,6 +202,10 @@ body.sm-collapsed .bottom-bar{left:64px !important;}
             <div id="fin-chart" class="fin-chart"></div>
           </div>
         </div>
+        <div class="fin-card">
+          <div class="fin-card-h">Evolução dos gastos por mês</div>
+          <div id="fin-chart-linha"></div>
+        </div>
         <div class="fin-bar">
           <select id="fin-forn-filtro" onchange="finRender()"><option value="">Todos os fornecedores</option></select>
           <select id="fin-mes" onchange="finRender()"><option value="">Todos os meses</option></select>
@@ -307,7 +311,7 @@ function finRender(){
     if(ord==='data-asc')   return da<db?-1:da>db?1:0;
     return da>db?-1:da<db?1:0; // data-desc (padrão)
   });
-  finKpis(rows); finChart(rows); finChartMes(rows); finTabela(rows);
+  finKpis(rows); finChart(rows); finChartMes(rows); finChartLinha(rows); finTabela(rows);
 }
 // paleta consistente por fornecedor
 var FIN_CORES={'GPM':'#0d7377','Jupiter':'#e8843f'};
@@ -367,6 +371,48 @@ function finChartMes(rows){
   }).join('');
   var leg=fornList.map(function(f){ return '<span class="fin-leg"><i style="background:'+finCorForn(f)+'"></i>'+f+'</span>'; }).join('');
   box.innerHTML='<div class="fin-mes-chart">'+cols+'</div><div class="fin-legbar">'+leg+'</div>';
+}
+// Gráfico de linha: evolução do gasto por mês (linha por fornecedor + Total)
+function finChartLinha(rows){
+  rows=rows||FIN_DATA;
+  var box=$('fin-chart-linha'); if(!box) return;
+  var meses={}, forns={};
+  rows.forEach(function(v){
+    var mes=(v.data_ref||'').slice(0,7); if(!mes) return;
+    var f=v.fornecedor||'(sem)';
+    (meses[mes]=meses[mes]||{})[f]=(meses[mes][f]||0)+Number(v.valor||0);
+    forns[f]=1;
+  });
+  var keys=Object.keys(meses).sort();
+  if(!keys.length){ box.innerHTML='<div style="color:#aaa;padding:20px 0;text-align:center">Sem lançamentos com data para montar o gráfico</div>'; return; }
+  var fornList=Object.keys(forns).sort();
+  var series=[];
+  fornList.forEach(function(f){ series.push({nome:f, cor:finCorForn(f), vals:keys.map(function(m){return meses[m][f]||0;})}); });
+  var totVals=keys.map(function(m){ return fornList.reduce(function(s,f){return s+(meses[m][f]||0);},0); });
+  if(fornList.length>1) series.push({nome:'Total', cor:'#1e293b', vals:totVals, total:true});
+  var max=Math.max.apply(null,[1].concat(totVals)), maxY=max*1.12;
+  var W=760,H=280, mL=58,mR=18,mT=16,mB=34, pW=W-mL-mR, pH=H-mT-mB, n=keys.length;
+  function X(i){ return n===1 ? mL+pW/2 : mL + i*(pW/(n-1)); }
+  function Y(val){ return mT + pH - (val/maxY)*pH; }
+  var grid='';
+  for(var g=0; g<=4; g++){ var gv=maxY*g/4, gy=Y(gv);
+    grid+='<line x1="'+mL+'" y1="'+gy.toFixed(1)+'" x2="'+(W-mR)+'" y2="'+gy.toFixed(1)+'" stroke="#eef2f7" stroke-width="1"/>';
+    grid+='<text x="'+(mL-8)+'" y="'+(gy+4).toFixed(1)+'" text-anchor="end" font-size="11" fill="#94a3b8" font-weight="600">'+finMoneyK(gv)+'</text>';
+  }
+  var xlabels='';
+  keys.forEach(function(m,i){ var mm=m.split('-'); xlabels+='<text x="'+X(i).toFixed(1)+'" y="'+(H-12)+'" text-anchor="middle" font-size="11" fill="#64748b" font-weight="700">'+mm[1]+'/'+mm[0].slice(2)+'</text>'; });
+  var paths='';
+  series.forEach(function(s){
+    if(n>1){
+      var pts=s.vals.map(function(v,i){ return X(i).toFixed(1)+','+Y(v).toFixed(1); });
+      paths+='<polyline points="'+pts.join(' ')+'" fill="none" stroke="'+s.cor+'" stroke-width="'+(s.total?3:2)+'" stroke-linejoin="round" stroke-linecap="round" opacity="'+(s.total?1:.9)+'"/>';
+    }
+    s.vals.forEach(function(v,i){ paths+='<circle cx="'+X(i).toFixed(1)+'" cy="'+Y(v).toFixed(1)+'" r="'+(s.total?4:3.2)+'" fill="#fff" stroke="'+s.cor+'" stroke-width="2"><title>'+s.nome+' · '+m2br(keys[i])+' · '+finMoney(v)+'</title></circle>'; });
+  });
+  function m2br(k){ var p=k.split('-'); return p[1]+'/'+p[0]; }
+  var svg='<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:auto;display:block" xmlns="http://www.w3.org/2000/svg">'+grid+paths+xlabels+'</svg>';
+  var leg=series.map(function(s){ return '<span class="fin-leg"><i style="background:'+s.cor+'"></i>'+s.nome+'</span>'; }).join('');
+  box.innerHTML=svg+'<div class="fin-legbar">'+leg+'</div>';
 }
 function finTabela(rows){
   var tb=$('tbody'); if(!tb)return;
