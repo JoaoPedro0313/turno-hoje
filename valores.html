@@ -402,10 +402,8 @@ function finChartLinha(rows){
   var keys=Object.keys(meses).sort();
   if(!keys.length){ box.innerHTML='<div style="color:#aaa;padding:20px 0;text-align:center">Sem lançamentos com data para montar o gráfico</div>'; return; }
   var fornList=Object.keys(forns).sort();
-  var series=[];
-  fornList.forEach(function(f){ series.push({nome:f, cor:finCorForn(f), vals:keys.map(function(m){return meses[m][f]||0;})}); });
   var totVals=keys.map(function(m){ return fornList.reduce(function(s,f){return s+(meses[m][f]||0);},0); });
-  if(fornList.length>1) series.push({nome:'Total', cor:'#1e293b', vals:totVals, total:true});
+  var series=[{nome:'Total da despesa', cor:'#0d7377', vals:totVals, total:true}];
   var max=Math.max.apply(null,[1].concat(totVals)), maxY=max*1.12;
   var W=900,H=215, mL=56,mR=18,mT=14,mB=30, pW=W-mL-mR, pH=H-mT-mB, n=keys.length;
   function X(i){ return n===1 ? mL+pW/2 : mL + i*(pW/(n-1)); }
@@ -445,7 +443,8 @@ function finChartLinha(rows){
   });
   function m2br(k){ var p=k.split('-'); return p[1]+'/'+p[0]; }
   var svg='<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:auto;display:block" xmlns="http://www.w3.org/2000/svg">'+grid+medLine+trendLine+paths+xlabels+'</svg>';
-  var leg=series.map(function(s){ return '<span class="fin-leg"><i style="background:'+s.cor+'"></i>'+s.nome+'</span>'; }).join('')+trendLeg;
+  var leg=series.map(function(s){ return '<span class="fin-leg"><i style="background:'+s.cor+'"></i>'+s.nome+'</span>'; }).join('')
+    +'<span class="fin-leg"><i style="background:#94a3b8"></i>Média mensal</span>'+trendLeg;
   box.innerHTML=svg+'<div class="fin-legbar">'+leg+'</div>';
 }
 function finEsc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
