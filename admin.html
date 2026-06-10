@@ -166,7 +166,7 @@ body.sm-collapsed .bottom-bar{left:64px !important;}
           <div id="u-msg" class="amsg"></div>
         </div>
         <div class="adminbox">
-          <h2>Quem tem acesso ao Financeiro</h2>
+          <h2>Usuários do sistema</h2>
           <div id="gest-list">Carregando…</div>
         </div>
       </div>
@@ -299,10 +299,15 @@ async function criarUsuario(){
 }
 async function carregarGestores(){
   const el=$('gest-list'); if(!el) return;
-  const {data,error}=await sb.from('gestores').select('email,nome,criado_em').order('criado_em');
+  const {data,error}=await sb.rpc('admin_listar_usuarios');
   if(error){ el.innerHTML='<div style="color:#c53030">Sem acesso à lista.</div>'; return; }
-  if(!data.length){ el.innerHTML='<div style="color:#aaa">Ninguém cadastrado.</div>'; return; }
-  el.innerHTML=data.map(g=>'<div class="gest-row"><span><b>'+(g.nome||'(sem nome)')+'</b> · '+g.email+'</span></div>').join('');
+  if(!data||!data.length){ el.innerHTML='<div style="color:#aaa">Ninguém cadastrado.</div>'; return; }
+  el.innerHTML=data.map(function(u){
+    var selo = u.gestor
+      ? '<span style="font-size:0.6rem;font-weight:800;color:#0d7377;background:#d0f0ee;padding:3px 9px;border-radius:20px;text-transform:uppercase;letter-spacing:0.5px;white-space:nowrap;">Gestor</span>'
+      : '<span style="font-size:0.6rem;font-weight:800;color:#666;background:#eef1f4;padding:3px 9px;border-radius:20px;text-transform:uppercase;letter-spacing:0.5px;white-space:nowrap;">Usuário</span>';
+    return '<div class="gest-row" style="display:flex;align-items:center;justify-content:space-between;gap:10px;"><span><b>'+(u.nome||'(sem nome)')+'</b> · '+u.email+'</span>'+selo+'</div>';
+  }).join('');
 }
 
 // ao abrir: se já estiver logado, entra direto
