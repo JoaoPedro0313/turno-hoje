@@ -406,6 +406,20 @@ function finChartLinha(rows){
   var mly=Y(mediaL);
   var medLine='<line x1="'+mL+'" y1="'+mly.toFixed(1)+'" x2="'+(W-mR)+'" y2="'+mly.toFixed(1)+'" stroke="#64748b" stroke-width="1.5" stroke-dasharray="6 4"/>'
     +'<text x="'+(W-mR)+'" y="'+(mly-5).toFixed(1)+'" text-anchor="end" font-size="10.5" fill="#475569" font-weight="800">média '+finMoneyK(mediaL)+'/mês</text>';
+  // linha de tendência (crescimento): regressão linear sobre os totais mensais
+  var trendLine='', trendLeg='';
+  if(n>=2){
+    var sx=0,sy=0,sxy=0,sxx=0;
+    totVals.forEach(function(y,i){ sx+=i; sy+=y; sxy+=i*y; sxx+=i*i; });
+    var den=(n*sxx - sx*sx);
+    var slope=den?(n*sxy - sx*sy)/den:0;
+    var inter=(sy - slope*sx)/n;
+    var clampV=function(v){ return Math.max(0,Math.min(maxY,v)); };
+    var tcor=slope>0?'#dc2626':(slope<0?'#16a34a':'#64748b');
+    var seta=slope>0?'▲':(slope<0?'▼':'■');
+    trendLine='<line x1="'+X(0).toFixed(1)+'" y1="'+Y(clampV(inter)).toFixed(1)+'" x2="'+X(n-1).toFixed(1)+'" y2="'+Y(clampV(inter+slope*(n-1))).toFixed(1)+'" stroke="'+tcor+'" stroke-width="2.5" stroke-linecap="round" opacity="0.92"><title>Tendência '+(slope>=0?'+':'-')+finMoney(Math.abs(slope))+'/mês</title></line>';
+    trendLeg='<span class="fin-leg"><i style="background:'+tcor+'"></i>Tendência '+seta+' '+finMoneyK(Math.abs(slope))+'/mês</span>';
+  }
   var xlabels='';
   keys.forEach(function(m,i){ var mm=m.split('-'); xlabels+='<text x="'+X(i).toFixed(1)+'" y="'+(H-12)+'" text-anchor="middle" font-size="11" fill="#64748b" font-weight="700">'+mm[1]+'/'+mm[0].slice(2)+'</text>'; });
   var paths='';
@@ -417,8 +431,8 @@ function finChartLinha(rows){
     s.vals.forEach(function(v,i){ paths+='<circle cx="'+X(i).toFixed(1)+'" cy="'+Y(v).toFixed(1)+'" r="'+(s.total?4:3.2)+'" fill="#fff" stroke="'+s.cor+'" stroke-width="2"><title>'+s.nome+' · '+m2br(keys[i])+' · '+finMoney(v)+'</title></circle>'; });
   });
   function m2br(k){ var p=k.split('-'); return p[1]+'/'+p[0]; }
-  var svg='<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:auto;display:block" xmlns="http://www.w3.org/2000/svg">'+grid+medLine+paths+xlabels+'</svg>';
-  var leg=series.map(function(s){ return '<span class="fin-leg"><i style="background:'+s.cor+'"></i>'+s.nome+'</span>'; }).join('');
+  var svg='<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:auto;display:block" xmlns="http://www.w3.org/2000/svg">'+grid+medLine+trendLine+paths+xlabels+'</svg>';
+  var leg=series.map(function(s){ return '<span class="fin-leg"><i style="background:'+s.cor+'"></i>'+s.nome+'</span>'; }).join('')+trendLeg;
   box.innerHTML=svg+'<div class="fin-legbar">'+leg+'</div>';
 }
 function finTabela(rows){
