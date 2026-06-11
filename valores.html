@@ -80,6 +80,8 @@
   .fin-leg i{width:12px;height:12px;border-radius:3px;display:inline-block}
   .fin-brow{display:flex;align-items:center;gap:10px;font-size:.85rem}
   .fin-brow .b-nm{width:90px;font-weight:700;color:#334155;flex-shrink:0}
+  .fin-brow .b-nm-serv{width:auto;flex:0 0 150px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:.8rem}
+  @media(max-width:600px){ .fin-brow .b-nm-serv{flex:0 0 110px} }
   .fin-brow .b-track{flex:1;background:#eef2f7;border-radius:8px;height:22px;overflow:hidden}
   .fin-brow .b-fill{height:100%;border-radius:8px;background:linear-gradient(90deg,var(--teal),var(--teal2));min-width:2px}
   .fin-brow .b-val{width:120px;text-align:right;font-weight:800;color:#0f3a33;flex-shrink:0}
@@ -422,25 +424,37 @@ function finSvgLinha(keys, vals, cor){
   });
   return '<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:auto;display:block;max-height:240px" xmlns="http://www.w3.org/2000/svg">'+grid+medLine+trendLine+line+xlabels+'</svg>';
 }
-// Dois (ou N) gráficos de linha — um por fornecedor
+// Dois gráficos: evolução do valor total (linha) + valor por serviço (barras)
+function finServNome(d){ return String(d||'(sem)').replace(/\s*\(\s*\d+\s*dias?\s*\)\s*$/i,'').trim(); }
+function finBarrasServicos(serv, servForn){
+  var keys=Object.keys(serv).sort(function(a,b){return serv[b]-serv[a];});
+  if(!keys.length) return '<div style="color:#aaa;text-align:center;padding:24px">Sem dados</div>';
+  var max=Math.max.apply(null,[1].concat(keys.map(function(k){return serv[k];})));
+  return '<div class="fin-chart">'+keys.map(function(k){
+    var w=serv[k]/max*100, cor=finCorForn(servForn[k]||'(sem)');
+    return '<div class="fin-brow"><span class="b-nm b-nm-serv" title="'+finEsc(k)+'">'+finEsc(k)+'</span>'
+      +'<span class="b-track"><span class="b-fill" style="width:'+w+'%;background:'+cor+'"></span></span>'
+      +'<span class="b-val">'+finMoney(serv[k])+'</span></div>';
+  }).join('')+'</div>';
+}
 function finChartLinha(rows){
   rows=rows||FIN_DATA;
   var box=$('fin-linhas-forn'); if(!box) return;
-  var meses={}, forns={};
-  rows.forEach(function(v){ var mes=(v.data_ref||'').slice(0,7); if(!mes)return; var f=v.fornecedor||'(sem)'; (meses[mes]=meses[mes]||{})[f]=(meses[mes][f]||0)+Number(v.valor||0); forns[f]=1; });
+  // 1) total por mês
+  var meses={};
+  rows.forEach(function(v){ var mes=(v.data_ref||'').slice(0,7); if(!mes)return; meses[mes]=(meses[mes]||0)+Number(v.valor||0); });
   var keys=Object.keys(meses).sort();
-  if(!keys.length){ box.innerHTML='<div class="fin-card"><div style="color:#aaa;text-align:center;padding:24px">Sem lançamentos com data para montar os gráficos</div></div>'; return; }
-  var fornList=Object.keys(forns).sort();
-  box.innerHTML=fornList.map(function(f){
-    var vals=keys.map(function(m){ return meses[m][f]||0; });
-    var media=vals.reduce(function(a,b){return a+b;},0)/keys.length;
-    var cor=finCorForn(f);
-    return '<div class="fin-card"><div class="fin-card-h">'
-      +'<span class="fat-dot" style="display:inline-block;vertical-align:middle;background:'+cor+'"></span> '
-      +finEsc(f)+' — evolução'
-      +'<small style="text-transform:none;letter-spacing:0;color:#94a3b8;font-weight:700"> · média '+finMoneyK(media)+'/mês</small>'
-      +'</div>'+finSvgLinha(keys, vals, cor)+'</div>';
-  }).join('');
+  var totVals=keys.map(function(m){ return meses[m]; });
+  var mediaTot=totVals.length?totVals.reduce(function(a,b){return a+b;},0)/totVals.length:0;
+  // 2) total por serviço (variações de "rastreamento (N dias)" agrupadas)
+  var serv={}, servForn={};
+  rows.forEach(function(v){ var nome=finServNome(v.descricao); serv[nome]=(serv[nome]||0)+Number(v.valor||0); servForn[nome]=v.fornecedor||'(sem)'; });
+  var card1='<div class="fin-card"><div class="fin-card-h">Evolução do valor total'
+    +'<small style="text-transform:none;letter-spacing:0;color:#94a3b8;font-weight:700"> · média '+finMoneyK(mediaTot)+'/mês</small></div>'
+    +(keys.length?finSvgLinha(keys, totVals, '#0d7377'):'<div style="color:#aaa;text-align:center;padding:24px">Sem lançamentos com data</div>')+'</div>';
+  var card2='<div class="fin-card"><div class="fin-card-h">Valor por serviço</div>'
+    +finBarrasServicos(serv, servForn)+'</div>';
+  box.innerHTML=card1+card2;
 }
 function finEsc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function finTabela(rows){
