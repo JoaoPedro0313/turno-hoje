@@ -596,7 +596,7 @@ let rdoDate        = '';
 
 const RDO_BASE_CONFIG = {
   ba: [{id:'irc',label:'🗺 IRECÊ'},{id:'jac',label:'🏗 JACOBINA'}],
-  mg: [{id:'pa', label:'🏙 P.ALEGRE'},{id:'ita',label:'🏔 ITAJUBÁ'}],
+  mg: [{id:'pa', label:'🏙 CONGONHAL'},{id:'ita',label:'🏔 ITAJUBÁ'}],
   se: [{id:'aju',label:'🌊 ARACAJU'}]
 };
 
@@ -667,7 +667,7 @@ function rdoTodasEquipes(){
   var extras = Object.keys(rdoData).filter(function(e){ return e && RDO_EQUIPES.indexOf(e)<0; });
   return RDO_EQUIPES.concat(extras);
 }
-const RDO_BASE_NOME = { irc:'Irecê', jac:'Jacobina', pa:'P.Alegre', ita:'Itajubá', aju:'Aracaju' };
+const RDO_BASE_NOME = { irc:'Irecê', jac:'Jacobina', pa:'Congonhal', ita:'Itajubá', aju:'Aracaju' };
 // Turmas de MG exibidas pelo código CON_MNT (igual ao Turno). Numeração do cadastro oficial.
 const RDO_CONMNT = {
   'RAIMUNDO-PA':'CON_MNT-01','FABRICIO-PA':'CON_MNT-02','GILVANDRO-PA':'CON_MNT-03',

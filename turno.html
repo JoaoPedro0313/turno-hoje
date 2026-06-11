@@ -944,7 +944,7 @@ const BASE_CONFIG = {
     { id:'jac', label:'🏗 JACOBINA' }
   ],
   mg: [
-    { id:'pa',  label:'🏙 POUSO ALEGRE' },
+    { id:'pa',  label:'🏙 CONGONHAL' },
     { id:'ita', label:'🏔 ITAJUBÁ' }
   ],
   se: [
@@ -1334,7 +1334,7 @@ const EQUIPES_ATIVAS = [
   'FABIANO-JAC','EMERSON-JAC','MAURIVALDO-JAC','PATRICIO-JAC','VALMIR-JAC',
   'JOAO-JAC','ANDRE-JAC','JAIR-JAC','CAIQUE-JAC',
   'MURILO-JAC','UELTON-JAC','ERONILSON-JAC','LUIZ-JAC',
-  // ── MG · POUSO ALEGRE ──
+  // ── MG · CONGONHAL ──
   'RAIMUNDO-PA','LEVY-PA','GILVANDRO-PA','RICHARD-PA','FABRICIO-PA','OTAVIO-PA','LUIZCF-PA','DOUGLAS-PA','SIDNEI-PA',
   // ── MG · ITAJUBÁ ──
   'CRISTIANO-ITA','LEANDRO-ITA','RAFAEL-ITA','JULIANO-ITA','CLAYTON-ITA',
@@ -1395,7 +1395,7 @@ const CADASTRO_EQUIPES = {
   'FABIO DIAS GOMES':'JAC','MARCELO MENESES DOS SANTOS':'JAC',
   'MURILO SILVA PINTO':'JAC','UELTON FERREIRA DE OLIVEIRA':'JAC',
   'ERONILSON SILVA SANTANA':'JAC','LUIZ CARLOS SILVA DOS SANTOS':'JAC',
-  // MG · Pouso Alegre
+  // MG · Congonhal
   'RAIMUNDO NONATO GOMES PEIXOTO':'PA','LEVY LEONARDO MONTOYA CALCURIAN':'PA',
   'GILVANDRO ALVES DE SOUZA':'PA','RICHARD AUGUSTO PELOSO':'PA',
   'FABRICIO DA SILVA OLIVEIRA':'PA','OTAVIO MACHADO DOS SANTOS':'PA',
@@ -1448,7 +1448,7 @@ const NOME_CURTO = {};
     'MURILO SILVA PINTO':'MURILO','UELTON FERREIRA DE OLIVEIRA':'UELTON',
     'ERONILSON SILVA SANTANA':'ERONILSON','LUIZ CARLOS SILVA DOS SANTOS':'LUIZ',
     'ANDERSON SANTANA DE SOUZA':'EDMILSON',
-    // MG · Pouso Alegre
+    // MG · Congonhal
     'RAIMUNDO NONATO GOMES PEIXOTO':'RAIMUNDO','LEVY LEONARDO MONTOYA CALCURIAN':'LEVY',
     'GILVANDRO ALVES DE SOUZA':'GILVANDRO','RICHARD AUGUSTO PELOSO':'RICHARD',
     'FABRICIO DA SILVA OLIVEIRA':'FABRICIO','OTAVIO MACHADO DOS SANTOS':'OTAVIO',
@@ -1472,7 +1472,7 @@ const NOME_CURTO = {};
     const utd = CADASTRO_EQUIPES[full] || '';
     NOME_CURTO[full] = utd ? manual[full] + '-' + utd : full;
   });
-  // Turmas de MG (Pouso Alegre / Itajubá / Linha Viva) exibidas pelo código CON_MNT.
+  // Turmas de MG (Congonhal / Itajubá / Linha Viva) exibidas pelo código CON_MNT.
   // Numeração conforme o cadastro oficial.
   const CONMNT_TURMA = {
     'RAIMUNDO NONATO GOMES PEIXOTO':'CON_MNT-01',
@@ -1721,7 +1721,7 @@ const falta = filterByStateAndBase(
 );
 // Label do filtro ativo para o cabeçalho
 const STATE_LABELS = { todos:'TODOS OS ESTADOS', ba:'🟡 BA', mg:'🔵 MG', se:'🟣 SE' };
-const BASE_LABELS  = { todos:'TODAS AS BASES', irc:'IRECÊ', jac:'JACOBINA', pa:'POUSO ALEGRE', ita:'ITAJUBÁ', lv:'LINHA VIVA', aju:'ARACAJU' };
+const BASE_LABELS  = { todos:'TODAS AS BASES', irc:'IRECÊ', jac:'JACOBINA', pa:'CONGONHAL', ita:'ITAJUBÁ', lv:'LINHA VIVA', aju:'ARACAJU' };
 const filtroLabel  = (turnoStateFilter!=='todos'||turnoBaseFilter!=='todos')
   ? (STATE_LABELS[turnoStateFilter]||turnoStateFilter) + (turnoBaseFilter!=='todos' ? ' · '+(BASE_LABELS[turnoBaseFilter]||turnoBaseFilter) : '')
   : '';
@@ -4998,7 +4998,7 @@ setTimeout(presenceInit, 1500);
     if(n.endsWith('-AJU')) return 'AJU';
     return '';
   }
-  const REL_BASE_LABEL = { IRC:'IRECÊ', JAC:'JACOBINA', PA:'POUSO ALEGRE', ITA:'ITAJUBÁ', AJU:'ARACAJU', '':'' };
+  const REL_BASE_LABEL = { IRC:'IRECÊ', JAC:'JACOBINA', PA:'CONGONHAL', ITA:'ITAJUBÁ', AJU:'ARACAJU', '':'' };
   function relDispName(n){ return n.replace(/-IRC$/,'').replace(/-JAC$/,''); }
   function relGetStatus(payload, nome){
     if(!payload) return 'nodata';
@@ -5252,7 +5252,7 @@ setTimeout(presenceInit, 1500);
             <button class="rel-fb" id="rf-irc" onclick="relSetBase('IRC')">IRECÊ</button>
             <button class="rel-fb" id="rf-jac" onclick="relSetBase('JAC')">JACOBINA</button>
             <span id="rel-sep-mg" style="font-size:.55rem;font-weight:800;color:#aaa;align-self:center;letter-spacing:1px;">MG:</span>
-            <button class="rel-fb" id="rf-pa"  onclick="relSetBase('PA')">P.ALEGRE</button>
+            <button class="rel-fb" id="rf-pa"  onclick="relSetBase('PA')">CONGONHAL</button>
             <button class="rel-fb" id="rf-ita" onclick="relSetBase('ITA')">ITAJUBÁ</button>
             <span id="rel-sep-se" style="font-size:.55rem;font-weight:800;color:#aaa;align-self:center;letter-spacing:1px;">SE:</span>
             <button class="rel-fb" id="rf-aju" onclick="relSetBase('AJU')">ARACAJU</button>
