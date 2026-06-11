@@ -29,7 +29,29 @@
   /* APP */
   header{background:linear-gradient(90deg,var(--teal),var(--teal2));color:#fff;padding:14px 18px;display:flex;align-items:center;justify-content:space-between}
   header b{font-size:1.1rem}
-  .who{font-size:.8rem;opacity:.95}
+  .usermenu{position:relative}
+  .um-btn{display:flex;align-items:center;gap:9px;background:rgba(255,255,255,.16);border:0;border-radius:999px;padding:5px 12px 5px 5px;color:#fff;cursor:pointer;font-family:inherit;transition:background .15s}
+  .um-btn:hover{background:rgba(255,255,255,.26)}
+  .um-av{width:30px;height:30px;border-radius:50%;background:#fff;color:var(--teal);font-weight:900;font-size:.78rem;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  .um-av.lg{width:38px;height:38px;font-size:.92rem}
+  .um-id{display:flex;flex-direction:column;line-height:1.12;text-align:left;min-width:0}
+  .um-id b{font-size:.84rem;font-weight:800;white-space:nowrap}
+  .um-id small{font-size:.66rem;opacity:.85;font-weight:600;white-space:nowrap}
+  .um-cv{display:flex;opacity:.9;transition:transform .15s}
+  .usermenu.open .um-cv{transform:rotate(180deg)}
+  .um-pop{position:absolute;top:calc(100% + 8px);right:0;width:250px;background:#fff;border-radius:14px;box-shadow:0 16px 44px rgba(15,23,42,.22);border:1px solid #eef2f7;padding:6px;display:none;z-index:50}
+  .usermenu.open .um-pop{display:block}
+  .um-head{display:flex;align-items:center;gap:11px;padding:10px 10px 12px}
+  .um-head .um-av{background:var(--teal);color:#fff}
+  .um-head .um-id b{color:#0f3a33}
+  .um-head .um-id small{color:#94a3b8;opacity:1}
+  .um-sep{height:1px;background:#f1f5f9;margin:4px 6px}
+  .um-row{display:flex;align-items:center;gap:11px;width:100%;background:none;border:0;padding:10px;border-radius:9px;cursor:pointer;color:#334155;font-family:inherit;font-size:.9rem;font-weight:600;text-align:left;transition:background .12s}
+  .um-row svg{color:#64748b;flex-shrink:0}
+  .um-row:hover{background:#f1f5f9}
+  .um-row.danger{color:#c53030}
+  .um-row.danger svg{color:#c53030}
+  @media(max-width:480px){ .um-btn .um-id,.um-btn .um-cv{display:none} .um-btn{padding:5px} }
   .btn{padding:10px 20px;border:0;border-radius:999px;font-weight:800;cursor:pointer;font-size:.85rem;transition:transform .12s ease,box-shadow .12s ease,filter .12s ease;letter-spacing:.01em}
   .btn:hover{transform:translateY(-1px)}.btn:active{transform:translateY(0)}
   .btn.add{background:linear-gradient(135deg,var(--teal),var(--teal2));color:#fff;box-shadow:0 4px 12px rgba(13,115,119,.30)}
@@ -211,9 +233,9 @@ body.sm-collapsed .bottom-bar{left:64px !important;}
   <div id="app-view" style="display:none">
     <header>
       <b>💰 Financeiro</b>
-      <div style="display:flex;align-items:center;gap:12px">
-        <span class="who" id="who"></span>
-        <button class="btn out" onclick="sair()">Sair</button>
+      <div class="usermenu" id="usermenu">
+        <button class="um-btn" id="um-btn" type="button" onclick="finToggleMenu(event)" aria-haspopup="true" aria-expanded="false"></button>
+        <div class="um-pop" id="um-pop"></div>
       </div>
     </header>
     <div class="wrap">
@@ -284,8 +306,8 @@ async function checarGestorEEntrar(){
   const {data,error}=await sb.rpc('is_gestor');
   if(error||data!==true){ setMsg('Seu usuário não tem permissão de gestor.'); await sb.auth.signOut(); return; }
   const {data:{user}}=await sb.auth.getUser();
-  $('who').textContent=user?user.email:'';
   $('login-view').style.display='none'; $('app-view').style.display='block';
+  finMontarMenu(user||null);
   carregarValores();
 }
 async function esqueci(){
@@ -507,6 +529,71 @@ function finTabela(rows){
   }).join('');
 }
 function finToggleFat(h){ var c=h.closest('.fat-card'); if(c) c.classList.toggle('open'); }
+
+// ===== Menu de usuário (topo) =====
+// Defina aqui os links externos do menu (deixe '' para mostrar aviso de não configurado):
+var FIN_LINKS={ suporte:'', treinamento:'', forum:'', notas:'' };
+var ICO={
+  chev:'<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>',
+  suporte:'<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14v-2a8 8 0 0 1 16 0v2"/><rect x="2.5" y="13" width="4" height="6.5" rx="1.5"/><rect x="17.5" y="13" width="4" height="6.5" rx="1.5"/><path d="M20 19.5a3 3 0 0 1-3 3h-3"/></svg>',
+  tela:'<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg>',
+  chat:'<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-11.5 7.2L4 20l1-4.2A8 8 0 1 1 21 12z"/></svg>',
+  chave:'<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="15" r="4"/><path d="M10.8 12.2 20 3M16 7l3 3M14 9l2 2"/></svg>',
+  notas:'<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2h8l6 6v12a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z"/><path d="M14 2v6h6M8 13h8M8 17h6"/></svg>',
+  limpar:'<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2M6 6l1 14a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-14"/></svg>',
+  sair:'<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2v-2"/><path d="M19 12H9M16 9l3 3-3 3"/></svg>'
+};
+function finIniciais(nome){ var p=nome.trim().split(/\s+/); return (((p[0]||'')[0]||'')+((p[1]||'')[0]||'')); }
+function finMontarMenu(user){
+  var email=(user&&user.email)||'';
+  var p=email.split('@')[0]||'';
+  var nome=p.split(/[._-]+/).filter(Boolean).map(function(s){return s.charAt(0).toUpperCase()+s.slice(1).toLowerCase();}).join(' ')||p||'Usuário';
+  var usuario=(p||email).toUpperCase();
+  var ini=(finIniciais(nome)||p.slice(0,2)||'U').toUpperCase();
+  var btn=$('um-btn'); if(btn) btn.innerHTML='<span class="um-av">'+finEsc(ini)+'</span>'
+    +'<span class="um-id"><b>'+finEsc(nome)+'</b><small>'+finEsc(usuario)+'</small></span>'
+    +'<span class="um-cv">'+ICO.chev+'</span>';
+  var rows=[
+    [ICO.suporte,'Suporte',"finMenuLink('suporte')"],
+    [ICO.tela,'Treinamento',"finMenuLink('treinamento')"],
+    [ICO.chat,'Fórum',"finMenuLink('forum')"],
+    ['sep'],
+    [ICO.chave,'Trocar Senha',"finTrocarSenha()"],
+    [ICO.notas,'Notas de Atualização',"finMenuLink('notas')"],
+    [ICO.limpar,'Limpar Sistema',"finLimparSistema()"],
+    ['sep'],
+    [ICO.sair,'Sair do Sistema',"sair()",'danger']
+  ];
+  var pop=$('um-pop'); if(pop) pop.innerHTML='<div class="um-head"><span class="um-av lg">'+finEsc(ini)+'</span>'
+    +'<span class="um-id"><b>'+finEsc(nome)+'</b><small>'+finEsc(usuario)+'</small></span></div>'
+    +rows.map(function(r){ return r[0]==='sep'?'<div class="um-sep"></div>'
+      :'<button type="button" class="um-row'+(r[3]?' '+r[3]:'')+'" onclick="'+r[2]+'">'+r[0]+'<span>'+r[1]+'</span></button>'; }).join('');
+}
+function finToggleMenu(e){ if(e) e.stopPropagation(); var m=$('usermenu'); if(!m)return; var open=m.classList.toggle('open'); var b=$('um-btn'); if(b) b.setAttribute('aria-expanded',open?'true':'false'); }
+document.addEventListener('click',function(e){ var m=$('usermenu'); if(m&&m.classList.contains('open')&&!m.contains(e.target)){ m.classList.remove('open'); var b=$('um-btn'); if(b) b.setAttribute('aria-expanded','false'); } });
+function finFecharMenu(){ var m=$('usermenu'); if(m) m.classList.remove('open'); }
+async function finTrocarSenha(){
+  finFecharMenu();
+  try{
+    var {data:{user}}=await sb.auth.getUser(); var email=user&&user.email;
+    if(!email){ alert('Sessão expirada. Entre novamente.'); return; }
+    var {error}=await sb.auth.resetPasswordForEmail(email,{redirectTo:location.origin+location.pathname});
+    alert(error?('Erro ao enviar: '+error.message):('Enviamos um link de redefinição de senha para '+email+'.'));
+  }catch(x){ alert('Erro: '+x.message); }
+}
+function finLimparSistema(){
+  finFecharMenu();
+  if(!confirm('Limpar os dados em cache do navegador e recarregar o sistema?\n(Não apaga nada do banco de dados.)')) return;
+  try{ localStorage.clear(); sessionStorage.clear(); }catch(e){}
+  if(window.caches&&caches.keys){ caches.keys().then(function(ks){return Promise.all(ks.map(function(k){return caches.delete(k);}));}).then(function(){location.reload();},function(){location.reload();}); }
+  else location.reload();
+}
+function finMenuLink(tipo){
+  finFecharMenu();
+  var url=FIN_LINKS[tipo];
+  if(url){ window.open(url,'_blank','noopener'); }
+  else{ alert('O link de "'+tipo+'" ainda não foi configurado.\nDefina a URL em FIN_LINKS no topo do script.'); }
+}
 async function addValor(){
   const reg={
     fornecedor:$('f-forn').value.trim()||null,
