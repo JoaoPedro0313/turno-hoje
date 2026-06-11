@@ -1493,9 +1493,18 @@ const NOME_CURTO = {};
   Object.keys(CONMNT_TURMA).forEach(function(full){ NOME_CURTO[full] = CONMNT_TURMA[full]; });
 })();
 // Converte nome completo -> CURTO-UTD se mapeado, caso contrário retorna original
+// Turmas de MG exibidas pelo código CON_MNT (mapa por código interno). Numeração do cadastro oficial.
+const TURNO_CONMNT = {
+  'RAIMUNDO-PA':'CON_MNT-01','FABRICIO-PA':'CON_MNT-02','GILVANDRO-PA':'CON_MNT-03',
+  'RICHARD-PA':'CON_MNT-04','LEVY-PA':'CON_MNT-05','OTAVIO-PA':'CON_MNT-06',
+  'JULIANO-ITA':'CON_MNT-07','LUIZCF-PA':'CON_MNT-08','LEANDRO-ITA':'CON_MNT-09',
+  'RAFAEL-ITA':'CON_MNT-10','CRISTIANO-ITA':'CON_MNT-11','CLAYTON-ITA':'CON_MNT-12',
+  'DOUGLAS-PA':'CON_MNT-LV-01','SIDNEI-PA':'CON_MNT-LV-02'
+};
 function toDisplayName(name) {
   if (!name) return name;
-  return NOME_CURTO[name.trim().toUpperCase()] || name;
+  var up = name.trim().toUpperCase();
+  return TURNO_CONMNT[up] || NOME_CURTO[up] || name;
 }
 function getUTD(name) { return name ? (CADASTRO_EQUIPES[name.trim().toUpperCase()] || '') : ''; }
 function utdBadge(name) { return ''; }
