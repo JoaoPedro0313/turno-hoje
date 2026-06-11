@@ -677,8 +677,9 @@ const RDO_CONMNT = {
   'DOUGLAS-PA':'CON_MNT-LV-01','SIDNEI-PA':'CON_MNT-LV-02'
 };
 function rdoDisplayName(n) {
+  if (RDO_CONMNT[n]) return RDO_CONMNT[n];
   var loc  = RDO_BASE_NOME[rdoTeamBase(n)] || '';
-  var nome = RDO_CONMNT[n] || (n||'').replace(/-IRC$|-JAC$|-PA$|-ITA$|-AJU$/, '');
+  var nome = (n||'').replace(/-IRC$|-JAC$|-PA$|-ITA$|-AJU$/, '');
   return loc ? (nome + ' · ' + loc) : nome;
 }
 
