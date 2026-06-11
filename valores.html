@@ -294,7 +294,23 @@ const $=id=>document.getElementById(id);
 function setMsg(t,ok){const m=$('msg');m.textContent=t||'';m.className='msg '+(ok?'ok':'err');}
 
 // recuperação de senha (quando a pessoa volta do e-mail)
-sb.auth.onAuthStateChange((ev)=>{ if(ev==='PASSWORD_RECOVERY'){ $('login-title').textContent='Definir nova senha'; $('form-login').style.display='none'; $('form-reset').style.display='block'; }});
+sb.auth.onAuthStateChange((ev)=>{ if(ev==='PASSWORD_RECOVERY'){ mostrarFormReset(); }});
+function mostrarFormReset(){ $('login-title').textContent='Definir nova senha'; $('form-login').style.display='none'; $('form-reset').style.display='block'; }
+// Ao abrir a página, trata o retorno do link de redefinição (token válido OU erro/expirado)
+(function tratarRetornoReset(){
+  var h=location.hash||'';
+  if(/[#&]error=/.test(h)){
+    var p=new URLSearchParams(h.replace(/^#/,''));
+    var code=(p.get('error_code')||'').toLowerCase();
+    if(/expired|otp_expired|invalid|access_denied/.test(code) || (p.get('error')||'')==='access_denied')
+      setMsg('O link de redefinição expirou ou já foi usado. Clique em "Esqueci minha senha" para receber um novo — e abra apenas o link mais recente, uma única vez.',false);
+    else
+      setMsg('Não foi possível validar o link: '+(p.get('error_description')||code||'tente novamente')+'.',false);
+    history.replaceState(null,'',location.pathname+location.search);
+    return;
+  }
+  if(/[#&]type=recovery/.test(h)){ mostrarFormReset(); }
+})();
 
 async function entrar(){
   setMsg('Entrando…',true);
