@@ -1472,6 +1472,25 @@ const NOME_CURTO = {};
     const utd = CADASTRO_EQUIPES[full] || '';
     NOME_CURTO[full] = utd ? manual[full] + '-' + utd : full;
   });
+  // Turmas de MG (Pouso Alegre / Itajubá / Linha Viva) exibidas pelo código CON_MNT.
+  // Numeração conforme o cadastro oficial.
+  const CONMNT_TURMA = {
+    'RAIMUNDO NONATO GOMES PEIXOTO':'CON_MNT-01',
+    'FABRICIO DA SILVA OLIVEIRA':'CON_MNT-02',
+    'GILVANDRO ALVES DE SOUZA':'CON_MNT-03',
+    'RICHARD AUGUSTO PELOSO':'CON_MNT-04',
+    'LEVY LEONARDO MONTOYA CALCURIAN':'CON_MNT-05',
+    'OTAVIO MACHADO DOS SANTOS':'CON_MNT-06',
+    'JULIANO SILVA DA CRUZ':'CON_MNT-07',
+    'LUIZ CARLOS DA FONSECA':'CON_MNT-08',
+    'LEANDRO RODRIGO RIBEIRO':'CON_MNT-09',
+    'RAFAEL DE AZEVEDO CARVALHO':'CON_MNT-10',
+    'CRISTIANO GOMES THEODORO':'CON_MNT-11',
+    'CLAYTON JOSE ANTUNES':'CON_MNT-12',
+    'DOUGLAS BARBOSA DA CRUZ OLIVEIRA':'CON_MNT-LV-01',
+    'SIDNEI SPADA':'CON_MNT-LV-02'
+  };
+  Object.keys(CONMNT_TURMA).forEach(function(full){ NOME_CURTO[full] = CONMNT_TURMA[full]; });
 })();
 // Converte nome completo -> CURTO-UTD se mapeado, caso contrário retorna original
 function toDisplayName(name) {
