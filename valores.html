@@ -313,7 +313,15 @@ async function checarGestorEEntrar(){
 async function esqueci(){
   const email=$('email').value.trim(); if(!email){setMsg('Digite seu e-mail primeiro.');return;}
   const {error}=await sb.auth.resetPasswordForEmail(email,{redirectTo:location.origin+location.pathname});
-  setMsg(error?'Erro ao enviar.':'Enviamos um link de redefinição para seu e-mail.',!error);
+  if(error){
+    var m=(error.message||'').toLowerCase();
+    if(error.status===429||/rate|second|segundo|limit/.test(m))
+      setMsg('Muitas tentativas seguidas. O envio de e-mail tem limite — aguarde alguns minutos e confira sua caixa de entrada e o spam (o link talvez já tenha chegado).',false);
+    else
+      setMsg('Erro ao enviar: '+(error.message||'tente novamente'),false);
+    return;
+  }
+  setMsg('Enviamos um link de redefinição para seu e-mail. Confira também o spam.',true);
 }
 async function definirNovaSenha(){
   const {error}=await sb.auth.updateUser({password:$('nova-senha').value});
@@ -568,7 +576,13 @@ async function finTrocarSenha(){
     var {data:{user}}=await sb.auth.getUser(); var email=user&&user.email;
     if(!email){ alert('Sessão expirada. Entre novamente.'); return; }
     var {error}=await sb.auth.resetPasswordForEmail(email,{redirectTo:location.origin+location.pathname});
-    alert(error?('Erro ao enviar: '+error.message):('Enviamos um link de redefinição de senha para '+email+'.'));
+    if(error){
+      var m=(error.message||'').toLowerCase();
+      if(error.status===429||/rate|second|segundo|limit/.test(m)) alert('Muitas tentativas seguidas. O envio de e-mail tem limite — aguarde alguns minutos e confira a caixa de entrada e o spam.');
+      else alert('Erro ao enviar: '+error.message);
+    } else {
+      alert('Enviamos um link de redefinição de senha para '+email+'. Confira também o spam.');
+    }
   }catch(x){ alert('Erro: '+x.message); }
 }
 function finLimparSistema(){
