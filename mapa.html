@@ -4292,7 +4292,10 @@ function mapaInitMesBar() {
   const mesWrapper = document.getElementById('mapa-mes-bar-wrapper');
   if (!mesBar || !GSHEETS_MESES || !GSHEETS_MESES.length) return;
   mesWrapper.style.display = 'flex';
-  mesBar.innerHTML = GSHEETS_MESES.map(entry => {
+  const _now = new Date(); const _atual = _now.getFullYear()*12 + (_now.getMonth()+1);
+  // Não exibe meses futuros (aba criada antes do mês chegar / ainda vazia).
+  const _mesesVis = GSHEETS_MESES.filter(e => (e.ano*12 + e.mes) <= _atual);
+  mesBar.innerHTML = (_mesesVis.length ? _mesesVis : GSHEETS_MESES).map(entry => {
     const label = (MESES_PT[entry.mes]||'?') + '/' + String(entry.ano).slice(-2);
     const now = new Date();
     const isCurrent = entry.ano === now.getFullYear() && entry.mes === now.getMonth() + 1;
