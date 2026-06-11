@@ -751,13 +751,28 @@ let GSHEETS_MESES = [
     GSHEETS_MESES.sort((a,b) => a.ano!==b.ano ? a.ano-b.ano : a.mes-b.mes);
   } catch(e) {}
 })();
+// Carrega meses auto-detectados em cargas anteriores (cache local), pra aparecerem na hora.
+(function() {
+  try {
+    const auto = JSON.parse(localStorage.getItem('mariua_meses_auto') || '[]');
+    auto.forEach(e => {
+      if (e && e.ano && e.mes && !GSHEETS_MESES.find(m => m.ano===e.ano && m.mes===e.mes)) GSHEETS_MESES.push(e);
+    });
+    GSHEETS_MESES.sort((a,b) => a.ano!==b.ano ? a.ano-b.ano : a.mes-b.mes);
+  } catch(e) {}
+})();
 // Carrega o ÚLTIMO mês disponível (o mais recente da lista). Usado ao entrar no mapa.
 function mapaCarregarUltimoMes() {
   if (!Array.isArray(GSHEETS_MESES) || !GSHEETS_MESES.length) return false;
-  let ultimo = GSHEETS_MESES[0];
+  const _now = new Date(); const _atual = _now.getFullYear()*12 + (_now.getMonth()+1);
+  let ultimo = null;
+  // prefere o mês mais recente que NÃO seja futuro (evita abrir num mês vazio ainda por vir)
   for (const e of GSHEETS_MESES) {
-    if ((e.ano*12 + e.mes) > (ultimo.ano*12 + ultimo.mes)) ultimo = e;
+    const v = e.ano*12 + e.mes;
+    if (v <= _atual && (!ultimo || v > (ultimo.ano*12 + ultimo.mes))) ultimo = e;
   }
+  // se todos forem futuros, cai pro mais recente da lista
+  if (!ultimo) { ultimo = GSHEETS_MESES[0]; for (const e of GSHEETS_MESES) if ((e.ano*12 + e.mes) > (ultimo.ano*12 + ultimo.mes)) ultimo = e; }
   if (ultimo && typeof mapaCarregarMes === 'function') {
     mapaCarregarMes(ultimo.ano, ultimo.mes);
     return true;
@@ -4170,12 +4185,14 @@ function mapaCarregarMes(ano, mes) {
   window._mapaViewingSheets = true; // flag permanente — só reseta se usuário voltar ao banco
   const mt = document.getElementById('mapa-titulo');
   if (mt) { mt.textContent = '⏳ Carregando '+label+'...'; mt.style.color='#888'; }
-  if (!entry.gidJacobina && !entry.gidIrece) {
-    console.warn('[mapa] Entrada do mês sem GIDs:', entry);
+  if (!entry.gidJacobina && !entry.gidIrece && !entry.sheetJacobina && !entry.sheetIrece) {
+    console.warn('[mapa] Entrada do mês sem GIDs/abas:', entry);
     return;
   }
-  const urlJac = entry.gidJacobina ? GSHEETS_BASE.JACOBINA + entry.gidJacobina : null;
-  const urlIrc = entry.gidIrece ? GSHEETS_BASE.IRECE + entry.gidIrece : null;
+  const urlJac = entry.gidJacobina ? GSHEETS_BASE.JACOBINA + entry.gidJacobina
+               : entry.sheetJacobina ? GSHEETS_SHEETBASE.JACOBINA + encodeURIComponent(entry.sheetJacobina) : null;
+  const urlIrc = entry.gidIrece ? GSHEETS_BASE.IRECE + entry.gidIrece
+               : entry.sheetIrece ? GSHEETS_SHEETBASE.IRECE + encodeURIComponent(entry.sheetIrece) : null;
 
   // CORRIGIDO: timeout de segurança — se o Sheets não responder em 15s, libera o banco local
   const _mesFlagTimeout = setTimeout(() => {
@@ -4195,15 +4212,18 @@ function mapaCarregarMes(ano, mes) {
       let resJac, resIrc;
       try {
         [resJac, resIrc] = await Promise.all([
-          fetch(urlJac, { signal: ctrl.signal }),
-          fetch(urlIrc, { signal: ctrl.signal })
+          urlJac ? fetch(urlJac, { signal: ctrl.signal }) : Promise.resolve(null),
+          urlIrc ? fetch(urlIrc, { signal: ctrl.signal }) : Promise.resolve(null)
         ]);
       } finally {
         clearTimeout(fetchTimeout);
       }
-      if (!resJac.ok) throw new Error('HTTP '+resJac.status+' (Jacobina) — verifique se a planilha está pública');
-      if (!resIrc.ok) throw new Error('HTTP '+resIrc.status+' (Irecê) — verifique se a planilha está pública');
-      const [textJac, textIrc] = await Promise.all([resJac.text(), resIrc.text()]);
+      if (urlJac && (!resJac || !resJac.ok)) throw new Error('HTTP '+(resJac?resJac.status:'?')+' (Jacobina) — verifique se a planilha está pública');
+      if (urlIrc && (!resIrc || !resIrc.ok)) throw new Error('HTTP '+(resIrc?resIrc.status:'?')+' (Irecê) — verifique se a planilha está pública');
+      const [textJac, textIrc] = await Promise.all([
+        (resJac && resJac.ok) ? resJac.text() : Promise.resolve(''),
+        (resIrc && resIrc.ok) ? resIrc.text() : Promise.resolve('')
+      ]);
       let dataJac = compParseCSVText(textJac, 'JACOBINA') || [];
       let dataIrc = compParseCSVText(textIrc, 'IRECÊ') || [];
       if (!dataJac.length && !dataIrc.length) throw new Error('Nenhum dado reconhecido nas planilhas — verifique o compartilhamento (deve ser "Qualquer pessoa com o link")');
@@ -4214,8 +4234,8 @@ function mapaCarregarMes(ano, mes) {
       const mesJac = (dataJac && dataJac._mesPlanilha) || mapaMesDaPlanilha(textJac);
       const mesIrc = (dataIrc && dataIrc._mesPlanilha) || mapaMesDaPlanilha(textIrc);
       const avisosMes = [];
-      if (entry.gidJacobina && mesJac && mesJac !== label) { avisosMes.push('Jacobina ainda em '+mesJac); dataJac = []; }
-      if (entry.gidIrece    && mesIrc && mesIrc !== label) { avisosMes.push('Irecê ainda em '+mesIrc);    dataIrc = []; }
+      if ((entry.gidJacobina||entry.sheetJacobina) && mesJac && mesJac !== label) { avisosMes.push('Jacobina ainda em '+mesJac); dataJac = []; }
+      if ((entry.gidIrece   ||entry.sheetIrece)    && mesIrc && mesIrc !== label) { avisosMes.push('Irecê ainda em '+mesIrc);    dataIrc = []; }
       window._mapaAvisoMes = avisosMes.length
         ? ('⚠️ '+avisosMes.join(' · ')+' — exibindo só o que é de '+label)
         : '';
@@ -4290,6 +4310,79 @@ if (document.readyState === 'loading') {
   mapaInitMesBar();
 }
 window.addEventListener('load', mapaInitMesBar);
+
+// ── AUTO-DETECÇÃO DE MESES NOVOS NA CARTEIRA ──────────────────────────────
+// Busca a aba do próximo mês pelo NOME (&sheet=) e confirma pelo mês declarado
+// no conteúdo. Se bater, cadastra o mês sozinho e re-renderiza a barra — sem
+// precisar mais colar gid no "Gerenciar meses".
+const GSHEETS_SHEETBASE = {
+  JACOBINA: GSHEETS_BASE.JACOBINA.replace('&gid=', '&sheet='),
+  IRECE:    GSHEETS_BASE.IRECE.replace('&gid=', '&sheet=')
+};
+// Nomes de aba candidatos para (ano,mes), tolerando convenções comuns de nomeação.
+function mapaNomesAbaCandidatos(ano, mes) {
+  const ab  = MESES_PT[mes];                          // ex.: JUL
+  const ext = ['','JANEIRO','FEVEREIRO','MARÇO','ABRIL','MAIO','JUNHO','JULHO','AGOSTO','SETEMBRO','OUTUBRO','NOVEMBRO','DEZEMBRO'][mes];
+  const yy  = String(ano).slice(-2);                  // 26
+  const mm  = String(mes).padStart(2,'0');            // 07
+  return [ ab+'/'+yy, ab+'/'+ano, ab+' '+yy, ab+'-'+yy, ab+' '+ano, ab,
+           ext+'/'+yy, ext+'/'+ano, ext+' '+yy, ext+' '+ano, ext,
+           mm+'/'+ano, mm+'/'+yy, mm+'-'+ano, mm+'.'+ano ];
+}
+// Sonda a aba de uma UTD por nome; só aceita se o conteúdo declarar o mês alvo.
+async function mapaSondarAbaMes(utd, ano, mes) {
+  const alvo = (MESES_PT[mes]||'?')+'/'+String(ano).slice(-2);
+  for (const nome of mapaNomesAbaCandidatos(ano, mes)) {
+    try {
+      const ctrl = new AbortController();
+      const to = setTimeout(() => ctrl.abort(), 8000);
+      let r; try { r = await fetch(GSHEETS_SHEETBASE[utd] + encodeURIComponent(nome), { signal: ctrl.signal }); }
+      finally { clearTimeout(to); }
+      if (!r || !r.ok) continue;
+      const txt = await r.text();
+      if (!txt || /<html|gviz.*error|not found/i.test(txt.slice(0,300))) continue; // aba inexistente
+      if (mapaMesDaPlanilha(txt) === alvo) return { nome };
+    } catch(e) {}
+  }
+  return null;
+}
+// Detecta meses novos após o último conhecido, até o mês atual real (não sonda futuro).
+async function mapaDetectarMesesNovos() {
+  if (!Array.isArray(GSHEETS_MESES) || !GSHEETS_MESES.length) return;
+  let ult = GSHEETS_MESES[0];
+  for (const e of GSHEETS_MESES) if (e.ano*12+e.mes > ult.ano*12+ult.mes) ult = e;
+  const now = new Date();
+  const limite = now.getFullYear()*12 + (now.getMonth()+1);
+  let cursor = ult.ano*12 + ult.mes, passos = 0;
+  const novos = [];
+  while (cursor < limite && passos < 4) {
+    cursor++; passos++;
+    const ano = Math.floor((cursor-1)/12), mes = ((cursor-1)%12)+1;
+    if (GSHEETS_MESES.find(e=>e.ano===ano && e.mes===mes)) continue;
+    const [jac, irc] = await Promise.all([
+      mapaSondarAbaMes('JACOBINA', ano, mes),
+      mapaSondarAbaMes('IRECE', ano, mes)
+    ]);
+    if (!jac && !irc) break; // mês ainda não existe na carteira; para (meses são sequenciais)
+    const entrada = { ano, mes, sheetJacobina: jac ? jac.nome : null, sheetIrece: irc ? irc.nome : null };
+    GSHEETS_MESES.push(entrada); novos.push(entrada);
+    console.log('[mapa] mês novo detectado na carteira:', (MESES_PT[mes])+'/'+String(ano).slice(-2), entrada);
+  }
+  if (novos.length) {
+    GSHEETS_MESES.sort((a,b)=> a.ano!==b.ano ? a.ano-b.ano : a.mes-b.mes);
+    try {
+      const cache = JSON.parse(localStorage.getItem('mariua_meses_auto')||'[]');
+      novos.forEach(n => { if (!cache.find(c=>c.ano===n.ano && c.mes===n.mes)) cache.push(n); });
+      localStorage.setItem('mariua_meses_auto', JSON.stringify(cache));
+    } catch(e){}
+    if (typeof mapaInitMesBar === 'function') mapaInitMesBar();
+  }
+}
+window.mapaDetectarMesesNovos = mapaDetectarMesesNovos; // permite rodar manual pelo console
+if (!window._mapaAutoDetectAgendado) {
+  window._mapaAutoDetectAgendado = true;
+  window.addEventListener('load', () => setTimeout(() => { try { mapaDetectarMesesNovos(); } catch(e){} }, 2000));
+}
 
 // ── MODAL: GERENCIAR MESES ────────────────────────────────────────────────
 function mapaMMExtrairGid(url) {
