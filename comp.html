@@ -555,6 +555,48 @@ const GSHEETS = {
   JACOBINA: 'https://docs.google.com/spreadsheets/d/142gvn8pNgJGTGDkidCfuOWMHJ2OCKpJd_FQU8zeo0x8/gviz/tq?tqx=out:csv&gid=1209313517',
   IRECE:    'https://docs.google.com/spreadsheets/d/14ImbZb8-OCBp78jDtd0QFkSLrMG5vXA7tzrM-x6KQVo/gviz/tq?tqx=out:csv&gid=663282613'
 };
+// ── AUTO-RESOLUÇÃO DA ABA DO MÊS MAIS RECENTE DA CARTEIRA ──────────────────
+// Em vez de gid fixo, acha por NOME (&sheet=) a aba mais recente de cada UTD
+// (ex.: JUN.26, depois JUL.26 quando existir) e aponta o GSHEETS pra ela.
+let _compAbasResolvidas = false;
+const _CMESES = ['','JAN','FEV','MAR','ABR','MAI','JUN','JUL','AGO','SET','OUT','NOV','DEZ'];
+function _compMesDoTexto(t){const m=String(t||'').toUpperCase().match(/\b(JAN|FEV|MAR|ABR|MAI|JUN|JUL|AGO|SET|OUT|NOV|DEZ)\s*[\/.\-]\s*(\d{2})\b/);return m?(m[1]+'/'+m[2]):null;}
+function _compNomesAba(ano,mes){
+  const ab=_CMESES[mes];
+  const ext=['','JANEIRO','FEVEREIRO','MARÇO','ABRIL','MAIO','JUNHO','JULHO','AGOSTO','SETEMBRO','OUTUBRO','NOVEMBRO','DEZEMBRO'][mes];
+  const yy=String(ano).slice(-2), mm=String(mes).padStart(2,'0');
+  return [ab+'.'+yy,ab+'.'+ano,ab+'/'+yy,ab+'/'+ano,ab+' '+yy,ab+'-'+yy,ab,ext+'.'+yy,ext+'/'+yy,ext+' '+yy,ext,mm+'.'+ano,mm+'/'+ano,mm+'-'+ano];
+}
+async function _compSondarAba(baseSheet,ano,mes){
+  const alvo=(_CMESES[mes]||'?')+'/'+String(ano).slice(-2);
+  for(const nome of _compNomesAba(ano,mes)){
+    try{
+      const ctrl=new AbortController(); const to=setTimeout(()=>ctrl.abort(),8000);
+      let r; try{ r=await fetch(baseSheet+encodeURIComponent(nome),{signal:ctrl.signal}); } finally { clearTimeout(to); }
+      if(!r||!r.ok) continue;
+      const txt=await r.text();
+      if(!txt||/<html|not found|gviz.*error/i.test(txt.slice(0,300))) continue;
+      if(_compMesDoTexto(txt)===alvo) return baseSheet+encodeURIComponent(nome);
+    }catch(e){}
+  }
+  return null;
+}
+// Aponta GSHEETS.JACOBINA/IRECE para a aba mais recente existente (mês atual e até 3 atrás).
+async function compResolverAbasAtuais(){
+  if(_compAbasResolvidas) return;
+  const baseJac=GSHEETS.JACOBINA.replace(/&gid=\d+/,'&sheet=');
+  const baseIrc=GSHEETS.IRECE.replace(/&gid=\d+/,'&sheet=');
+  const now=new Date(); const cur=now.getFullYear()*12+(now.getMonth()+1);
+  let urlJac=null, urlIrc=null;
+  for(let i=0;i<4 && (!urlJac || !urlIrc);i++){
+    const v=cur-i, ano=Math.floor((v-1)/12), mes=((v-1)%12)+1;
+    if(!urlJac){ const j=await _compSondarAba(baseJac,ano,mes); if(j) urlJac=j; }
+    if(!urlIrc){ const k=await _compSondarAba(baseIrc,ano,mes); if(k) urlIrc=k; }
+  }
+  if(urlJac) GSHEETS.JACOBINA=urlJac;
+  if(urlIrc) GSHEETS.IRECE=urlIrc;
+  if(urlJac||urlIrc){ _compAbasResolvidas=true; console.log('[comp] aba atual →', (GSHEETS.JACOBINA.split('&sheet=')[1]||'gid'), '|', (GSHEETS.IRECE.split('&sheet=')[1]||'gid')); }
+}
 // URLs do Sheets resolvidas — atualizadas após gsheetsCarregarMeses()
 function todayDate() { const d=new Date(); const p=n=>String(n).padStart(2,'0'); return p(d.getDate())+'/'+p(d.getMonth()+1)+'/'+d.getFullYear(); }
 const DEFAULTS = {
@@ -2531,6 +2573,7 @@ el.style.cssText = 'display:block;padding:10px 14px;border-radius:8px;font-size:
 el.textContent = msg;
 }
 async function compCompareComSheets() {
+  try { await compResolverAbasAtuais(); } catch(e){}
 if (!bancoDB || !bancoDB.length) {
 compSetStatus('⚠️ Nenhum banco carregado. Sincronize do Sheets ou carregue os CSVs primeiro.', 'erro');
 return;
@@ -2936,6 +2979,7 @@ async function compCheckForUpdates() {
 await compAutoSincronizar();
 }
 async function compAutoSincronizar() {
+  try { await compResolverAbasAtuais(); } catch(e){}
 if (!window.Papa) {
 await new Promise(resolve => {
 const s = document.createElement('script');
@@ -3603,6 +3647,7 @@ function progFocarMapa(lat, lon) {
 mapaEnsureLeaflet(() => { mapaMap.setView([lat,lon],16,{animate:true}); const mc=document.getElementById('mapa-container'); if(mc)mc.scrollIntoView({behavior:'smooth',block:'center'}); });
 }
 async function sincronizarSheets() {
+  try { await compResolverAbasAtuais(); } catch(e){}
 const btn = document.getElementById('btn-sincronizar-sheets');
 const btn2 = document.getElementById('btn-sincronizar-sheets-mapa');
 const setBtn = (html, dis) => {
