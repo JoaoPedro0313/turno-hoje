@@ -4056,7 +4056,7 @@ const MESES_ORDER = {'JAN':1,'FEV':2,'MAR':3,'ABR':4,'MAI':5,'JUN':6,'JUL':7,'AG
 // Lê o rótulo de mês declarado no topo de uma aba (ex.: "JUN/26"), se existir.
 function mapaMesDaPlanilha(csvText) {
   const m = String(csvText || '').toUpperCase()
-    .match(/\b(JAN|FEV|MAR|ABR|MAI|JUN|JUL|AGO|SET|OUT|NOV|DEZ)\s*\/\s*(\d{2})\b/);
+    .match(/\b(JAN|FEV|MAR|ABR|MAI|JUN|JUL|AGO|SET|OUT|NOV|DEZ)\s*[\/.\-]\s*(\d{2})\b/);
   return m ? (m[1] + '/' + m[2]) : null;
 }
 // Extrai as colunas PES (percentuais de execução) de uma obra da planilha.
@@ -4325,9 +4325,9 @@ function mapaNomesAbaCandidatos(ano, mes) {
   const ext = ['','JANEIRO','FEVEREIRO','MARÇO','ABRIL','MAIO','JUNHO','JULHO','AGOSTO','SETEMBRO','OUTUBRO','NOVEMBRO','DEZEMBRO'][mes];
   const yy  = String(ano).slice(-2);                  // 26
   const mm  = String(mes).padStart(2,'0');            // 07
-  return [ ab+'/'+yy, ab+'/'+ano, ab+' '+yy, ab+'-'+yy, ab+' '+ano, ab,
-           ext+'/'+yy, ext+'/'+ano, ext+' '+yy, ext+' '+ano, ext,
-           mm+'/'+ano, mm+'/'+yy, mm+'-'+ano, mm+'.'+ano ];
+  return [ ab+'.'+yy, ab+'.'+ano, ab+'/'+yy, ab+'/'+ano, ab+' '+yy, ab+'-'+yy, ab+' '+ano, ab,
+           ext+'.'+yy, ext+'/'+yy, ext+'/'+ano, ext+' '+yy, ext+' '+ano, ext,
+           mm+'.'+ano, mm+'/'+ano, mm+'/'+yy, mm+'-'+ano ];
 }
 // Sonda a aba de uma UTD por nome; só aceita se o conteúdo declarar o mês alvo.
 async function mapaSondarAbaMes(utd, ano, mes) {
