@@ -668,9 +668,17 @@ function rdoTodasEquipes(){
   return RDO_EQUIPES.concat(extras);
 }
 const RDO_BASE_NOME = { irc:'Irecê', jac:'Jacobina', pa:'P.Alegre', ita:'Itajubá', aju:'Aracaju' };
+// Turmas de MG exibidas pelo código CON_MNT (igual ao Turno). Numeração do cadastro oficial.
+const RDO_CONMNT = {
+  'RAIMUNDO-PA':'CON_MNT-01','FABRICIO-PA':'CON_MNT-02','GILVANDRO-PA':'CON_MNT-03',
+  'RICHARD-PA':'CON_MNT-04','LEVY-PA':'CON_MNT-05','OTAVIO-PA':'CON_MNT-06',
+  'JULIANO-ITA':'CON_MNT-07','LUIZCF-PA':'CON_MNT-08','LEANDRO-ITA':'CON_MNT-09',
+  'RAFAEL-ITA':'CON_MNT-10','CRISTIANO-ITA':'CON_MNT-11','CLAYTON-ITA':'CON_MNT-12',
+  'DOUGLAS-PA':'CON_MNT-LV-01','SIDNEI-PA':'CON_MNT-LV-02'
+};
 function rdoDisplayName(n) {
-  var nome = (n||'').replace(/-IRC$|-JAC$|-PA$|-ITA$|-AJU$/, '');
   var loc  = RDO_BASE_NOME[rdoTeamBase(n)] || '';
+  var nome = RDO_CONMNT[n] || (n||'').replace(/-IRC$|-JAC$|-PA$|-ITA$|-AJU$/, '');
   return loc ? (nome + ' · ' + loc) : nome;
 }
 
