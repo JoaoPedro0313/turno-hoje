@@ -235,6 +235,16 @@ body.sm-collapsed .bottom-bar{left:64px !important;}
 .ac-pick select:focus,.ac-pick input:focus{outline:none;border-color:#0d9488;box-shadow:0 0 0 3px rgba(13,148,136,.12)}
 .ac-pick .ac-user-wrap{display:flex;flex-direction:column;gap:6px}
 .ac-pick.ac-full{flex-basis:100%;min-width:100%}
+.acc{position:relative;width:100%}
+.acc-inp{width:100%;box-sizing:border-box;padding:11px 30px 11px 12px;border:1px solid #cbd5e1;border-radius:10px;font-size:1rem;background:#fff;font-family:inherit}
+.acc-inp:focus{outline:none;border-color:#0d9488;box-shadow:0 0 0 3px rgba(13,148,136,.12)}
+.acc-arrow{position:absolute;right:11px;top:50%;transform:translateY(-50%);color:#64748b;font-size:.8rem;cursor:pointer}
+.acc.open .acc-arrow{color:#0d9488}
+.acc-pop{position:absolute;z-index:60;left:0;right:0;top:calc(100% + 4px);max-height:260px;overflow-y:auto;background:#fff;border:1px solid #cbd5e1;border-radius:10px;box-shadow:0 12px 30px rgba(0,0,0,.14);padding:4px}
+.acc-opt{padding:9px 11px;border-radius:7px;cursor:pointer;font-size:.92rem;color:#334155;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.acc-opt:hover,.acc-opt.hl{background:#f0fafa;color:#0d7377}
+.acc-opt.sel{background:#0d9488;color:#fff;font-weight:700}
+.acc-empty{padding:10px 11px;color:#94a3b8;font-size:.85rem}
 .ac-pick input{padding:11px 12px;border:1px solid #cbd5e1;border-radius:10px;font-size:1rem;background:#fff;font-family:inherit;width:100%;box-sizing:border-box}
 .ac-pick input:focus{outline:none;border-color:#0d9488;box-shadow:0 0 0 3px rgba(13,148,136,.12)}
 #ac-search{border:1.5px solid #0d9488 !important}
@@ -620,10 +630,60 @@ window.acRender=function(){
   $('perm-utree').innerHTML=h||'<div class="empty">'+(q?'Nada encontrado para \u201c'+esc(q)+'\u201d.':'Sem acesso registrado.')+'</div>';
   $('perm-count').textContent=tot+' telas';
 }; 
+/* ── Combo "selecionar + digitar": sobrepõe um <select> sem mudar a lógica.
+   Lê as opções do select, filtra ao digitar e, ao escolher, seta o select e
+   dispara 'change' (mantém os filtros encadeados e o acRender intactos). ── */
+function acComboWrap(selectId, placeholder){
+  var sel=document.getElementById(selectId);
+  if(!sel || sel._acc) return; sel._acc=true;
+  sel.style.display='none';
+  var box=document.createElement('div'); box.className='acc';
+  var inp=document.createElement('input'); inp.type='text'; inp.className='acc-inp'; inp.autocomplete='off'; inp.placeholder=placeholder||'Selecione ou digite\u2026';
+  var arr=document.createElement('span'); arr.className='acc-arrow'; arr.textContent='\u25be';
+  var pop=document.createElement('div'); pop.className='acc-pop'; pop.style.display='none';
+  box.appendChild(inp); box.appendChild(arr); box.appendChild(pop);
+  sel.parentNode.insertBefore(box, sel.nextSibling);
+  var hl=-1, filt='', open=false, lastVis=[];
+  function curLabel(){ var o=sel.options[sel.selectedIndex]; return o?o.textContent:''; }
+  function draw(){
+    var fn=ptNorm(filt.trim()), html=''; lastVis=[];
+    for(var i=0;i<sel.options.length;i++){ var t=sel.options[i].textContent; if(fn && ptNorm(t).indexOf(fn)<0) continue; lastVis.push(i); }
+    if(hl>=lastVis.length) hl=lastVis.length-1;
+    for(var k=0;k<lastVis.length;k++){ var i2=lastVis[k]; html+='<div class="acc-opt'+(i2===sel.selectedIndex?' sel':'')+(k===hl?' hl':'')+'" data-i="'+i2+'">'+esc(sel.options[i2].textContent)+'</div>'; }
+    pop.innerHTML=html||'<div class="acc-empty">(nada encontrado)</div>';
+    var h=pop.querySelector('.acc-opt.hl'); if(h&&h.scrollIntoView) h.scrollIntoView({block:'nearest'});
+  }
+  function show(){ open=true; pop.style.display='block'; box.classList.add('open'); draw(); }
+  function hide(){ open=false; pop.style.display='none'; box.classList.remove('open'); filt=''; hl=-1; inp.value=curLabel(); }
+  function pick(i){ if(i==null||i<0||i>=sel.options.length) return; sel.selectedIndex=i; hide(); sel.dispatchEvent(new Event('change',{bubbles:true})); }
+  inp.addEventListener('focus', function(){ filt=''; hl=-1; show(); setTimeout(function(){ try{ inp.select(); }catch(e){} },0); });
+  inp.addEventListener('click', function(){ if(!open){ filt=''; hl=-1; show(); } });
+  arr.addEventListener('mousedown', function(e){ e.preventDefault(); if(!open){ inp.focus(); } else hide(); });
+  inp.addEventListener('input', function(){ filt=inp.value; hl=0; show(); });
+  pop.addEventListener('mousedown', function(e){ var d=e.target.closest('.acc-opt'); if(!d) return; e.preventDefault(); pick(+d.getAttribute('data-i')); });
+  inp.addEventListener('keydown', function(e){
+    if(!open && (e.key==='ArrowDown'||e.key==='ArrowUp')){ filt=''; hl=-1; show(); return; }
+    if(e.key==='ArrowDown'){ e.preventDefault(); hl=Math.min(hl+1, lastVis.length-1); draw(); }
+    else if(e.key==='ArrowUp'){ e.preventDefault(); hl=Math.max(hl-1, 0); draw(); }
+    else if(e.key==='Enter'){ if(open){ e.preventDefault(); pick(hl>=0?lastVis[hl]:lastVis[0]); } }
+    else if(e.key==='Escape'){ hide(); }
+  });
+  document.addEventListener('mousedown', function(e){ if(open && !box.contains(e.target)) hide(); });
+  var mo=new MutationObserver(function(){ if(!open) inp.value=curLabel(); else draw(); });
+  mo.observe(sel,{childList:true});
+  inp.value=curLabel();
+}
+function acInitCombos(){
+  acComboWrap('ac-uf','Selecione o estado\u2026');
+  acComboWrap('ac-base','Selecione a base\u2026');
+  acComboWrap('ac-func','Selecione a fun\u00e7\u00e3o\u2026');
+  acComboWrap('ac-user','Buscar por nome ou login\u2026');
+  var b=document.getElementById('ac-user-busca'); if(b) b.style.display='none';
+}
 var _acInit=false;
 function acInit(){
   if(!TREE){$('perm-utree').innerHTML='<div class="empty">\u00c1rvore n\u00e3o carregada (telas_usuarios_arvore.js).</div>';return;}
-  if(!_acInit){_acInit=true;acFillUF();acFillBases();acFillFuncs();acFillUsers();}
+  if(!_acInit){_acInit=true;acFillUF();acFillBases();acFillFuncs();acFillUsers();acInitCombos();}
   acRender();
 }
 
