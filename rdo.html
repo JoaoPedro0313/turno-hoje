@@ -593,6 +593,7 @@ let rdoStateFilter = 'todos';
 let rdoBaseFilter  = 'todos';
 let rdoData        = {}; // { 'ALAN-IRC': ['LINHA MORTA', 'LINHA MORTA'], ... }
 let rdoDate        = '';
+let rdoJustif      = {}; // { 'ALAN-IRC': 'motivo da falta justificada', ... }
 
 const RDO_BASE_CONFIG = {
   ba: [{id:'irc',label:'🗺 IRECÊ'},{id:'jac',label:'🏗 JACOBINA'}],
@@ -701,8 +702,8 @@ function setDbStatus(status, msg) {
 }
 window.dbBadgeClick = function(){ setDbStatus('syncing', 'Reconectando...'); rdoCarregarBanco(); };
 async function rdoSalvarBanco() {
-  if (!rdoDate && Object.keys(rdoData).length === 0) return;
-  var payload = { lancou: rdoData, date: rdoDate, savedAt: new Date().toISOString() };
+  if (!rdoDate && Object.keys(rdoData).length === 0 && Object.keys(rdoJustif).length === 0) return;
+  var payload = { lancou: rdoData, justif: rdoJustif, date: rdoDate, savedAt: new Date().toISOString() };
   try { localStorage.setItem('rdo_atual', JSON.stringify(payload)); } catch(e0) {}
   try {
     setDbStatus('syncing', 'Salvando...');
@@ -742,6 +743,7 @@ async function rdoCarregarBanco() {
     if (data && data.length && data[0].value && data[0].value.lancou) {
       rdoData = data[0].value.lancou;
       rdoDate = data[0].value.date || '';
+      rdoJustif = data[0].value.justif || {};
       var dl = document.getElementById('rdo-date-label');
       if (dl) dl.textContent = rdoDate ? '📅 ' + rdoDate : '';
       rdoRender();
@@ -758,6 +760,7 @@ async function rdoCarregarBanco() {
     var local = JSON.parse(localStorage.getItem('rdo_atual'));
     if (local && local.lancou) {
       rdoData = local.lancou; rdoDate = local.date || '';
+      rdoJustif = local.justif || {};
       rdoRender();
     }
   } catch(e2) {}
@@ -765,9 +768,11 @@ async function rdoCarregarBanco() {
 
 function rdoRender() {
   const lancouSet = Object.keys(rdoData);
+  const justifSet = Object.keys(rdoJustif||{});
   const TODAS = rdoTodasEquipes();
   const lancou = rdoFilter(TODAS.filter(function(e) { return lancouSet.includes(e); }));
-  const nao    = rdoFilter(TODAS.filter(function(e) { return !lancouSet.includes(e); }));
+  const justif = rdoFilter(TODAS.filter(function(e) { return !lancouSet.includes(e) && justifSet.includes(e); }));
+  const nao    = rdoFilter(TODAS.filter(function(e) { return !lancouSet.includes(e) && !justifSet.includes(e); }));
 
   // counts set in buildCard section below
 
@@ -781,9 +786,14 @@ function rdoRender() {
   function buildCard(name, type) {
     // type: 'ok' | 'falta' | 'justif'
     const disp = rdoDisplayName(name);
-    const badgeTxt   = type === 'ok' ? 'OK' : type === 'justif' ? 'JUS' : 'FALTA';
-    const cardClass  = type === 'falta' ? 'card absent' : type === 'justif' ? 'card justif' : 'card';
-    return '<div class="'+cardClass+'"><span class="card-name">'+disp+'</span><span class="badge '+type+'">'+badgeTxt+'</span></div>';
+    if (type === 'justif') {
+      const mot = String(rdoJustif[name]||'Justificado').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
+      return '<div class="card justif" title="Clique para remover a justificativa" onclick="rdoRemoverJustif(\''+name+'\')"><span class="card-name">'+disp+'</span><span class="justif-obs">'+mot+'</span><span class="badge justif">JUS</span></div>';
+    }
+    if (type === 'falta') {
+      return '<div class="card absent" title="Clique para justificar a falta" onclick="rdoJustificar(\''+name+'\')"><span class="card-name">'+disp+'</span><span class="badge falta">FALTA</span></div>';
+    }
+    return '<div class="card"><span class="card-name">'+disp+'</span><span class="badge ok">OK</span></div>';
   }
 
   var gl = document.getElementById('rdo-grid-lancou');
@@ -794,19 +804,40 @@ function rdoRender() {
   var cn = document.getElementById('rdo-count-nao');
 
   if (cl) cl.textContent = lancou.length;
-  if (cj) cj.textContent = 0;
+  if (cj) cj.textContent = justif.length;
   if (cn) cn.textContent = nao.length;
 
   if (gl) gl.innerHTML = lancou.length
     ? lancou.sort().map(function(n){ return buildCard(n,'ok'); }).join('')
     : '<div class="empty-msg">Nenhum lançamento no filtro selecionado</div>';
 
-  if (gj) gj.innerHTML = '<div class="empty-msg">Nenhuma equipe</div>';
+  if (gj) gj.innerHTML = justif.length
+    ? justif.sort().map(function(n){ return buildCard(n,'justif'); }).join('')
+    : '<div class="empty-msg">Nenhuma equipe</div>';
 
   if (gn) gn.innerHTML = nao.length
     ? nao.sort().map(function(n){ return buildCard(n,'falta'); }).join('')
     : '<div class="empty-msg">✅ Todos lançaram!</div>';
 }
+
+function rdoJustificar(name){
+  if(!name) return;
+  var atual = rdoJustif[name] || '';
+  var motivo = prompt('Motivo da falta justificada — '+rdoDisplayName(name)+':', atual);
+  if(motivo===null) return; // cancelou
+  rdoJustif[name] = String(motivo).trim() || 'Justificado';
+  rdoRender();
+  if(typeof rdoSalvarBanco==='function') rdoSalvarBanco();
+}
+function rdoRemoverJustif(name){
+  if(!name || !(name in rdoJustif)) return;
+  if(!confirm('Remover a justificativa de '+rdoDisplayName(name)+'?')) return;
+  delete rdoJustif[name];
+  rdoRender();
+  if(typeof rdoSalvarBanco==='function') rdoSalvarBanco();
+}
+window.rdoJustificar = rdoJustificar;
+window.rdoRemoverJustif = rdoRemoverJustif;
 
 function rdoShowMsg(txt, type) {
   const gm = document.getElementById('rdo-gear-msg');
@@ -1196,8 +1227,12 @@ function rdoFoto() {
     if(!payload) return 'nodata';
     const lan = payload.lancou || payload.ok || {};
     const okS = new Set((Array.isArray(lan)?lan:Object.keys(lan)).map(n=>String(n||'').trim().toUpperCase()));
+    const jus = payload.justif || {};
+    const jS  = new Set((Array.isArray(jus)?jus:Object.keys(jus)).map(n=>String(n||'').trim().toUpperCase()));
     const d   = String(nome||'').trim().toUpperCase();
-    return okS.has(d) ? 'ok' : 'falta';
+    if(okS.has(d)) return 'ok';
+    if(jS.has(d)) return 'justif';
+    return 'falta';
   }
 
   function relCalcPeriodo(){
