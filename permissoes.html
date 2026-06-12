@@ -176,7 +176,7 @@ body.sm-collapsed .bottom-bar{left:64px !important;}
         <div class="ac-pick"><label>Usuário</label>
           <div class="ac-user-wrap">
             <input id="ac-user-busca" placeholder="🔎 buscar por nome ou login…" oninput="acFillUsers();acRender();" autocomplete="off">
-            <select id="ac-user" onchange="acRender()"></select>
+            <select id="ac-user" onchange="acOnUser()"></select>
           </div>
         </div>
         <div class="ac-pick ac-full"><label>Buscar subpasta ou tela</label><input id="ac-search" type="text" placeholder="🔎 digite parte do nome da pasta ou tela" oninput="acRender()"></div>
@@ -671,6 +671,7 @@ function acComboWrap(selectId, placeholder){
   document.addEventListener('mousedown', function(e){ if(open && !box.contains(e.target)) hide(); });
   var mo=new MutationObserver(function(){ if(!open) inp.value=curLabel(); else draw(); });
   mo.observe(sel,{childList:true});
+  sel._accSync=function(){ if(!open) inp.value=curLabel(); else draw(); };
   inp.value=curLabel();
 }
 function acInitCombos(){
@@ -680,6 +681,20 @@ function acInitCombos(){
   acComboWrap('ac-user','Buscar por nome ou login\u2026');
   var b=document.getElementById('ac-user-busca'); if(b) b.style.display='none';
 }
+// seta o valor de um select de filtro e sincroniza o combo sobreposto
+function acSetSel(id,val){ var s=document.getElementById(id); if(!s) return; s.value=val; if(s._accSync) s._accSync(); }
+// ao escolher um USUÁRIO, preenche Estado / Base / Função com os dados dele
+window.acOnUser=function(){
+  var v=$('ac-user').value;
+  if(v!==''){
+    var uid=+v;
+    acSetSel('ac-uf', acSup(uid)?'__SUP__':acUuf(uid));
+    acFillBases(); acSetSel('ac-base', acBase(uid));
+    acFillFuncs(); acSetSel('ac-func', acUfunc(uid));
+    acFillUsers(); acSetSel('ac-user', String(uid));
+  }
+  acRender();
+};
 var _acInit=false;
 function acInit(){
   if(!TREE){$('perm-utree').innerHTML='<div class="empty">\u00c1rvore n\u00e3o carregada (telas_usuarios_arvore.js).</div>';return;}
