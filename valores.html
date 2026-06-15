@@ -68,6 +68,10 @@
   .fin-kpi .k-lbl{font-size:.7rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.03em}
   .fin-kpi .k-val{font-size:1.45rem;font-weight:900;color:#0f3a33;margin-top:2px}
   .fin-kpi .k-sub{font-size:.72rem;color:#94a3b8;margin-top:2px}
+  .k-var{font-size:.74rem;font-weight:800;margin-top:4px;display:flex;align-items:center;gap:5px}
+  .k-var span{color:#94a3b8;font-weight:700}
+  .k-var.up{color:#276749}.k-var.dn{color:#c53030}
+  .fin-res-h{font-size:1.0rem;font-weight:800;color:#0f3a33;margin:2px 2px 10px}
   .fin-card{background:#fff;border-radius:12px;padding:16px;box-shadow:0 2px 10px rgba(0,0,0,.06);margin-bottom:14px}
   .fin-faturas{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;align-items:start}
   .fat-card{background:#fff;border-radius:14px;box-shadow:0 2px 10px rgba(0,0,0,.06);border:1px solid #eef2f7;overflow:hidden;display:flex;flex-direction:column}
@@ -240,6 +244,8 @@ body.sm-collapsed .bottom-bar{left:64px !important;}
     </header>
     <div class="wrap">
       <div id="pane-lanc">
+        <div id="fin-resumo-tit" class="fin-res-h">Resumo</div>
+        <div id="fin-resumo" class="fin-kpis"></div>
         <div id="fin-kpis" class="fin-kpis"></div>
         <div class="fin-graphs">
           <div class="fin-card">
@@ -378,7 +384,7 @@ function finRender(){
     if(ord==='data-asc')   return da<db?-1:da>db?1:0;
     return da>db?-1:da<db?1:0; // data-desc (padrão)
   });
-  finKpis(rows); finChart(rows); finChartMes(rows); finChartLinha(rows); finTabela(rows);
+  finResumo(); finKpis(rows); finChart(rows); finChartMes(rows); finChartLinha(rows); finTabela(rows);
 }
 // paleta consistente por fornecedor
 var FIN_CORES={'GPM':'#0d7377','Jupiter':'#e8843f'};
@@ -391,6 +397,36 @@ function finLimparFiltros(){
   if($('fin-ord'))$('fin-ord').value='data-desc';
   if($('fin-busca'))$('fin-busca').value='';
   finRender();
+}
+function finMesNome(ym){ var M=['','janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro']; var p=(ym||'').split('-'); return p[1]?(M[+p[1]]+'/'+p[0]):'—'; }
+function finResumo(){
+  var fForn=$('fin-forn-filtro')?$('fin-forn-filtro').value:'';
+  var q=($('fin-busca')&&$('fin-busca').value?$('fin-busca').value:'').trim().toLowerCase();
+  var base=FIN_DATA.filter(function(v){ return (!fForn||(v.fornecedor||'(sem)')===fForn) && (!q||(v.descricao||'').toLowerCase().indexOf(q)>=0); });
+  var mset={}; base.forEach(function(v){var m=(v.data_ref||'').slice(0,7); if(m)mset[m]=1;});
+  var meses=Object.keys(mset).sort();
+  var tit=$('fin-resumo-tit'), box=$('fin-resumo');
+  if(!meses.length){ if(box)box.innerHTML=''; if(tit)tit.textContent='Resumo'; return; }
+  var fMes=$('fin-mes')?$('fin-mes').value:'';
+  var ref=(fMes&&mset[fMes])?fMes:meses[meses.length-1];
+  var idx=meses.indexOf(ref); var prev=idx>0?meses[idx-1]:'';
+  function soma(m){ return base.reduce(function(s,v){ return s+((v.data_ref||'').slice(0,7)===m?Number(v.valor||0):0); },0); }
+  function forns(m){ var o={}; base.forEach(function(v){ if((v.data_ref||'').slice(0,7)===m) o[v.fornecedor||'(sem)']=1; }); return Object.keys(o).length; }
+  function notas(m){ return base.reduce(function(s,v){ return s+((v.data_ref||'').slice(0,7)===m?1:0); },0); }
+  var totMes=soma(ref), totPrev=prev?soma(prev):0;
+  var ano=ref.slice(0,4);
+  var acum=base.reduce(function(s,v){ return s+((v.data_ref||'').slice(0,4)===ano?Number(v.valor||0):0); },0);
+  var nMesesAno=meses.filter(function(m){return m.slice(0,4)===ano;}).length;
+  var nFat=forns(ref)||1, fatMed=totMes/nFat;
+  var nFatP=prev?(forns(prev)||1):0, fatMedP=prev?totPrev/nFatP:0;
+  function vb(cur,old){ if(!old) return '<div class="k-sub">sem mês anterior</div>'; var d=(cur-old)/old*100; var up=d>=0; return '<div class="k-var '+(up?'up':'dn')+'">'+(up?'▲':'▼')+' '+Math.abs(d).toFixed(1).replace('.',',')+'% <span>vs. '+finMesNome(prev).split('/')[0]+'</span></div>'; }
+  var html='';
+  html+='<div class="fin-kpi"><div class="k-lbl">Total do mês</div><div class="k-val">'+finMoney(totMes)+'</div>'+vb(totMes,totPrev)+'</div>';
+  html+='<div class="fin-kpi"><div class="k-lbl">Acumulado '+ano+'</div><div class="k-val">'+finMoney(acum)+'</div><div class="k-sub">'+nMesesAno+' '+(nMesesAno===1?'mês lançado':'meses lançados')+'</div></div>';
+  html+='<div class="fin-kpi" style="border-left-color:#64748b"><div class="k-lbl">Fatura média</div><div class="k-val">'+finMoney(fatMed)+'</div>'+vb(fatMed,fatMedP)+'</div>';
+  html+='<div class="fin-kpi" style="border-left-color:#ff6b35"><div class="k-lbl">Fornecedores</div><div class="k-val">'+forns(ref)+'</div><div class="k-sub">'+notas(ref)+' '+(notas(ref)===1?'nota':'notas')+' no mês</div></div>';
+  if(box)box.innerHTML=html;
+  if(tit)tit.textContent='Resumo — '+finMesNome(ref);
 }
 function finKpis(rows){
   rows=rows||FIN_DATA;
