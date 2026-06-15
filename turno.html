@@ -951,6 +951,14 @@ const CENTRO_CUSTO = {
   aju:'SERVIÇOS EM ENERGIA - ARACAJU'
 };
 function teamCentro(name) { return CENTRO_CUSTO[teamBase(name)] || ''; }
+// Filial: Itajubá não é filial própria — pertence à filial Congonhal (centro de custo distingue)
+function teamFilial(name) { const b = teamBase(name); return b === 'ita' ? 'pa' : b; }
+// Configuração da FILIAL por estado (MG = só Congonhal; Itajubá vira centro de custo)
+const FILIAL_CONFIG = {
+  ba: [{ id:'irc', label:'🗺 IRECÊ' }, { id:'jac', label:'🏗 JACOBINA' }],
+  mg: [{ id:'pa',  label:'🏙 CONGONHAL' }],
+  se: [{ id:'aju', label:'🌊 ARACAJU' }]
+};
 
 // Configuração das bases por estado
 const BASE_CONFIG = {
@@ -986,7 +994,7 @@ function updateBaseFilterButtons() {
   container.appendChild(mkBtn('todos', 'Todos'));
   const states = turnoStateFilter === 'todos' ? ['ba','mg','se'] : [turnoStateFilter];
   states.forEach(function(st) {
-    (BASE_CONFIG[st]||[]).forEach(function(b) {
+    (FILIAL_CONFIG[st]||[]).forEach(function(b) {
       container.appendChild(mkBtn(b.id, b.label));
     });
   });
@@ -1054,7 +1062,7 @@ function filterByStateAndBase(arr) {
     const name = typeof n === 'string' ? n : (n.name || '');
     const st = teamState(name);
     if (turnoStateFilter !== 'todos' && st !== turnoStateFilter) return false;
-    if (turnoBaseFilter  !== 'todos' && teamBase(name) !== turnoBaseFilter) return false;
+    if (turnoBaseFilter  !== 'todos' && teamFilial(name) !== turnoBaseFilter) return false;
     if (turnoCentroFilter !== 'todos' && teamBase(name) !== turnoCentroFilter) return false;
     return true;
   });

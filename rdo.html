@@ -635,6 +635,13 @@ const RDO_CENTRO_CUSTO = {
   aju:'SERVIÇOS EM ENERGIA - ARACAJU'
 };
 function rdoTeamCentro(n) { return RDO_CENTRO_CUSTO[rdoTeamBase(n)] || ''; }
+// Filial: Itajubá não é filial própria — pertence à filial Congonhal (centro de custo distingue)
+function rdoTeamFilial(n) { const b = rdoTeamBase(n); return b === 'ita' ? 'pa' : b; }
+const RDO_FILIAL_CONFIG = {
+  ba: [{id:'irc',label:'🗺 IRECÊ'},{id:'jac',label:'🏗 JACOBINA'}],
+  mg: [{id:'pa', label:'🏙 CONGONHAL'}],
+  se: [{id:'aju',label:'🌊 ARACAJU'}]
+};
 
 function rdoSetState(s) {
   rdoStateFilter = s;
@@ -698,14 +705,14 @@ function rdoBuildBaseButtons() {
   c.appendChild(mkBtn('todos','Todos'));
   const states = rdoStateFilter === 'todos' ? ['ba','mg','se'] : [rdoStateFilter];
   states.forEach(function(st) {
-    (RDO_BASE_CONFIG[st]||[]).forEach(function(b) { c.appendChild(mkBtn(b.id, b.label)); });
+    (RDO_FILIAL_CONFIG[st]||[]).forEach(function(b) { c.appendChild(mkBtn(b.id, b.label)); });
   });
 }
 
 function rdoFilter(list) {
   return list.filter(function(n) {
     if (rdoStateFilter !== 'todos' && rdoTeamState(n) !== rdoStateFilter) return false;
-    if (rdoBaseFilter  !== 'todos' && rdoTeamBase(n)  !== rdoBaseFilter)  return false;
+    if (rdoBaseFilter  !== 'todos' && rdoTeamFilial(n) !== rdoBaseFilter)  return false;
     if (rdoCentroFilter !== 'todos' && rdoTeamBase(n) !== rdoCentroFilter) return false;
     return true;
   });
