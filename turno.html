@@ -329,9 +329,9 @@ window.presenceOpenModal = function() { if(window._presenceOpenModal) window._pr
     <span style="font-size:0.6rem;font-weight:800;color:#aaa;letter-spacing:1.5px;text-transform:uppercase;white-space:nowrap;flex-shrink:0;">🏢 FILIAL:</span>
     <div id="turno-base-filter-btns" style="display:flex;gap:7px;align-items:center;overflow-x:auto;scrollbar-width:none;"></div>
   </div>
-  <!-- Filtro Centro de custo (dinâmico conforme estado selecionado) -->
+  <!-- Filtro Centro de serviço (filtrado pela filial selecionada) -->
   <div style="background:#fff;border-bottom:2px solid #e2e8f0;padding:7px 12px;display:flex;align-items:center;gap:7px;overflow-x:auto;scrollbar-width:none;">
-    <span style="font-size:0.6rem;font-weight:800;color:#aaa;letter-spacing:1.5px;text-transform:uppercase;white-space:nowrap;flex-shrink:0;">💲 CENTRO DE CUSTO:</span>
+    <span style="font-size:0.6rem;font-weight:800;color:#aaa;letter-spacing:1.5px;text-transform:uppercase;white-space:nowrap;flex-shrink:0;">💲 CENTRO DE SERVIÇO:</span>
     <div id="turno-centro-filter-btns" style="display:flex;gap:7px;align-items:center;overflow-x:auto;scrollbar-width:none;"></div>
   </div>
 
@@ -961,6 +961,10 @@ const FILIAL_CONFIG = {
   mg: [{ id:'pa',  label:'🏙 CONGONHAL' }],
   se: [{ id:'aju', label:'🌊 ARACAJU' }]
 };
+// Centros de serviço que pertencem a cada filial (Congonhal abrange Congonhal + Itajubá)
+const FILIAL_CENTROS = {
+  irc:['irc'], jac:['jac'], fsa:['fsa'], pa:['pa','ita'], aju:['aju']
+};
 
 // Configuração das bases por estado
 const BASE_CONFIG = {
@@ -1024,11 +1028,17 @@ function turnoSetState(state) {
 
 function turnoSetBase(base) {
   turnoBaseFilter = base;
+  // Centro de serviço deve pertencer à filial selecionada
+  if (base !== 'todos') {
+    const permit = FILIAL_CENTROS[base] || [];
+    if (turnoCentroFilter !== 'todos' && permit.indexOf(turnoCentroFilter) < 0) turnoCentroFilter = 'todos';
+  }
   updateBaseFilterButtons();
+  updateCentroFilterButtons();
   render();
 }
 
-// Botões do filtro de Centro de custo (nome oficial por região)
+// Botões do filtro de Centro de serviço (filtrados pela filial selecionada)
 function updateCentroFilterButtons() {
   const container = document.getElementById('turno-centro-filter-btns');
   if (!container) return;
@@ -1045,12 +1055,15 @@ function updateCentroFilterButtons() {
   }
   container.innerHTML = '';
   container.appendChild(mkBtn('todos', 'Todos'));
-  const states = turnoStateFilter === 'todos' ? ['ba','mg','se'] : [turnoStateFilter];
-  states.forEach(function(st) {
-    (BASE_CONFIG[st]||[]).forEach(function(b) {
-      container.appendChild(mkBtn(b.id, CENTRO_CUSTO[b.id] || b.label));
-    });
-  });
+  let ids = [];
+  if (turnoBaseFilter !== 'todos') {
+    // Só os centros de serviço da filial selecionada
+    ids = (FILIAL_CENTROS[turnoBaseFilter] || []).slice();
+  } else {
+    const states = turnoStateFilter === 'todos' ? ['ba','mg','se'] : [turnoStateFilter];
+    states.forEach(function(st) { (BASE_CONFIG[st]||[]).forEach(function(b) { ids.push(b.id); }); });
+  }
+  ids.forEach(function(id) { container.appendChild(mkBtn(id, CENTRO_CUSTO[id] || id)); });
 }
 
 function turnoSetCentro(id) {

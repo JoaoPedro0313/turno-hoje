@@ -509,9 +509,9 @@ box-shadow:0 2px 8px rgba(0,0,0,0.08)}
   <div id="rdo-base-btns" style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;overflow-x:auto;"></div>
 </div>
 
-<!-- Filtro Centro de custo -->
+<!-- Filtro Centro de serviço -->
 <div class="rdo-base-bar">
-  <span style="font-size:0.6rem;font-weight:800;color:#aaa;letter-spacing:1.5px;text-transform:uppercase;white-space:nowrap;flex-shrink:0;">💲 CENTRO DE CUSTO:</span>
+  <span style="font-size:0.6rem;font-weight:800;color:#aaa;letter-spacing:1.5px;text-transform:uppercase;white-space:nowrap;flex-shrink:0;">💲 CENTRO DE SERVIÇO:</span>
   <div id="rdo-centro-btns" style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;overflow-x:auto;"></div>
 </div>
 
@@ -644,6 +644,8 @@ const RDO_FILIAL_CONFIG = {
   mg: [{id:'pa', label:'🏙 CONGONHAL'}],
   se: [{id:'aju',label:'🌊 ARACAJU'}]
 };
+// Centros de serviço por filial (Congonhal abrange Congonhal + Itajubá)
+const RDO_FILIAL_CENTROS = { irc:['irc'], jac:['jac'], fsa:['fsa'], pa:['pa','ita'], aju:['aju'] };
 
 function rdoSetState(s) {
   rdoStateFilter = s;
@@ -659,9 +661,15 @@ function rdoSetState(s) {
 
 function rdoSetBase(b) {
   rdoBaseFilter = b;
+  // Centro de serviço deve pertencer à filial selecionada
+  if (b !== 'todos') {
+    const permit = RDO_FILIAL_CENTROS[b] || [];
+    if (rdoCentroFilter !== 'todos' && permit.indexOf(rdoCentroFilter) < 0) rdoCentroFilter = 'todos';
+  }
   document.querySelectorAll('.rdo-base-btn').forEach(function(btn) {
     btn.classList.toggle('active', btn.dataset.base === b);
   });
+  rdoBuildCentroButtons();
   rdoRender();
 }
 
@@ -686,10 +694,14 @@ function rdoBuildCentroButtons() {
     return btn;
   }
   c.appendChild(mkBtn('todos','Todos'));
-  const states = rdoStateFilter === 'todos' ? ['ba','mg','se'] : [rdoStateFilter];
-  states.forEach(function(st) {
-    (RDO_BASE_CONFIG[st]||[]).forEach(function(b) { c.appendChild(mkBtn(b.id, RDO_CENTRO_CUSTO[b.id] || b.label)); });
-  });
+  let ids = [];
+  if (rdoBaseFilter !== 'todos') {
+    ids = (RDO_FILIAL_CENTROS[rdoBaseFilter] || []).slice();
+  } else {
+    const states = rdoStateFilter === 'todos' ? ['ba','mg','se'] : [rdoStateFilter];
+    states.forEach(function(st) { (RDO_BASE_CONFIG[st]||[]).forEach(function(b) { ids.push(b.id); }); });
+  }
+  ids.forEach(function(id) { c.appendChild(mkBtn(id, RDO_CENTRO_CUSTO[id] || id)); });
 }
 
 function rdoBuildBaseButtons() {
