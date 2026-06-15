@@ -173,6 +173,8 @@ body.sm-collapsed .bottom-bar{left:64px !important;}
         <div class="ac-pick"><label>Estado / UF</label><select id="ac-uf" onchange="acOnUF()"></select></div>
         <div class="ac-pick"><label>Base</label><select id="ac-base" onchange="acOnBase()"></select></div>
         <div class="ac-pick"><label>Função (cargo)</label><select id="ac-func" onchange="acOnFunc()"></select></div>
+        <div class="ac-pick"><label>Filial</label><select id="ac-fil" onchange="acOnFilial()"></select></div>
+        <div class="ac-pick"><label>Centro de serviço</label><select id="ac-cen" onchange="acOnCentro()"></select></div>
         <div class="ac-pick"><label>Usuário</label>
           <div class="ac-user-wrap">
             <input id="ac-user-busca" placeholder="🔎 buscar por nome ou login…" oninput="acFillUsers();acRender();" autocomplete="off">
@@ -563,6 +565,12 @@ function acUfunc(i){return (TREE&&TREE.cargos[i])||AC_SEMF;}
 function acUuf(i){return (TREE&&TREE.uf&&TREE.uf[i])||AC_SEMUF;}
 function acBase(i){return (TREE&&TREE.base&&TREE.base[i])||AC_SEMBASE;}
 function acSup(i){var lg=(TREE&&TREE.users[i]&&TREE.users[i][0])||'';return /^(NW|SV)/i.test(lg);}
+/* Filial / Centro de serviço por usuário — derivados do cadastro de funcionários
+   (cruzado por nome). Cada entrada: uid -> [filial, centroDeServico]. */
+var AC_SEMFIL='(sem filial)', AC_SEMCEN='(sem centro)';
+var AC_LOTA={"0":["Jacobina","Jacobina"],"1":["Jacobina","Jacobina"],"2":["Irecê","Irecê"],"6":["Jacobina",""],"7":["Congonhal",""],"8":["Congonhal",""],"13":["Irecê","Irecê"],"15":["Jacobina","Jacobina"],"21":["Congonhal","Itajuba"],"22":["Congonhal",""],"23":["Congonhal",""],"24":["Itajuba","Itajuba"],"30":["Congonhal",""],"34":["Jacobina","Jacobina"],"37":["Irecê","Irecê"],"39":["Congonhal",""],"41":["","Jacobina"],"42":["Jacobina","Jacobina"],"43":["","Aracaju"],"44":["Jacobina","Jacobina"],"45":["Congonhal",""],"46":["Congonhal","Itajuba"],"54":["","Jacobina"],"58":["Congonhal",""],"59":["Congonhal",""],"65":["","Aracaju"],"66":["","Jacobina"],"67":["Congonhal",""],"68":["Irecê","Irecê"],"70":["Irecê","Irecê"],"71":["","Aracaju"],"79":["Jacobina",""],"80":["Congonhal","Itajuba"],"81":["Jacobina","Jacobina"],"82":["Congonhal","Itajuba"],"88":["Itajuba",""],"91":["Jacobina","Jacobina"],"94":["","Jacobina"],"98":["Irecê","Irecê"],"99":["Jacobina","Aracaju"],"100":["Jacobina","Aracaju"],"103":["Jacobina","Jacobina"],"105":["","Aracaju"],"106":["Congonhal",""],"107":["Irecê","Irecê"],"109":["Congonhal",""],"115":["Jacobina","Jacobina"],"116":["Jacobina","Jacobina"],"118":["","Jacobina"],"120":["Jacobina","Jacobina"],"123":["Jacobina","Jacobina"],"127":["Jacobina","Jacobina"],"128":["","Jacobina"],"131":["Jacobina","Jacobina"],"134":["Jacobina","Jacobina"],"135":["Irecê","Irecê"],"137":["Irecê","Irecê"],"140":["","Jacobina"],"142":["","Aracaju"],"149":["","Pouso Alegre"]};
+function acFilial(i){return (AC_LOTA[i]&&AC_LOTA[i][0])||AC_SEMFIL;}
+function acCentro(i){return (AC_LOTA[i]&&AC_LOTA[i][1])||AC_SEMCEN;}
 // contas de suporte (NW/SV) ficam fora dos filtros comuns; só aparecem ao escolher "Suporte"
 function acMatchUF(i,uf){ if(uf==='__SUP__')return acSup(i); if(acSup(i))return false; if(!uf)return true; return acUuf(i)===uf; }
 function acFillUF(){
@@ -588,12 +596,27 @@ function acFillFuncs(){
   var tot=0; for(var k in c)tot+=c[k];
   $('ac-func').innerHTML='<option value="">Todas as fun\u00e7\u00f5es ('+tot+')</option>'+ks.map(function(f){return '<option value="'+esc(f)+'">'+esc(f)+' ('+c[f]+')</option>';}).join('');
 }
+function acFillFiliais(){
+  var uf=$('ac-uf').value, ba=$('ac-base').value, f=$('ac-func').value, c={};
+  TREE.users.forEach(function(u,i){if(!acMatchUF(i,uf))return;if(ba&&acBase(i)!==ba)return;if(f&&acUfunc(i)!==f)return;var x=acFilial(i);c[x]=(c[x]||0)+1;});
+  var ks=Object.keys(c).sort(function(a,b){if(a===AC_SEMFIL)return 1;if(b===AC_SEMFIL)return -1;return a.localeCompare(b,'pt');});
+  var tot=0; for(var k in c)tot+=c[k];
+  $('ac-fil').innerHTML='<option value="">Todas as filiais ('+tot+')</option>'+ks.map(function(x){return '<option value="'+esc(x)+'">'+esc(x)+' ('+c[x]+')</option>';}).join('');
+}
+function acFillCentros(){
+  var uf=$('ac-uf').value, ba=$('ac-base').value, f=$('ac-func').value, fl=$('ac-fil').value, c={};
+  TREE.users.forEach(function(u,i){if(!acMatchUF(i,uf))return;if(ba&&acBase(i)!==ba)return;if(f&&acUfunc(i)!==f)return;if(fl&&acFilial(i)!==fl)return;var x=acCentro(i);c[x]=(c[x]||0)+1;});
+  var ks=Object.keys(c).sort(function(a,b){if(a===AC_SEMCEN)return 1;if(b===AC_SEMCEN)return -1;return a.localeCompare(b,'pt');});
+  var tot=0; for(var k in c)tot+=c[k];
+  $('ac-cen').innerHTML='<option value="">Todos os centros ('+tot+')</option>'+ks.map(function(x){return '<option value="'+esc(x)+'">'+esc(x)+' ('+c[x]+')</option>';}).join('');
+}
 function acFillUsers(){
-  var uf=$('ac-uf').value, ba=$('ac-base').value, f=$('ac-func').value;
+  var uf=$('ac-uf').value, ba=$('ac-base').value, f=$('ac-func').value, fl=$('ac-fil').value, ce=$('ac-cen').value;
   var qb=$('ac-user-busca'); var q=qb?ptNorm(qb.value).trim():'';
   var prev=$('ac-user').value;
   var order=TREE.users.map(function(u,i){return {i:i,nome:u[1]||u[0]||('#'+i),login:u[0]||'',f:acUfunc(i),uf:acUuf(i),base:acBase(i)};})
     .filter(function(o){return acMatchUF(o.i,uf)&&(!ba||o.base===ba)&&(!f||o.f===f)
+      &&(!fl||acFilial(o.i)===fl)&&(!ce||acCentro(o.i)===ce)
       &&(!q||ptNorm(o.nome).indexOf(q)>=0||ptNorm(o.login).indexOf(q)>=0);})
     .sort(function(a,b){return a.nome.toUpperCase()<b.nome.toUpperCase()?-1:1;});
   $('ac-user').innerHTML=order.length?order.map(function(o){return '<option value="'+o.i+'">'+esc(o.nome)+(o.login?' \u2014 '+esc(o.login):'')+'</option>';}).join(''):'<option value="">(nenhum)</option>';
@@ -612,9 +635,11 @@ function acNodeU(name,n,d,uid,q){
   var ic=d===1?'\ud83d\udcc1':'\ud83d\udcc2';
   return '<details class="tw-folder tw-d'+d+'" open><summary><span class="tw-ic">'+ic+'</span>'+esc(name)+'<span class="tw-n">'+acCntU(n,uid)+' telas</span></summary><div class="tw-children">'+inner+'</div></details>';
 }
-window.acOnUF=function(){acFillBases();acFillFuncs();acFillUsers();acRender();};
-window.acOnBase=function(){acFillFuncs();acFillUsers();acRender();};
-window.acOnFunc=function(){acFillUsers();acRender();};
+window.acOnUF=function(){acFillBases();acFillFuncs();acFillFiliais();acFillCentros();acFillUsers();acRender();};
+window.acOnBase=function(){acFillFuncs();acFillFiliais();acFillCentros();acFillUsers();acRender();};
+window.acOnFunc=function(){acFillFiliais();acFillCentros();acFillUsers();acRender();};
+window.acOnFilial=function(){acFillCentros();acFillUsers();acRender();};
+window.acOnCentro=function(){acFillUsers();acRender();};
 window.acOnTop=window.acOnUF;
 window.acRender=function(){
   if(!TREE){$('perm-utree').innerHTML='<div class="empty">\u00c1rvore n\u00e3o carregada.</div>';return;}
@@ -678,6 +703,8 @@ function acInitCombos(){
   acComboWrap('ac-uf','Selecione o estado\u2026');
   acComboWrap('ac-base','Selecione a base\u2026');
   acComboWrap('ac-func','Selecione a fun\u00e7\u00e3o\u2026');
+  acComboWrap('ac-fil','Selecione a filial\u2026');
+  acComboWrap('ac-cen','Selecione o centro\u2026');
   acComboWrap('ac-user','Buscar por nome ou login\u2026');
   var b=document.getElementById('ac-user-busca'); if(b) b.style.display='none';
 }
@@ -691,6 +718,8 @@ window.acOnUser=function(){
     acSetSel('ac-uf', acSup(uid)?'__SUP__':acUuf(uid));
     acFillBases(); acSetSel('ac-base', acBase(uid));
     acFillFuncs(); acSetSel('ac-func', acUfunc(uid));
+    acFillFiliais(); acSetSel('ac-fil', acFilial(uid));
+    acFillCentros(); acSetSel('ac-cen', acCentro(uid));
     acFillUsers(); acSetSel('ac-user', String(uid));
   }
   acRender();
@@ -698,7 +727,7 @@ window.acOnUser=function(){
 var _acInit=false;
 function acInit(){
   if(!TREE){$('perm-utree').innerHTML='<div class="empty">\u00c1rvore n\u00e3o carregada (telas_usuarios_arvore.js).</div>';return;}
-  if(!_acInit){_acInit=true;acFillUF();acFillBases();acFillFuncs();acFillUsers();acInitCombos();}
+  if(!_acInit){_acInit=true;acFillUF();acFillBases();acFillFuncs();acFillFiliais();acFillCentros();acFillUsers();acInitCombos();}
   acRender();
 }
 
