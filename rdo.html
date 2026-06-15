@@ -414,6 +414,8 @@ box-shadow:0 2px 8px rgba(0,0,0,0.08)}
 .rdo-state-btn.active{background:#fff;color:#1a2a3a;border-color:#fff;}
 .rdo-base-btn{flex-shrink:0;padding:5px 14px;border-radius:20px;border:1.5px solid #e2e8f0;background:#f0f4f5;color:#888;font-family:Barlow,sans-serif;font-size:0.72rem;font-weight:800;cursor:pointer;transition:all .18s;}
 .rdo-base-btn.active{background:#0d7377;color:#fff;border-color:#0d7377;}
+.rdo-centro-btn{flex-shrink:0;padding:5px 14px;border-radius:20px;border:1.5px solid #e2e8f0;background:#f0f4f5;color:#888;font-family:Barlow,sans-serif;font-size:0.72rem;font-weight:800;cursor:pointer;transition:all .18s;}
+.rdo-centro-btn.active{background:#0d7377;color:#fff;border-color:#0d7377;}
 .rdo-upload-bar{background:#fff;border-bottom:2px solid #e2e8f0;padding:8px 14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
 .rdo-section{background:#fff;border-radius:12px;margin:12px 8px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,.07);}
 .rdo-section-hdr{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:1px solid #e8ecef;}
@@ -501,10 +503,16 @@ box-shadow:0 2px 8px rgba(0,0,0,0.08)}
   <div id="rdo-state-counts" style="margin-left:auto;font-size:0.62rem;font-weight:700;color:rgba(255,255,255,0.4);white-space:nowrap;"></div>
 </div>
 
-<!-- Filtro Base -->
+<!-- Filtro Filial -->
 <div class="rdo-base-bar">
-  <span style="font-size:0.6rem;font-weight:800;color:#aaa;letter-spacing:1.5px;text-transform:uppercase;white-space:nowrap;flex-shrink:0;">🏢 BASE:</span>
+  <span style="font-size:0.6rem;font-weight:800;color:#aaa;letter-spacing:1.5px;text-transform:uppercase;white-space:nowrap;flex-shrink:0;">🏢 FILIAL:</span>
   <div id="rdo-base-btns" style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;overflow-x:auto;"></div>
+</div>
+
+<!-- Filtro Centro de custo -->
+<div class="rdo-base-bar">
+  <span style="font-size:0.6rem;font-weight:800;color:#aaa;letter-spacing:1.5px;text-transform:uppercase;white-space:nowrap;flex-shrink:0;">💲 CENTRO DE CUSTO:</span>
+  <div id="rdo-centro-btns" style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;overflow-x:auto;"></div>
 </div>
 
 <!-- Data carregada (o upload do arquivo agora fica em ⚙️ Configurações) -->
@@ -591,6 +599,7 @@ const SUPA_HEADERS = { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY
 
 let rdoStateFilter = 'todos';
 let rdoBaseFilter  = 'todos';
+let rdoCentroFilter = 'todos';
 let rdoData        = {}; // { 'ALAN-IRC': ['LINHA MORTA', 'LINHA MORTA'], ... }
 let rdoDate        = '';
 let rdoJustif      = {}; // { 'ALAN-IRC': 'motivo da falta justificada', ... }
@@ -617,14 +626,25 @@ function rdoTeamState(n) {
   if (b==='aju')            return 'se';
   return '';
 }
+// Centro de custo (nome oficial do cadastro) por base/região
+const RDO_CENTRO_CUSTO = {
+  irc:'SERVIÇOS EM ENERGIA - IRECÊ',
+  jac:'SERVIÇOS EM ENERGIA - JACOBINA',
+  pa: 'SERVIÇOS EM ENERGIA EM CONGONHAL',
+  ita:'SERVIÇOS EM ENERGIA EM ITAJUBÁ',
+  aju:'SERVIÇOS EM ENERGIA - ARACAJU'
+};
+function rdoTeamCentro(n) { return RDO_CENTRO_CUSTO[rdoTeamBase(n)] || ''; }
 
 function rdoSetState(s) {
   rdoStateFilter = s;
   rdoBaseFilter  = 'todos';
+  rdoCentroFilter = 'todos';
   document.querySelectorAll('.rdo-state-btn').forEach(function(btn) {
     btn.classList.toggle('active', btn.id === 'rdo-state-' + s);
   });
   rdoBuildBaseButtons();
+  rdoBuildCentroButtons();
   rdoRender();
 }
 
@@ -634,6 +654,33 @@ function rdoSetBase(b) {
     btn.classList.toggle('active', btn.dataset.base === b);
   });
   rdoRender();
+}
+
+function rdoSetCentro(b) {
+  rdoCentroFilter = b;
+  document.querySelectorAll('.rdo-centro-btn').forEach(function(btn) {
+    btn.classList.toggle('active', btn.dataset.base === b);
+  });
+  rdoRender();
+}
+
+function rdoBuildCentroButtons() {
+  const c = document.getElementById('rdo-centro-btns');
+  if (!c) return;
+  c.innerHTML = '';
+  function mkBtn(id, label) {
+    const btn = document.createElement('button');
+    btn.className = 'rdo-centro-btn' + (rdoCentroFilter === id ? ' active' : '');
+    btn.dataset.base = id;
+    btn.textContent = label;
+    btn.onclick = function() { rdoSetCentro(id); };
+    return btn;
+  }
+  c.appendChild(mkBtn('todos','Todos'));
+  const states = rdoStateFilter === 'todos' ? ['ba','mg','se'] : [rdoStateFilter];
+  states.forEach(function(st) {
+    (RDO_BASE_CONFIG[st]||[]).forEach(function(b) { c.appendChild(mkBtn(b.id, RDO_CENTRO_CUSTO[b.id] || b.label)); });
+  });
 }
 
 function rdoBuildBaseButtons() {
@@ -659,6 +706,7 @@ function rdoFilter(list) {
   return list.filter(function(n) {
     if (rdoStateFilter !== 'todos' && rdoTeamState(n) !== rdoStateFilter) return false;
     if (rdoBaseFilter  !== 'todos' && rdoTeamBase(n)  !== rdoBaseFilter)  return false;
+    if (rdoCentroFilter !== 'todos' && rdoTeamBase(n) !== rdoCentroFilter) return false;
     return true;
   });
 }
@@ -894,6 +942,7 @@ function rdoImportar(file) {
 
 // Init
 rdoBuildBaseButtons();
+rdoBuildCentroButtons();
 rdoCarregarBanco();
 </script>
 

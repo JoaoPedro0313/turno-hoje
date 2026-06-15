@@ -324,10 +324,15 @@ window.presenceOpenModal = function() { if(window._presenceOpenModal) window._pr
     <button id="state-btn-se" onclick="turnoSetState('se')" style="flex-shrink:0;padding:4px 14px;border-radius:20px;border:1.5px solid rgba(255,255,255,0.2);background:transparent;color:rgba(255,255,255,0.65);font-family:Barlow,sans-serif;font-size:0.7rem;font-weight:800;cursor:pointer;transition:all .18s;">🟣 SE</button>
     <div id="turno-base-counts" style="margin-left:auto;font-size:0.62rem;font-weight:700;color:rgba(255,255,255,0.4);white-space:nowrap;"></div>
   </div>
-  <!-- Filtro Base (dinâmico conforme estado selecionado) -->
+  <!-- Filtro Filial (dinâmico conforme estado selecionado) -->
   <div style="background:#fff;border-bottom:2px solid #e2e8f0;padding:7px 12px;display:flex;align-items:center;gap:7px;overflow-x:auto;scrollbar-width:none;">
-    <span style="font-size:0.6rem;font-weight:800;color:#aaa;letter-spacing:1.5px;text-transform:uppercase;white-space:nowrap;flex-shrink:0;">🏢 BASE:</span>
+    <span style="font-size:0.6rem;font-weight:800;color:#aaa;letter-spacing:1.5px;text-transform:uppercase;white-space:nowrap;flex-shrink:0;">🏢 FILIAL:</span>
     <div id="turno-base-filter-btns" style="display:flex;gap:7px;align-items:center;overflow-x:auto;scrollbar-width:none;"></div>
+  </div>
+  <!-- Filtro Centro de custo (dinâmico conforme estado selecionado) -->
+  <div style="background:#fff;border-bottom:2px solid #e2e8f0;padding:7px 12px;display:flex;align-items:center;gap:7px;overflow-x:auto;scrollbar-width:none;">
+    <span style="font-size:0.6rem;font-weight:800;color:#aaa;letter-spacing:1.5px;text-transform:uppercase;white-space:nowrap;flex-shrink:0;">💲 CENTRO DE CUSTO:</span>
+    <div id="turno-centro-filter-btns" style="display:flex;gap:7px;align-items:center;overflow-x:auto;scrollbar-width:none;"></div>
   </div>
 
   <div id="turno-hist-bar" style="background:#1a2a3a;padding:10px 16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;border-bottom:2px solid #0d7377;">
@@ -916,6 +921,7 @@ setTimeout(() => setDbStatus('local', 'Dados locais'), 2000);
 // ── Filtro por Estado e Base ───────────────────────────────────────────────
 let turnoStateFilter = 'todos'; // 'todos' | 'ba' | 'mg' | 'se'
 let turnoBaseFilter  = 'todos'; // 'todos' | irc/jac | pa/ita/lv | aju
+let turnoCentroFilter = 'todos'; // mesmo id de base (irc/jac/pa/ita/aju); centro de custo = região
 
 // Retorna a base (sufixo) de um nome de equipe
 function teamBase(name) {
@@ -936,6 +942,15 @@ function teamState(name) {
   if (b === 'aju') return 'se';
   return '';
 }
+// Centro de custo (nome oficial do cadastro) por base/região
+const CENTRO_CUSTO = {
+  irc:'SERVIÇOS EM ENERGIA - IRECÊ',
+  jac:'SERVIÇOS EM ENERGIA - JACOBINA',
+  pa: 'SERVIÇOS EM ENERGIA EM CONGONHAL',
+  ita:'SERVIÇOS EM ENERGIA EM ITAJUBÁ',
+  aju:'SERVIÇOS EM ENERGIA - ARACAJU'
+};
+function teamCentro(name) { return CENTRO_CUSTO[teamBase(name)] || ''; }
 
 // Configuração das bases por estado
 const BASE_CONFIG = {
@@ -980,6 +995,7 @@ function updateBaseFilterButtons() {
 function turnoSetState(state) {
   turnoStateFilter = state;
   turnoBaseFilter  = 'todos';
+  turnoCentroFilter = 'todos';
   // Atualiza botões de estado
   ['todos','ba','mg','se'].forEach(s => {
     const el = document.getElementById('state-btn-' + s);
@@ -991,6 +1007,7 @@ function turnoSetState(state) {
     }
   });
   updateBaseFilterButtons();
+  updateCentroFilterButtons();
   render();
 }
 
@@ -1000,13 +1017,45 @@ function turnoSetBase(base) {
   render();
 }
 
-// Filtra lista de equipes por estado + base ativos
+// Botões do filtro de Centro de custo (nome oficial por região)
+function updateCentroFilterButtons() {
+  const container = document.getElementById('turno-centro-filter-btns');
+  if (!container) return;
+  const aS = 'flex-shrink:0;padding:5px 14px;border-radius:20px;border:1.5px solid #0d7377;background:#0d7377;color:#fff;font-family:Barlow,sans-serif;font-size:0.72rem;font-weight:800;cursor:pointer;transition:all .18s;';
+  const iS = 'flex-shrink:0;padding:5px 14px;border-radius:20px;border:1.5px solid #e2e8f0;background:#f0f4f5;color:#888;font-family:Barlow,sans-serif;font-size:0.72rem;font-weight:800;cursor:pointer;transition:all .18s;';
+  function mkBtn(id, label) {
+    const s = turnoCentroFilter === id ? aS : iS;
+    const btn = document.createElement('button');
+    btn.id = 'centro-btn-' + id;
+    btn.style.cssText = s;
+    btn.textContent = label;
+    btn.onclick = function() { turnoSetCentro(id); };
+    return btn;
+  }
+  container.innerHTML = '';
+  container.appendChild(mkBtn('todos', 'Todos'));
+  const states = turnoStateFilter === 'todos' ? ['ba','mg','se'] : [turnoStateFilter];
+  states.forEach(function(st) {
+    (BASE_CONFIG[st]||[]).forEach(function(b) {
+      container.appendChild(mkBtn(b.id, CENTRO_CUSTO[b.id] || b.label));
+    });
+  });
+}
+
+function turnoSetCentro(id) {
+  turnoCentroFilter = id;
+  updateCentroFilterButtons();
+  render();
+}
+
+// Filtra lista de equipes por estado + filial + centro de custo ativos
 function filterByStateAndBase(arr) {
   return arr.filter(n => {
     const name = typeof n === 'string' ? n : (n.name || '');
     const st = teamState(name);
     if (turnoStateFilter !== 'todos' && st !== turnoStateFilter) return false;
     if (turnoBaseFilter  !== 'todos' && teamBase(name) !== turnoBaseFilter) return false;
+    if (turnoCentroFilter !== 'todos' && teamBase(name) !== turnoCentroFilter) return false;
     return true;
   });
 }
@@ -1051,12 +1100,13 @@ document.getElementById('footer-text').innerHTML  =
 updateBaseCounts();
 renderProducao();
 }
-// Inicializa os botões de base ao carregar
+// Inicializa os botões de base/filial e centro de custo ao carregar
 (function initBaseFilter() {
+  function initFiltros(){ updateBaseFilterButtons(); updateCentroFilterButtons(); }
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', updateBaseFilterButtons);
+    document.addEventListener('DOMContentLoaded', initFiltros);
   } else {
-    setTimeout(updateBaseFilterButtons, 0);
+    setTimeout(initFiltros, 0);
   }
 })();
 
