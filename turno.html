@@ -929,6 +929,7 @@ function teamBase(name) {
   const n = (name || '').toUpperCase();
   if (n.endsWith('-IRC')) return 'irc';
   if (n.endsWith('-JAC')) return 'jac';
+  if (n.endsWith('-FSA')) return 'fsa';
   if (n.endsWith('-AJU')) return 'aju';
   if (n.endsWith('-PA'))  return 'pa';
   if (n.endsWith('-ITA')) return 'ita';
@@ -937,7 +938,7 @@ function teamBase(name) {
 // Retorna o estado de um nome de equipe
 function teamState(name) {
   const b = teamBase(name);
-  if (b === 'irc' || b === 'jac') return 'ba';
+  if (b === 'irc' || b === 'jac' || b === 'fsa') return 'ba';
   if (b === 'pa'  || b === 'ita') return 'mg';
   if (b === 'aju') return 'se';
   return '';
@@ -946,6 +947,7 @@ function teamState(name) {
 const CENTRO_CUSTO = {
   irc:'SERVIÇOS EM ENERGIA - IRECÊ',
   jac:'SERVIÇOS EM ENERGIA - JACOBINA',
+  fsa:'SERVIÇOS EM ENERGIA - FEIRA DE SANTANA',
   pa: 'SERVIÇOS EM ENERGIA EM CONGONHAL',
   ita:'SERVIÇOS EM ENERGIA EM ITAJUBÁ',
   aju:'SERVIÇOS EM ENERGIA - ARACAJU'
@@ -955,7 +957,7 @@ function teamCentro(name) { return CENTRO_CUSTO[teamBase(name)] || ''; }
 function teamFilial(name) { const b = teamBase(name); return b === 'ita' ? 'pa' : b; }
 // Configuração da FILIAL por estado (MG = só Congonhal; Itajubá vira centro de custo)
 const FILIAL_CONFIG = {
-  ba: [{ id:'irc', label:'🗺 IRECÊ' }, { id:'jac', label:'🏗 JACOBINA' }],
+  ba: [{ id:'irc', label:'🗺 IRECÊ' }, { id:'jac', label:'🏗 JACOBINA' }, { id:'fsa', label:'🌆 FEIRA DE SANTANA' }],
   mg: [{ id:'pa',  label:'🏙 CONGONHAL' }],
   se: [{ id:'aju', label:'🌊 ARACAJU' }]
 };
@@ -964,7 +966,8 @@ const FILIAL_CONFIG = {
 const BASE_CONFIG = {
   ba: [
     { id:'irc', label:'🗺 IRECÊ' },
-    { id:'jac', label:'🏗 JACOBINA' }
+    { id:'jac', label:'🏗 JACOBINA' },
+    { id:'fsa', label:'🌆 FEIRA DE SANTANA' }
   ],
   mg: [
     { id:'pa',  label:'🏙 CONGONHAL' },
@@ -1779,7 +1782,7 @@ const falta = filterByStateAndBase(
 );
 // Label do filtro ativo para o cabeçalho
 const STATE_LABELS = { todos:'TODOS OS ESTADOS', ba:'🟡 BA', mg:'🔵 MG', se:'🟣 SE' };
-const BASE_LABELS  = { todos:'TODAS AS BASES', irc:'IRECÊ', jac:'JACOBINA', pa:'CONGONHAL', ita:'ITAJUBÁ', lv:'LINHA VIVA', aju:'ARACAJU' };
+const BASE_LABELS  = { todos:'TODAS AS BASES', irc:'IRECÊ', jac:'JACOBINA', fsa:'FEIRA DE SANTANA', pa:'CONGONHAL', ita:'ITAJUBÁ', lv:'LINHA VIVA', aju:'ARACAJU' };
 const filtroLabel  = (turnoStateFilter!=='todos'||turnoBaseFilter!=='todos')
   ? (STATE_LABELS[turnoStateFilter]||turnoStateFilter) + (turnoBaseFilter!=='todos' ? ' · '+(BASE_LABELS[turnoBaseFilter]||turnoBaseFilter) : '')
   : '';
