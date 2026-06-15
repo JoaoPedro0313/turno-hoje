@@ -605,7 +605,7 @@ let rdoDate        = '';
 let rdoJustif      = {}; // { 'ALAN-IRC': 'motivo da falta justificada', ... }
 
 const RDO_BASE_CONFIG = {
-  ba: [{id:'irc',label:'🗺 IRECÊ'},{id:'jac',label:'🏗 JACOBINA'},{id:'fsa',label:'🌆 FEIRA DE SANTANA'}],
+  ba: [{id:'irc',label:'🗺 IRECÊ'},{id:'jac',label:'🏗 JACOBINA'},{id:'fsa',label:'🌆 FEIRA DE SANTANA'},{id:'srr',label:'🌾 SERRINHA'}],
   mg: [{id:'pa', label:'🏙 CONGONHAL'},{id:'ita',label:'🏔 ITAJUBÁ'}],
   se: [{id:'aju',label:'🌊 ARACAJU'}]
 };
@@ -615,6 +615,7 @@ function rdoTeamBase(n) {
   if (n.endsWith('-IRC')) return 'irc';
   if (n.endsWith('-JAC')) return 'jac';
   if (n.endsWith('-FSA')) return 'fsa';
+  if (n.endsWith('-SRR')) return 'srr';
   if (n.endsWith('-PA'))  return 'pa';
   if (n.endsWith('-ITA')) return 'ita';
   if (n.endsWith('-AJU')) return 'aju';
@@ -622,7 +623,7 @@ function rdoTeamBase(n) {
 }
 function rdoTeamState(n) {
   const b = rdoTeamBase(n);
-  if (b==='irc'||b==='jac'||b==='fsa') return 'ba';
+  if (b==='irc'||b==='jac'||b==='fsa'||b==='srr') return 'ba';
   if (b==='pa'||b==='ita')  return 'mg';
   if (b==='aju')            return 'se';
   return '';
@@ -632,20 +633,21 @@ const RDO_CENTRO_CUSTO = {
   irc:'SERVIÇOS EM ENERGIA - IRECÊ',
   jac:'SERVIÇOS EM ENERGIA - JACOBINA',
   fsa:'SERVIÇOS EM ENERGIA - FEIRA DE SANTANA',
+  srr:'SERVIÇOS EM ENERGIA - SERRINHA',
   pa: 'SERVIÇOS EM ENERGIA EM CONGONHAL',
   ita:'SERVIÇOS EM ENERGIA EM ITAJUBÁ',
   aju:'SERVIÇOS EM ENERGIA - ARACAJU'
 };
 function rdoTeamCentro(n) { return RDO_CENTRO_CUSTO[rdoTeamBase(n)] || ''; }
-// Filial: Itajubá não é filial própria — pertence à filial Congonhal (centro de custo distingue)
-function rdoTeamFilial(n) { const b = rdoTeamBase(n); return b === 'ita' ? 'pa' : b; }
+// Filial: Itajubá pertence a Congonhal e Serrinha pertence a Feira de Santana (centro de serviço distingue)
+function rdoTeamFilial(n) { const b = rdoTeamBase(n); if (b === 'ita') return 'pa'; if (b === 'srr') return 'fsa'; return b; }
 const RDO_FILIAL_CONFIG = {
   ba: [{id:'irc',label:'🗺 IRECÊ'},{id:'jac',label:'🏗 JACOBINA'},{id:'fsa',label:'🌆 FEIRA DE SANTANA'}],
   mg: [{id:'pa', label:'🏙 CONGONHAL'}],
   se: [{id:'aju',label:'🌊 ARACAJU'}]
 };
-// Centros de serviço por filial (Congonhal abrange Congonhal + Itajubá)
-const RDO_FILIAL_CENTROS = { irc:['irc'], jac:['jac'], fsa:['fsa'], pa:['pa','ita'], aju:['aju'] };
+// Centros de serviço por filial
+const RDO_FILIAL_CENTROS = { irc:['irc'], jac:['jac'], fsa:['fsa','srr'], pa:['pa','ita'], aju:['aju'] };
 
 function rdoSetState(s) {
   rdoStateFilter = s;
