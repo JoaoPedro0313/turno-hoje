@@ -297,6 +297,18 @@ body.sm-collapsed .bottom-bar{left:64px !important;}
 
       <div id="pane-pda" style="display:none">
         <div id="fin-pda-resumo" class="fin-kpis"></div>
+        <div class="fin-graphs">
+          <div class="fin-card">
+            <div class="fin-card-h">📲 Acessos por mês</div>
+            <div id="fin-pda-acessos-top" style="font-size:.72rem;color:#64748b;font-weight:700;margin-bottom:8px"></div>
+            <div style="height:220px"><canvas id="fin-pda-chart-acessos"></canvas></div>
+          </div>
+          <div class="fin-card">
+            <div class="fin-card-h">💰 Custo ocioso por mês</div>
+            <div id="fin-pda-custo-top" style="font-size:.72rem;color:#64748b;font-weight:700;margin-bottom:8px"></div>
+            <div style="height:220px"><canvas id="fin-pda-chart-custo"></canvas></div>
+          </div>
+        </div>
         <div class="fin-card">
           <div class="fin-card-h">📲 Aparelhos ativos sem acesso ao PDA</div>
           <div id="fin-pda-meta" style="font-size:.74rem;color:#64748b;font-weight:600;margin-bottom:10px"></div>
@@ -313,6 +325,7 @@ body.sm-collapsed .bottom-bar{left:64px !important;}
   </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
 <script>if(window.pdfjsLib){ pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js'; }</script>
@@ -405,6 +418,7 @@ function finTab(t){
   }
 }
 var FIN_PDA_CACHE=null;
+var FIN_PDA_MESES=null;
 async function finPdaOcioso(){
   var meta=$('fin-pda-meta'), res=$('fin-pda-resumo');
   if(res && !FIN_PDA_CACHE) res.innerHTML='';
@@ -414,6 +428,21 @@ async function finPdaOcioso(){
       var {data,error}=await sb.from('turno_data').select('value').eq('key','pda_ocioso').maybeSingle();
       if(error){ if(meta) meta.textContent='Não foi possível carregar ('+error.message+').'; return; }
       FIN_PDA_CACHE=(data&&data.value)||{lista:[],qtd:0,diaria:0.5337};
+    }
+    if(!FIN_PDA_MESES){
+      // competências de acesso acumuladas (pda_acesso_AAAA-MM) -> acessos por mês
+      var r2=await sb.from('turno_data').select('key,value').like('key','pda_acesso_%');
+      var porMes={};
+      if(!r2.error && r2.data){
+        r2.data.forEach(function(row){
+          var v=row&&row.value; if(!v) return;
+          var comp=v.comp || (row.key.indexOf('pda_acesso_')===0?row.key.slice('pda_acesso_'.length):null);
+          if(!comp) return;
+          var n=v.count!=null?Number(v.count):(v.data?String(v.data).split('\n').filter(function(l){return l.indexOf('|')>=0;}).length:0);
+          porMes[comp]=(porMes[comp]||0)+n;
+        });
+      }
+      FIN_PDA_MESES=porMes;
     }
     finPdaRender();
   }catch(e){ if(meta) meta.textContent='Erro ao carregar.'; }
@@ -438,10 +467,54 @@ function finPdaRender(){
   var thead=$('fin-pda-thead'), tbody=$('fin-pda-tbody');
   if(thead) thead.innerHTML=['Funcionário','Matrícula','Cargo','Equipe','Custo/mês'].map(function(c){return '<th>'+c+'</th>';}).join('');
   if(tbody){
-    if(!lista.length){ tbody.innerHTML='<tr><td colspan="5" style="text-align:center;color:#94a3b8;padding:20px">Nada para mostrar. Rode a comparação na tela PDA primeiro.</td></tr>'; return; }
-    tbody.innerHTML=lista.map(function(x){
+    if(!lista.length){ tbody.innerHTML='<tr><td colspan="5" style="text-align:center;color:#94a3b8;padding:20px">Nada para mostrar. Rode a comparação na tela PDA primeiro.</td></tr>'; }
+    else tbody.innerHTML=lista.map(function(x){
       return '<tr><td style="font-weight:700;color:#1f2d3d">'+escHtml(x.nome||'—')+'</td><td>'+escHtml(x.mat||'—')+'</td><td>'+escHtml(x.cargo||'—')+'</td><td>'+escHtml(x.equipe||'—')+'</td><td style="font-weight:800;color:#c2410c">'+f(custoMes)+'</td></tr>';
     }).join('');
+  }
+  finPdaCharts(lista.length, diaria);
+}
+var FIN_CHART_ACESSOS=null, FIN_CHART_CUSTO=null;
+function finPdaCharts(qtdOcioso, diaria){
+  if(typeof Chart==='undefined') return;
+  var MN=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+  var porMes=FIN_PDA_MESES||{};
+  var meses=Object.keys(porMes).sort();
+  var rotulo=function(m){var p=m.split('-');return MN[+p[1]-1]+'/'+p[0].slice(2);};
+  var labels=meses.map(rotulo);
+
+  // 1) Acessos por mês
+  var topA=$('fin-pda-acessos-top');
+  var ctxA=document.getElementById('fin-pda-chart-acessos');
+  if(ctxA){
+    if(FIN_CHART_ACESSOS) FIN_CHART_ACESSOS.destroy();
+    if(meses.length){
+      var valsA=meses.map(function(m){return porMes[m];});
+      var maxA=Math.max.apply(null,valsA);
+      var coresA=valsA.map(function(v){return v===maxA?'#0d7377':'#5ec0b8';});
+      if(topA){ var pa=valsA.indexOf(maxA); topA.textContent='Pico: '+labels[pa]+' ('+maxA+' acessos)'; }
+      FIN_CHART_ACESSOS=new Chart(ctxA,{type:'bar',
+        data:{labels:labels,datasets:[{label:'Acessos',data:valsA,backgroundColor:coresA,borderRadius:6,maxBarThickness:46}]},
+        options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return c.parsed.y+' acesso'+(c.parsed.y===1?'':'s');}}}},
+          scales:{y:{beginAtZero:true,ticks:{precision:0,font:{family:'Barlow'}},grid:{color:'#eef2f5'}},x:{ticks:{font:{family:'Barlow',weight:'700'},color:'#555'},grid:{display:false}}}}});
+    } else if(topA){ topA.textContent='Sem competências de acesso no banco ainda.'; }
+  }
+
+  // 2) Custo ocioso por mês = nº ocioso atual × (diária × dias daquele mês)
+  var topC=$('fin-pda-custo-top');
+  var ctxC=document.getElementById('fin-pda-chart-custo');
+  if(ctxC){
+    if(FIN_CHART_CUSTO) FIN_CHART_CUSTO.destroy();
+    if(meses.length){
+      var valsC=meses.map(function(m){var p=m.split('-');var dias=new Date(+p[0],+p[1],0).getDate();return +(qtdOcioso*diaria*dias).toFixed(2);});
+      var maxC=Math.max.apply(null,valsC);
+      var coresC=valsC.map(function(v){return v===maxC?'#c2410c':'#f0a36b';});
+      if(topC){ topC.textContent=qtdOcioso+' aparelhos ociosos × diária R$ '+diaria.toFixed(2).replace('.',',')+' × dias do mês'; }
+      FIN_CHART_CUSTO=new Chart(ctxC,{type:'bar',
+        data:{labels:labels,datasets:[{label:'Custo ocioso',data:valsC,backgroundColor:coresC,borderRadius:6,maxBarThickness:46}]},
+        options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return 'R$ '+Number(c.parsed.y).toFixed(2).replace('.',',');}}}},
+          scales:{y:{beginAtZero:true,ticks:{font:{family:'Barlow'},callback:function(v){return 'R$ '+v;}},grid:{color:'#eef2f5'}},x:{ticks:{font:{family:'Barlow',weight:'700'},color:'#555'},grid:{display:false}}}}});
+    } else if(topC){ topC.textContent='Sem competências para calcular o custo por mês.'; }
   }
 }
 function escHtml(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
