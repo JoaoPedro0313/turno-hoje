@@ -2565,10 +2565,15 @@ let headerIdx = -1;
 for (let i=0; i<Math.min(rows.length,10); i++) {
 const r = rows[i].map(c=>String(c).trim().toUpperCase());
 if ((r.some(c=>c==='NOTA') && r.some(c=>c.includes('PEP'))) ||
-(r.some(c=>c==='PEP OBRA') && r.some(c=>c==='STATUS DA OBRA'))) { headerIdx=i; break; }
+(r.some(c=>c==='PEP OBRA') && (r.some(c=>c==='STATUS DA OBRA') || r.some(c=>c==='OBS STATUS')))) { headerIdx=i; break; }
 }
 if (headerIdx===-1) return null;
-const headers = rows[headerIdx].map(c=>String(c).trim().replace(/\n/g,' ').toUpperCase());
+const headers = rows[headerIdx].map(c => {
+  let h = String(c).trim().toUpperCase();
+  h = h.split('\n')[0].trim();
+  h = h.replace(/\s+/g, ' ');
+  return h;
+});
 const data = [];
 for (let i=headerIdx+1; i<rows.length; i++) {
 const row = rows[i];
@@ -2577,6 +2582,11 @@ const obj = { _UTD: utdLabel||'' };
 headers.forEach((h,idx) => { obj[h] = String(row[idx]||'').trim(); });
 if (obj['PEP OBRA']) data.push(obj);
 }
+try {
+  const topo = rows.slice(0, headerIdx + 1).map(r => (r||[]).join(' ')).join(' ').toUpperCase();
+  const mm = topo.match(/\b(JAN|FEV|MAR|ABR|MAI|JUN|JUL|AGO|SET|OUT|NOV|DEZ)\s*\/\s*(\d{2})\b/);
+  data._mesPlanilha = mm ? (mm[1] + '/' + mm[2]) : null;
+} catch(e) { data._mesPlanilha = null; }
 return data;
 }
 let compDataAtual = null, compAllChanges = [], compActiveFilter = 'todos', compBaseFilter = 'TODAS';
