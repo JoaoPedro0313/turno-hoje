@@ -2686,10 +2686,12 @@ s.src = 'https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js
 s.onload = res; s.onerror = rej; document.head.appendChild(s);
 });
 }
-const resJac = await fetch(GSHEETS.JACOBINA);
+const _cb = '&_cb=' + Date.now();
+const _noCache = { cache: 'no-store', headers: { 'cache-control': 'no-cache' } };
+const resJac = await fetch(GSHEETS.JACOBINA + _cb, _noCache);
 if (!resJac.ok) throw new Error('Falha ao buscar planilha (HTTP ' + resJac.status + ')');
 const textJac = await resJac.text();
-const resIrc = await fetch(GSHEETS.IRECE); const textIrc = resIrc.ok ? await resIrc.text() : '';
+const resIrc = await fetch(GSHEETS.IRECE + _cb, _noCache); const textIrc = resIrc.ok ? await resIrc.text() : '';
 const dataJac = compParseCSVText(textJac, 'JACOBINA');
 const dataIrc = textIrc ? (compParseCSVText(textIrc, 'IRECÊ')||[]) : [];
 if (!dataJac || !dataJac.length) throw new Error('Planilha JACOBINA não retornou dados válidos');
