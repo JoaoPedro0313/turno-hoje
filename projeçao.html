@@ -2284,6 +2284,17 @@ function compute(){
 
   pdaResult={acessaram:acessaram,naoAcessaram:naoAcessaram,semCadastro:semCadastro,
     kpi:{totalCad:totalCad,ativos:ativos,acessaram:acessaram.length,cobertura:cobertura,naoAtivos:naoAtivos,semCadastro:semCadastro.length}};
+  saveOciosoToBank();
+}
+function saveOciosoToBank(){
+  if(!PDA_SKEY || !pdaResult) return;
+  var lista=pdaResult.naoAcessaram.filter(function(x){return x.ativo;}).map(function(x){
+    return {nome:x.nome||'',mat:x.mat||'',cargo:x.cargo||'',equipe:x.equipe||'',uf:x.uf||'',situacao:x.situacao||''};
+  });
+  var payload={v:1,diaria:PDA_DIARIA,qtd:lista.length,updatedAt:new Date().toLocaleString('pt-BR'),lista:lista};
+  fetch(PDA_SUPA+'/rest/v1/turno_data',{method:'POST',headers:pdaSupaHeaders({'Content-Type':'application/json','Prefer':'resolution=merge-duplicates'}),body:JSON.stringify({key:'pda_ocioso',value:payload})})
+    .then(function(r){ if(!r.ok) console.error('[PDA] salvar ocioso', r.status); })
+    .catch(function(e){ console.error('[PDA] salvar ocioso', e); });
 }
 
 function kpi(cls,v,l){ return '<div class="pda-kpi '+cls+'"><div class="v">'+v+'</div><div class="l">'+l+'</div></div>'; }
@@ -2343,7 +2354,6 @@ function renderTabs(){
   var r=pdaResult;
   var tabs=[
     {id:'naoacessaram',label:'Não acessaram',n:r.naoAcessaram.filter(function(x){return !x.equipe;}).length},
-    {id:'custo',label:'💰 Custo (ativos s/ acesso)',n:r.naoAcessaram.filter(function(x){return x.ativo;}).length},
     {id:'acessaram',label:'Acessaram',n:r.acessaram.length},
     {id:'semcadastro',label:'Sem cadastro',n:r.semCadastro.length}
   ];
@@ -2356,11 +2366,9 @@ function currentList(){
   var list= pdaTab==='acessaram'?pdaResult.acessaram : pdaTab==='semcadastro'?pdaResult.semCadastro : pdaResult.naoAcessaram;
   /* Na aba "Não acessaram", ocultar quem pertence a alguma equipe */
   if(pdaTab==='naoacessaram') list=list.filter(function(x){ return !x.equipe; });
-  /* Na aba "Custo", só os ATIVOS sem acesso (aparelho cobrado e sem uso) */
-  if(pdaTab==='custo') list=list.filter(function(x){ return x.ativo; });
   var q=norm($('pda-search').value).toLowerCase();
   if(q) list=list.filter(function(x){ return String(x.nome||'').toLowerCase().indexOf(q)>=0 || String(x.mat||'').indexOf(q)>=0; });
-  if(pdaStatus!=='todos' && pdaTab!=='semcadastro' && pdaTab!=='custo') list=list.filter(function(x){ return pdaStatus==='ativo'?x.ativo:!x.ativo; });
+  if(pdaStatus!=='todos' && pdaTab!=='semcadastro') list=list.filter(function(x){ return pdaStatus==='ativo'?x.ativo:!x.ativo; });
   if(pdaCargo!=='todos' && pdaTab!=='semcadastro') list=list.filter(function(x){ return (x.cargo||'(sem cargo)')===pdaCargo; });
   if(pdaEquipe!=='todos' && pdaTab!=='semcadastro') list=list.filter(function(x){ return (x.equipe||'(sem equipe)')===pdaEquipe; });
   if(pdaUF!=='todos' && pdaTab!=='semcadastro') list=list.filter(function(x){ return (x.uf||'(sem UF)')===pdaUF; });
@@ -2411,40 +2419,14 @@ function pdaRender(){
   if(!pdaResult) return;
   var iscad = pdaTab!=='semcadastro';
   ['pda-fg-situacao','pda-fg-uf','pda-fg-cargo','pda-fg-equipe'].forEach(function(id){ var el=$(id); if(el) el.style.display=iscad?'':'none'; });
-  var fgsit=$('pda-fg-situacao'); if(fgsit && pdaTab==='custo') fgsit.style.display='none';
-  var seg=$('pda-status-seg'); if(seg) seg.style.display=(iscad&&pdaTab!=='custo')?'flex':'none';
+  var seg=$('pda-status-seg'); if(seg) seg.style.display=iscad?'flex':'none';
   populateCargoSelect();
   populateEquipeSelect();
   populateUFSelect();
-  var titles={naoacessaram:'📲 Não acessaram',acessaram:'📲 Acessaram',semcadastro:'📲 Acessos sem cadastro',custo:'💰 Custo dos ativos sem acesso'};
+  var titles={naoacessaram:'📲 Não acessaram',acessaram:'📲 Acessaram',semcadastro:'📲 Acessos sem cadastro'};
   var st=$('pda-sec-title'); if(st) st.textContent=titles[pdaTab]||'📲 Comparação';
   var list=currentList(), cols, rowsHtml;
   var cnt=$('pda-count'); if(cnt) cnt.textContent=list.length+(list.length===1?' registro':' registros');
-  if(pdaTab==='custo'){
-    var hoje=new Date();
-    var diasMes=new Date(hoje.getFullYear(),hoje.getMonth()+1,0).getDate();
-    var custoMes=PDA_DIARIA*diasMes;
-    var total=custoMes*list.length;
-    var fmt=function(n){return 'R$ '+n.toFixed(2).replace('.',',');};
-    var resumo='<div style="display:flex;gap:18px;flex-wrap:wrap;align-items:center;padding:12px 16px;margin-bottom:12px;background:#fff8f0;border:1px solid #fde3c0;border-radius:10px;">'
-      +'<div><div style="font-size:1.35rem;font-weight:800;color:#c2410c;">'+fmt(total)+'</div><div style="font-size:0.62rem;font-weight:700;color:#9a6b3f;text-transform:uppercase;letter-spacing:1px;">Custo/mês desperdiçado</div></div>'
-      +'<div><div style="font-size:1.35rem;font-weight:800;color:#2d3748;">'+list.length+'</div><div style="font-size:0.62rem;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:1px;">Aparelhos ativos sem uso</div></div>'
-      +'<div><div style="font-size:1.35rem;font-weight:800;color:#2d3748;">'+fmt(custoMes)+'</div><div style="font-size:0.62rem;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:1px;">Custo/mês por aparelho</div></div>'
-      +'<div style="font-size:0.68rem;color:#9a6b3f;font-weight:600;max-width:230px;line-height:1.35;">Diária R$ '+PDA_DIARIA.toFixed(2).replace('.',',')+' × '+diasMes+' dias do mês. Ativos com cadastro que nunca acessaram o PDA.</div>'
-      +'</div>';
-    cols=['Funcionário','Matrícula','Cargo','Equipe','Situação','Custo/mês'];
-    rowsHtml=list.map(function(x){return '<tr><td class="main">'+esc(x.nome)+'</td><td>'+esc(x.mat)+'</td><td>'+esc(x.cargo||'—')+'</td><td>'+eqCell(x)+'</td><td>'+sb(x)+'</td><td style="font-weight:800;color:#c2410c;">'+fmt(custoMes)+'</td></tr>';}).join('');
-    $('pda-thead').innerHTML='<tr>'+cols.map(function(c){return '<th>'+c+'</th>';}).join('')+'</tr>';
-    var wrap=$('pda-tbody').closest('.pda-table-wrap')||$('pda-tbody').parentNode.parentNode;
-    // injeta o resumo acima da tabela (remove anterior se houver)
-    var old=$('pda-custo-resumo'); if(old) old.parentNode.removeChild(old);
-    var box=document.createElement('div'); box.id='pda-custo-resumo'; box.innerHTML=resumo;
-    var tw=document.querySelector('.pda-table-wrap'); if(tw&&tw.parentNode) tw.parentNode.insertBefore(box,tw);
-    $('pda-tbody').innerHTML=list.length?rowsHtml:'<tr><td class="pda-empty" colspan="'+cols.length+'">Nada para mostrar</td></tr>';
-    return;
-  } else {
-    var rem=$('pda-custo-resumo'); if(rem) rem.parentNode.removeChild(rem);
-  }
   if(pdaTab==='acessaram'){
     cols=['Funcionário','Matrícula','Cargo','Equipe','Situação','Último acesso','Acessos','Aparelho acessado'];
     rowsHtml=list.map(function(x){return '<tr><td class="main">'+esc(x.nome)+'</td><td>'+esc(x.mat)+'</td><td>'+esc(x.cargo||'—')+'</td><td>'+eqCell(x)+'</td><td>'+sb(x)+'</td><td>'+fmtDate(x.ultimo)+'</td><td>'+x.qtdAcessos+'</td><td>'+(x.imeis.length?x.imeis.map(imeiShort).join(', '):'—')+'</td></tr>';}).join('');

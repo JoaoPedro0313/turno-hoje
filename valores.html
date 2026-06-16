@@ -73,6 +73,13 @@
   .k-var.up{color:#276749}.k-var.dn{color:#c53030}
   .fin-res-h{font-size:1.0rem;font-weight:800;color:#0f3a33;margin:2px 2px 10px}
   .fin-card{background:#fff;border-radius:12px;padding:16px;box-shadow:0 2px 10px rgba(0,0,0,.06);margin-bottom:14px}
+  .fin-tabs{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+  .fin-tab{background:#fff;border:1.5px solid #e2e8f0;color:#475569;padding:9px 16px;border-radius:10px;font-family:inherit;font-size:.82rem;font-weight:800;cursor:pointer;transition:all .15s}
+  .fin-tab:hover{border-color:#14a085;color:#0d7377}
+  .fin-tab.active{background:linear-gradient(135deg,#0d7377,#14a085);border-color:#0d7377;color:#fff;box-shadow:0 4px 12px rgba(13,115,119,.25)}
+  #fin-pda-tbl thead th{text-align:left;padding:10px 12px;font-size:.66rem;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:#94a3b8;border-bottom:2px solid #e8edf2;white-space:nowrap}
+  #fin-pda-tbl tbody td{padding:10px 12px;border-bottom:1px solid #eef2f6;color:#334155;white-space:nowrap}
+  #fin-pda-tbl tbody tr:hover{background:#f9fbfd}
   .fin-faturas{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;align-items:start}
   .fat-card{background:#fff;border-radius:14px;box-shadow:0 2px 10px rgba(0,0,0,.06);border:1px solid #eef2f7;overflow:hidden;display:flex;flex-direction:column}
   .fat-head{display:flex;align-items:center;gap:9px;padding:13px 15px;cursor:pointer;user-select:none}
@@ -243,6 +250,10 @@ body.sm-collapsed .bottom-bar{left:64px !important;}
       </div>
     </header>
     <div class="wrap">
+      <div class="fin-tabs">
+        <button class="fin-tab active" id="fintab-lanc" onclick="finTab('lanc')">💰 Lançamentos</button>
+        <button class="fin-tab" id="fintab-pda" onclick="finTab('pda')">📲 PDA ocioso</button>
+      </div>
       <div id="pane-lanc">
         <div id="fin-resumo-tit" class="fin-res-h">Resumo</div>
         <div id="fin-resumo" class="fin-kpis"></div>
@@ -282,6 +293,20 @@ body.sm-collapsed .bottom-bar{left:64px !important;}
           <button class="btn add" onclick="addValor()">Salvar</button>
         </div>
         <div id="fin-faturas" class="fin-faturas"><div style="color:#aaa;text-align:center;padding:30px">Carregando…</div></div>
+      </div>
+
+      <div id="pane-pda" style="display:none">
+        <div id="fin-pda-resumo" class="fin-kpis"></div>
+        <div class="fin-card">
+          <div class="fin-card-h">📲 Aparelhos ativos sem acesso ao PDA</div>
+          <div id="fin-pda-meta" style="font-size:.74rem;color:#64748b;font-weight:600;margin-bottom:10px"></div>
+          <div style="overflow-x:auto">
+            <table id="fin-pda-tbl" style="width:100%;border-collapse:collapse;font-size:.82rem">
+              <thead><tr id="fin-pda-thead"></tr></thead>
+              <tbody id="fin-pda-tbody"></tbody>
+            </table>
+          </div>
+        </div>
       </div>
 
     </div>
@@ -365,6 +390,60 @@ async function carregarValores(){
   finRender();
 }
 function finToggleForm(){ var f=$('fin-form'); if(f)f.style.display=(f.style.display==='none'?'flex':'none'); }
+
+// ===== Abas Financeiro =====
+function finTab(t){
+  var lanc=$('pane-lanc'), pda=$('pane-pda');
+  var tl=$('fintab-lanc'), tp=$('fintab-pda');
+  if(t==='pda'){
+    if(lanc)lanc.style.display='none'; if(pda)pda.style.display='';
+    if(tl)tl.classList.remove('active'); if(tp)tp.classList.add('active');
+    finPdaOcioso();
+  } else {
+    if(lanc)lanc.style.display=''; if(pda)pda.style.display='none';
+    if(tp)tp.classList.remove('active'); if(tl)tl.classList.add('active');
+  }
+}
+var FIN_PDA_CACHE=null;
+async function finPdaOcioso(){
+  var meta=$('fin-pda-meta'), res=$('fin-pda-resumo');
+  if(res && !FIN_PDA_CACHE) res.innerHTML='';
+  if(meta && !FIN_PDA_CACHE) meta.textContent='Carregando do banco…';
+  try{
+    if(!FIN_PDA_CACHE){
+      var {data,error}=await sb.from('turno_data').select('value').eq('key','pda_ocioso').maybeSingle();
+      if(error){ if(meta) meta.textContent='Não foi possível carregar ('+error.message+').'; return; }
+      FIN_PDA_CACHE=(data&&data.value)||{lista:[],qtd:0,diaria:0.5337};
+    }
+    finPdaRender();
+  }catch(e){ if(meta) meta.textContent='Erro ao carregar.'; }
+}
+function finPdaRender(){
+  var d=FIN_PDA_CACHE||{}; var lista=d.lista||[];
+  var diaria=Number(d.diaria||0.5337);
+  var hoje=new Date(); var diasMes=new Date(hoje.getFullYear(),hoje.getMonth()+1,0).getDate();
+  var custoMes=diaria*diasMes;
+  var total=custoMes*lista.length;
+  var f=function(n){return 'R$ '+Number(n).toFixed(2).replace('.',',');};
+  var res=$('fin-pda-resumo');
+  if(res){
+    res.innerHTML=
+      '<div class="fin-kpi" style="border-left-color:#c2410c"><div class="k-lbl">Custo/mês ocioso</div><div class="k-val" style="color:#c2410c">'+f(total)+'</div><div class="k-sub">aparelhos ativos sem uso</div></div>'
+     +'<div class="fin-kpi"><div class="k-lbl">Aparelhos sem acesso</div><div class="k-val">'+lista.length+'</div><div class="k-sub">ativos que nunca acessaram</div></div>'
+     +'<div class="fin-kpi"><div class="k-lbl">Custo/mês por aparelho</div><div class="k-val">'+f(custoMes)+'</div><div class="k-sub">diária '+f(diaria)+' × '+diasMes+' dias</div></div>';
+  }
+  var meta=$('fin-pda-meta');
+  if(meta) meta.innerHTML='Diária de '+f(diaria)+' por aparelho × '+diasMes+' dias do mês. '+(d.updatedAt?'Atualizado pela PDA em '+escHtml(d.updatedAt)+'.':'')+' <span style="color:#94a3b8">Os dados vêm da tela PDA (cadastro × relatório de acesso).</span>';
+  var thead=$('fin-pda-thead'), tbody=$('fin-pda-tbody');
+  if(thead) thead.innerHTML=['Funcionário','Matrícula','Cargo','Equipe','Custo/mês'].map(function(c){return '<th>'+c+'</th>';}).join('');
+  if(tbody){
+    if(!lista.length){ tbody.innerHTML='<tr><td colspan="5" style="text-align:center;color:#94a3b8;padding:20px">Nada para mostrar. Rode a comparação na tela PDA primeiro.</td></tr>'; return; }
+    tbody.innerHTML=lista.map(function(x){
+      return '<tr><td style="font-weight:700;color:#1f2d3d">'+escHtml(x.nome||'—')+'</td><td>'+escHtml(x.mat||'—')+'</td><td>'+escHtml(x.cargo||'—')+'</td><td>'+escHtml(x.equipe||'—')+'</td><td style="font-weight:800;color:#c2410c">'+f(custoMes)+'</td></tr>';
+    }).join('');
+  }
+}
+function escHtml(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function finRender(){
   var fForn=$('fin-forn-filtro')?$('fin-forn-filtro').value:'';
   var fMes=$('fin-mes')?$('fin-mes').value:'';
