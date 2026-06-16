@@ -2609,6 +2609,7 @@ return data;
 }
 let compDataAtual = null, compAllChanges = [], compActiveFilter = 'todos', compBaseFilter = 'TODAS';
 let compUltimaPlanilha = [];
+let compUltimoDiag = null;
 function compObraParaChange(row){
   function v(...kws){ for(const kw of kws){ const k=compNorm(kw); const col=Object.keys(row).find(c=>compNorm(c).includes(k)); if(col!==undefined) return compParseNum(row[col]); } return null; }
   return {
@@ -2746,7 +2747,9 @@ try {
     const dImp  = (_v(rowAt,'POSTES A IMPLANTA')||0) - (_v(b,'POSTES A IMPLANTA')||0);
     if (dCava||dReal||dImp) diferentes++; else identicas++;
   });
+  compUltimoDiag = {total:dataAtual.length, casaram:casaram, diferentes:diferentes, identicas:identicas, novas:novas};
   compSetStatus('Carteira buscada: '+dataAtual.length+' obras · '+casaram+' casaram c/ banco · '+diferentes+' com diferença · '+identicas+' idênticas · '+novas+' novas. ' + (diferentes===0 ? 'Banco e carteira estão iguais (nada a mostrar).' : ''), diferentes>0?'ok':'info');
+  if (typeof compRenderTable==='function') compRenderTable();
 } catch(e) {
   compSetStatus('✅ Comparação concluída — planilha buscada às ' + horaAtual, 'ok');
 }
@@ -2762,7 +2765,7 @@ btn.textContent = origText;
 function compExecutarComparacao(dadosBase, dadosNovos) {
 compUltimaPlanilha = dadosNovos || [];
 const mapAnt = {};
-dadosBase.forEach(r => { mapAnt[r['PEP OBRA']] = r; });
+dadosBase.forEach(r => { mapAnt[compNorm(r['PEP OBRA']||'')] = r; });
 compAllChanges = [];
 function findVal(row, ...kws) {
 if (!row) return null;
@@ -2775,7 +2778,7 @@ return null;
 }
 dadosNovos.forEach(rowAtual => {
 const pep = rowAtual['PEP OBRA'];
-const rowAnt = mapAnt[pep];
+const rowAnt = mapAnt[compNorm(pep||'')];
 const cavaAnt  = findVal(rowAnt,  'CAVA REALIZADA'),   cavaAt  = findVal(rowAtual, 'CAVA REALIZADA');
 const pRealAnt = findVal(rowAnt,  'POSTES REALIZADO'), pRealAt = findVal(rowAtual, 'POSTES REALIZADO');
 const pImpAnt  = findVal(rowAnt,  'POSTES A IMPLANTA'),pImpAt  = findVal(rowAtual, 'POSTES A IMPLANTA');
@@ -2866,7 +2869,7 @@ const cl = document.getElementById('comp-count-label');
 if (cl) cl.textContent = rows.length;
 const tbody = document.getElementById('comp-table-body');
 if (!tbody) return;
-if (!rows.length) { const planN=(compUltimaPlanilha||[]).length; const dica = verTudo ? 'A planilha do mês não retornou obras.' : 'Nenhuma diferença entre o banco e a planilha do mês.<br><span style="font-size:0.78rem;color:#aaa;">Planilha buscada: '+planN+' obras. Para ver todas, clique em <b>📋 Ver todas do mês</b>.</span>'; tbody.innerHTML=`<tr><td colspan="8"><div class="empty-state"><div class="big">🔍</div><div class="msg">${dica}</div></div></td></tr>`; return; }
+if (!rows.length) { const d=compUltimoDiag; let dica; if(verTudo){ dica='A planilha do mês não retornou obras.'; } else if(d){ dica = (d.diferentes===0 ? 'Banco e carteira estão <b>iguais</b> — nada para comparar.' : d.diferentes+' obras com diferença, mas filtradas.') + '<br><span style="font-size:0.76rem;color:#999;">Carteira: '+d.total+' obras · '+d.casaram+' casaram · '+d.diferentes+' diferentes · '+d.identicas+' idênticas · '+d.novas+' novas.<br>Para ver todas as obras, clique em <b style="color:#6b46c1;">📋 Ver todas do mês</b>.</span>'; } else { dica='Clique em <b>BUSCAR PLANILHA E COMPARAR COM BANCO</b>.'; } tbody.innerHTML=`<tr><td colspan="8"><div class="empty-state"><div class="big">🔍</div><div class="msg">${dica}</div></div></td></tr>`; return; }
 tbody.innerHTML = rows.map(r => {
 const newTag = r.isNew ? `<span style="background:#d0f0ee;color:#0d7377;font-size:0.65rem;font-weight:800;padding:2px 7px;border-radius:4px;margin-left:6px;">NOVA</span>` : '';
 const utdTag = r.utd ? `<span style="background:#ebf4ff;color:#2b6cb0;font-size:0.65rem;font-weight:800;padding:1px 6px;border-radius:4px;">${r.utd}</span>` : '';
