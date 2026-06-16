@@ -3134,14 +3134,22 @@ s.onload = resolve; document.head.appendChild(s);
 });
 }
 try {
-const resJac = await fetch(GSHEETS.JACOBINA);
+const _cb = '&_cb=' + Date.now();
+const _noCache = { cache: 'no-store', headers: { 'cache-control': 'no-cache' } };
+const resJac = await fetch(GSHEETS.JACOBINA + _cb, _noCache);
 if (!resJac.ok) return;
 const textJac = await resJac.text();
-const resIrc = await fetch(GSHEETS.IRECE); const textIrc = resIrc.ok ? await resIrc.text() : '';
+const resIrc = await fetch(GSHEETS.IRECE + _cb, _noCache); const textIrc = resIrc.ok ? await resIrc.text() : '';
 const dataJac = compParseCSVText(textJac, 'JACOBINA');
 const dataIrc = textIrc ? (compParseCSVText(textIrc, 'IRECÊ')||[]) : [];
 if (!dataJac || !dataJac.length) return;
 const merged = [...dataJac, ...dataIrc];
+// ANTES de sobrescrever o banco: compara a carteira nova com o banco atual e mostra as diferenças
+try {
+  if (bancoDB && bancoDB.length && typeof compExecutarComparacao==='function') {
+    compExecutarComparacao(bancoDB, merged);
+  }
+} catch(eCmp) { console.warn('[autoSync] comparação:', eCmp.message); }
 const now = new Date(), pad = n => String(n).padStart(2,'0');
 const updatedAt = pad(now.getDate())+'/'+pad(now.getMonth()+1)+'/'+now.getFullYear()+' às '+pad(now.getHours())+':'+pad(now.getMinutes());
 const info = { count: merged.length, updatedAt, utds: ['IRECÊ ('+dataIrc.length+')', 'JACOBINA ('+dataJac.length+')'] };
