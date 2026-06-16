@@ -1631,6 +1631,7 @@ function resetFontSize() { applyFontSize(100); }
 const saved = localStorage.getItem('cardFontSize');
 if (saved) { window.addEventListener('DOMContentLoaded', () => applyFontSize(saved)); applyFontSize(saved); }
 window.addEventListener('DOMContentLoaded', function(){ try{ if(typeof compAtualizarRotuloSheets==='function') compAtualizarRotuloSheets(); }catch(e){} });
+window.addEventListener('DOMContentLoaded', function(){ try{ if(typeof compCarregarMeses==='function') compCarregarMeses(); }catch(e){} });
 })();
 let aprData = [];
 function showAprMsg(text, type) {
@@ -5730,6 +5731,7 @@ function resetFontSize() { applyFontSize(100); }
 const saved = localStorage.getItem('cardFontSize');
 if (saved) { window.addEventListener('DOMContentLoaded', () => applyFontSize(saved)); applyFontSize(saved); }
 window.addEventListener('DOMContentLoaded', function(){ try{ if(typeof compAtualizarRotuloSheets==='function') compAtualizarRotuloSheets(); }catch(e){} });
+window.addEventListener('DOMContentLoaded', function(){ try{ if(typeof compCarregarMeses==='function') compCarregarMeses(); }catch(e){} });
 })();
 let aprData = [];
 function showAprMsg(text, type) {
