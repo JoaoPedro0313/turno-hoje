@@ -419,7 +419,8 @@ async function finPdaOcioso(){
   }catch(e){ if(meta) meta.textContent='Erro ao carregar.'; }
 }
 function finPdaRender(){
-  var d=FIN_PDA_CACHE||{}; var lista=d.lista||[];
+  var d=FIN_PDA_CACHE||{};
+  var lista=(d.lista||[]).filter(function(x){ return !((x.equipe||'').trim()); });
   var diaria=Number(d.diaria||0.5337);
   var hoje=new Date(); var diasMes=new Date(hoje.getFullYear(),hoje.getMonth()+1,0).getDate();
   var custoMes=diaria*diasMes;
