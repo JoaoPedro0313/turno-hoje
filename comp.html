@@ -584,7 +584,7 @@ async function _compSondarAba(baseSheet,ano,mes){
 }
 // Aponta GSHEETS.JACOBINA/IRECE para a aba mais recente existente (mês atual e até 3 atrás).
 async function compResolverAbasAtuais(){
-  if(_compAbasResolvidas) return;
+  if(_compAbasResolvidas){ compAtualizarRotuloSheets(); return; }
   const baseJac=GSHEETS.JACOBINA.replace(/&gid=\d+/,'&sheet=');
   const baseIrc=GSHEETS.IRECE.replace(/&gid=\d+/,'&sheet=');
   const now=new Date(); const cur=now.getFullYear()*12+(now.getMonth()+1);
@@ -603,9 +603,11 @@ async function compResolverAbasAtuais(){
 // Mostra os meses resolvidos de cada planilha no rótulo "PLANILHA ATUAL (SHEETS)"
 function compAtualizarRotuloSheets(){
   var el=document.getElementById('comp-fonte-sheets'); if(!el) return;
-  var jac=_compMesJac?('Jacobina '+_compMesJac):'Jacobina —';
-  var irc=_compMesIrc?('Irecê '+_compMesIrc):'Irecê —';
-  el.innerHTML='<span style="color:#2b6cb0;">'+jac+'</span> · <span style="color:#0d7377;">'+irc+'</span>';
+  // se a busca não resolveu, usa o mês atual como referência (a planilha aponta para a aba corrente)
+  var _M=['','JAN','FEV','MAR','ABR','MAI','JUN','JUL','AGO','SET','OUT','NOV','DEZ'];
+  var d=new Date(); var atual=_M[d.getMonth()+1]+'/'+String(d.getFullYear()).slice(-2);
+  var mJac=_compMesJac||atual, mIrc=_compMesIrc||atual;
+  el.innerHTML='<span style="color:#2b6cb0;">Jacobina '+mJac+'</span> · <span style="color:#0d7377;">Irecê '+mIrc+'</span>';
 }
 // URLs do Sheets resolvidas — atualizadas após gsheetsCarregarMeses()
 function todayDate() { const d=new Date(); const p=n=>String(n).padStart(2,'0'); return p(d.getDate())+'/'+p(d.getMonth()+1)+'/'+d.getFullYear(); }
@@ -1562,6 +1564,7 @@ function resetFontSize() { applyFontSize(100); }
 (function() {
 const saved = localStorage.getItem('cardFontSize');
 if (saved) { window.addEventListener('DOMContentLoaded', () => applyFontSize(saved)); applyFontSize(saved); }
+window.addEventListener('DOMContentLoaded', function(){ try{ if(typeof compAtualizarRotuloSheets==='function') compAtualizarRotuloSheets(); }catch(e){} });
 })();
 let aprData = [];
 function showAprMsg(text, type) {
@@ -5660,6 +5663,7 @@ function resetFontSize() { applyFontSize(100); }
 (function() {
 const saved = localStorage.getItem('cardFontSize');
 if (saved) { window.addEventListener('DOMContentLoaded', () => applyFontSize(saved)); applyFontSize(saved); }
+window.addEventListener('DOMContentLoaded', function(){ try{ if(typeof compAtualizarRotuloSheets==='function') compAtualizarRotuloSheets(); }catch(e){} });
 })();
 let aprData = [];
 function showAprMsg(text, type) {
