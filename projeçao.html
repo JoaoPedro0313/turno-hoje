@@ -2571,7 +2571,7 @@ function compFromRows(rows){
   meses.sort(function(a,b){return cont[b]-cont[a];});
   return meses[0];
 }
-function ociosoCountForRows(rows){
+function ociosoListForRows(rows){
   // ativos + sem equipe do cadastro que NÃO acessaram neste mês (rows = acessos da competência)
   if(!pdaCad || !pdaCad.rows) return null;
   var acessou={};
@@ -2579,7 +2579,7 @@ function ociosoCountForRows(rows){
     var mat=get(r,['Matrícula','Matricula','Usuário','Usuario']);
     if(mat) acessou[key(mat)]=1;
   });
-  var n=0;
+  var lista=[];
   pdaCad.rows.forEach(function(r){
     var mat=get(r,['Login','Matrícula','Matricula']);
     var nome=get(r,['Funcionário','Funcionario']);
@@ -2590,9 +2590,9 @@ function ociosoCountForRows(rows){
     var ev=(pdaEqMap&&pdaEqMap[matKey(mat)])||null;
     if(ev && ev.eq) return;            // vinculado a equipe -> fora
     if(acessou[key(mat)]) return;      // acessou neste mês -> não é ocioso
-    n++;
+    lista.push({nome:nome||'',mat:mat||'',cargo:(pdaCargoMap&&pdaCargoMap[matKey(mat)])||get(r,['Cargo'])||'',uf:(pdaUFMap&&pdaUFMap[matKey(mat)])||''});
   });
-  return n;
+  return lista;
 }
 function saveAcessoToBank(rows){
   if(!PDA_SKEY) return;
@@ -2608,9 +2608,9 @@ function saveAcessoToBank(rows){
 }
 function saveOciosoMes(comp, rows){
   if(!PDA_SKEY) return;
-  var qtd=ociosoCountForRows(rows);
-  if(qtd==null) return; // sem cadastro carregado ainda
-  var payload={v:1,comp:comp,diaria:PDA_DIARIA,qtd:qtd,updatedAt:new Date().toLocaleString('pt-BR')};
+  var lista=ociosoListForRows(rows);
+  if(lista==null) return; // sem cadastro carregado ainda
+  var payload={v:2,comp:comp,diaria:PDA_DIARIA,qtd:lista.length,lista:lista,updatedAt:new Date().toLocaleString('pt-BR')};
   fetch(PDA_SUPA+'/rest/v1/turno_data',{method:'POST',headers:pdaSupaHeaders({'Content-Type':'application/json','Prefer':'resolution=merge-duplicates'}),body:JSON.stringify({key:'pda_ocioso_'+comp,value:payload})})
     .then(function(r){ if(!r.ok) console.error('[PDA] salvar ocioso mês', r.status); })
     .catch(function(e){ console.error('[PDA] salvar ocioso mês', e); });
