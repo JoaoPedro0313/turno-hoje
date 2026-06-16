@@ -1687,6 +1687,17 @@ function showPstrMsg(text, type) {
   el.textContent = text; el.className = 'msg ' + type;
   clearTimeout(el._t); el._t = setTimeout(() => el.className = 'msg', 7000);
 }
+function compToastCoelba(total, ok, nao){
+  var t=document.createElement('div');
+  var cor = ok>0 ? '#276749' : '#c53030';
+  t.style.cssText='position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:'+cor+';color:#fff;padding:14px 24px;border-radius:12px;font-family:Barlow,sans-serif;font-size:0.9rem;font-weight:800;z-index:99999;box-shadow:0 8px 28px rgba(0,0,0,0.35);letter-spacing:0.3px;text-align:center;line-height:1.5;max-width:90vw;';
+  t.innerHTML = (ok>0?'✅':'⚠️')+' Coelba importado<br>'
+    +'<span style="font-size:0.78rem;font-weight:600;opacity:0.95;">'
+    +total+' no CSV · <b>'+ok+'</b> cruzadas · '+nao+' sem correspondência</span>'
+    + (ok===0 ? '<br><span style="font-size:0.72rem;font-weight:600;opacity:0.9;">Verifique se a coluna PROCESSO bate com o PEP das obras</span>' : '');
+  document.body.appendChild(t);
+  setTimeout(function(){ t.style.transition='opacity .5s'; t.style.opacity='0'; setTimeout(function(){try{t.remove();}catch(e){}},500); }, 6000);
+}
 
 async function handlePstrCSV(file) {
   if (!file) return;
@@ -1760,6 +1771,11 @@ async function handlePstrCSV(file) {
 
     naoEncontradas = linhasLidas - atualizadas;
     bancoDB = bancoAtualizado;
+
+    // Notificação flutuante (aparece mesmo importando pelo botão do rodapé)
+    compToastCoelba(linhasLidas, atualizadas, naoEncontradas);
+    // Atualiza a tabela principal para refletir os Postes Coelba
+    if (typeof compRenderTable==='function') compRenderTable();
 
     document.getElementById('pstr-summary').style.display = 'block';
     document.getElementById('pstr-summary-stats').innerHTML =
