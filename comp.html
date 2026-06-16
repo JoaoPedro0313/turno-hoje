@@ -296,6 +296,7 @@ body.sm-collapsed .bottom-bar{left:64px !important;}
           <button class="filter-btn active" onclick="compSetFilter('todos', this)">Todos</button>
           <button class="filter-btn" onclick="compSetFilter('postes', this)">Postes Realizados</button>
           <button class="filter-btn" onclick="compSetFilter('implantados', this)">Postes Coelba</button>
+          <button class="filter-btn" onclick="compSetFilter('tudo', this)" style="border-color:#6b46c1;color:#6b46c1;">📋 Ver todas do mês</button>
           <input class="comp-search" type="text" id="comp-search" placeholder="🔍 Buscar por obra, PEP..." oninput="compRenderTable()">
         </div>
         <div class="toolbar" style="border-top:none;padding-top:0;">
@@ -2590,6 +2591,19 @@ try {
 return data;
 }
 let compDataAtual = null, compAllChanges = [], compActiveFilter = 'todos', compBaseFilter = 'TODAS';
+let compUltimaPlanilha = [];
+function compObraParaChange(row){
+  function v(...kws){ for(const kw of kws){ const k=compNorm(kw); const col=Object.keys(row).find(c=>compNorm(c).includes(k)); if(col!==undefined) return compParseNum(row[col]); } return null; }
+  return {
+    pep: row['PEP OBRA']||'', titulo: row['TÍTULO']||row['TITULO']||'',
+    utd: row['_UTD']||'', status: (row['STATUS DA OBRA']||row['OBS STATUS']||'').trim(),
+    isNew:false, mes: (typeof mesFromObra==='function'?mesFromObra(row):'')||'',
+    cavaAnt:null, cavaAt:v('CAVA REALIZADA'), cavaDiff:0,
+    pRealAnt:null, pRealAt:v('POSTES REALIZADO'), pRealDiff:0,
+    pImpAnt:null, pImpAt:v('POSTES A IMPLANTA'), pImpDiff:0,
+    pPrevAt:v('POSTES PREVISTOS')
+  };
+}
 let compBancoTemp = { 'IRECÊ': null, 'JACOBINA': null };
 function compUpdateBaseUI() {
 const el = document.getElementById('comp-base-info');
@@ -2712,6 +2726,7 @@ btn.textContent = origText;
 }
 }
 function compExecutarComparacao(dadosBase, dadosNovos) {
+compUltimaPlanilha = dadosNovos || [];
 const mapAnt = {};
 dadosBase.forEach(r => { mapAnt[r['PEP OBRA']] = r; });
 compAllChanges = [];
@@ -2802,7 +2817,9 @@ return `<div class="diff-val"><span class="old-val">${a}</span><span class="arro
 }
 function compRenderTable() {
 const search = (document.getElementById('comp-search')?document.getElementById('comp-search').value||'':'').toLowerCase();
-const rows = compAllChanges.filter(r => {
+const verTudo = (compActiveFilter==='tudo');
+const baseList = verTudo ? (compUltimaPlanilha||[]).map(compObraParaChange) : compAllChanges;
+const rows = baseList.filter(r => {
 if (search && !r.titulo.toLowerCase().includes(search) && !r.pep.toLowerCase().includes(search)) return false;
 if (compActiveFilter==='cava'&&r.cavaDiff===0) return false;
 if (compActiveFilter==='postes'&&r.pRealDiff===0) return false;
@@ -2815,7 +2832,7 @@ const cl = document.getElementById('comp-count-label');
 if (cl) cl.textContent = rows.length;
 const tbody = document.getElementById('comp-table-body');
 if (!tbody) return;
-if (!rows.length) { tbody.innerHTML=`<tr><td colspan="8"><div class="empty-state"><div class="big">🔍</div><div class="msg">Nenhuma alteração encontrada</div></div></td></tr>`; return; }
+if (!rows.length) { const planN=(compUltimaPlanilha||[]).length; const dica = verTudo ? 'A planilha do mês não retornou obras.' : 'Nenhuma diferença entre o banco e a planilha do mês.<br><span style="font-size:0.78rem;color:#aaa;">Planilha buscada: '+planN+' obras. Para ver todas, clique em <b>📋 Ver todas do mês</b>.</span>'; tbody.innerHTML=`<tr><td colspan="8"><div class="empty-state"><div class="big">🔍</div><div class="msg">${dica}</div></div></td></tr>`; return; }
 tbody.innerHTML = rows.map(r => {
 const newTag = r.isNew ? `<span style="background:#d0f0ee;color:#0d7377;font-size:0.65rem;font-weight:800;padding:2px 7px;border-radius:4px;margin-left:6px;">NOVA</span>` : '';
 const utdTag = r.utd ? `<span style="background:#ebf4ff;color:#2b6cb0;font-size:0.65rem;font-weight:800;padding:1px 6px;border-radius:4px;">${r.utd}</span>` : '';
