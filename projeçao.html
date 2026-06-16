@@ -2545,22 +2545,51 @@ function accRowsFromCompact(val){
   }
   return out;
 }
+function compFromRows(rows){
+  // competência = mês mais frequente nas datas do relatório
+  var cont={};
+  rows.forEach(function(r){
+    var dt=parseDate(get(r,['Data de Acesso']));
+    if(!dt) return;
+    var ym=dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0');
+    cont[ym]=(cont[ym]||0)+1;
+  });
+  var meses=Object.keys(cont);
+  if(!meses.length) return null;
+  meses.sort(function(a,b){return cont[b]-cont[a];});
+  return meses[0];
+}
 function saveAcessoToBank(rows){
   if(!PDA_SKEY) return;
-  var payload={v:1,fmt:'imei|mat|nome|email|qtd|data',updatedAt:new Date().toLocaleString('pt-BR'),count:rows.length,data:compactFromAcc(rows)};
-  fetch(PDA_SUPA+'/rest/v1/turno_data',{method:'POST',headers:pdaSupaHeaders({'Content-Type':'application/json','Prefer':'resolution=merge-duplicates'}),body:JSON.stringify({key:'pda_acesso',value:payload})})
-    .then(function(r){ if(!r.ok) console.error('[PDA] salvar acesso', r.status); })
+  var comp=compFromRows(rows);
+  if(!comp){ alert('Não consegui identificar o mês deste relatório (sem datas válidas). Nada foi salvo.'); return; }
+  var payload={v:1,fmt:'imei|mat|nome|email|qtd|data',comp:comp,updatedAt:new Date().toLocaleString('pt-BR'),count:rows.length,data:compactFromAcc(rows)};
+  var chave='pda_acesso_'+comp; // uma chave por competência -> acumula no banco
+  fetch(PDA_SUPA+'/rest/v1/turno_data',{method:'POST',headers:pdaSupaHeaders({'Content-Type':'application/json','Prefer':'resolution=merge-duplicates'}),body:JSON.stringify({key:chave,value:payload})})
+    .then(function(r){ if(!r.ok){ console.error('[PDA] salvar acesso', r.status); } else { var fl=$('pda-files'); if(fl){ var n=document.createElement('div'); n.style.cssText='font-size:.72rem;font-weight:700;color:#0d7377;margin-top:6px;'; n.textContent='✓ Competência '+comp+' salva no banco ('+rows.length+' acessos).'; fl.appendChild(n); setTimeout(function(){try{fl.removeChild(n);}catch(e){}},4000); } if(typeof loadAcessoFromBank==='function') loadAcessoFromBank(); } })
     .catch(function(e){ console.error('[PDA] salvar acesso', e); });
 }
 function loadAcessoFromBank(){
   if(!PDA_SKEY) return;
-  fetch(PDA_SUPA+'/rest/v1/turno_data?key=eq.pda_acesso&select=value',{headers:pdaSupaHeaders()})
+  // pega todas as competências (pda_acesso_*) + a chave antiga (pda_acesso)
+  fetch(PDA_SUPA+'/rest/v1/turno_data?key=like.pda_acesso*&select=key,value',{headers:pdaSupaHeaders()})
     .then(function(r){ return r.ok?r.json():null; })
     .then(function(arr){
-      if(arr && arr[0] && arr[0].value && arr[0].value.data){
-        pdaAcc={name:'(banco)',source:'banco',rows:accRowsFromCompact(arr[0].value),updatedAt:arr[0].value.updatedAt||''};
-        renderFiles(); maybeCompare();
-      }
+      if(!arr||!arr.length) return;
+      var comps=[], allRows=[], totalCount=0, lastUpd='';
+      arr.forEach(function(row){
+        var v=row&&row.value; if(!v||!v.data) return;
+        var rs=accRowsFromCompact(v);
+        allRows=allRows.concat(rs);
+        totalCount+=rs.length;
+        var c=v.comp||(row.key&&row.key.indexOf('pda_acesso_')===0?row.key.slice('pda_acesso_'.length):'(antigo)');
+        comps.push(c);
+        if(v.updatedAt && v.updatedAt>lastUpd) lastUpd=v.updatedAt;
+      });
+      if(!allRows.length) return;
+      comps=comps.filter(function(c,i){return comps.indexOf(c)===i;}).sort();
+      pdaAcc={name:'(banco · '+comps.length+(comps.length===1?' mês':' meses')+')',source:'banco',rows:allRows,updatedAt:lastUpd,comps:comps};
+      renderFiles(); maybeCompare();
     })
     .catch(function(){});
 }
