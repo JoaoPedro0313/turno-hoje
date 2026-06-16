@@ -1062,6 +1062,13 @@ body.sm-collapsed .bottom-bar{left:64px !important;}
 
   <div id="pda-results" style="display:none;">
     <div class="pda-kpis" id="pda-kpis"></div>
+    <div class="pda-chart-card" id="pda-chart-card" style="background:#fff;border-radius:12px;box-shadow:0 2px 12px rgba(0,0,0,0.07);padding:16px 18px;margin:0 0 22px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:10px;">
+        <div style="font-size:0.9rem;font-weight:800;color:#0b5e62;letter-spacing:0.5px;display:flex;align-items:center;gap:7px;">📊 Acessos por mês</div>
+        <div id="pda-chart-top" style="font-size:0.72rem;font-weight:700;color:#888;"></div>
+      </div>
+      <div style="height:240px;"><canvas id="pda-chart-meses"></canvas></div>
+    </div>
     <div class="pda-cols">
       <aside class="pda-side">
         <div class="pda-side-h">⚙ Filtros</div>
@@ -2279,6 +2286,46 @@ function compute(){
 }
 
 function kpi(cls,v,l){ return '<div class="pda-kpi '+cls+'"><div class="v">'+v+'</div><div class="l">'+l+'</div></div>'; }
+var pdaChartMeses=null;
+function pdaRenderChartMeses(){
+  var card=$('pda-chart-card'); if(!card) return;
+  if(!pdaAcc || !pdaAcc.rows){ card.style.display='none'; return; }
+  var MNOME=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+  var cont={};
+  pdaAcc.rows.forEach(function(r){
+    var dt=parseDate(get(r,['Data de Acesso']));
+    if(!dt) return;
+    var ym=dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0');
+    cont[ym]=(cont[ym]||0)+1;
+  });
+  var meses=Object.keys(cont).sort();
+  if(!meses.length){ card.style.display='none'; return; }
+  card.style.display='block';
+  var valores=meses.map(function(m){return cont[m];});
+  var max=Math.max.apply(null,valores);
+  var labels=meses.map(function(m){var p=m.split('-');return MNOME[+p[1]-1]+'/'+p[0].slice(2);});
+  var cores=valores.map(function(v){return v===max?'#d97706':'#14a085';});
+  // resumo do(s) mês(es) com mais acessos
+  var topIdx=valores.reduce(function(a,v,i){return v===max?a.concat(i):a;},[]);
+  var topTxt=topIdx.map(function(i){return labels[i];}).join(', ');
+  var tEl=$('pda-chart-top'); if(tEl) tEl.textContent='Pico: '+topTxt+' ('+max+' acessos)';
+  var ctx=document.getElementById('pda-chart-meses');
+  if(!ctx) return;
+  if(pdaChartMeses){ pdaChartMeses.destroy(); }
+  pdaChartMeses=new Chart(ctx,{
+    type:'bar',
+    data:{labels:labels,datasets:[{label:'Acessos',data:valores,backgroundColor:cores,borderRadius:6,maxBarThickness:48}]},
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},
+        tooltip:{callbacks:{label:function(c){return c.parsed.y+' acesso'+(c.parsed.y===1?'':'s');}}}},
+      scales:{
+        y:{beginAtZero:true,ticks:{precision:0,font:{family:'Barlow'}},grid:{color:'#eef2f5'}},
+        x:{ticks:{font:{family:'Barlow',weight:'700'},color:'#555'},grid:{display:false}}
+      }
+    }
+  });
+}
 function renderKpis(){
   var k=pdaResult.kpi;
   $('pda-kpis').innerHTML=
@@ -2288,6 +2335,7 @@ function renderKpis(){
     kpi('green',k.cobertura+'%','Cobertura (ativos)')+
     kpi('orange',k.naoAtivos,'Ativos s/ acesso')+
     kpi('red',k.semCadastro,'Acessos s/ cadastro');
+  pdaRenderChartMeses();
 }
 function renderTabs(){
   renderKpis();
