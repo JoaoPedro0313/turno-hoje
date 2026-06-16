@@ -419,6 +419,7 @@ function finTab(t){
 }
 var FIN_PDA_CACHE=null;
 var FIN_PDA_MESES=null;
+var FIN_PDA_OCMES=null;
 async function finPdaOcioso(){
   var meta=$('fin-pda-meta'), res=$('fin-pda-resumo');
   if(res && !FIN_PDA_CACHE) res.innerHTML='';
@@ -443,6 +444,17 @@ async function finPdaOcioso(){
         });
       }
       FIN_PDA_MESES=porMes;
+      // ocioso REAL por competência (pda_ocioso_AAAA-MM) -> qtd de ociosos naquele mês
+      var r3=await sb.from('turno_data').select('key,value').like('key','pda_ocioso_%');
+      var ocMes={};
+      if(!r3.error && r3.data){
+        r3.data.forEach(function(row){
+          var v=row&&row.value; if(!v) return;
+          var comp=v.comp || (row.key.indexOf('pda_ocioso_')===0?row.key.slice('pda_ocioso_'.length):null);
+          if(comp && v.qtd!=null) ocMes[comp]=Number(v.qtd);
+        });
+      }
+      FIN_PDA_OCMES=ocMes;
     }
     finPdaRender();
   }catch(e){ if(meta) meta.textContent='Erro ao carregar.'; }
@@ -500,19 +512,26 @@ function finPdaCharts(qtdOcioso, diaria){
     } else if(topA){ topA.textContent='Sem competências de acesso no banco ainda.'; }
   }
 
-  // 2) Custo ocioso por mês = nº ocioso atual × (diária × dias daquele mês)
+  // 2) Custo ocioso por mês = (ocioso real do mês, se houver; senão o atual) × diária × dias do mês
   var topC=$('fin-pda-custo-top');
   var ctxC=document.getElementById('fin-pda-chart-custo');
+  var ocMes=FIN_PDA_OCMES||{};
   if(ctxC){
     if(FIN_CHART_CUSTO) FIN_CHART_CUSTO.destroy();
     if(meses.length){
-      var valsC=meses.map(function(m){var p=m.split('-');var dias=new Date(+p[0],+p[1],0).getDate();return +(qtdOcioso*diaria*dias).toFixed(2);});
+      var algumEstimado=false;
+      var valsC=meses.map(function(m){
+        var p=m.split('-');var dias=new Date(+p[0],+p[1],0).getDate();
+        var q=(ocMes[m]!=null)?ocMes[m]:qtdOcioso;
+        if(ocMes[m]==null) algumEstimado=true;
+        return +(q*diaria*dias).toFixed(2);
+      });
       var maxC=Math.max.apply(null,valsC);
       var coresC=valsC.map(function(v){return v===maxC?'#c2410c':'#f0a36b';});
-      if(topC){ topC.textContent=qtdOcioso+' aparelhos ociosos × diária R$ '+diaria.toFixed(2).replace('.',',')+' × dias do mês'; }
+      if(topC){ topC.textContent='Ociosos reais por mês × diária R$ '+diaria.toFixed(2).replace('.',',')+(algumEstimado?' (meses sem histórico usam o total atual: '+qtdOcioso+')':''); }
       FIN_CHART_CUSTO=new Chart(ctxC,{type:'bar',
         data:{labels:labels,datasets:[{label:'Custo ocioso',data:valsC,backgroundColor:coresC,borderRadius:6,maxBarThickness:46}]},
-        options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return 'R$ '+Number(c.parsed.y).toFixed(2).replace('.',',');}}}},
+        options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){var m=meses[c.dataIndex];var q=(ocMes[m]!=null)?ocMes[m]:qtdOcioso;return 'R$ '+Number(c.parsed.y).toFixed(2).replace('.',',')+' · '+q+' ociosos';}}}},
           scales:{y:{beginAtZero:true,ticks:{font:{family:'Barlow'},callback:function(v){return 'R$ '+v;}},grid:{color:'#eef2f5'}},x:{ticks:{font:{family:'Barlow',weight:'700'},color:'#555'},grid:{display:false}}}}});
     } else if(topC){ topC.textContent='Sem competências para calcular o custo por mês.'; }
   }

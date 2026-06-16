@@ -2571,6 +2571,29 @@ function compFromRows(rows){
   meses.sort(function(a,b){return cont[b]-cont[a];});
   return meses[0];
 }
+function ociosoCountForRows(rows){
+  // ativos + sem equipe do cadastro que NÃO acessaram neste mês (rows = acessos da competência)
+  if(!pdaCad || !pdaCad.rows) return null;
+  var acessou={};
+  rows.forEach(function(r){
+    var mat=get(r,['Matrícula','Matricula','Usuário','Usuario']);
+    if(mat) acessou[key(mat)]=1;
+  });
+  var n=0;
+  pdaCad.rows.forEach(function(r){
+    var mat=get(r,['Login','Matrícula','Matricula']);
+    var nome=get(r,['Funcionário','Funcionario']);
+    if(!mat && !nome) return;
+    var sit=get(r,['Situação','Situacao']);
+    var ativo=/ativo/i.test(sit) && !/inativo/i.test(sit);
+    if(!ativo) return;
+    var ev=(pdaEqMap&&pdaEqMap[matKey(mat)])||null;
+    if(ev && ev.eq) return;            // vinculado a equipe -> fora
+    if(acessou[key(mat)]) return;      // acessou neste mês -> não é ocioso
+    n++;
+  });
+  return n;
+}
 function saveAcessoToBank(rows){
   if(!PDA_SKEY) return;
   var comp=compFromRows(rows);
@@ -2580,6 +2603,17 @@ function saveAcessoToBank(rows){
   fetch(PDA_SUPA+'/rest/v1/turno_data',{method:'POST',headers:pdaSupaHeaders({'Content-Type':'application/json','Prefer':'resolution=merge-duplicates'}),body:JSON.stringify({key:chave,value:payload})})
     .then(function(r){ if(!r.ok){ console.error('[PDA] salvar acesso', r.status); } else { var fl=$('pda-files'); if(fl){ var n=document.createElement('div'); n.style.cssText='font-size:.72rem;font-weight:700;color:#0d7377;margin-top:6px;'; n.textContent='✓ Competência '+comp+' salva no banco ('+rows.length+' acessos).'; fl.appendChild(n); setTimeout(function(){try{fl.removeChild(n);}catch(e){}},4000); } if(typeof loadAcessoFromBank==='function') loadAcessoFromBank(); } })
     .catch(function(e){ console.error('[PDA] salvar acesso', e); });
+  // salva também o ocioso REAL daquela competência (ativos+sem equipe que não acessaram no mês)
+  saveOciosoMes(comp, rows);
+}
+function saveOciosoMes(comp, rows){
+  if(!PDA_SKEY) return;
+  var qtd=ociosoCountForRows(rows);
+  if(qtd==null) return; // sem cadastro carregado ainda
+  var payload={v:1,comp:comp,diaria:PDA_DIARIA,qtd:qtd,updatedAt:new Date().toLocaleString('pt-BR')};
+  fetch(PDA_SUPA+'/rest/v1/turno_data',{method:'POST',headers:pdaSupaHeaders({'Content-Type':'application/json','Prefer':'resolution=merge-duplicates'}),body:JSON.stringify({key:'pda_ocioso_'+comp,value:payload})})
+    .then(function(r){ if(!r.ok) console.error('[PDA] salvar ocioso mês', r.status); })
+    .catch(function(e){ console.error('[PDA] salvar ocioso mês', e); });
 }
 function loadAcessoFromBank(){
   if(!PDA_SKEY) return;
