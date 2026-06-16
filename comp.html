@@ -1730,6 +1730,7 @@ async function handlePstrCSV(file) {
 
     const mapaPstr = {};
     window.mapaPstrGlobal = mapaPstr; // expõe globalmente para a tabela principal
+    try { window.mapaPstrGlobalNorm = {}; Object.keys(mapaPstr).forEach(k=>{ window.mapaPstrGlobalNorm[compNorm(k)] = mapaPstr[k]; }); } catch(e){}
     let linhasLidas = 0;
     for (let i = 1; i < lines.length; i++) {
       const cols = lines[i].split(sep).map(c => c.trim().replace(/^"|"$/g, ''));
@@ -1750,10 +1751,16 @@ async function handlePstrCSV(file) {
     let atualizadas = 0, naoEncontradas = 0, semPostes = 0;
     const linhasTabela = [];
 
+    // Mapa normalizado das chaves do CSV (PROCESSO) para casar com PEP do banco
+    const mapaPstrNorm = {};
+    Object.keys(mapaPstr).forEach(k => { mapaPstrNorm[compNorm(k)] = mapaPstr[k]; });
+
     const bancoAtualizado = bancoDB.map(obra => {
       const pep = obra['PEP OBRA'] || '';
-      if (Object.prototype.hasOwnProperty.call(mapaPstr, pep)) {
-        const pstrVal   = parseFloat(String(mapaPstr[pep]).replace(',', '.')) || 0;
+      const pstrRaw = Object.prototype.hasOwnProperty.call(mapaPstr, pep) ? mapaPstr[pep]
+                    : (Object.prototype.hasOwnProperty.call(mapaPstrNorm, compNorm(pep)) ? mapaPstrNorm[compNorm(pep)] : undefined);
+      if (pstrRaw !== undefined) {
+        const pstrVal   = parseFloat(String(pstrRaw).replace(',', '.')) || 0;
         const postCol   = obra['POSTES  REALIZADO'] !== undefined ? 'POSTES  REALIZADO' : 'POSTES REALIZADO';
         const postAtual = parseFloat(String(obra[postCol] || '0').replace(',', '.')) || 0;
         const novoVal   = Math.max(0, postAtual - pstrVal);
@@ -2874,7 +2881,9 @@ tbody.innerHTML = rows.map(r => {
 const newTag = r.isNew ? `<span style="background:#d0f0ee;color:#0d7377;font-size:0.65rem;font-weight:800;padding:2px 7px;border-radius:4px;margin-left:6px;">NOVA</span>` : '';
 const utdTag = r.utd ? `<span style="background:#ebf4ff;color:#2b6cb0;font-size:0.65rem;font-weight:800;padding:1px 6px;border-radius:4px;">${r.utd}</span>` : '';
 const stCls = 'status-' + (r.status||'DEFAULT').replace(/\s+/g,'_');
-const pstrCoelba = (window.mapaPstrGlobal && window.mapaPstrGlobal[r.pep] !== undefined) ? parseFloat(String(window.mapaPstrGlobal[r.pep]).replace(',','.')) || 0 : null;
+const _pstrRaw = (window.mapaPstrGlobal && window.mapaPstrGlobal[r.pep] !== undefined) ? window.mapaPstrGlobal[r.pep]
+  : (window.mapaPstrGlobalNorm && window.mapaPstrGlobalNorm[compNorm(r.pep)] !== undefined ? window.mapaPstrGlobalNorm[compNorm(r.pep)] : undefined);
+const pstrCoelba = (_pstrRaw !== undefined) ? parseFloat(String(_pstrRaw).replace(',','.')) || 0 : null;
 const saldoFinal = (pstrCoelba !== null && r.pRealAt !== null) ? Math.max(0, r.pRealAt - pstrCoelba) : null;
 const coelbaCell = pstrCoelba !== null ? `<span style="font-weight:800;color:#6b46c1;">${pstrCoelba}</span>` : `<span style="color:#ccc;">—</span>`;
 const saldoCell = saldoFinal !== null ? `<span style="font-weight:800;color:#276749;">${saldoFinal}</span>` : `<span style="color:#ccc;">—</span>`;
