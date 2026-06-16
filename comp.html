@@ -612,6 +612,7 @@ function compAtualizarRotuloSheets(){
   var d=new Date(); var atual=_M[d.getMonth()+1]+'/'+String(d.getFullYear()).slice(-2);
   var mJac=_compMesJac||atual, mIrc=_compMesIrc||atual;
   el.innerHTML='<span style="color:#2b6cb0;">Jacobina '+mJac+'</span> · <span style="color:#0d7377;">Irecê '+mIrc+'</span>';
+  try{ if(typeof compRenderMesesBar==='function') compRenderMesesBar(); }catch(e){}
 }
 // ===== Barra de MESES no Comparador (reaproveita 'meses_extras' do Mapa) =====
 const COMP_GBASE = {
@@ -1632,6 +1633,7 @@ const saved = localStorage.getItem('cardFontSize');
 if (saved) { window.addEventListener('DOMContentLoaded', () => applyFontSize(saved)); applyFontSize(saved); }
 window.addEventListener('DOMContentLoaded', function(){ try{ if(typeof compAtualizarRotuloSheets==='function') compAtualizarRotuloSheets(); }catch(e){} });
 window.addEventListener('DOMContentLoaded', function(){ try{ if(typeof compCarregarMeses==='function') compCarregarMeses(); }catch(e){} });
+(function(){ function _cm(){ try{ if(typeof compCarregarMeses==='function') compCarregarMeses(); }catch(e){} } if(document.readyState==='loading'){ document.addEventListener('DOMContentLoaded', _cm); } else { setTimeout(_cm, 0); } })();
 })();
 let aprData = [];
 function showAprMsg(text, type) {
