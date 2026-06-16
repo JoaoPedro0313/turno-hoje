@@ -2288,7 +2288,7 @@ function compute(){
 }
 function saveOciosoToBank(){
   if(!PDA_SKEY || !pdaResult) return;
-  var lista=pdaResult.naoAcessaram.filter(function(x){return x.ativo;}).map(function(x){
+  var lista=pdaResult.naoAcessaram.filter(function(x){return x.ativo && !x.equipe;}).map(function(x){
     return {nome:x.nome||'',mat:x.mat||'',cargo:x.cargo||'',equipe:x.equipe||'',uf:x.uf||'',situacao:x.situacao||''};
   });
   var payload={v:1,diaria:PDA_DIARIA,qtd:lista.length,updatedAt:new Date().toLocaleString('pt-BR'),lista:lista};
