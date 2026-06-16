@@ -559,6 +559,7 @@ const GSHEETS = {
 // Em vez de gid fixo, acha por NOME (&sheet=) a aba mais recente de cada UTD
 // (ex.: JUN.26, depois JUL.26 quando existir) e aponta o GSHEETS pra ela.
 let _compAbasResolvidas = false;
+let _compMesJac = null, _compMesIrc = null;
 const _CMESES = ['','JAN','FEV','MAR','ABR','MAI','JUN','JUL','AGO','SET','OUT','NOV','DEZ'];
 function _compMesDoTexto(t){const m=String(t||'').toUpperCase().match(/\b(JAN|FEV|MAR|ABR|MAI|JUN|JUL|AGO|SET|OUT|NOV|DEZ)\s*[\/.\-]\s*(\d{2})\b/);return m?(m[1]+'/'+m[2]):null;}
 function _compNomesAba(ano,mes){
@@ -590,12 +591,21 @@ async function compResolverAbasAtuais(){
   let urlJac=null, urlIrc=null;
   for(let i=0;i<4 && (!urlJac || !urlIrc);i++){
     const v=cur-i, ano=Math.floor((v-1)/12), mes=((v-1)%12)+1;
-    if(!urlJac){ const j=await _compSondarAba(baseJac,ano,mes); if(j) urlJac=j; }
-    if(!urlIrc){ const k=await _compSondarAba(baseIrc,ano,mes); if(k) urlIrc=k; }
+    const alvo=(_CMESES[mes]||'?')+'/'+String(ano).slice(-2);
+    if(!urlJac){ const j=await _compSondarAba(baseJac,ano,mes); if(j){ urlJac=j; _compMesJac=alvo; } }
+    if(!urlIrc){ const k=await _compSondarAba(baseIrc,ano,mes); if(k){ urlIrc=k; _compMesIrc=alvo; } }
   }
   if(urlJac) GSHEETS.JACOBINA=urlJac;
   if(urlIrc) GSHEETS.IRECE=urlIrc;
   if(urlJac||urlIrc){ _compAbasResolvidas=true; console.log('[comp] aba atual →', (GSHEETS.JACOBINA.split('&sheet=')[1]||'gid'), '|', (GSHEETS.IRECE.split('&sheet=')[1]||'gid')); }
+  compAtualizarRotuloSheets();
+}
+// Mostra os meses resolvidos de cada planilha no rótulo "PLANILHA ATUAL (SHEETS)"
+function compAtualizarRotuloSheets(){
+  var el=document.getElementById('comp-fonte-sheets'); if(!el) return;
+  var jac=_compMesJac?('Jacobina '+_compMesJac):'Jacobina —';
+  var irc=_compMesIrc?('Irecê '+_compMesIrc):'Irecê —';
+  el.innerHTML='<span style="color:#2b6cb0;">'+jac+'</span> · <span style="color:#0d7377;">'+irc+'</span>';
 }
 // URLs do Sheets resolvidas — atualizadas após gsheetsCarregarMeses()
 function todayDate() { const d=new Date(); const p=n=>String(n).padStart(2,'0'); return p(d.getDate())+'/'+p(d.getMonth()+1)+'/'+d.getFullYear(); }
@@ -1371,6 +1381,7 @@ _sel('page-turno', page==='turno' ? '' : 'none');
 _sel('page-prod',  page==='prod'  ? '' : 'none');
 _sel('page-apr',   page==='apr'   ? '' : 'none');
 _sel('page-comp',  page==='comp'  ? '' : 'none');
+if (page==='comp') { setTimeout(function(){ if (typeof compResolverAbasAtuais==='function') compResolverAbasAtuais().catch(function(){}); }, 50); }
 const pgMapa = document.getElementById('page-mapa');
 if (pgMapa) pgMapa.style.display = page==='mapa' ? '' : 'none';
 const pgProg = document.getElementById('page-prog');
@@ -2584,7 +2595,7 @@ btn.disabled = true;
 btn.textContent = '⏳ Buscando planilha…';
 compSetStatus('Buscando dados do Google Sheets…', 'info');
 const fsEl = document.getElementById('comp-fonte-sheets');
-if (fsEl) fsEl.innerHTML = '<span style="color:#2b6cb0;">⏳ Buscando…</span>';
+if (fsEl) { compAtualizarRotuloSheets(); }
 try {
 if (!window.Papa) {
 await new Promise((res, rej) => {
@@ -5468,6 +5479,7 @@ _sel('page-turno', page==='turno' ? '' : 'none');
 _sel('page-prod',  page==='prod'  ? '' : 'none');
 _sel('page-apr',   page==='apr'   ? '' : 'none');
 _sel('page-comp',  page==='comp'  ? '' : 'none');
+if (page==='comp') { setTimeout(function(){ if (typeof compResolverAbasAtuais==='function') compResolverAbasAtuais().catch(function(){}); }, 50); }
 const pgMapa = document.getElementById('page-mapa');
 if (pgMapa) pgMapa.style.display = page==='mapa' ? '' : 'none';
 const pgProg = document.getElementById('page-prog');
@@ -6517,7 +6529,7 @@ btn.disabled = true;
 btn.textContent = '⏳ Buscando planilha…';
 compSetStatus('Buscando dados do Google Sheets…', 'info');
 const fsEl = document.getElementById('comp-fonte-sheets');
-if (fsEl) fsEl.innerHTML = '<span style="color:#2b6cb0;">⏳ Buscando…</span>';
+if (fsEl) { compAtualizarRotuloSheets(); }
 try {
 if (!window.Papa) {
 await new Promise((res, rej) => {
