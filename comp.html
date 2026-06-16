@@ -2732,8 +2732,25 @@ const now = new Date(), pad = n => String(n).padStart(2,'0');
 const horaAtual = pad(now.getDate())+'/'+pad(now.getMonth()+1)+'/'+now.getFullYear()+' '+pad(now.getHours())+':'+pad(now.getMinutes());
 if (fsEl) fsEl.innerHTML = '<span style="color:#2b6cb0;font-weight:800;">'+dataAtual.length+' obras</span><br><span style="color:#63b3ed;font-size:0.7rem;">buscado às '+horaAtual+'</span>';
 compExecutarComparacao(bancoDB, dataAtual);
-compSetStatus('✅ Comparação concluída — planilha buscada às ' + horaAtual, 'ok');
-setTimeout(() => compSetStatus('', ''), 6000);
+// Diagnóstico: quantas casaram pelo PEP, quantas diferem, quantas idênticas
+try {
+  const bMap = {}; (bancoDB||[]).forEach(o => { bMap[compNorm(o['PEP OBRA']||'')] = o; });
+  function _v(row,...kws){ if(!row) return null; for(const kw of kws){ const k=compNorm(kw); const col=Object.keys(row).find(c=>compNorm(c).includes(k)); if(col!==undefined) return compParseNum(row[col]); } return null; }
+  let casaram=0, diferentes=0, identicas=0, novas=0;
+  (dataAtual||[]).forEach(rowAt => {
+    const b = bMap[compNorm(rowAt['PEP OBRA']||'')];
+    if (!b) { novas++; return; }
+    casaram++;
+    const dCava = (_v(rowAt,'CAVA REALIZADA')||0) - (_v(b,'CAVA REALIZADA')||0);
+    const dReal = (_v(rowAt,'POSTES REALIZADO')||0) - (_v(b,'POSTES REALIZADO')||0);
+    const dImp  = (_v(rowAt,'POSTES A IMPLANTA')||0) - (_v(b,'POSTES A IMPLANTA')||0);
+    if (dCava||dReal||dImp) diferentes++; else identicas++;
+  });
+  compSetStatus('Carteira buscada: '+dataAtual.length+' obras · '+casaram+' casaram c/ banco · '+diferentes+' com diferença · '+identicas+' idênticas · '+novas+' novas. ' + (diferentes===0 ? 'Banco e carteira estão iguais (nada a mostrar).' : ''), diferentes>0?'ok':'info');
+} catch(e) {
+  compSetStatus('✅ Comparação concluída — planilha buscada às ' + horaAtual, 'ok');
+}
+setTimeout(() => compSetStatus('', ''), 12000);
 } catch(e) {
 compSetStatus('❌ ' + (e.message || 'Erro ao buscar planilha'), 'erro');
 if (fsEl) fsEl.innerHTML = '<span style="color:#e53e3e;">Erro ao buscar</span>';
