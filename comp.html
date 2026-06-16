@@ -228,6 +228,10 @@ body.sm-collapsed .bottom-bar{left:64px !important;}
             <span style="font-size:0.6rem;font-weight:800;color:#2b6cb0;letter-spacing:1.5px;text-transform:uppercase;">PLANILHA ATUAL (SHEETS)</span>
           </div>
           <div id="comp-fonte-sheets" style="font-size:0.78rem;font-weight:700;color:#aaa;">Jacobina + Irecê</div>
+          <div id="comp-meses-wrap" style="margin-top:10px;display:none;">
+            <div style="font-size:0.6rem;font-weight:800;color:#6b46c1;letter-spacing:1.2px;text-transform:uppercase;margin-bottom:6px;">📅 Escolha o mês</div>
+            <div id="comp-meses-bar" style="display:flex;gap:6px;flex-wrap:wrap;"></div>
+          </div>
         </div>
       </div>
 
@@ -609,6 +613,68 @@ function compAtualizarRotuloSheets(){
   var mJac=_compMesJac||atual, mIrc=_compMesIrc||atual;
   el.innerHTML='<span style="color:#2b6cb0;">Jacobina '+mJac+'</span> · <span style="color:#0d7377;">Irecê '+mIrc+'</span>';
 }
+// ===== Barra de MESES no Comparador (reaproveita 'meses_extras' do Mapa) =====
+const COMP_GBASE = {
+  JACOBINA: 'https://docs.google.com/spreadsheets/d/142gvn8pNgJGTGDkidCfuOWMHJ2OCKpJd_FQU8zeo0x8/gviz/tq?tqx=out:csv&gid=',
+  IRECE:    'https://docs.google.com/spreadsheets/d/14ImbZb8-OCBp78jDtd0QFkSLrMG5vXA7tzrM-x6KQVo/gviz/tq?tqx=out:csv&gid='
+};
+const COMP_MESES_FIXOS = [
+  { ano: 2026, mes: 1,  gidJacobina: 310661297,  gidIrece: 1816810936 },
+  { ano: 2026, mes: 2,  gidJacobina: 1111886256, gidIrece: 420931092  },
+  { ano: 2026, mes: 3,  gidJacobina: 624598081,  gidIrece: 534264140  },
+  { ano: 2026, mes: 4,  gidJacobina: 257935593,  gidIrece: 1837597274 },
+  { ano: 2026, mes: 5,  gidJacobina: 1209313517, gidIrece: 663282613  },
+  { ano: 2026, mes: 6,  gidJacobina: 557360701,  gidIrece: 1842405101 }
+];
+let COMP_MESES = COMP_MESES_FIXOS.slice();
+let _compMesSel = null;
+async function compCarregarMeses(){
+  try{
+    const r = await fetch(SUPA_URL + '/rest/v1/turno_data?select=value&key=eq.meses_extras&limit=1', { headers: SUPA_HEADERS });
+    if (r.ok){
+      const arr = await r.json();
+      const extras = (arr && arr[0] && Array.isArray(arr[0].value)) ? arr[0].value : [];
+      const mapa = {};
+      COMP_MESES_FIXOS.forEach(e => mapa[e.ano+'-'+e.mes] = e);
+      extras.forEach(e => { if(e && e.ano && e.mes) mapa[e.ano+'-'+e.mes] = e; });
+      COMP_MESES = Object.values(mapa).sort((a,b) => a.ano!==b.ano ? a.ano-b.ano : a.mes-b.mes);
+    }
+  }catch(e){}
+  compRenderMesesBar();
+}
+function compRenderMesesBar(){
+  const wrap = document.getElementById('comp-meses-wrap');
+  const bar  = document.getElementById('comp-meses-bar');
+  if(!bar) return;
+  if(!COMP_MESES.length){ if(wrap) wrap.style.display='none'; return; }
+  if(wrap) wrap.style.display='block';
+  if(!_compMesSel){ const u = COMP_MESES[COMP_MESES.length-1]; _compMesSel = u.ano+'-'+u.mes; compAplicarMes(u); }
+  bar.innerHTML = COMP_MESES.map(function(e){
+    const id = e.ano+'-'+e.mes;
+    const on = id===_compMesSel;
+    const lbl = _CMESES[e.mes]+'/'+String(e.ano).slice(-2);
+    return '<button class="comp-mes-btn" data-id="'+id+'" onclick="compSelecionarMes('+e.ano+','+e.mes+')" '
+      + 'style="padding:5px 13px;border-radius:20px;border:1.5px solid '+(on?'#6b46c1':'#e2e8f0')+';background:'+(on?'#6b46c1':'#fff')+';color:'+(on?'#fff':'#555')+';font-family:\'Barlow\',sans-serif;font-size:0.74rem;font-weight:800;cursor:pointer;transition:all .15s;">'+lbl+'</button>';
+  }).join('');
+}
+function compAplicarMes(e){
+  if(e.gidJacobina) GSHEETS.JACOBINA = COMP_GBASE.JACOBINA + e.gidJacobina;
+  if(e.gidIrece)    GSHEETS.IRECE    = COMP_GBASE.IRECE    + e.gidIrece;
+  _compAbasResolvidas = true;
+  _compMesJac = _CMESES[e.mes]+'/'+String(e.ano).slice(-2);
+  _compMesIrc = _compMesJac;
+  compAtualizarRotuloSheets();
+}
+function compSelecionarMes(ano, mes){
+  const e = COMP_MESES.find(x => x.ano===ano && x.mes===mes);
+  if(!e) return;
+  _compMesSel = ano+'-'+mes;
+  compAplicarMes(e);
+  compRenderMesesBar();
+  if(typeof compCompareComSheets==='function') compCompareComSheets();
+}
+window.compSelecionarMes = compSelecionarMes;
+window.compCarregarMeses = compCarregarMeses;
 // URLs do Sheets resolvidas — atualizadas após gsheetsCarregarMeses()
 function todayDate() { const d=new Date(); const p=n=>String(n).padStart(2,'0'); return p(d.getDate())+'/'+p(d.getMonth()+1)+'/'+d.getFullYear(); }
 const DEFAULTS = {
@@ -1383,7 +1449,7 @@ _sel('page-turno', page==='turno' ? '' : 'none');
 _sel('page-prod',  page==='prod'  ? '' : 'none');
 _sel('page-apr',   page==='apr'   ? '' : 'none');
 _sel('page-comp',  page==='comp'  ? '' : 'none');
-if (page==='comp') { setTimeout(function(){ if (typeof compResolverAbasAtuais==='function') compResolverAbasAtuais().catch(function(){}); }, 50); }
+if (page==='comp') { setTimeout(function(){ if (typeof compCarregarMeses==='function') compCarregarMeses().catch(function(){}); else if (typeof compResolverAbasAtuais==='function') compResolverAbasAtuais().catch(function(){}); }, 50); }
 const pgMapa = document.getElementById('page-mapa');
 if (pgMapa) pgMapa.style.display = page==='mapa' ? '' : 'none';
 const pgProg = document.getElementById('page-prog');
@@ -5482,7 +5548,7 @@ _sel('page-turno', page==='turno' ? '' : 'none');
 _sel('page-prod',  page==='prod'  ? '' : 'none');
 _sel('page-apr',   page==='apr'   ? '' : 'none');
 _sel('page-comp',  page==='comp'  ? '' : 'none');
-if (page==='comp') { setTimeout(function(){ if (typeof compResolverAbasAtuais==='function') compResolverAbasAtuais().catch(function(){}); }, 50); }
+if (page==='comp') { setTimeout(function(){ if (typeof compCarregarMeses==='function') compCarregarMeses().catch(function(){}); else if (typeof compResolverAbasAtuais==='function') compResolverAbasAtuais().catch(function(){}); }, 50); }
 const pgMapa = document.getElementById('page-mapa');
 if (pgMapa) pgMapa.style.display = page==='mapa' ? '' : 'none';
 const pgProg = document.getElementById('page-prog');
