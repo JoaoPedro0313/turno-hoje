@@ -83,6 +83,13 @@
   .u-act{display:inline-flex;align-items:center;gap:8px}
   .u-ic{background:none;border:none;cursor:pointer;font-size:1rem;padding:2px;border-radius:6px;line-height:1}
   .u-ic:hover{background:#eef2f6}
+.u-link-row{display:flex;align-items:center;gap:5px}
+.u-link-row input{width:150px;padding:5px 8px;border:1.5px solid #e2e8f0;border-radius:7px;font-family:'Barlow',sans-serif;font-size:.74rem;font-weight:600;color:#334155;outline:none}
+.u-link-row input:focus{border-color:var(--teal)}
+.u-link-btn{background:var(--teal);color:#fff;border:none;border-radius:7px;padding:5px 11px;font-family:'Barlow',sans-serif;font-size:.7rem;font-weight:800;cursor:pointer;white-space:nowrap}
+.u-link-btn:hover{filter:brightness(.95)}
+.u-link-btn:disabled{opacity:.5;cursor:default}
+.u-link-ok{font-size:.7rem;font-weight:700;color:#0d7377;}
   .u-sw{position:relative;width:38px;height:20px;border-radius:20px;border:none;cursor:pointer;background:#cbd5e1;transition:background .15s;flex-shrink:0}
   .u-sw.on{background:#16a34a}
   .u-sw::after{content:'';position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#fff;transition:left .15s;box-shadow:0 1px 3px rgba(0,0,0,.3)}
@@ -213,6 +220,7 @@ body.sm-collapsed .bottom-bar{left:64px !important;}
               </tr></thead>
               <tbody id="gest-list"><tr><td colspan="9" style="text-align:center;color:#aaa;padding:18px;">Carregando…</td></tr></tbody>
             </table>
+            <datalist id="link-func-list"></datalist>
           </div>
         </div>
       </div>
@@ -410,7 +418,13 @@ async function carregarGestores(){
       + '<td class="u-nome">'+escapeHtml(u.nome||'(sem nome)')+tagG+'</td>'
       + '<td>'+(u.matricula
             ? '<b>'+escapeHtml(u.matricula)+'</b>'+(u.func_nome?'<br><span style="font-size:.66rem;color:#94a3b8;font-weight:600;">'+escapeHtml(u.func_nome)+'</span>':'')
-            : '<span style="color:#cbd5e1;font-weight:700;">— vincular —</span>')+'</td>'
+            : '<div class="u-link-row">'
+                + '<input list="link-func-list" placeholder="🔍 funcionário…" '
+                  + 'oninput="buscarFuncLink(this.value)" '
+                  + 'onchange="this.nextElementSibling.dataset.mat=(this.value.split(\' — \')[0]||\'\').trim()" '
+                  + 'data-email="'+escapeHtml(u.email)+'">'
+                + '<button class="u-link-btn" data-mat="" onclick="vincularRapido(\''+escapeHtml(u.email)+'\',this)">Vincular</button>'
+              + '</div>')+'</td>'
       + '<td>'+fmtData(u.criado_em)+'</td>'
       + '<td>'+escapeHtml(u.email)+'</td>'
       + '<td>'+escapeHtml(u.telefone||'—')+'</td>'
@@ -475,6 +489,34 @@ async function salvarEdicao(){
   var r2=await sb.rpc('admin_definir_gestor',{p_email:email,p_gestor:gestor});
   if(r2.error){ msg.style.color='#c53030'; msg.textContent='Erro: '+r2.error.message; return; }
   fecharEdicao(); carregarGestores();
+}
+
+// ===== Vínculo rápido inline (usuários criados antes, sem matrícula) =====
+let _linkT;
+async function buscarFuncLink(termo){
+  clearTimeout(_linkT);
+  if(!termo||termo.length<2) return;
+  _linkT=setTimeout(async function(){
+    const {data,error}=await sb.rpc('admin_buscar_funcionarios',{p_termo:termo});
+    if(error||!data) return;
+    window.FUNC_CACHE=window.FUNC_CACHE||{};
+    const dl=$('link-func-list'); if(!dl) return;
+    dl.innerHTML=data.map(function(f){
+      window.FUNC_CACHE[f.matricula]=f.nome;
+      return '<option value="'+f.matricula+' — '+escapeHtml(f.nome)+(f.situacao!=='ATIVO'?' ('+f.situacao+')':'')+'">';
+    }).join('');
+  },250);
+}
+async function vincularRapido(email, btn){
+  var mat=(btn.dataset.mat||'').trim();
+  // também aceita matrícula digitada direto no input ao lado
+  if(!mat){ var inp=btn.previousElementSibling; mat=((inp&&inp.value||'').split(' — ')[0]||'').trim(); }
+  if(!/^\w+$/.test(mat)){ alert('Escolha um funcionário (ou digite a matrícula) antes de vincular.'); return; }
+  var u=(window.USERS||[]).find(function(x){return x.email===email;}); if(!u) return;
+  btn.disabled=true; var txt=btn.textContent; btn.textContent='…';
+  var r=await sb.rpc('admin_atualizar_usuario',{p_email:email,p_nome:u.nome||null,p_telefone:u.telefone||null,p_vigencia:u.data_vigencia||null,p_matricula:mat});
+  if(r.error){ btn.disabled=false; btn.textContent=txt; alert('Erro: '+r.error.message); return; }
+  carregarGestores();
 }
 
 // ao abrir: se já estiver logado, entra direto
