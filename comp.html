@@ -2824,7 +2824,7 @@ return '<button class="comp-mes-btn" data-mes="'+m+'" onclick="compSetMes(\''+m+
 (m==='TODOS'?'Todos':m)+' <span style="opacity:0.75;font-size:0.65rem;">('+mesCount2(m)+')</span></button>';
 }).join('');
 }
-compSetFilter('todos', document.querySelector('#page-comp .filter-btn'));
+if (compActiveFilter!=='tudo') compSetFilter('todos', document.querySelector('#page-comp .filter-btn')); else compRenderTable();
 cr.scrollIntoView({ behavior: 'smooth' });
 }
 function compCompare() {
@@ -2851,6 +2851,11 @@ function compSetFilter(f, btn) {
 compActiveFilter = f;
 document.querySelectorAll('#page-comp .filter-btn').forEach(b => b.classList.remove('active'));
 if (btn) btn.classList.add('active');
+// "Ver todas do mês" precisa da carteira carregada; se ainda não buscou, busca agora
+if (f==='tudo' && (!compUltimaPlanilha || !compUltimaPlanilha.length)) {
+  compSetStatus('Buscando a carteira do mês para listar todas as obras…', 'info');
+  if (typeof compCompareComSheets==='function') { compCompareComSheets(); return; }
+}
 compRenderTable();
 }
 function compDiffCell(ant, at, diff) {
