@@ -330,6 +330,7 @@ body.sm-collapsed .bottom-bar{left:64px !important;}
   <button class="fab" style="background:#276749;" onclick="document.getElementById('pstr-csv-file-direto').click()" title="Importar CSV - COMPARADOR COELBA">&#128268; COMPARADOR COELBA</button>
   <input type="file" id="pstr-csv-file-direto" accept=".csv" style="display:none" onchange="if(window.handlePstrCSV)window.handlePstrCSV(this.files[0]);this.value=''">
   <button class="fab"        onclick="if(window.openAdmModal)window.openAdmModal()">&#9881; GERENCIAR</button>
+  <button class="fab" style="background:#6b46c1;" onclick="if(window.compDiagnostico)window.compDiagnostico()" title="Diagnóstico">&#128269; DIAG</button>
 </div>
 
 <div class="modal-overlay" id="modal-overlay">
@@ -3248,7 +3249,13 @@ const icon = document.getElementById('comp-sync-icon');
 if (btn) { btn.disabled = true; btn.style.opacity = '0.5'; }
 if (icon) icon.textContent = '⏳';
 try {
-await compAutoSincronizar();
+// ATUALIZAR AGORA: busca a carteira e COMPARA com o banco, SEM sobrescrever o banco.
+// Assim as alterações que você fez na carteira aparecem (banco = retrato anterior).
+if (typeof compCompareComSheets==='function') {
+  await compCompareComSheets();
+} else {
+  await compAutoSincronizar();
+}
 } finally {
 startCompAutoRefresh();
 if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
@@ -4839,6 +4846,45 @@ if (!document.hidden && presenceEnabled) { presenceHeartbeat(); presencePoll(); 
 window.addEventListener('load', () => {
 setTimeout(presenceInit, 1500);
 });
+// Diagnóstico: mostra estado real (mês/gid, obras no banco vs carteira, amostra de valores)
+async function compDiagnostico(){
+  var L=[];
+  try{
+    L.push('=== DIAGNÓSTICO COMPARADOR ===');
+    var gJac=(GSHEETS.JACOBINA.split('gid=')[1]||'?'), gIrc=(GSHEETS.IRECE.split('gid=')[1]||'?');
+    L.push('Mês/gid em uso → Jacobina gid='+gJac+' · Irecê gid='+gIrc);
+    L.push('Mês selecionado: '+(_compMesSel||'(nenhum)'));
+    L.push('Banco (obras_base): '+((bancoDB&&bancoDB.length)||0)+' obras');
+    L.push('');
+    L.push('Buscando carteira atual (fura-cache)…');
+    var cb='&_cb='+Date.now(), nc={cache:'no-store',headers:{'cache-control':'no-cache'}};
+    var rJ=await fetch(GSHEETS.JACOBINA+cb,nc); var tJ=rJ.ok?await rJ.text():'';
+    var rI=await fetch(GSHEETS.IRECE+cb,nc); var tI=rI.ok?await rI.text():'';
+    var dJ=compParseCSVText(tJ,'JACOBINA')||[]; var dI=compParseCSVText(tI,'IRECÊ')||[];
+    L.push('Carteira agora → Jac '+dJ.length+' · Irc '+dI.length+' = '+(dJ.length+dI.length)+' obras');
+    var cart=[...dJ,...dI];
+    // compara 1ª obra que difere
+    var bMap={}; (bancoDB||[]).forEach(function(o){ bMap[compNorm(o['PEP OBRA']||'')]=o; });
+    function val(r,k){ if(!r)return '—'; var c=Object.keys(r).find(function(x){return compNorm(x).includes(compNorm(k));}); return c?r[c]:'—'; }
+    var achou=0;
+    for(var i=0;i<cart.length && achou<3;i++){
+      var o=cart[i]; var b=bMap[compNorm(o['PEP OBRA']||'')];
+      if(!b) continue;
+      var pa=val(b,'POSTES REALIZADO'), pn=val(o,'POSTES REALIZADO');
+      var ca=val(b,'CAVA REALIZADA'), cn=val(o,'CAVA REALIZADA');
+      if(String(pa)!==String(pn) || String(ca)!==String(cn)){
+        L.push(''); L.push('DIFERENÇA em '+o['PEP OBRA']+':');
+        L.push('  Postes: banco='+pa+' → carteira='+pn);
+        L.push('  Cava: banco='+ca+' → carteira='+cn);
+        achou++;
+      }
+    }
+    if(!achou) L.push(''),L.push('Nenhuma diferença encontrada entre banco e carteira nos valores de postes/cava.');
+    L.push(''); L.push('Snapshots no histórico: '+((typeof compHistorico!=='undefined'&&compHistorico.length)||0));
+  }catch(e){ L.push('ERRO: '+e.message); }
+  alert(L.join('\n'));
+}
+window.compDiagnostico = compDiagnostico;
 // ===== Exposição global garantida (estas funções são definidas FORA da IIFE acima) =====
 try {
   window.compCompareComSheets = compCompareComSheets;
