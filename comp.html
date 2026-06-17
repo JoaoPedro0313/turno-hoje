@@ -2628,14 +2628,25 @@ let compDataAtual = null, compAllChanges = [], compActiveFilter = 'todos', compB
 let compUltimaPlanilha = [];
 let compUltimoDiag = null;
 function compObraParaChange(row){
-  function v(...kws){ for(const kw of kws){ const k=compNorm(kw); const col=Object.keys(row).find(c=>compNorm(c).includes(k)); if(col!==undefined) return compParseNum(row[col]); } return null; }
+  const cols = Object.keys(row);
+  function v(...kws){
+    for(const kw of kws){
+      const k=compNorm(kw);
+      let col=cols.find(c=>compNorm(c).includes(k));
+      if(col!==undefined) return compParseNum(row[col]);
+      const toks=String(kw).toUpperCase().split(/\s+/).map(t=>compNorm(t)).filter(Boolean).map(t=>t.replace(/S$/,''));
+      col=cols.find(c=>{ const cn=compNorm(c); return toks.every(t=>cn.includes(t)); });
+      if(col!==undefined) return compParseNum(row[col]);
+    }
+    return null;
+  }
   return {
     pep: row['PEP OBRA']||'', titulo: row['TÍTULO']||row['TITULO']||'',
     utd: row['_UTD']||'', status: (row['STATUS DA OBRA']||row['OBS STATUS']||'').trim(),
     isNew:false, mes: (typeof mesFromObra==='function'?mesFromObra(row):'')||'',
-    cavaAnt:null, cavaAt:v('CAVA REALIZADA'), cavaDiff:0,
-    pRealAnt:null, pRealAt:v('POSTES REALIZADO'), pRealDiff:0,
-    pImpAnt:null, pImpAt:v('POSTES A IMPLANTA'), pImpDiff:0,
+    cavaAnt:null, cavaAt:v('CAVA REALIZADA','CAVA REAL','CAVA'), cavaDiff:0,
+    pRealAnt:null, pRealAt:v('POSTES REALIZADO','POSTES REALIZADOS','POSTES INSTALADO'), pRealDiff:0,
+    pImpAnt:null, pImpAt:v('POSTES A IMPLANTA','POSTES A IMPLANTAR'), pImpDiff:0,
     pPrevAt:v('POSTES PREVISTOS')
   };
 }
@@ -2786,9 +2797,15 @@ dadosBase.forEach(r => { mapAnt[compNorm(r['PEP OBRA']||'')] = r; });
 compAllChanges = [];
 function findVal(row, ...kws) {
 if (!row) return null;
+const cols = Object.keys(row);
 for (const kw of kws) {
 const k = compNorm(kw);
-const col = Object.keys(row).find(c => compNorm(c).includes(k));
+// 1) match direto: coluna contém a chave inteira normalizada
+let col = cols.find(c => compNorm(c).includes(k));
+if (col!==undefined) return compParseNum(row[col]);
+// 2) match por tokens: todas as palavras da chave aparecem na coluna (ex.: "POSTES REALIZADO" casa "POSTES REALIZADOS")
+const toks = String(kw).toUpperCase().split(/\s+/).map(t=>compNorm(t)).filter(Boolean).map(t=>t.replace(/S$/,''));
+col = cols.find(c => { const cn = compNorm(c); return toks.every(t => cn.includes(t)); });
 if (col!==undefined) return compParseNum(row[col]);
 }
 return null;
@@ -2796,9 +2813,9 @@ return null;
 dadosNovos.forEach(rowAtual => {
 const pep = rowAtual['PEP OBRA'];
 const rowAnt = mapAnt[compNorm(pep||'')];
-const cavaAnt  = findVal(rowAnt,  'CAVA REALIZADA'),   cavaAt  = findVal(rowAtual, 'CAVA REALIZADA');
-const pRealAnt = findVal(rowAnt,  'POSTES REALIZADO'), pRealAt = findVal(rowAtual, 'POSTES REALIZADO');
-const pImpAnt  = findVal(rowAnt,  'POSTES A IMPLANTA'),pImpAt  = findVal(rowAtual, 'POSTES A IMPLANTA');
+const cavaAnt  = findVal(rowAnt,  'CAVA REALIZADA','CAVA REAL','CAVA'),   cavaAt  = findVal(rowAtual, 'CAVA REALIZADA','CAVA REAL','CAVA');
+const pRealAnt = findVal(rowAnt,  'POSTES REALIZADO','POSTES REALIZADOS','POSTES INSTALADO','POSTES IMPLANTADO'), pRealAt = findVal(rowAtual, 'POSTES REALIZADO','POSTES REALIZADOS','POSTES INSTALADO','POSTES IMPLANTADO');
+const pImpAnt  = findVal(rowAnt,  'POSTES A IMPLANTA','POSTES A IMPLANTAR','POSTES IMPLANTAR'),pImpAt  = findVal(rowAtual, 'POSTES A IMPLANTA','POSTES A IMPLANTAR','POSTES IMPLANTAR');
 const pPrevAt  = findVal(rowAtual,'POSTES PREVISTOS');
 const cavaDiff  = (cavaAnt !==null || cavaAt !==null) ? (cavaAt  || 0) - (cavaAnt  || 0) : 0;
 const pRealDiff = (pRealAnt!==null || pRealAt!==null) ? (pRealAt || 0) - (pRealAnt || 0) : 0;
