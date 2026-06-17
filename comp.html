@@ -79,14 +79,26 @@
   </div>
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 <script>
 // ===================== CONFIG =====================
 const SUPA_URL = 'https://eqxejfoibebcbtsqymji.supabase.co';
 const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVxeGVqZm9pYmViY2J0c3F5bWppIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE4NjUzMTEsImV4cCI6MjA4NzQ0MTMxMX0.lwf7_EJ6UchEOpzhW3cVKztxDGy78gaQblRvgiEwWh8';
 const SUPA_HEADERS = { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY, 'Content-Type': 'application/json' };
-const KEY_OBRAS = 'obras_base';        // banco com as obras (mesma fonte do Mapa)
 const KEY_BASE  = 'comp_postes_base';  // retrato anterior dos postes (do comparador)
 const KEY_HIST  = 'comp_postes_hist';  // histórico de alterações
+// Carteira (Google Sheets) — mesmas planilhas/gids do Mapa
+const SHEET_JAC = 'https://docs.google.com/spreadsheets/d/142gvn8pNgJGTGDkidCfuOWMHJ2OCKpJd_FQU8zeo0x8/gviz/tq?tqx=out:csv&gid=';
+const SHEET_IRC = 'https://docs.google.com/spreadsheets/d/14ImbZb8-OCBp78jDtd0QFkSLrMG5vXA7tzrM-x6KQVo/gviz/tq?tqx=out:csv&gid=';
+const MESES_NOME = ['','JAN','FEV','MAR','ABR','MAI','JUN','JUL','AGO','SET','OUT','NOV','DEZ'];
+const MESES = [
+  { ano:2026, mes:1, jac:'310661297',  irc:'1816810936' },
+  { ano:2026, mes:2, jac:'1111886256', irc:'420931092'  },
+  { ano:2026, mes:3, jac:'624598081',  irc:'534264140'  },
+  { ano:2026, mes:4, jac:'257935593',  irc:'1837597274' },
+  { ano:2026, mes:5, jac:'1209313517', irc:'663282613'  },
+  { ano:2026, mes:6, jac:'557360701',  irc:'1842405101' },
+];
 
 let ULTIMA_LISTA = [], ULTIMA_ALTERADAS = [], ULTIMA_TEMBASE = false, MOSTRANDO_TODAS = false;
 
@@ -113,13 +125,45 @@ function postesDe(obj){
 }
 
 // ===================== SUPABASE =====================
-async function carregarObrasBase(){
-  const r = await fetch(SUPA_URL+'/rest/v1/turno_data?select=value&key=eq.'+KEY_OBRAS+'&limit=1', { headers: SUPA_HEADERS });
-  if(!r.ok) throw new Error('Não consegui ler o banco (HTTP '+r.status+')');
-  const a = await r.json();
-  const v = a && a[0] && a[0].value;
-  const arr = v && Array.isArray(v.data) ? v.data : (Array.isArray(v) ? v : []);
-  return arr;
+// === Lê o CSV de uma aba e devolve as obras com postes ===
+function parseCarteira(text, utd){
+  const rows = Papa.parse(String(text||'').replace(/^\uFEFF/,''), { skipEmptyLines:false }).data;
+  let hIdx = -1;
+  for(let i=0;i<Math.min(rows.length,15);i++){
+    const r = (rows[i]||[]).map(c=>norm(c));
+    if(r.some(c=>c==='PEPOBRA')){ hIdx=i; break; }
+  }
+  if(hIdx<0) return { obras:[], headers:[] };
+  const headers = (rows[hIdx]||[]).map(c=>String(c==null?'':c).replace(/[\r\n]+/g,' ').replace(/\s+/g,' ').trim());
+  const idx = (...termos)=>{
+    for(const t of termos){
+      const toks=String(t).toUpperCase().split(/\s+/).map(norm).filter(Boolean);
+      const i=headers.findIndex(h=>{ const hn=norm(h); return toks.every(x=>hn.includes(x)); });
+      if(i>=0) return i;
+    }
+    return -1;
+  };
+  const iPep=idx('PEP OBRA'), iTit=idx('TITULO'), iMun=idx('MUNICIPIO');
+  // POSTES REALIZADO (não PREVISTOS, não À IMPLANTA)
+  let iPos = headers.findIndex(h=>{ const hn=norm(h); return hn.includes('POSTES')&&hn.includes('REALIZAD'); });
+  const obras=[];
+  for(let i=hIdx+1;i<rows.length;i++){
+    const row=rows[i]||[];
+    const pep = iPep>=0 ? String(row[iPep]==null?'':row[iPep]).trim() : '';
+    if(!pep || !/\d/.test(pep)) continue;
+    if(/^(TOTAL|TOTAIS|SOMA|SUBTOTAL)/.test(pep.toUpperCase())) continue;
+    obras.push({
+      pep, titulo: iTit>=0?String(row[iTit]||'').trim():'',
+      utd, mun: iMun>=0?String(row[iMun]||'').trim():'',
+      postes: iPos>=0 ? num(row[iPos]) : null
+    });
+  }
+  return { obras, headers };
+}
+async function buscarCSV(url){
+  const r = await fetch(url+'&_cb='+Date.now(), { cache:'no-store', headers:{'cache-control':'no-cache'} });
+  if(!r.ok) throw new Error('HTTP '+r.status);
+  return await r.text();
 }
 async function carregarBasePostes(){
   try{
@@ -148,34 +192,38 @@ async function salvarHist(hist){
 // ===================== FLUXO PRINCIPAL =====================
 async function rodar(){
   const btn = document.getElementById('btn');
-  btn.disabled = true; btn.textContent='⏳ Lendo o banco…'; showErr('');
+  btn.disabled = true; btn.textContent='⏳ Buscando carteiras…'; showErr('');
   try{
-    const obrasBruto = await carregarObrasBase();
-    if(!obrasBruto.length) throw new Error('O banco de obras está vazio. Abra o Mapa e sincronize a carteira primeiro.');
-
-    // monta lista atual: cada obra (pep) uma vez, com seus postes
+    // busca TODOS os meses (mais recente primeiro → vence na dedup)
     const dedup = {};
-    obrasBruto.forEach(o=>{
-      const pep = (getCol(o,'PEP OBRA')||'').toString().trim();
-      if(!pep || !/\d/.test(pep)) return;
-      const k = norm(pep);
-      if(dedup[k]) return;
-      dedup[k] = {
-        pep,
-        titulo: (getCol(o,'TITULO')||'').toString().trim(),
-        utd: (o['_UTD']||getCol(o,'UTD')||'').toString().trim(),
-        mun: (getCol(o,'MUNICIPIO')||'').toString().trim(),
-        postes: postesDe(o)
-      };
-    });
+    const ordenados = MESES.slice().sort((a,b)=> (b.ano*12+b.mes)-(a.ano*12+a.mes));
+    let semPostes=[], headersVistos='';
+    for(const m of ordenados){
+      const lbl = MESES_NOME[m.mes]+'/'+String(m.ano).slice(-2);
+      btn.textContent='⏳ '+lbl+'…';
+      for(const [base,gid,utd] of [[SHEET_JAC,m.jac,'JACOBINA'],[SHEET_IRC,m.irc,'IRECÊ']]){
+        if(!gid) continue;
+        try{
+          const txt = await buscarCSV(base+gid);
+          const res = parseCarteira(txt, utd);
+          if(res.obras.length){
+            const temPostes = res.obras.some(o=>o.postes!==null);
+            if(!temPostes && !headersVistos){ headersVistos = lbl+' '+utd+' → '+res.headers.filter(Boolean).join(' | '); }
+            res.obras.forEach(o=>{
+              const k=norm(o.pep);
+              if(k && !dedup[k]){ o.mes=lbl; dedup[k]=o; }
+            });
+          }
+        }catch(e){ /* mês indisponível */ }
+      }
+    }
     const lista = Object.values(dedup);
     ULTIMA_LISTA = lista;
-    if(!lista.length) throw new Error('Nenhuma obra com PEP encontrada no banco.');
+    if(!lista.length) throw new Error('Nenhuma obra foi lida das carteiras.');
 
     const algumComPostes = lista.some(o=>o.postes!==null);
     if(!algumComPostes){
-      const cols = Object.keys(obrasBruto[0]||{}).join(' | ');
-      showErr('⚠️ Não encontrei a coluna de POSTES no banco.\n\nColunas do banco:\n'+cols);
+      showErr('⚠️ Não encontrei a coluna de POSTES nas carteiras.\n\nColunas vistas:\n'+(headersVistos||'(nenhuma)'));
     }
 
     // compara com o retrato anterior
