@@ -2983,14 +2983,27 @@ const now = new Date(), pad = n => String(n).padStart(2,'0');
 const ts = pad(now.getDate())+'/'+pad(now.getMonth()+1)+'/'+now.getFullYear()+' '+pad(now.getHours())+':'+pad(now.getMinutes());
 const dia = pad(now.getDate())+'/'+pad(now.getMonth()+1)+'/'+now.getFullYear();
 if (compHistorico.length > 0 && compHistorico[compHistorico.length-1].ts===ts) return;
+// busca robusta de coluna (casa por tokens, aceita variações de nome)
+function getCol(row, ...kws){
+  const cols = Object.keys(row);
+  for(const kw of kws){
+    const k = compNorm(kw);
+    let c = cols.find(x => compNorm(x).includes(k));
+    if(c!==undefined) return row[c];
+    const toks = String(kw).toUpperCase().split(/\s+/).map(t=>compNorm(t)).filter(Boolean).map(t=>t.replace(/S$/,''));
+    c = cols.find(x => { const xn=compNorm(x); return toks.every(t=>xn.includes(t)); });
+    if(c!==undefined) return row[c];
+  }
+  return '';
+}
 compHistorico.push({ ts, dia, data: data.map(r => ({
 pep: r['PEP OBRA']||'',
 titulo: r['TÍTULO']||r['TITULO']||'',
 utd: r['_UTD']||'',
-status: (r['STATUS DA OBRA']||'').trim(),
-cava: r['CAVA REALIZADA']||r['CAVA  REALIZADA']||'',
-postR: r['POSTES REALIZADO']||r['POSTES  REALIZADO']||'',
-postI: r['POSTES A IMPLANTA']||r['POSTES  À IMPLANTA']||r['POSTES À IMPLANTA']||'',
+status: (r['STATUS DA OBRA']||r['OBS STATUS']||'').trim(),
+cava: getCol(r,'CAVA REALIZADA','CAVA REAL','CAVA'),
+postR: getCol(r,'POSTES REALIZADO','POSTES REALIZADOS','POSTES INSTALADO'),
+postI: getCol(r,'POSTES A IMPLANTA','POSTES A IMPLANTAR'),
 }))});
 compHistoricoSave();
 compHistoricoRender();
@@ -3063,9 +3076,9 @@ let changes = [];
 const baseData = snapBase ? snapBase.data : (allSnaps.length > 1 ? allSnaps[0].data : null);
 if (baseData) {
 const mapAnt = {};
-baseData.forEach(r => { mapAnt[r.pep] = r; });
+baseData.forEach(r => { mapAnt[compNorm(r.pep||'')] = r; });
 snapAtual.data.forEach(rowAt => {
-const rowAnt = mapAnt[rowAt.pep];
+const rowAnt = mapAnt[compNorm(rowAt.pep||'')];
 const cavaAnt = compHistoricoParseNum(rowAnt&&rowAnt.cava), cavaAt = compHistoricoParseNum(rowAt.cava);
 const pRealAnt = compHistoricoParseNum(rowAnt&&rowAnt.postR), pRealAt = compHistoricoParseNum(rowAt.postR);
 const pImpAnt = compHistoricoParseNum(rowAnt&&rowAnt.postI), pImpAt = compHistoricoParseNum(rowAt.postI);
