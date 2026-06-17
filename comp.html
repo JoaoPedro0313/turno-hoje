@@ -2589,29 +2589,30 @@ s.src = 'https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js
 s.onload = cb; document.head.appendChild(s);
 }
 function compParseCSVText(text, utdLabel) {
-const rows = Papa.parse(text.replace(/^\uFEFF/,''), { skipEmptyLines: true }).data;
+const rows = Papa.parse(text.replace(/^\uFEFF/,''), { skipEmptyLines: false }).data;
 let headerIdx = -1;
-for (let i=0; i<Math.min(rows.length,10); i++) {
+for (let i=0; i<Math.min(rows.length,12); i++) {
 const r = rows[i].map(c=>String(c).trim().toUpperCase());
 if ((r.some(c=>c==='NOTA') && r.some(c=>c.includes('PEP'))) ||
 (r.some(c=>c==='PEP OBRA') && (r.some(c=>c==='STATUS DA OBRA') || r.some(c=>c==='OBS STATUS')))) { headerIdx=i; break; }
 }
 if (headerIdx===-1) return null;
+// cabeçalho: junta quebras de linha como ESPAÇO (não corta), normaliza espaços.
+// "POSTES\nREALIZADO" vira "POSTES REALIZADO".
 const headers = rows[headerIdx].map(c => {
-  let h = String(c).trim().toUpperCase();
-  h = h.split('\n')[0].trim();
-  h = h.replace(/\s+/g, ' ');
+  let h = String(c==null?'':c).trim().toUpperCase();
+  h = h.replace(/[\r\n]+/g, ' ');
+  h = h.replace(/\s+/g, ' ').trim();
   return h;
 });
 const data = [];
 for (let i=headerIdx+1; i<rows.length; i++) {
 const row = rows[i];
-if (!row.some(c=>String(c).trim())) continue;
+if (!row || !row.some(c=>String(c==null?'':c).trim())) continue;
 const obj = { _UTD: utdLabel||'' };
-headers.forEach((h,idx) => { obj[h] = String(row[idx]||'').trim(); });
+headers.forEach((h,idx) => { if(h) obj[h] = String(row[idx]==null?'':row[idx]).trim(); });
 const pepVal = (obj['PEP OBRA']||'').trim();
 if (!pepVal) continue;
-// descarta linhas de total/legenda: PEP precisa ter pelo menos um dígito e não ser rótulo
 const pepUp = pepVal.toUpperCase();
 if (!/\d/.test(pepVal)) continue;
 if (/^(TOTAL|TOTAIS|SOMA|SUBTOTAL|TOTAL GERAL|QTD|QUANTIDADE)\b/.test(pepUp)) continue;
