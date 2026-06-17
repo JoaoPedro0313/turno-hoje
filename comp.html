@@ -4830,6 +4830,19 @@ if (!document.hidden && presenceEnabled) { presenceHeartbeat(); presencePoll(); 
 window.addEventListener('load', () => {
 setTimeout(presenceInit, 1500);
 });
+// ===== Exposição global garantida (estas funções são definidas FORA da IIFE acima) =====
+try {
+  window.compCompareComSheets = compCompareComSheets;
+  window.handlePstrCSV = handlePstrCSV;
+  window.compSelecionarMes = compSelecionarMes;
+  window.compCarregarMeses = compCarregarMeses;
+  window.compSetFilter = compSetFilter;
+  if (typeof compSetMes==='function') window.compSetMes = compSetMes;
+  if (typeof switchTab==='function') window.switchTab = switchTab;
+  if (typeof compAtualizarRotuloSheets==='function') window.compAtualizarRotuloSheets = compAtualizarRotuloSheets;
+  if (typeof compRenderMesesBar==='function') window.compRenderMesesBar = compRenderMesesBar;
+} catch(e){ console.error('[comp] exposição global:', e.message); }
+
 </script>
 
 <div class="modal-overlay" id="adm-modal-overlay" onclick="if(event.target.id==='adm-modal-overlay')closeAdmModal()">
