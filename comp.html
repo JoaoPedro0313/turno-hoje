@@ -4938,7 +4938,15 @@ async function compDiagnostico(){
     if(!achou) L.push(''),L.push('Nenhuma diferença encontrada entre banco e carteira nos valores de postes/cava.');
     L.push(''); L.push('Snapshots no histórico: '+((typeof compHistorico!=='undefined'&&compHistorico.length)||0));
   }catch(e){ L.push('ERRO: '+e.message); }
-  alert(L.join('\n'));
+  // mostra numa caixa grande na tela (fácil de ler e printar)
+  try{
+    var old=document.getElementById('__diagbox'); if(old) old.remove();
+    var box=document.createElement('div'); box.id='__diagbox';
+    box.style.cssText='position:fixed;inset:5% 5% auto 5%;max-height:88vh;overflow:auto;z-index:999999;background:#1a202c;color:#68d391;font:600 13px/1.6 monospace;padding:18px 22px;border-radius:12px;white-space:pre-wrap;box-shadow:0 12px 48px rgba(0,0,0,.6);border:2px solid #68d391;';
+    var close='<div style="text-align:right;margin-bottom:8px;"><button onclick="document.getElementById(\'__diagbox\').remove()" style="background:#e53e3e;color:#fff;border:none;border-radius:6px;padding:6px 16px;font-weight:800;cursor:pointer;">FECHAR ✕</button></div>';
+    box.innerHTML=close+'<div>'+L.join('\n').replace(/</g,'&lt;')+'</div>';
+    document.body.appendChild(box);
+  }catch(e){ alert(L.join('\n')); }
 }
 window.compDiagnostico = compDiagnostico;
 // ===== Exposição global garantida (estas funções são definidas FORA da IIFE acima) =====
