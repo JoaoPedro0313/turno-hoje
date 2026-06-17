@@ -2778,6 +2778,16 @@ try {
   compUltimoDiag = {total:dataAtual.length, casaram:casaram, diferentes:diferentes, identicas:identicas, novas:novas};
   compSetStatus('Carteira buscada: '+dataAtual.length+' obras · '+casaram+' casaram c/ banco · '+diferentes+' com diferença · '+identicas+' idênticas · '+novas+' novas. ' + (diferentes===0 ? 'Banco e carteira estão iguais (nada a mostrar).' : ''), diferentes>0?'ok':'info');
   if (typeof compRenderTable==='function') compRenderTable();
+  // FLUXO PRINCIPAL: depois de MOSTRAR as obras que mudaram, registra no histórico e
+  // SALVA o novo valor automaticamente (próxima comparação parte daqui).
+  try {
+    if (diferentes > 0 || novas > 0) {
+      if (typeof compSalvarBancoDirectly==='function') {
+        await compSalvarBancoDirectly(dataAtual, dataJac.length, dataIrc.length);
+        compSetStatus('✅ '+diferentes+' obra(s) com alteração de postes. Valores salvos — próxima comparação parte daqui.', 'ok');
+      }
+    }
+  } catch(eSave){ console.warn('[comp] auto-save:', eSave.message); }
 } catch(e) {
   compSetStatus('✅ Comparação concluída — planilha buscada às ' + horaAtual, 'ok');
 }
