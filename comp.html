@@ -2,21 +2,6 @@
 <html lang="pt-BR">
 <head>
 <script>
-// === Capturador de erros visível na tela (temporário, para diagnóstico) ===
-(function(){
-  window.addEventListener('error', function(ev){
-    try{
-      var msg = (ev.message||'erro') + (ev.filename ? ('  ['+String(ev.filename).split('/').pop()+':'+ev.lineno+':'+ev.colno+']') : '');
-      var bar = document.getElementById('__errbar');
-      if(!bar){
-        bar = document.createElement('div'); bar.id='__errbar';
-        bar.style.cssText='position:fixed;top:0;left:0;right:0;z-index:999999;background:#c53030;color:#fff;font:700 13px/1.5 monospace;padding:10px 14px;white-space:pre-wrap;max-height:40vh;overflow:auto;box-shadow:0 2px 12px rgba(0,0,0,.4);';
-        (document.body||document.documentElement).appendChild(bar);
-      }
-      bar.textContent += '⚠️ '+msg+'\n';
-    }catch(e){}
-  }, true);
-})();
 // Console limpo: silencia os logs internos de diagnóstico (mensagens que começam com [Tag]).
 // Erros reais (console.error) continuam aparecendo.
 // Para reativar todos os logs: rode no console  localStorage.setItem('mariua_debug','1')  e recarregue.
