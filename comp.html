@@ -1120,7 +1120,7 @@ function emptyMsg(id) {
 document.getElementById(id).innerHTML = '<div class="_s9">Nenhuma equipe</div>';
 }
 function buildGridOk(id, list) {
-const g = document.getElementById(id); g.innerHTML = '';
+const g = document.getElementById(id); if(!g) return; g.innerHTML = '';
 if (!list.length) { emptyMsg(id); return; }
 list.forEach(name => {
 const d = document.createElement('div'); d.className = 'card';
@@ -1129,7 +1129,7 @@ g.appendChild(d);
 });
 }
 function buildGridJustif(id, list) {
-const g = document.getElementById(id); g.innerHTML = '';
+const g = document.getElementById(id); if(!g) return; g.innerHTML = '';
 if (!list.length) { emptyMsg(id); return; }
 list.forEach(function(t) {
 const d = document.createElement('div'); d.className = 'card justif';
@@ -1139,7 +1139,7 @@ g.appendChild(d);
 });
 }
 function buildGridFalta(id, list) {
-const g = document.getElementById(id); g.innerHTML = '';
+const g = document.getElementById(id); if(!g) return; g.innerHTML = '';
 if (!list.length) { emptyMsg(id); return; }
 list.forEach(name => {
 const d = document.createElement('div'); d.className = 'card absent';
@@ -3376,7 +3376,8 @@ if (pageMapa && pageMapa.style.display!=='none') {
   mapaRenderFiltros && mapaRenderFiltros();
 }
 mapaRotaObrasFiltradas = mapaData.filter(d=>d.temCoord);
-mapaRotaFiltrarLista();
+if (typeof mapaRotaFiltrarLista==='function') mapaRotaFiltrarLista();
+else if (window.mapaRotaFiltrarLista) window.mapaRotaFiltrarLista();
 }
 function mapaEnsureLeaflet(cb) {
   const ph = document.getElementById('mapa-placeholder'); if (ph) ph.style.display='none';
