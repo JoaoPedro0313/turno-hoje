@@ -4899,8 +4899,33 @@ async function compDiagnostico(){
     L.push('Mês selecionado: '+(_compMesSel||'(nenhum)'));
     L.push('Banco (obras_base): '+((bancoDB&&bancoDB.length)||0)+' obras');
     L.push('');
-    L.push('Buscando carteira atual (fura-cache)…');
+    // Procura a coluna de POSTES nas abas da planilha de Jacobina (varre gids dos meses + alguns próximos)
+    L.push('🔎 Procurando a aba com a coluna de POSTES (Jacobina)…');
+    var baseJac = COMP_GBASE.JACOBINA;
+    var gidsTestar = {};
+    try { COMP_MESES.forEach(function(m){ if(m.gidJacobina) gidsTestar[m.gidJacobina]=1; }); } catch(e){}
     var cb='&_cb='+Date.now(), nc={cache:'no-store',headers:{'cache-control':'no-cache'}};
+    var achouPostes=false;
+    for (var gid in gidsTestar){
+      try{
+        var r=await fetch(baseJac+gid+cb,nc); if(!r.ok) continue;
+        var t=await r.text();
+        var d=compParseCSVText(t,'JACOBINA')||[];
+        if(!d.length) continue;
+        var cols=Object.keys(d[0]);
+        var colPoste=cols.find(function(c){ return compNorm(c).includes('POSTE'); });
+        L.push('  gid='+gid+' → '+d.length+' obras · coluna postes: '+(colPoste?('"'+colPoste+'" ✅'):'não tem'));
+        if(colPoste) achouPostes=true;
+      }catch(e){ L.push('  gid='+gid+' → erro'); }
+    }
+    if(!achouPostes){
+      L.push('');
+      L.push('⚠️ Nenhuma aba cadastrada tem coluna de POSTES.');
+      L.push('A aba certa (com POSTESREALIZADO) tem um gid diferente.');
+      L.push('Abra a planilha, clique na aba da carteira e copie o número após #gid= na URL.');
+    }
+    L.push('');
+    L.push('Buscando carteira atual (fura-cache)…');
     var rJ=await fetch(GSHEETS.JACOBINA+cb,nc); var tJ=rJ.ok?await rJ.text():'';
     var rI=await fetch(GSHEETS.IRECE+cb,nc); var tI=rI.ok?await rI.text():'';
     var dJ=compParseCSVText(tJ,'JACOBINA')||[]; var dI=compParseCSVText(tI,'IRECÊ')||[];
