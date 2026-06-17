@@ -238,19 +238,13 @@ body.sm-collapsed .bottom-bar{left:64px !important;}
       <div id="comp-compare-status" style="display:none;padding:10px 14px;border-radius:8px;font-size:0.78rem;font-weight:700;margin-bottom:14px;"></div>
 
       <button class="btn-compare" id="comp-btn-compare" onclick="compCompareComSheets()" style="background:linear-gradient(135deg,#2b6cb0,#4299e1);opacity:1;">
-        🔄 BUSCAR PLANILHA E COMPARAR COM BANCO
+        🔄 ATUALIZAR E COMPARAR
       </button>
 
       <div style="display:flex;align-items:center;justify-content:center;gap:12px;margin-top:14px;flex-wrap:wrap;">
         <span id="comp-auto-countdown" style="font-size:0.72rem;font-weight:700;color:#888;background:#f0f4f5;padding:5px 14px;border-radius:20px;letter-spacing:0.3px;white-space:nowrap;">
           Calculando próxima sync...
         </span>
-        <button id="comp-btn-manual-sync"
-          onclick="compManualSync()"
-          style="display:inline-flex;align-items:center;gap:6px;padding:6px 16px;background:#fff;border:1.5px solid #2b6cb0;color:#2b6cb0;border-radius:20px;font-family:'Barlow',sans-serif;font-size:0.72rem;font-weight:800;cursor:pointer;letter-spacing:0.3px;transition:all 0.2s;"
-          onmouseover="this.style.background='#ebf4ff'" onmouseout="this.style.background='#fff'">
-          <span id="comp-sync-icon">⚡</span> ATUALIZAR AGORA
-        </button>
       </div>
     </div>
     <div id="comp-historico-wrap" style="margin-bottom:20px;display:none;">
@@ -326,7 +320,6 @@ body.sm-collapsed .bottom-bar{left:64px !important;}
 </div>
 <div class="bottom-bar" id="bottom-bar">
   <button class="btn-print"  onclick="if(window.tirarPrint)window.tirarPrint()">&#128248; SALVAR PRINT</button>
-  <button class="btn-refresh" id="btn-refresh" onclick="if(window.atualizarRelatorio)window.atualizarRelatorio()">&#8635; ATUALIZAR</button>
   <button class="fab" style="background:#276749;" onclick="document.getElementById('pstr-csv-file-direto').click()" title="Importar CSV - COMPARADOR COELBA">&#128268; COMPARADOR COELBA</button>
   <input type="file" id="pstr-csv-file-direto" accept=".csv" style="display:none" onchange="if(window.handlePstrCSV)window.handlePstrCSV(this.files[0]);this.value=''">
   <button class="fab"        onclick="if(window.openAdmModal)window.openAdmModal()">&#9881; GERENCIAR</button>
