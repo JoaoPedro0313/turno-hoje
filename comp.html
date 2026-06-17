@@ -2748,18 +2748,36 @@ s.onload = res; s.onerror = rej; document.head.appendChild(s);
 }
 const _cb = '&_cb=' + Date.now();
 const _noCache = { cache: 'no-store', headers: { 'cache-control': 'no-cache' } };
-const resJac = await fetch(GSHEETS.JACOBINA + _cb, _noCache);
-if (!resJac.ok) throw new Error('Falha ao buscar planilha (HTTP ' + resJac.status + ')');
-const textJac = await resJac.text();
-const resIrc = await fetch(GSHEETS.IRECE + _cb, _noCache); const textIrc = resIrc.ok ? await resIrc.text() : '';
-const dataJac = compParseCSVText(textJac, 'JACOBINA');
-const dataIrc = textIrc ? (compParseCSVText(textIrc, 'IRECÊ')||[]) : [];
-if (!dataJac || !dataJac.length) throw new Error('Planilha JACOBINA não retornou dados válidos');
+// === PUXA TODOS OS MESES (jan..jun) e junta numa lista só, cada obra uma vez ===
+const _mesesList = (typeof COMP_MESES!=='undefined' && COMP_MESES.length) ? COMP_MESES : COMP_MESES_FIXOS;
+let dataJac = [], dataIrc = [];
+const _vistosPep = {}; // dedup global por PEP (mês mais recente prevalece)
+// percorre do mais recente para o mais antigo, assim o 1º que entra (recente) vence
+const _mesesOrdenados = _mesesList.slice().sort((a,b)=> (b.ano*12+b.mes)-(a.ano*12+a.mes));
+let _okMeses = 0;
+for (const _m of _mesesOrdenados) {
+  const _lbl = (_CMESES[_m.mes]||'?')+'/'+String(_m.ano).slice(-2);
+  if (btn) btn.textContent = '⏳ '+_lbl+'…';
+  try {
+    if (_m.gidJacobina) {
+      const rJ = await fetch(COMP_GBASE.JACOBINA + _m.gidJacobina + _cb, _noCache);
+      if (rJ.ok) { const tJ = await rJ.text(); const dJ = compParseCSVText(tJ,'JACOBINA')||[];
+        dJ.forEach(o=>{ const k=compNorm(o['PEP OBRA']||''); if(k && !_vistosPep[k]){ _vistosPep[k]=1; o._mesCart=_lbl; dataJac.push(o); } }); }
+    }
+    if (_m.gidIrece) {
+      const rI = await fetch(COMP_GBASE.IRECE + _m.gidIrece + _cb, _noCache);
+      if (rI.ok) { const tI = await rI.text(); const dI = compParseCSVText(tI,'IRECÊ')||[];
+        dI.forEach(o=>{ const k=compNorm(o['PEP OBRA']||''); if(k && !_vistosPep[k]){ _vistosPep[k]=1; o._mesCart=_lbl; dataIrc.push(o); } }); }
+    }
+    _okMeses++;
+  } catch(eM){ console.warn('[comp] mês', _lbl, eM.message); }
+}
+if (!dataJac.length && !dataIrc.length) throw new Error('Nenhum mês retornou dados válidos');
 
 const dataAtual = [...dataJac, ...dataIrc];
 const now = new Date(), pad = n => String(n).padStart(2,'0');
 const horaAtual = pad(now.getDate())+'/'+pad(now.getMonth()+1)+'/'+now.getFullYear()+' '+pad(now.getHours())+':'+pad(now.getMinutes());
-if (fsEl) fsEl.innerHTML = '<span style="color:#2b6cb0;font-weight:800;">'+dataAtual.length+' obras</span> <span style="color:#999;font-size:0.72rem;">(Jac '+dataJac.length+' · Irc '+dataIrc.length+')</span><br><span style="color:#63b3ed;font-size:0.7rem;">buscado às '+horaAtual+'</span>';
+if (fsEl) fsEl.innerHTML = '<span style="color:#2b6cb0;font-weight:800;">'+dataAtual.length+' obras</span> <span style="color:#999;font-size:0.72rem;">(Jac '+dataJac.length+' · Irc '+dataIrc.length+' · '+_okMeses+' meses)</span><br><span style="color:#63b3ed;font-size:0.7rem;">todos os meses · buscado às '+horaAtual+'</span>';
 compExecutarComparacao(bancoDB, dataAtual);
 // Diagnóstico: quantas casaram pelo PEP, quantas diferem, quantas idênticas
 try {
