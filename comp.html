@@ -881,6 +881,14 @@ console.warn('[dbLoadProgDiaria] Erro:', e.message);
 }
 }
 async function dbLoadObrasBase() {
+// Se há uma comparação ativa na tela (alterações sendo exibidas), NÃO recarrega o banco,
+// senão o retrato anterior é sobrescrito e as alterações somem.
+try {
+  if (typeof compAllChanges !== 'undefined' && compAllChanges.length > 0 && !window._compForcarRecarga) {
+    console.log('[obras_base] recarga adiada — comparação ativa na tela');
+    return;
+  }
+} catch(e){}
 try {
 const controller = new AbortController();
 const tid = setTimeout(() => controller.abort(), 30000);
@@ -1517,6 +1525,8 @@ function atualizarRelatorio() {
   try { progRenderList(); } catch(e) {}
   try { progRenderDash(); } catch(e) {}
   dbReconectar();
+  // preserva a tabela do comparador (não apaga a comparação que está na tela)
+  try { if (typeof compRenderTable==='function' && (compAllChanges.length || (compUltimaPlanilha&&compUltimaPlanilha.length))) compRenderTable(); } catch(e) {}
 }
 function tirarPrint() {
 const pad = n => String(n).padStart(2,'0');
