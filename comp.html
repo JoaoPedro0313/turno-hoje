@@ -2605,7 +2605,13 @@ const row = rows[i];
 if (!row.some(c=>String(c).trim())) continue;
 const obj = { _UTD: utdLabel||'' };
 headers.forEach((h,idx) => { obj[h] = String(row[idx]||'').trim(); });
-if (obj['PEP OBRA']) data.push(obj);
+const pepVal = (obj['PEP OBRA']||'').trim();
+if (!pepVal) continue;
+// descarta linhas de total/legenda: PEP precisa ter pelo menos um dígito e não ser rótulo
+const pepUp = pepVal.toUpperCase();
+if (!/\d/.test(pepVal)) continue;
+if (/^(TOTAL|TOTAIS|SOMA|SUBTOTAL|TOTAL GERAL|QTD|QUANTIDADE)\b/.test(pepUp)) continue;
+data.push(obj);
 }
 try {
   const topo = rows.slice(0, headerIdx + 1).map(r => (r||[]).join(' ')).join(' ').toUpperCase();
