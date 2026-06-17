@@ -1391,9 +1391,9 @@ showImportMsg('✅ '+teams.ok.length+' abriram | ❌ '+teams.falta.length+' nao 
 };
 r.readAsText(file,'utf-8');
 }
-function openModal()  { document.getElementById('modal-overlay').classList.add('open'); }
-function closeModal() { document.getElementById('modal-overlay').classList.remove('open'); }
-document.getElementById('modal-overlay').addEventListener('click',e=>{if(e.target.id==='modal-overlay')closeModal();});
+function openModal()  { var m=document.getElementById('modal-overlay'); if(m) m.classList.add('open'); }
+function closeModal() { var m=document.getElementById('modal-overlay'); if(m) m.classList.remove('open'); }
+(function(){ var m=document.getElementById('modal-overlay'); if(m) m.addEventListener('click',function(e){ if(e.target.id==='modal-overlay') closeModal(); }); })();
 function showMsg(text,type) {
 const el=document.getElementById('add-msg');
 el.textContent=text; el.className='msg '+type;
