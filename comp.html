@@ -4938,13 +4938,18 @@ async function compDiagnostico(){
     if(!achou) L.push(''),L.push('Nenhuma diferença encontrada entre banco e carteira nos valores de postes/cava.');
     L.push(''); L.push('Snapshots no histórico: '+((typeof compHistorico!=='undefined'&&compHistorico.length)||0));
   }catch(e){ L.push('ERRO: '+e.message); }
-  // mostra numa caixa grande na tela (fácil de ler e printar)
+  // mostra em tela cheia, fonte grande, com botão COPIAR automático
   try{
     var old=document.getElementById('__diagbox'); if(old) old.remove();
+    var texto=L.join('\n');
+    window.__diagTexto=texto;
     var box=document.createElement('div'); box.id='__diagbox';
-    box.style.cssText='position:fixed;inset:5% 5% auto 5%;max-height:88vh;overflow:auto;z-index:999999;background:#1a202c;color:#68d391;font:600 13px/1.6 monospace;padding:18px 22px;border-radius:12px;white-space:pre-wrap;box-shadow:0 12px 48px rgba(0,0,0,.6);border:2px solid #68d391;';
-    var close='<div style="text-align:right;margin-bottom:8px;"><button onclick="document.getElementById(\'__diagbox\').remove()" style="background:#e53e3e;color:#fff;border:none;border-radius:6px;padding:6px 16px;font-weight:800;cursor:pointer;">FECHAR ✕</button></div>';
-    box.innerHTML=close+'<div>'+L.join('\n').replace(/</g,'&lt;')+'</div>';
+    box.style.cssText='position:fixed;inset:0;z-index:9999999;background:#1a202c;color:#9ae6b4;font:700 16px/1.7 monospace;padding:16px;overflow:auto;white-space:pre-wrap;';
+    var topo='<div style="position:sticky;top:0;background:#1a202c;padding-bottom:12px;display:flex;gap:10px;">'
+      +'<button onclick="(function(){var t=window.__diagTexto||\'\';if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(t).then(function(){alert(\'Copiado! Agora é só colar no chat.\');},function(){window.prompt(\'Copie o texto (Ctrl+C):\',t);});}else{window.prompt(\'Copie o texto (Ctrl+C):\',t);}})()" style="background:#38a169;color:#fff;border:none;border-radius:8px;padding:12px 22px;font-weight:800;font-size:16px;cursor:pointer;">📋 COPIAR TUDO</button>'
+      +'<button onclick="document.getElementById(\'__diagbox\').remove()" style="background:#e53e3e;color:#fff;border:none;border-radius:8px;padding:12px 22px;font-weight:800;font-size:16px;cursor:pointer;">FECHAR ✕</button>'
+      +'</div>';
+    box.innerHTML=topo+'<div style="font-size:15px;">'+texto.replace(/</g,'&lt;')+'</div>';
     document.body.appendChild(box);
   }catch(e){ alert(L.join('\n')); }
 }
