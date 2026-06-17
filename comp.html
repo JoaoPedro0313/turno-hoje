@@ -2738,7 +2738,7 @@ if (!dataJac || !dataJac.length) throw new Error('Planilha JACOBINA não retorno
 const dataAtual = [...dataJac, ...dataIrc];
 const now = new Date(), pad = n => String(n).padStart(2,'0');
 const horaAtual = pad(now.getDate())+'/'+pad(now.getMonth()+1)+'/'+now.getFullYear()+' '+pad(now.getHours())+':'+pad(now.getMinutes());
-if (fsEl) fsEl.innerHTML = '<span style="color:#2b6cb0;font-weight:800;">'+dataAtual.length+' obras</span><br><span style="color:#63b3ed;font-size:0.7rem;">buscado às '+horaAtual+'</span>';
+if (fsEl) fsEl.innerHTML = '<span style="color:#2b6cb0;font-weight:800;">'+dataAtual.length+' obras</span> <span style="color:#999;font-size:0.72rem;">(Jac '+dataJac.length+' · Irc '+dataIrc.length+')</span><br><span style="color:#63b3ed;font-size:0.7rem;">buscado às '+horaAtual+'</span>';
 compExecutarComparacao(bancoDB, dataAtual);
 // Diagnóstico: quantas casaram pelo PEP, quantas diferem, quantas idênticas
 try {
