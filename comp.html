@@ -7,59 +7,62 @@
 <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;600;700;800;900&display=swap" rel="stylesheet">
 <style>
   *{margin:0;padding:0;box-sizing:border-box;font-family:'Barlow',sans-serif;}
-  body{background:#f0f4f5;color:#222;padding:0 0 60px;}
-  .topbar{background:linear-gradient(135deg,#0d7377,#14a085);color:#fff;padding:16px 22px;display:flex;align-items:center;gap:14px;box-shadow:0 2px 10px rgba(0,0,0,.15);}
-  .topbar .logo{font-size:1.1rem;font-weight:900;letter-spacing:0.5px;}
-  .topbar .sub{font-size:0.72rem;font-weight:600;opacity:0.9;}
-  .topbar a{margin-left:auto;color:#fff;text-decoration:none;font-weight:800;font-size:0.78rem;background:rgba(255,255,255,0.18);padding:7px 16px;border-radius:20px;}
-  .orange-bar{height:4px;background:#ff6b35;}
+  body{background:#f0f4f5;color:#222;padding-top:92px;padding-bottom:60px;}
+  /* topo + menu (igual aos outros módulos) */
+  .top-bar{background:linear-gradient(90deg,#0a4a4d,#0d7377 40%,#0f8a82 70%,#0d7377);position:fixed;top:0;left:0;right:0;z-index:91;height:52px;border-bottom:3px solid #ff6b35;box-shadow:0 2px 16px rgba(0,0,0,.25);display:flex;align-items:center;justify-content:space-between;padding:0 20px;}
+  .top-bar .logo{color:#fff;font-weight:900;font-size:0.95rem;letter-spacing:1px;}
+  .top-bar .badge{font-size:0.7rem;font-weight:800;color:#b0ffd0;background:rgba(45,184,100,.2);border:1px solid rgba(255,255,255,.3);padding:4px 10px;border-radius:6px;}
+  .page-nav{display:flex;background:#0d7377;position:fixed;top:52px;left:0;right:0;z-index:90;overflow-x:auto;scrollbar-width:none;}
+  .page-nav::-webkit-scrollbar{display:none;}
+  .page-nav a{flex:1;min-width:80px;padding:0 10px;height:40px;background:transparent;font-size:0.65rem;font-weight:800;color:rgba(255,255,255,.6);letter-spacing:.6px;text-transform:uppercase;border-top:2px solid transparent;display:flex;align-items:center;justify-content:center;gap:6px;white-space:nowrap;text-decoration:none;transition:all .2s;}
+  .page-nav a:hover{color:#fff;background:rgba(255,255,255,.08);}
+  .page-nav a.active{color:#fff;background:rgba(0,0,0,.2);border-top:2px solid #fff;}
   .wrap{max-width:1100px;margin:18px auto;padding:0 16px;}
   .card{background:#fff;border-radius:14px;box-shadow:0 2px 14px rgba(0,0,0,.07);padding:20px;margin-bottom:16px;}
-  .btn-main{display:block;width:100%;background:linear-gradient(135deg,#0d7377,#14a085);color:#fff;border:none;border-radius:12px;padding:18px;font-size:1.05rem;font-weight:900;letter-spacing:0.4px;cursor:pointer;box-shadow:0 4px 14px rgba(13,115,119,.3);transition:all .2s;}
-  .btn-main:hover{filter:brightness(1.08);}
-  .btn-main:disabled{opacity:0.6;cursor:wait;}
+  .btn-main{display:block;width:100%;background:linear-gradient(135deg,#0d7377,#14a085);color:#fff;border:none;border-radius:12px;padding:18px;font-size:1.05rem;font-weight:900;letter-spacing:.4px;cursor:pointer;box-shadow:0 4px 14px rgba(13,115,119,.3);transition:all .2s;}
+  .btn-main:hover{filter:brightness(1.08);} .btn-main:disabled{opacity:.6;cursor:wait;}
   .status{margin-top:12px;font-size:0.82rem;font-weight:700;text-align:center;color:#555;min-height:20px;}
   .kpis{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px;}
   .kpi{flex:1;min-width:120px;background:#fff;border-radius:12px;padding:16px;text-align:center;box-shadow:0 2px 10px rgba(0,0,0,.06);}
   .kpi .num{font-size:1.8rem;font-weight:900;line-height:1;}
-  .kpi .lbl{font-size:0.68rem;font-weight:800;text-transform:uppercase;letter-spacing:0.6px;color:#888;margin-top:6px;}
+  .kpi .lbl{font-size:0.68rem;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:#888;margin-top:6px;}
   .kpi.alt .num{color:#ff6b35;} .kpi.nova .num{color:#2b6cb0;} .kpi.tot .num{color:#0d7377;}
   table{width:100%;border-collapse:collapse;font-size:0.84rem;}
-  th{text-align:left;padding:10px 8px;font-size:0.64rem;font-weight:800;text-transform:uppercase;letter-spacing:0.6px;color:#888;border-bottom:2px solid #eee;}
+  th{text-align:left;padding:10px 8px;font-size:0.64rem;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:#888;border-bottom:2px solid #eee;}
   td{padding:10px 8px;border-bottom:1px solid #f0f0f0;}
   td code{color:#0d7377;font-weight:800;font-size:0.8rem;}
   .delta-up{color:#1a8a4a;font-weight:800;} .delta-dn{color:#c53030;font-weight:800;}
-  .arrow{color:#aaa;margin:0 6px;}
-  .old{color:#aaa;text-decoration:line-through;} .new{font-weight:900;}
-  .badge{display:inline-block;background:#ebf8ff;color:#2b6cb0;font-size:0.62rem;font-weight:800;padding:2px 8px;border-radius:10px;margin-left:6px;}
-  .empty{text-align:center;padding:40px 20px;color:#aaa;font-weight:700;}
-  .empty .big{font-size:2.5rem;}
+  .arrow{color:#aaa;margin:0 6px;} .old{color:#aaa;text-decoration:line-through;} .new{font-weight:900;}
+  .empty{text-align:center;padding:40px 20px;color:#aaa;font-weight:700;} .empty .big{font-size:2.5rem;}
   .err{background:#fff5f5;border:1.5px solid #fc8181;border-radius:10px;padding:14px;color:#c53030;font-size:0.82rem;font-weight:700;margin-top:12px;white-space:pre-wrap;}
   .sec-title{font-size:0.66rem;font-weight:900;letter-spacing:1px;text-transform:uppercase;color:#0d7377;margin-bottom:10px;}
   .toggle{display:inline-block;font-size:0.74rem;font-weight:800;color:#6b46c1;cursor:pointer;border:1.5px solid #d6bcfa;border-radius:18px;padding:5px 14px;margin-top:4px;}
-  .hist-item{padding:8px 0;border-bottom:1px solid #f0f0f0;font-size:0.8rem;}
-  .hist-item .when{font-weight:800;color:#0d7377;}
+  .hist-item{padding:8px 0;border-bottom:1px solid #f0f0f0;font-size:0.8rem;} .hist-item .when{font-weight:800;color:#0d7377;}
 </style>
 </head>
 <body>
-<div class="topbar">
-  <div>
-    <div class="logo">⚡ COMPARADOR DE POSTES</div>
-    <div class="sub">Mariuá · Construção e Energia</div>
-  </div>
-  <a href="index.html">← Início</a>
+<div class="top-bar">
+  <span class="logo">⚡ COMPARADOR DE POSTES</span>
+  <span class="badge" id="db-badge">Carregando…</span>
 </div>
-<div class="orange-bar"></div>
+<nav class="page-nav">
+  <a href="turno.html">📋 TURNO</a>
+  <a href="rdo.html">📊 RDO</a>
+  <a href="comp.html" class="active">⚡ COMPARADOR</a>
+  <a href="mapa.html">🗺️ MAPA</a>
+  <a href="prog.html">📅 PROG. DIÁRIA</a>
+  <a href="index.html">🏠 INÍCIO</a>
+</nav>
 
 <div class="wrap">
   <div class="card">
     <button class="btn-main" id="btn" onclick="rodar()">🔄 ATUALIZAR E COMPARAR</button>
-    <div class="status" id="status">Clique para buscar as carteiras e detectar alterações de postes.</div>
+    <div class="status" id="status">Clique para conferir os postes das obras e detectar alterações.</div>
     <div id="errbox"></div>
   </div>
 
   <div class="kpis" id="kpis" style="display:none;">
-    <div class="kpi tot"><div class="num" id="k-tot">0</div><div class="lbl">Obras lidas</div></div>
+    <div class="kpi tot"><div class="num" id="k-tot">0</div><div class="lbl">Obras conferidas</div></div>
     <div class="kpi alt"><div class="num" id="k-alt">0</div><div class="lbl">Postes alterados</div></div>
     <div class="kpi nova"><div class="num" id="k-nova">0</div><div class="lbl">Obras novas</div></div>
   </div>
@@ -76,93 +79,49 @@
   </div>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 <script>
 // ===================== CONFIG =====================
 const SUPA_URL = 'https://eqxejfoibebcbtsqymji.supabase.co';
 const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVxeGVqZm9pYmViY2J0c3F5bWppIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE4NjUzMTEsImV4cCI6MjA4NzQ0MTMxMX0.lwf7_EJ6UchEOpzhW3cVKztxDGy78gaQblRvgiEwWh8';
 const SUPA_HEADERS = { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY, 'Content-Type': 'application/json' };
-const KEY_BASE = 'comp_postes_base';   // valores salvos (retrato anterior)
-const KEY_HIST = 'comp_postes_hist';   // histórico de alterações
+const KEY_OBRAS = 'obras_base';        // banco com as obras (mesma fonte do Mapa)
+const KEY_BASE  = 'comp_postes_base';  // retrato anterior dos postes (do comparador)
+const KEY_HIST  = 'comp_postes_hist';  // histórico de alterações
 
-const SHEET_JAC = 'https://docs.google.com/spreadsheets/d/142gvn8pNgJGTGDkidCfuOWMHJ2OCKpJd_FQU8zeo0x8/gviz/tq?tqx=out:csv&gid=';
-const SHEET_IRC = 'https://docs.google.com/spreadsheets/d/14ImbZb8-OCBp78jDtd0QFkSLrMG5vXA7tzrM-x6KQVo/gviz/tq?tqx=out:csv&gid=';
-const MESES_NOME = ['','JAN','FEV','MAR','ABR','MAI','JUN','JUL','AGO','SET','OUT','NOV','DEZ'];
-// gids de cada mês (Jacobina / Irecê)
-const MESES = [
-  { ano:2026, mes:1, jac:'310661297',  irc:'1816810936' },
-  { ano:2026, mes:2, jac:'1111886256', irc:'420931092'  },
-  { ano:2026, mes:3, jac:'624598081',  irc:'534264140'  },
-  { ano:2026, mes:4, jac:'257935593',  irc:'1837597274' },
-  { ano:2026, mes:5, jac:'1209313517', irc:'663282613'  },
-  { ano:2026, mes:6, jac:'557360701',  irc:'1842405101' },
-];
-
-let ULTIMA_LISTA = [];     // lista atual de obras (para "ver todas")
-let ULTIMA_ALTERADAS = []; // últimas obras alteradas
-let ULTIMA_TEMBASE = false;
-let MOSTRANDO_TODAS = false;
+let ULTIMA_LISTA = [], ULTIMA_ALTERADAS = [], ULTIMA_TEMBASE = false, MOSTRANDO_TODAS = false;
 
 // ===================== HELPERS =====================
 function norm(s){ return String(s==null?'':s).toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,'').trim(); }
 function num(v){ if(v==null) return null; let s=String(v).trim(); if(!s) return null; s=s.replace(/\./g,'').replace(',', '.').replace(/[^\d.\-]/g,''); const n=parseFloat(s); return isNaN(n)?null:n; }
 function setStatus(t){ document.getElementById('status').textContent=t; }
 function showErr(html){ document.getElementById('errbox').innerHTML = html ? '<div class="err">'+html+'</div>' : ''; }
-
-// Acha o índice da coluna pelo nome (casa por palavras, ignora acento/caixa/espaço)
-function acharCol(headers, ...termos){
+function getCol(obj, ...termos){
+  const keys = Object.keys(obj);
   for(const termo of termos){
     const toks = String(termo).toUpperCase().split(/\s+/).map(norm).filter(Boolean);
-    const idx = headers.findIndex(h => { const hn=norm(h); return toks.every(t=>hn.includes(t)); });
-    if(idx>=0) return idx;
+    const k = keys.find(x=>{ const xn=norm(x); return toks.every(t=>xn.includes(t)); });
+    if(k!==undefined) return obj[k];
   }
-  return -1;
+  return undefined;
 }
-
-// ===================== PARSE CSV =====================
-// Retorna { obras:[{pep,titulo,utd,mun,postes}], headers:[...], temPostes:bool }
-function parseCSV(text, utd){
-  const rows = Papa.parse(String(text||'').replace(/^\uFEFF/,''), { skipEmptyLines:false }).data;
-  // acha a linha do cabeçalho (a que tem PEP OBRA)
-  let hIdx = -1;
-  for(let i=0;i<Math.min(rows.length,15);i++){
-    const r = (rows[i]||[]).map(c=>norm(c));
-    if(r.some(c=>c==='PEPOBRA')){ hIdx=i; break; }
-  }
-  if(hIdx<0) return { obras:[], headers:[], temPostes:false };
-  // cabeçalho: junta quebras de linha como espaço
-  const headers = (rows[hIdx]||[]).map(c => String(c==null?'':c).replace(/[\r\n]+/g,' ').replace(/\s+/g,' ').trim());
-  const iPep = acharCol(headers,'PEP OBRA');
-  const iTit = acharCol(headers,'TITULO');
-  const iMun = acharCol(headers,'MUNICIPIO');
-  // POSTES REALIZADO: precisa ter POSTES e REALIZAD (evita PREVISTOS / A IMPLANTAR)
-  let iPos = headers.findIndex(h=>{ const hn=norm(h); return hn.includes('POSTES') && hn.includes('REALIZAD'); });
-  if(iPos<0) iPos = acharCol(headers,'POSTES REALIZADO','POSTES REALIZADOS','POSTES INSTALADO');
-  const obras=[];
-  for(let i=hIdx+1;i<rows.length;i++){
-    const row = rows[i]||[];
-    const pep = iPep>=0 ? String(row[iPep]==null?'':row[iPep]).trim() : '';
-    if(!pep || !/\d/.test(pep)) continue;
-    if(/^(TOTAL|TOTAIS|SOMA|SUBTOTAL)/.test(pep.toUpperCase())) continue;
-    obras.push({
-      pep: pep,
-      titulo: iTit>=0 ? String(row[iTit]||'').trim() : '',
-      utd: utd,
-      mun: iMun>=0 ? String(row[iMun]||'').trim() : '',
-      postes: iPos>=0 ? num(row[iPos]) : null
-    });
-  }
-  return { obras, headers, temPostes: iPos>=0 };
-}
-
-async function buscarCSV(url){
-  const r = await fetch(url + '&_cb=' + Date.now(), { cache:'no-store', headers:{'cache-control':'no-cache'} });
-  if(!r.ok) throw new Error('HTTP '+r.status);
-  return await r.text();
+function postesDe(obj){
+  // POSTES REALIZADO (evita PREVISTOS / A IMPLANTAR)
+  const keys = Object.keys(obj);
+  let k = keys.find(x=>{ const xn=norm(x); return xn.includes('POSTES') && xn.includes('REALIZAD'); });
+  if(k===undefined) k = keys.find(x=>{ const xn=norm(x); return xn.includes('POSTES') && xn.includes('INSTALAD'); });
+  return k!==undefined ? num(obj[k]) : null;
 }
 
 // ===================== SUPABASE =====================
-async function carregarBase(){
+async function carregarObrasBase(){
+  const r = await fetch(SUPA_URL+'/rest/v1/turno_data?select=value&key=eq.'+KEY_OBRAS+'&limit=1', { headers: SUPA_HEADERS });
+  if(!r.ok) throw new Error('Não consegui ler o banco (HTTP '+r.status+')');
+  const a = await r.json();
+  const v = a && a[0] && a[0].value;
+  const arr = v && Array.isArray(v.data) ? v.data : (Array.isArray(v) ? v : []);
+  return arr;
+}
+async function carregarBasePostes(){
   try{
     const r = await fetch(SUPA_URL+'/rest/v1/turno_data?select=value&key=eq.'+KEY_BASE+'&limit=1', { headers: SUPA_HEADERS });
     if(!r.ok) return {};
@@ -170,8 +129,8 @@ async function carregarBase(){
     return (a && a[0] && a[0].value && a[0].value.obras) ? a[0].value.obras : {};
   }catch(e){ return {}; }
 }
-async function salvarBase(mapaObras){
-  const body = { key: KEY_BASE, value: { updatedAt: new Date().toISOString(), obras: mapaObras }, updated_at: new Date().toISOString() };
+async function salvarBasePostes(mapaObras){
+  const body = { key: KEY_BASE, value: { updatedAt:new Date().toISOString(), obras:mapaObras }, updated_at:new Date().toISOString() };
   await fetch(SUPA_URL+'/rest/v1/turno_data', { method:'POST', headers:{...SUPA_HEADERS,'Prefer':'resolution=merge-duplicates'}, body: JSON.stringify(body) });
 }
 async function carregarHist(){
@@ -183,100 +142,85 @@ async function carregarHist(){
   }catch(e){ return []; }
 }
 async function salvarHist(hist){
-  const body = { key: KEY_HIST, value: hist.slice(-60), updated_at: new Date().toISOString() };
-  await fetch(SUPA_URL+'/rest/v1/turno_data', { method:'POST', headers:{...SUPA_HEADERS,'Prefer':'resolution=merge-duplicates'}, body: JSON.stringify(body) });
+  await fetch(SUPA_URL+'/rest/v1/turno_data', { method:'POST', headers:{...SUPA_HEADERS,'Prefer':'resolution=merge-duplicates'}, body: JSON.stringify({ key:KEY_HIST, value:hist.slice(-60), updated_at:new Date().toISOString() }) });
 }
 
 // ===================== FLUXO PRINCIPAL =====================
 async function rodar(){
   const btn = document.getElementById('btn');
-  btn.disabled = true;
-  showErr('');
+  btn.disabled = true; btn.textContent='⏳ Lendo o banco…'; showErr('');
   try{
-    // 1) busca TODOS os meses (mais recente primeiro → vence na dedup)
-    const dedup = {};   // pepNorm → obra (com mês)
-    const ordenados = MESES.slice().sort((a,b)=> (b.ano*12+b.mes)-(a.ano*12+a.mes));
-    let semPostes = [];
-    for(const m of ordenados){
-      const lbl = MESES_NOME[m.mes]+'/'+String(m.ano).slice(-2);
-      btn.textContent = '⏳ '+lbl+'…';
-      for(const [base,gid,utd] of [[SHEET_JAC,m.jac,'JACOBINA'],[SHEET_IRC,m.irc,'IRECÊ']]){
-        if(!gid) continue;
-        try{
-          const txt = await buscarCSV(base+gid);
-          const res = parseCSV(txt, utd);
-          if(res.obras.length && !res.temPostes) semPostes.push(lbl+' '+utd+' → colunas: '+res.headers.filter(Boolean).join(' | '));
-          res.obras.forEach(o=>{
-            const k = norm(o.pep);
-            if(k && !dedup[k]){ o.mes = lbl; dedup[k] = o; }
-          });
-        }catch(e){ /* mês indisponível, ignora */ }
-      }
-    }
-    btn.textContent = '🔄 ATUALIZAR E COMPARAR';
+    const obrasBruto = await carregarObrasBase();
+    if(!obrasBruto.length) throw new Error('O banco de obras está vazio. Abra o Mapa e sincronize a carteira primeiro.');
+
+    // monta lista atual: cada obra (pep) uma vez, com seus postes
+    const dedup = {};
+    obrasBruto.forEach(o=>{
+      const pep = (getCol(o,'PEP OBRA')||'').toString().trim();
+      if(!pep || !/\d/.test(pep)) return;
+      const k = norm(pep);
+      if(dedup[k]) return;
+      dedup[k] = {
+        pep,
+        titulo: (getCol(o,'TITULO')||'').toString().trim(),
+        utd: (o['_UTD']||getCol(o,'UTD')||'').toString().trim(),
+        mun: (getCol(o,'MUNICIPIO')||'').toString().trim(),
+        postes: postesDe(o)
+      };
+    });
     const lista = Object.values(dedup);
     ULTIMA_LISTA = lista;
-    if(!lista.length) throw new Error('Nenhuma obra foi lida das planilhas.');
+    if(!lista.length) throw new Error('Nenhuma obra com PEP encontrada no banco.');
 
-    // se NENHUM mês trouxe a coluna de postes, avisa com as colunas encontradas
     const algumComPostes = lista.some(o=>o.postes!==null);
     if(!algumComPostes){
-      showErr('⚠️ Não encontrei a coluna de POSTES nas planilhas.\n\nColunas vistas:\n'+(semPostes[0]||'(nenhuma)'));
+      const cols = Object.keys(obrasBruto[0]||{}).join(' | ');
+      showErr('⚠️ Não encontrei a coluna de POSTES no banco.\n\nColunas do banco:\n'+cols);
     }
 
-    // 2) carrega o retrato anterior salvo
-    const base = await carregarBase();
+    // compara com o retrato anterior
+    const base = await carregarBasePostes();
     const temBase = Object.keys(base).length>0;
-
-    // 3) compara postes
-    const alteradas = [], novas = [];
-    const novoMapa = {};
+    const alteradas=[], novoMapa={};
+    let novas=0;
     lista.forEach(o=>{
       const k = norm(o.pep);
-      novoMapa[k] = { pep:o.pep, titulo:o.titulo, utd:o.utd, mun:o.mun, postes:o.postes, mes:o.mes };
+      novoMapa[k] = { pep:o.pep, titulo:o.titulo, utd:o.utd, mun:o.mun, postes:o.postes };
       const ant = base[k];
-      if(!ant){ if(temBase) novas.push(o); return; }
+      if(!ant){ if(temBase) novas++; return; }
       const pa = ant.postes==null?null:Number(ant.postes);
       const pn = o.postes==null?null:Number(o.postes);
-      if(pa!==pn) alteradas.push({ ...o, de: pa, para: pn });
+      if(pa!==pn) alteradas.push({ ...o, de:pa, para:pn });
     });
 
-    // 4) mostra
+    // mostra
     document.getElementById('kpis').style.display='flex';
     document.getElementById('k-tot').textContent = lista.length;
     document.getElementById('k-alt').textContent = alteradas.length;
-    document.getElementById('k-nova').textContent = novas.length;
-    MOSTRANDO_TODAS = false;
-    ULTIMA_ALTERADAS = alteradas;
-    ULTIMA_TEMBASE = temBase;
+    document.getElementById('k-nova').textContent = novas;
+    MOSTRANDO_TODAS=false; ULTIMA_ALTERADAS=alteradas; ULTIMA_TEMBASE=temBase;
     renderTabela(alteradas, temBase);
 
-    // 5) salva o novo retrato automaticamente
-    await salvarBase(novoMapa);
+    // salva o novo retrato automaticamente
+    await salvarBasePostes(novoMapa);
 
-    // 6) histórico
+    // histórico
+    const hist = await carregarHist();
     if(alteradas.length){
-      const hist = await carregarHist();
-      hist.push({ ts: new Date().toLocaleString('pt-BR'), n: alteradas.length, itens: alteradas.slice(0,200).map(a=>({pep:a.pep,titulo:a.titulo,utd:a.utd,de:a.de,para:a.para})) });
+      hist.push({ ts:new Date().toLocaleString('pt-BR'), n:alteradas.length, itens:alteradas.slice(0,200).map(a=>({pep:a.pep,titulo:a.titulo,utd:a.utd,de:a.de,para:a.para})) });
       await salvarHist(hist);
-      renderHist(hist);
-    } else {
-      const hist = await carregarHist(); renderHist(hist);
     }
+    renderHist(hist);
 
-    if(!temBase){
-      setStatus('✅ Primeira carga: '+lista.length+' obras salvas. Da próxima vez, mostro o que mudou.');
-    } else if(alteradas.length){
-      setStatus('✅ '+alteradas.length+' obra(s) com alteração de postes. Valores salvos.');
-    } else {
-      setStatus('✅ Nenhuma alteração de postes desde a última verificação. ('+lista.length+' obras conferidas)');
-    }
+    if(!temBase) setStatus('✅ Primeira carga: '+lista.length+' obras salvas. Da próxima vez, mostro o que mudou.');
+    else if(alteradas.length) setStatus('✅ '+alteradas.length+' obra(s) com alteração de postes. Valores salvos.');
+    else setStatus('✅ Nenhuma alteração de postes desde a última verificação. ('+lista.length+' obras conferidas)');
+    document.getElementById('db-badge').textContent = 'Banco OK · '+lista.length+' obras';
   }catch(e){
-    showErr('Erro: '+e.message);
-    setStatus('Falha ao comparar.');
+    showErr('Erro: '+e.message); setStatus('Falha ao comparar.');
+    document.getElementById('db-badge').textContent = 'Erro';
   }finally{
-    btn.disabled = false;
-    btn.textContent = '🔄 ATUALIZAR E COMPARAR';
+    btn.disabled=false; btn.textContent='🔄 ATUALIZAR E COMPARAR';
   }
 }
 
@@ -287,41 +231,31 @@ function renderTabela(alteradas, temBase){
     el.innerHTML = '<div class="empty"><div class="big">✅</div>'+(temBase?'Nenhuma alteração de postes.':'Primeira carga concluída — valores salvos.')+'<br><span style="font-size:0.8rem;">Clique em "Ver todas as obras" para conferir os postes atuais.</span></div>';
     return;
   }
-  let h = '<table><thead><tr><th>PEP</th><th>Título</th><th>UTD</th><th>Mês</th><th>Postes (antes → agora)</th></tr></thead><tbody>';
+  let h = '<table><thead><tr><th>PEP</th><th>Título</th><th>UTD</th><th>Postes (antes → agora)</th></tr></thead><tbody>';
   alteradas.forEach(a=>{
-    const de = a.de==null?'—':a.de, para=a.para==null?'—':a.para;
-    const diff = (a.para||0)-(a.de||0);
-    const cls = diff>0?'delta-up':'delta-dn';
-    const sinal = diff>0?'+':'';
-    h += '<tr><td><code>'+a.pep+'</code></td><td>'+(a.titulo||'')+'</td><td>'+a.utd+'</td><td>'+(a.mes||'')+'</td>'
+    const de=a.de==null?'—':a.de, para=a.para==null?'—':a.para, diff=(a.para||0)-(a.de||0);
+    const cls=diff>0?'delta-up':'delta-dn', sinal=diff>0?'+':'';
+    h += '<tr><td><code>'+a.pep+'</code></td><td>'+(a.titulo||'')+'</td><td>'+(a.utd||'')+'</td>'
       +'<td><span class="old">'+de+'</span><span class="arrow">→</span><span class="new">'+para+'</span> <span class="'+cls+'">('+sinal+diff+')</span></td></tr>';
   });
-  h += '</tbody></table>';
-  el.innerHTML = h;
+  el.innerHTML = h+'</tbody></table>';
 }
-
 function verTodas(){
-  MOSTRANDO_TODAS = !MOSTRANDO_TODAS;
-  const el = document.getElementById('tabela');
-  const tog = document.getElementById('toggle-todas');
+  MOSTRANDO_TODAS=!MOSTRANDO_TODAS;
+  const el=document.getElementById('tabela'), tog=document.getElementById('toggle-todas');
   if(!MOSTRANDO_TODAS){ tog.textContent='Ver todas as obras'; renderTabela(ULTIMA_ALTERADAS, ULTIMA_TEMBASE); return; }
   tog.textContent='Mostrar só as alteradas';
   if(!ULTIMA_LISTA.length){ el.innerHTML='<div class="empty">Rode a comparação primeiro.</div>'; return; }
-  let h = '<table><thead><tr><th>PEP</th><th>Título</th><th>UTD</th><th>Mês</th><th>Postes</th></tr></thead><tbody>';
+  let h='<table><thead><tr><th>PEP</th><th>Título</th><th>UTD</th><th>Postes</th></tr></thead><tbody>';
   ULTIMA_LISTA.slice().sort((a,b)=>(a.pep>b.pep?1:-1)).forEach(o=>{
-    h += '<tr><td><code>'+o.pep+'</code></td><td>'+(o.titulo||'')+'</td><td>'+o.utd+'</td><td>'+(o.mes||'')+'</td><td>'+(o.postes==null?'—':o.postes)+'</td></tr>';
+    h+='<tr><td><code>'+o.pep+'</code></td><td>'+(o.titulo||'')+'</td><td>'+(o.utd||'')+'</td><td>'+(o.postes==null?'—':o.postes)+'</td></tr>';
   });
-  h += '</tbody></table>';
-  el.innerHTML = h;
+  el.innerHTML=h+'</tbody></table>';
 }
-
 function renderHist(hist){
   if(!hist || !hist.length) return;
   document.getElementById('card-hist').style.display='block';
-  const el = document.getElementById('hist');
-  el.innerHTML = hist.slice().reverse().slice(0,15).map(h=>{
-    return '<div class="hist-item"><span class="when">'+h.ts+'</span> — '+h.n+' obra(s) com alteração de postes</div>';
-  }).join('');
+  document.getElementById('hist').innerHTML = hist.slice().reverse().slice(0,15).map(h=>'<div class="hist-item"><span class="when">'+h.ts+'</span> — '+h.n+' obra(s) com alteração de postes</div>').join('');
 }
 </script>
 </body>
