@@ -7,17 +7,29 @@
 <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;600;700;800;900&display=swap" rel="stylesheet">
 <style>
   *{margin:0;padding:0;box-sizing:border-box;font-family:'Barlow',sans-serif;}
-  body{background:#f0f4f5;color:#222;padding-top:92px;padding-bottom:60px;}
-  /* topo + menu (igual aos outros módulos) */
-  .top-bar{background:linear-gradient(90deg,#0a4a4d,#0d7377 40%,#0f8a82 70%,#0d7377);position:fixed;top:0;left:0;right:0;z-index:91;height:52px;border-bottom:3px solid #ff6b35;box-shadow:0 2px 16px rgba(0,0,0,.25);display:flex;align-items:center;justify-content:space-between;padding:0 20px;}
-  .top-bar .logo{color:#fff;font-weight:900;font-size:0.95rem;letter-spacing:1px;}
-  .top-bar .badge{font-size:0.7rem;font-weight:800;color:#b0ffd0;background:rgba(45,184,100,.2);border:1px solid rgba(255,255,255,.3);padding:4px 10px;border-radius:6px;}
-  .page-nav{display:flex;background:#0d7377;position:fixed;top:52px;left:0;right:0;z-index:90;overflow-x:auto;scrollbar-width:none;}
-  .page-nav::-webkit-scrollbar{display:none;}
-  .page-nav a{flex:1;min-width:80px;padding:0 10px;height:40px;background:transparent;font-size:0.65rem;font-weight:800;color:rgba(255,255,255,.6);letter-spacing:.6px;text-transform:uppercase;border-top:2px solid transparent;display:flex;align-items:center;justify-content:center;gap:6px;white-space:nowrap;text-decoration:none;transition:all .2s;}
-  .page-nav a:hover{color:#fff;background:rgba(255,255,255,.08);}
-  .page-nav a.active{color:#fff;background:rgba(0,0,0,.2);border-top:2px solid #fff;}
-  .wrap{max-width:1100px;margin:18px auto;padding:0 16px;}
+  body{background:#f0f4f5;color:#222;}
+  /* menu lateral */
+  .sidebar{position:fixed;top:0;left:0;bottom:0;width:210px;background:linear-gradient(180deg,#0d7377,#0a4a4d);z-index:100;padding:18px 12px;display:flex;flex-direction:column;gap:6px;box-shadow:2px 0 16px rgba(0,0,0,.18);overflow-y:auto;}
+  .sidebar .brand{color:#fff;font-weight:900;font-size:0.95rem;letter-spacing:.5px;padding:6px 10px 14px;border-bottom:1px solid rgba(255,255,255,.15);margin-bottom:8px;line-height:1.3;}
+  .sidebar .brand small{display:block;font-size:0.62rem;font-weight:600;opacity:.8;letter-spacing:.5px;margin-top:2px;}
+  .sidebar a{display:flex;align-items:center;gap:10px;color:rgba(255,255,255,.78);text-decoration:none;font-size:0.82rem;font-weight:800;letter-spacing:.3px;padding:11px 13px;border-radius:10px;transition:all .15s;}
+  .sidebar a:hover{background:rgba(255,255,255,.1);color:#fff;}
+  .sidebar a.active{background:linear-gradient(135deg,#14a085,#0f8a82);color:#fff;box-shadow:0 3px 10px rgba(0,0,0,.2);}
+  .sidebar a .ic{font-size:1.05rem;width:22px;text-align:center;}
+  .sb-badge{margin-top:auto;font-size:0.68rem;font-weight:800;color:#b0ffd0;background:rgba(45,184,100,.18);border:1px solid rgba(255,255,255,.2);padding:8px 10px;border-radius:8px;text-align:center;}
+  .orange-edge{position:fixed;top:0;left:210px;width:4px;bottom:0;background:#ff6b35;z-index:101;}
+  @media(max-width:760px){
+    .sidebar{width:100%;height:auto;bottom:auto;flex-direction:row;flex-wrap:wrap;padding:10px;gap:4px;}
+    .sidebar .brand{width:100%;border-bottom:none;padding:4px 8px 8px;}
+    .sidebar a{flex:1;min-width:90px;justify-content:center;padding:9px 8px;font-size:0.7rem;}
+    .sidebar a .ic{width:auto;}
+    .sb-badge{width:100%;margin-top:6px;}
+    .orange-edge{display:none;}
+    body{padding-top:0;}
+    .main{margin-left:0 !important;}
+  }
+  .main{margin-left:210px;}
+  .wrap{max-width:1000px;margin:18px auto;padding:18px 16px 60px;}
   .card{background:#fff;border-radius:14px;box-shadow:0 2px 14px rgba(0,0,0,.07);padding:20px;margin-bottom:16px;}
   .btn-main{display:block;width:100%;background:linear-gradient(135deg,#0d7377,#14a085);color:#fff;border:none;border-radius:12px;padding:18px;font-size:1.05rem;font-weight:900;letter-spacing:.4px;cursor:pointer;box-shadow:0 4px 14px rgba(13,115,119,.3);transition:all .2s;}
   .btn-main:hover{filter:brightness(1.08);} .btn-main:disabled{opacity:.6;cursor:wait;}
@@ -41,19 +53,19 @@
 </style>
 </head>
 <body>
-<div class="top-bar">
-  <span class="logo">⚡ COMPARADOR DE POSTES</span>
-  <span class="badge" id="db-badge">Carregando…</span>
-</div>
-<nav class="page-nav">
-  <a href="turno.html">📋 TURNO</a>
-  <a href="rdo.html">📊 RDO</a>
-  <a href="comp.html" class="active">⚡ COMPARADOR</a>
-  <a href="mapa.html">🗺️ MAPA</a>
-  <a href="prog.html">📅 PROG. DIÁRIA</a>
-  <a href="index.html">🏠 INÍCIO</a>
-</nav>
+<aside class="sidebar">
+  <div class="brand">⚡ MARIUÁ<small>Comparador de Postes</small></div>
+  <a href="index.html"><span class="ic">🏠</span> Início</a>
+  <a href="turno.html"><span class="ic">📋</span> Turno</a>
+  <a href="rdo.html"><span class="ic">📊</span> RDO</a>
+  <a href="comp.html" class="active"><span class="ic">⚡</span> Comparador</a>
+  <a href="mapa.html"><span class="ic">🗺️</span> Mapa</a>
+  <a href="prog.html"><span class="ic">📅</span> Prog. Diária</a>
+  <div class="sb-badge" id="db-badge">Carregando…</div>
+</aside>
+<div class="orange-edge"></div>
 
+<div class="main">
 <div class="wrap">
   <div class="card">
     <button class="btn-main" id="btn" onclick="rodar()">🔄 ATUALIZAR E COMPARAR</button>
@@ -77,6 +89,7 @@
     <div class="sec-title">🗓️ Histórico de alterações</div>
     <div id="hist"></div>
   </div>
+</div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
