@@ -4898,6 +4898,12 @@ async function compDiagnostico(){
     L.push('Mês/gid em uso → Jacobina gid='+gJac+' · Irecê gid='+gIrc);
     L.push('Mês selecionado: '+(_compMesSel||'(nenhum)'));
     L.push('Banco (obras_base): '+((bancoDB&&bancoDB.length)||0)+' obras');
+    if(bancoDB && bancoDB.length){
+      var bcols=Object.keys(bancoDB[0]);
+      var bpost=bcols.filter(function(c){var cn=compNorm(c);return cn.includes('POSTE')||cn.includes('CAVA');});
+      L.push('  Colunas POSTE/CAVA no BANCO: '+(bpost.length?bpost.join(', '):'NENHUMA'));
+      if(bpost.length){ L.push('  Valores na 1ª obra do banco ('+(bancoDB[0]['PEP OBRA']||'?')+'):'); bpost.forEach(function(c){ L.push('    '+c+' = '+bancoDB[0][c]); }); }
+    }
     L.push('');
     // Procura a coluna de POSTES nas abas da planilha de Jacobina (varre gids dos meses + alguns próximos)
     L.push('🔎 Procurando a aba com a coluna de POSTES (Jacobina)…');
