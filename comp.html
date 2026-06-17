@@ -4893,6 +4893,19 @@ async function compDiagnostico(){
     var dJ=compParseCSVText(tJ,'JACOBINA')||[]; var dI=compParseCSVText(tI,'IRECÊ')||[];
     L.push('Carteira agora → Jac '+dJ.length+' · Irc '+dI.length+' = '+(dJ.length+dI.length)+' obras');
     var cart=[...dJ,...dI];
+    // mostra os NOMES das colunas que vieram da planilha (pra achar a coluna de postes)
+    if(cart.length){
+      var cols=Object.keys(cart[0]);
+      L.push('');
+      L.push('COLUNAS da planilha ('+cols.length+'):');
+      cols.forEach(function(c){ L.push('  • '+c); });
+      L.push('');
+      L.push('1ª obra ('+(cart[0]['PEP OBRA']||'?')+') — valores que parecem POSTE/CAVA:');
+      cols.forEach(function(c){
+        var cn=compNorm(c);
+        if(cn.includes('POSTE')||cn.includes('CAVA')) L.push('  '+c+' = '+cart[0][c]);
+      });
+    }
     // compara 1ª obra que difere
     var bMap={}; (bancoDB||[]).forEach(function(o){ bMap[compNorm(o['PEP OBRA']||'')]=o; });
     function val(r,k){ if(!r)return '—'; var c=Object.keys(r).find(function(x){return compNorm(x).includes(compNorm(k));}); return c?r[c]:'—'; }
