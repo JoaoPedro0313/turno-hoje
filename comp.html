@@ -366,7 +366,36 @@ function verTodas(){
 function renderHist(hist){
   if(!hist || !hist.length) return;
   document.getElementById('card-hist').style.display='block';
-  document.getElementById('hist').innerHTML = hist.slice().reverse().slice(0,15).map(h=>'<div class="hist-item"><span class="when">'+h.ts+'</span> — '+h.n+' obra(s) com alteração de postes</div>').join('');
+  const el = document.getElementById('hist');
+  el.innerHTML = hist.slice().reverse().slice(0,30).map((h,idx)=>{
+    const itens = Array.isArray(h.itens) ? h.itens : [];
+    let det = '';
+    if(itens.length){
+      det = '<div class="hist-det" id="hist-det-'+idx+'" style="display:none;margin-top:8px;border-top:1px dashed #e2e8f0;padding-top:8px;">'
+        + '<table style="width:100%;"><thead><tr><th>PEP</th><th>Título</th><th>UTD</th><th>Postes</th></tr></thead><tbody>'
+        + itens.map(a=>{
+            const de=a.de==null?'—':a.de, para=a.para==null?'—':a.para, diff=(Number(a.para)||0)-(Number(a.de)||0);
+            const cls=diff>0?'delta-up':'delta-dn', sinal=diff>0?'+':'';
+            return '<tr><td><code>'+a.pep+'</code></td><td>'+(a.titulo||'')+'</td><td>'+(a.utd||'')+'</td>'
+              +'<td><span class="old">'+de+'</span><span class="arrow">→</span><span class="new">'+para+'</span> <span class="'+cls+'">('+sinal+diff+')</span></td></tr>';
+          }).join('')
+        + '</tbody></table></div>';
+    }
+    return '<div class="hist-item">'
+      + '<div onclick="histToggle('+idx+')" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:8px;">'
+      +   '<span><span class="when">'+h.ts+'</span> — <b>'+h.n+'</b> obra(s) com alteração de postes</span>'
+      +   (itens.length?'<span id="hist-arrow-'+idx+'" style="color:#0d7377;font-weight:900;">▸</span>':'')
+      + '</div>'
+      + det
+      + '</div>';
+  }).join('');
+}
+function histToggle(idx){
+  const d=document.getElementById('hist-det-'+idx), ar=document.getElementById('hist-arrow-'+idx);
+  if(!d) return;
+  const open = d.style.display==='none';
+  d.style.display = open?'block':'none';
+  if(ar) ar.textContent = open?'▾':'▸';
 }
 </script>
 <script>
