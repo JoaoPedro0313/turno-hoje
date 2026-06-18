@@ -81,11 +81,21 @@
   .toggle:hover{background:#f0e6ff;}
   .hist-item{padding:10px 0;border-bottom:1px solid #f0f0f0;font-size:0.82rem;} .hist-item:last-child{border-bottom:none;} .hist-item .when{font-weight:800;color:#0d7377;}
   .comp-tag{display:inline-block;font-size:0.7rem;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:#2b6cb0;background:#ebf4ff;padding:6px 14px;border-radius:20px;margin-bottom:16px;}
-  .hist-header{background:linear-gradient(135deg,#2d3748,#1a202c);padding:16px 20px;}
+  .comp-fontes{display:grid;grid-template-columns:1fr auto 1fr;gap:0;align-items:center;margin-bottom:18px;}
+  .comp-fonte{border-radius:12px;padding:14px 16px;}
+  .comp-fonte.verde{border:1.5px solid #c6f6d5;background:#f0fff4;}
+  .comp-fonte.azul{border:1.5px solid #bee3f8;background:#ebf8ff;}
+  .comp-fonte-top{display:flex;align-items:center;gap:7px;margin-bottom:6px;}
+  .comp-fonte-lbl{font-size:0.6rem;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;}
+  .comp-fonte-lbl.verde{color:#276749;} .comp-fonte-lbl.azul{color:#2b6cb0;}
+  .comp-fonte-val{font-size:0.78rem;font-weight:700;color:#888;}
+  .comp-fonte-seta{text-align:center;padding:0 12px;font-size:1.5rem;color:#cbd5e0;user-select:none;}
+  .hist-header{background:linear-gradient(135deg,#2d3748,#4a5568);padding:14px 20px;display:flex;align-items:center;gap:10px;}
+  .hist-header-ic{width:34px;height:34px;background:rgba(255,255,255,.15);border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0;}
   .hist-header-title{display:block;color:#fff;font-size:0.92rem;font-weight:800;letter-spacing:.5px;}
-  .hist-header-sub{display:block;color:rgba(255,255,255,.55);font-size:0.7rem;font-weight:600;margin-top:2px;}
+  .hist-header-sub{display:block;color:rgba(255,255,255,.6);font-size:0.68rem;font-weight:600;margin-top:1px;}
   .table-wrap{overflow-x:auto;}
-  @media(max-width:560px){ .kpis{grid-template-columns:1fr;} }
+  @media(max-width:560px){ .kpis{grid-template-columns:1fr;} .comp-fontes{grid-template-columns:1fr;gap:8px;} .comp-fonte-seta{transform:rotate(90deg);} }
 </style>
 </head>
 <body>
@@ -114,9 +124,22 @@
 <div class="wrap">
   <div class="section">
     <div class="section-body">
-      <div class="comp-tag">🔍 Comparar postes — banco vs planilha atual</div>
+      <div class="comp-tag">🔍 COMPARAR POSTES — BANCO vs PLANILHA ATUAL</div>
+
+      <div class="comp-fontes">
+        <div class="comp-fonte verde">
+          <div class="comp-fonte-top"><span>📦</span><span class="comp-fonte-lbl verde">RETRATO SALVO</span></div>
+          <div class="comp-fonte-val" id="fonte-banco">Carregando…</div>
+        </div>
+        <div class="comp-fonte-seta">→</div>
+        <div class="comp-fonte azul">
+          <div class="comp-fonte-top"><span>🔄</span><span class="comp-fonte-lbl azul">PLANILHA ATUAL (SHEETS)</span></div>
+          <div class="comp-fonte-val" id="fonte-sheets">Jacobina + Irecê · todos os meses</div>
+        </div>
+      </div>
+
       <button class="btn-main" id="btn" onclick="rodar()">🔄 ATUALIZAR E COMPARAR</button>
-      <div class="status" id="status">Clique para conferir os postes das obras e detectar alterações.</div>
+      <div class="status" id="status">Conferindo os postes das obras…</div>
       <div id="errbox"></div>
     </div>
   </div>
@@ -129,7 +152,7 @@
 
   <div class="section" id="card-tabela" style="display:none;">
     <div class="section-header">
-      <div class="section-label"><span class="section-icon">⚡</span> Detalhamento de alterações</div>
+      <div class="section-label"><span class="section-icon">⚡</span> DETALHAMENTO DE ALTERAÇÕES</div>
       <span class="toggle" id="toggle-todas" onclick="verTodas()">Ver todas as obras</span>
     </div>
     <div class="section-body" style="padding:0;"><div class="table-wrap" id="tabela"></div></div>
@@ -137,8 +160,11 @@
 
   <div class="section" id="card-hist" style="display:none;">
     <div class="hist-header">
-      <span class="hist-header-title">📅 Histórico de alterações por dia</span>
-      <span class="hist-header-sub">Obras modificadas a cada verificação</span>
+      <div class="hist-header-ic">📅</div>
+      <div>
+        <span class="hist-header-title">HISTÓRICO DE ALTERAÇÕES POR DIA</span>
+        <span class="hist-header-sub">Obras modificadas a cada verificação</span>
+      </div>
     </div>
     <div class="section-body"><div id="hist"></div></div>
   </div>
@@ -295,6 +321,11 @@ async function rodar(){
     // compara com o retrato anterior
     const base = await carregarBasePostes();
     const temBase = Object.keys(base).length>0;
+    // atualiza os cartões do topo
+    const fb=document.getElementById('fonte-banco');
+    if(fb) fb.textContent = temBase ? (Object.keys(base).length+' obras no retrato anterior') : 'Sem retrato anterior (1ª carga)';
+    const fs=document.getElementById('fonte-sheets');
+    if(fs) fs.textContent = lista.length+' obras lidas · todos os meses';
     const alteradas=[], novoMapa={};
     let novas=0;
     lista.forEach(o=>{
@@ -308,7 +339,7 @@ async function rodar(){
     });
 
     // mostra
-    document.getElementById('kpis').style.display='flex';
+    document.getElementById('kpis').style.display='grid';
     document.getElementById('k-tot').textContent = lista.length;
     document.getElementById('k-alt').textContent = alteradas.length;
     document.getElementById('k-nova').textContent = novas;
