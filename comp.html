@@ -398,6 +398,19 @@ function histToggle(idx){
   d.style.display = open?'block':'none';
   if(ar) ar.textContent = open?'▾':'▸';
 }
+
+// Roda a comparação automaticamente ao abrir a página (sem precisar clicar)
+function autoRodar(){
+  if(window.Papa){ rodar(); return; }
+  // espera o PapaParse carregar
+  let tent=0;
+  const iv=setInterval(()=>{
+    if(window.Papa || tent>40){ clearInterval(iv); if(window.Papa) rodar(); }
+    tent++;
+  }, 150);
+}
+if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', autoRodar);
+else autoRodar();
 </script>
 <script>
 (function(){
