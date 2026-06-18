@@ -7,28 +7,41 @@
 <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;600;700;800;900&display=swap" rel="stylesheet">
 <style>
   *{margin:0;padding:0;box-sizing:border-box;font-family:'Barlow',sans-serif;}
-  body{background:#f0f4f5;color:#222;}
-  /* menu lateral */
-  .sidebar{position:fixed;top:0;left:0;bottom:0;width:210px;background:linear-gradient(180deg,#0d7377,#0a4a4d);z-index:100;padding:18px 12px;display:flex;flex-direction:column;gap:6px;box-shadow:2px 0 16px rgba(0,0,0,.18);overflow-y:auto;}
-  .sidebar .brand{color:#fff;font-weight:900;font-size:0.95rem;letter-spacing:.5px;padding:6px 10px 14px;border-bottom:1px solid rgba(255,255,255,.15);margin-bottom:8px;line-height:1.3;}
-  .sidebar .brand small{display:block;font-size:0.62rem;font-weight:600;opacity:.8;letter-spacing:.5px;margin-top:2px;}
-  .sidebar a{display:flex;align-items:center;gap:10px;color:rgba(255,255,255,.78);text-decoration:none;font-size:0.82rem;font-weight:800;letter-spacing:.3px;padding:11px 13px;border-radius:10px;transition:all .15s;}
-  .sidebar a:hover{background:rgba(255,255,255,.1);color:#fff;}
-  .sidebar a.active{background:linear-gradient(135deg,#14a085,#0f8a82);color:#fff;box-shadow:0 3px 10px rgba(0,0,0,.2);}
-  .sidebar a .ic{font-size:1.05rem;width:22px;text-align:center;}
-  .sb-badge{margin-top:auto;font-size:0.68rem;font-weight:800;color:#b0ffd0;background:rgba(45,184,100,.18);border:1px solid rgba(255,255,255,.2);padding:8px 10px;border-radius:8px;text-align:center;}
-  .orange-edge{position:fixed;top:0;left:210px;width:4px;bottom:0;background:#ff6b35;z-index:101;}
-  @media(max-width:760px){
-    .sidebar{width:100%;height:auto;bottom:auto;flex-direction:row;flex-wrap:wrap;padding:10px;gap:4px;}
-    .sidebar .brand{width:100%;border-bottom:none;padding:4px 8px 8px;}
-    .sidebar a{flex:1;min-width:90px;justify-content:center;padding:9px 8px;font-size:0.7rem;}
-    .sidebar a .ic{width:auto;}
-    .sb-badge{width:100%;margin-top:6px;}
-    .orange-edge{display:none;}
-    body{padding-top:0;}
-    .main{margin-left:0 !important;}
+  body{background:#f0f4f5;color:#222;padding-left:232px;transition:padding .22s ease;}
+  /* menu lateral (igual aos outros módulos) */
+  .sm-side{position:fixed;top:0;left:0;bottom:0;width:232px;z-index:110;background:#fff;border-right:1px solid #e6ebee;box-shadow:2px 0 12px rgba(0,0,0,.04);display:flex;flex-direction:column;transition:width .22s ease;font-family:'Barlow',sans-serif}
+  .sm-top{display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid #eef2f4;overflow:hidden}
+  .sm-logo{width:34px;height:34px;flex-shrink:0;object-fit:contain;display:block}
+  .sm-logo-tx{font-weight:800;color:#0d7377;letter-spacing:1px;font-size:1rem;white-space:nowrap;line-height:1.05}
+  .sm-logo-tx small{display:block;font-size:.5rem;letter-spacing:2px;color:#9aa6ab;font-weight:700}
+  .sm-toggle{display:flex;justify-content:center;padding:7px 0;border-bottom:1px solid #eef2f4}
+  .sm-toggle button{background:#f3f6f7;border:1px solid #e6ebee;color:#0d7377;width:38px;height:30px;border-radius:8px;cursor:pointer;font-size:.95rem;display:flex;align-items:center;justify-content:center}
+  .sm-toggle button:hover{background:#e7f0f0}
+  .sm-nav{flex:1;overflow-y:auto;overflow-x:hidden;padding:8px;display:flex;flex-direction:column;gap:3px}
+  .sm-item{display:flex;align-items:center;gap:12px;padding:9px 11px;border-radius:10px;text-decoration:none;color:#54616a;transition:background .14s,color .14s;white-space:nowrap;cursor:pointer}
+  .sm-item:hover{background:#eef4f4;color:#0d7377}
+  .sm-ic{width:32px;height:32px;border-radius:9px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:1rem;background:#f1f5f6}
+  .sm-tx{font-size:.84rem;font-weight:700}
+  .sm-item.active{background:linear-gradient(135deg,#0d7377,#14a085);color:#fff;box-shadow:0 4px 12px rgba(13,115,119,.28)}
+  .sm-item.active .sm-ic{background:rgba(255,255,255,.22)}
+  .sm-foot{padding:9px 14px;border-top:1px solid #eef2f4;font-size:.6rem;color:#aab4b8;font-weight:700;white-space:nowrap;overflow:hidden}
+  body.sm-collapsed{padding-left:64px;}
+  body.sm-collapsed .sm-side{width:64px}
+  body.sm-collapsed .sm-logo-tx,body.sm-collapsed .sm-tx,body.sm-collapsed .sm-foot{display:none}
+  body.sm-collapsed .sm-top{justify-content:center;padding:12px 0}
+  body.sm-collapsed .sm-item{justify-content:center;padding:9px 0}
+  @media (max-width:780px){
+    body{padding-left:64px !important;}
+    .sm-side{width:64px}
+    .sm-logo-tx,.sm-tx,.sm-foot{display:none}
+    .sm-top{justify-content:center;padding:12px 0}
+    .sm-item{justify-content:center;padding:9px 0}
+    body.sm-expanded .sm-side{width:228px;box-shadow:6px 0 24px rgba(0,0,0,.18)}
+    body.sm-expanded .sm-logo-tx,body.sm-expanded .sm-tx,body.sm-expanded .sm-foot{display:block}
+    body.sm-expanded .sm-tx{display:inline}
+    body.sm-expanded .sm-top{justify-content:flex-start;padding:12px 14px}
+    body.sm-expanded .sm-item{justify-content:flex-start;padding:9px 11px}
   }
-  .main{margin-left:210px;}
   .wrap{max-width:1000px;margin:18px auto;padding:18px 16px 60px;}
   .card{background:#fff;border-radius:14px;box-shadow:0 2px 14px rgba(0,0,0,.07);padding:20px;margin-bottom:16px;}
   .btn-main{display:block;width:100%;background:linear-gradient(135deg,#0d7377,#14a085);color:#fff;border:none;border-radius:12px;padding:18px;font-size:1.05rem;font-weight:900;letter-spacing:.4px;cursor:pointer;box-shadow:0 4px 14px rgba(13,115,119,.3);transition:all .2s;}
@@ -53,17 +66,26 @@
 </style>
 </head>
 <body>
-<aside class="sidebar">
-  <div class="brand">⚡ MARIUÁ<small>Comparador de Postes</small></div>
-  <a href="index.html"><span class="ic">🏠</span> Início</a>
-  <a href="turno.html"><span class="ic">📋</span> Turno</a>
-  <a href="rdo.html"><span class="ic">📊</span> RDO</a>
-  <a href="comp.html" class="active"><span class="ic">⚡</span> Comparador</a>
-  <a href="mapa.html"><span class="ic">🗺️</span> Mapa</a>
-  <a href="prog.html"><span class="ic">📅</span> Prog. Diária</a>
-  <div class="sb-badge" id="db-badge">Carregando…</div>
+<aside class="sm-side">
+  <div class="sm-top">
+    <img class="sm-logo" src="assets/logo-mariua.png" alt="Mariuá">
+    <div class="sm-logo-tx">MARIUÁ<small>Construção e Energia</small></div>
+  </div>
+  <div class="sm-toggle"><button type="button" onclick="smToggle()" title="Recolher / expandir">↔</button></div>
+  <nav class="sm-nav">
+    <a class="sm-item" href="index.html"><span class="sm-ic">🏠</span><span class="sm-tx">Início</span></a>
+    <a class="sm-item" href="turno.html"><span class="sm-ic">📋</span><span class="sm-tx">Turno</span></a>
+    <a class="sm-item" href="rdo.html"><span class="sm-ic">📊</span><span class="sm-tx">RDO</span></a>
+    <a class="sm-item" href="comp.html"><span class="sm-ic">⚡</span><span class="sm-tx">Comparador</span></a>
+    <a class="sm-item" href="mapa.html"><span class="sm-ic">🗺️</span><span class="sm-tx">Mapa</span></a>
+    <a class="sm-item" href="prog.html"><span class="sm-ic">📅</span><span class="sm-tx">Prog. Diária</span></a>
+    <a class="sm-item" href="projeçao.html"><span class="sm-ic">📈</span><span class="sm-tx">PDA</span></a>
+    <a class="sm-item" href="permissoes.html"><span class="sm-ic">🔐</span><span class="sm-tx">Telas x Usuários</span></a>
+    <a class="sm-item" href="valores.html"><span class="sm-ic">💰</span><span class="sm-tx">Financeiro</span></a>
+    <a class="sm-item" href="admin.html"><span class="sm-ic">⚙️</span><span class="sm-tx">Admin</span></a>
+  </nav>
+  <div class="sm-foot">Mariuá · Sistema de Obras</div>
 </aside>
-<div class="orange-edge"></div>
 
 <div class="main">
 <div class="wrap">
@@ -276,10 +298,8 @@ async function rodar(){
     if(!temBase) setStatus('✅ Primeira carga: '+lista.length+' obras salvas. Da próxima vez, mostro o que mudou.');
     else if(alteradas.length) setStatus('✅ '+alteradas.length+' obra(s) com alteração de postes. Valores salvos.');
     else setStatus('✅ Nenhuma alteração de postes desde a última verificação. ('+lista.length+' obras conferidas)');
-    document.getElementById('db-badge').textContent = 'Banco OK · '+lista.length+' obras';
   }catch(e){
     showErr('Erro: '+e.message); setStatus('Falha ao comparar.');
-    document.getElementById('db-badge').textContent = 'Erro';
   }finally{
     btn.disabled=false; btn.textContent='🔄 ATUALIZAR E COMPARAR';
   }
@@ -318,6 +338,24 @@ function renderHist(hist){
   document.getElementById('card-hist').style.display='block';
   document.getElementById('hist').innerHTML = hist.slice().reverse().slice(0,15).map(h=>'<div class="hist-item"><span class="when">'+h.ts+'</span> — '+h.n+' obra(s) com alteração de postes</div>').join('');
 }
+</script>
+<script>
+(function(){
+  function isMobile(){return window.matchMedia('(max-width:780px)').matches;}
+  window.smToggle=function(){
+    if(isMobile()) document.body.classList.toggle('sm-expanded');
+    else document.body.classList.toggle('sm-collapsed');
+  };
+  try{
+    var cur=decodeURIComponent((location.pathname.split('/').pop()||'')).toLowerCase();
+    if(!cur) cur='index.html';
+    document.querySelectorAll('.sm-item').forEach(function(a){
+      var href=decodeURIComponent((a.getAttribute('href')||'')).toLowerCase();
+      if(href===cur) a.classList.add('active');
+      a.addEventListener('click',function(){document.body.classList.remove('sm-expanded');});
+    });
+  }catch(e){}
+})();
 </script>
 </body>
 </html>
