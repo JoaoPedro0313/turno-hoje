@@ -798,7 +798,16 @@ async function mapaMMCarregarSupabase() {
     });
     GSHEETS_MESES.sort((a,b) => a.ano!==b.ano ? a.ano-b.ano : a.mes-b.mes);
     console.log('[meses] Supabase:', extras.length, 'extra(s) carregado(s). Total:', GSHEETS_MESES.length);
-    try { localStorage.setItem('mariua_meses_extras', JSON.stringify(extras)); } catch(ex) {}
+    // Mescla com o cache local em vez de sobrescrever — assim meses adicionados localmente
+    // (ex.: julho) não somem caso o registro do banco ainda não os tenha.
+    try {
+      const locais = JSON.parse(localStorage.getItem('mariua_meses_extras') || '[]');
+      const merge = Array.isArray(extras) ? extras.slice() : [];
+      (Array.isArray(locais) ? locais : []).forEach(e => {
+        if (e && e.ano && e.mes && !merge.find(m => m.ano===e.ano && m.mes===e.mes)) merge.push(e);
+      });
+      localStorage.setItem('mariua_meses_extras', JSON.stringify(merge));
+    } catch(ex) {}
     if (typeof mapaInitMesBar === 'function') mapaInitMesBar();
     if (typeof mapaMMRenderLista === 'function' && document.getElementById('modal-meses-overlay')?.style.display==='flex') mapaMMRenderLista();
     // Auto-carrega o ÚLTIMO mês (o mais recente) UMA ÚNICA VEZ, só se nada estiver ativo.
