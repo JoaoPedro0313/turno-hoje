@@ -4864,7 +4864,13 @@ encSel.innerHTML = encs.map(e => `<option value="${e}"${e===(encStillValid?curEn
 if (!encStillValid) mapaEncFiltro = '';
 }
 const statusCount = {};
-base.forEach(d => { const s=d.status.trim()||'SEM STATUS'; statusCount[s]=(statusCount[s]||0)+1; });
+const STATUS_MAX_LEN = 24; // status reais são curtos; textos longos são observação, não status
+base.forEach(d => {
+  let s = d.status.trim() || 'SEM STATUS';
+  // ignora textos longos de observação (não são status padronizados)
+  if (s.length > STATUS_MAX_LEN) return;
+  statusCount[s]=(statusCount[s]||0)+1;
+});
 const bar = document.getElementById('mapa-filter-btns'); if (!bar) return;
 bar.innerHTML = '';
 const mkStatus = (label, key, count, bg) => {
