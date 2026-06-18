@@ -42,27 +42,45 @@
     body.sm-expanded .sm-top{justify-content:flex-start;padding:12px 14px}
     body.sm-expanded .sm-item{justify-content:flex-start;padding:9px 11px}
   }
-  .wrap{max-width:1000px;margin:18px auto;padding:18px 16px 60px;}
+  .wrap{max-width:1100px;margin:16px auto;padding:0 12px 70px;}
+  .page-head{background:linear-gradient(135deg,#0d7377 0%,#14a085 60%,#0d7377 100%);border-radius:14px;padding:18px 22px;color:#fff;margin-bottom:16px;box-shadow:0 4px 16px rgba(13,115,119,.25);position:relative;overflow:hidden;}
+  .page-head::before{content:'';position:absolute;inset:0;background:repeating-linear-gradient(45deg,rgba(255,255,255,.04) 0,rgba(255,255,255,.04) 1px,transparent 1px,transparent 18px);}
+  .page-head h1{font-size:1.15rem;font-weight:900;letter-spacing:.5px;position:relative;display:flex;align-items:center;gap:10px;}
+  .page-head p{font-size:0.76rem;font-weight:600;opacity:.9;margin-top:3px;position:relative;}
+  .page-head .edge{position:absolute;left:0;right:0;bottom:0;height:4px;background:linear-gradient(90deg,#ff6b35,#ff9a3c,#ff6b35);}
+  .section{background:#fff;border-radius:12px;margin-bottom:16px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,.07);}
+  .section-header{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:1px solid #c0e8e5;background:#f0fafa;}
+  .section-header.blue{background:#ebf4ff;border-bottom-color:#bee3f8;}
+  .section-header.orange{background:#fffbf0;border-bottom-color:#fde8b0;}
+  .section-label{display:flex;align-items:center;gap:10px;font-size:0.96rem;font-weight:800;letter-spacing:.5px;color:#222;}
+  .section-icon{width:26px;height:26px;border-radius:7px;background:#14a085;color:#fff;display:flex;align-items:center;justify-content:center;font-size:0.95rem;}
+  .section-icon.blue{background:#2b6cb0;} .section-icon.orange{background:#f0a500;}
+  .section-body{padding:18px 20px;}
   .card{background:#fff;border-radius:14px;box-shadow:0 2px 14px rgba(0,0,0,.07);padding:20px;margin-bottom:16px;}
-  .btn-main{display:block;width:100%;background:linear-gradient(135deg,#0d7377,#14a085);color:#fff;border:none;border-radius:12px;padding:18px;font-size:1.05rem;font-weight:900;letter-spacing:.4px;cursor:pointer;box-shadow:0 4px 14px rgba(13,115,119,.3);transition:all .2s;}
-  .btn-main:hover{filter:brightness(1.08);} .btn-main:disabled{opacity:.6;cursor:wait;}
+  .btn-main{display:block;width:100%;background:linear-gradient(135deg,#0d7377,#14a085);color:#fff;border:none;border-radius:12px;padding:16px;font-size:1rem;font-weight:900;letter-spacing:.4px;cursor:pointer;box-shadow:0 4px 14px rgba(13,115,119,.3);transition:all .2s;}
+  .btn-main:hover{box-shadow:0 6px 20px rgba(13,115,119,.4);transform:translateY(-1px);} .btn-main:disabled{opacity:.6;cursor:wait;transform:none;}
   .status{margin-top:12px;font-size:0.82rem;font-weight:700;text-align:center;color:#555;min-height:20px;}
-  .kpis{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px;}
-  .kpi{flex:1;min-width:120px;background:#fff;border-radius:12px;padding:16px;text-align:center;box-shadow:0 2px 10px rgba(0,0,0,.06);}
-  .kpi .num{font-size:1.8rem;font-weight:900;line-height:1;}
-  .kpi .lbl{font-size:0.68rem;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:#888;margin-top:6px;}
+  .kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:16px;}
+  .kpi{background:#fff;border-radius:12px;padding:16px 18px;text-align:center;box-shadow:0 2px 12px rgba(0,0,0,.07);border-top:3px solid #14a085;}
+  .kpi.alt{border-top-color:#ff6b35;} .kpi.nova{border-top-color:#2b6cb0;} .kpi.tot{border-top-color:#0d7377;}
+  .kpi .num{font-size:2rem;font-weight:900;line-height:1;color:#2d3748;}
   .kpi.alt .num{color:#ff6b35;} .kpi.nova .num{color:#2b6cb0;} .kpi.tot .num{color:#0d7377;}
+  .kpi .lbl{font-size:0.65rem;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:#888;margin-top:6px;}
   table{width:100%;border-collapse:collapse;font-size:0.84rem;}
-  th{text-align:left;padding:10px 8px;font-size:0.64rem;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:#888;border-bottom:2px solid #eee;}
-  td{padding:10px 8px;border-bottom:1px solid #f0f0f0;}
-  td code{color:#0d7377;font-weight:800;font-size:0.8rem;}
-  .delta-up{color:#1a8a4a;font-weight:800;} .delta-dn{color:#c53030;font-weight:800;}
-  .arrow{color:#aaa;margin:0 6px;} .old{color:#aaa;text-decoration:line-through;} .new{font-weight:900;}
-  .empty{text-align:center;padding:40px 20px;color:#aaa;font-weight:700;} .empty .big{font-size:2.5rem;}
-  .err{background:#fff5f5;border:1.5px solid #fc8181;border-radius:10px;padding:14px;color:#c53030;font-size:0.82rem;font-weight:700;margin-top:12px;white-space:pre-wrap;}
+  thead tr{background:#f8fafc;border-bottom:2px solid #e8ecef;}
+  th{text-align:left;padding:11px 14px;font-size:0.66rem;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:#888;white-space:nowrap;}
+  td{padding:11px 14px;border-bottom:1px solid #edf0f2;color:#2d3748;}
+  tbody tr:hover{background:#f9fbff;}
+  td code{color:#0d7377;font-weight:800;font-size:0.8rem;background:#f0fafa;padding:2px 7px;border-radius:4px;}
+  .delta-up{color:#0d7377;font-weight:800;background:#d0f0ee;padding:2px 7px;border-radius:5px;font-size:0.72rem;} .delta-dn{color:#c53030;font-weight:800;background:#fde8e8;padding:2px 7px;border-radius:5px;font-size:0.72rem;}
+  .arrow{color:#ccc;margin:0 6px;} .old{color:#aaa;text-decoration:line-through;text-decoration-color:#e53e3e;} .new{font-weight:800;}
+  .empty{text-align:center;padding:50px 20px;color:#aaa;font-weight:600;} .empty .big{font-size:3rem;margin-bottom:12px;}
+  .err{background:#fff5f5;border:1.5px solid #fc8181;border-radius:10px;padding:14px;color:#c53030;font-size:0.82rem;font-weight:700;margin-top:12px;white-space:pre-wrap;line-height:1.5;}
   .sec-title{font-size:0.66rem;font-weight:900;letter-spacing:1px;text-transform:uppercase;color:#0d7377;margin-bottom:10px;}
-  .toggle{display:inline-block;font-size:0.74rem;font-weight:800;color:#6b46c1;cursor:pointer;border:1.5px solid #d6bcfa;border-radius:18px;padding:5px 14px;margin-top:4px;}
-  .hist-item{padding:8px 0;border-bottom:1px solid #f0f0f0;font-size:0.8rem;} .hist-item .when{font-weight:800;color:#0d7377;}
+  .toggle{display:inline-block;font-size:0.74rem;font-weight:800;color:#6b46c1;cursor:pointer;border:1.5px solid #d6bcfa;border-radius:18px;padding:6px 16px;background:#faf5ff;transition:all .15s;}
+  .toggle:hover{background:#f0e6ff;}
+  .hist-item{padding:10px 0;border-bottom:1px solid #f0f0f0;font-size:0.82rem;} .hist-item:last-child{border-bottom:none;} .hist-item .when{font-weight:800;color:#0d7377;}
+  @media(max-width:560px){ .kpis{grid-template-columns:1fr;} }
 </style>
 </head>
 <body>
@@ -89,10 +107,18 @@
 
 <div class="main">
 <div class="wrap">
-  <div class="card">
-    <button class="btn-main" id="btn" onclick="rodar()">🔄 ATUALIZAR E COMPARAR</button>
-    <div class="status" id="status">Clique para conferir os postes das obras e detectar alterações.</div>
-    <div id="errbox"></div>
+  <div class="page-head">
+    <h1>⚡ Comparador de Postes</h1>
+    <p>Lê os postes de cada obra, guarda e avisa quais mudaram.</p>
+    <div class="edge"></div>
+  </div>
+
+  <div class="section">
+    <div class="section-body">
+      <button class="btn-main" id="btn" onclick="rodar()">🔄 ATUALIZAR E COMPARAR</button>
+      <div class="status" id="status">Clique para conferir os postes das obras e detectar alterações.</div>
+      <div id="errbox"></div>
+    </div>
   </div>
 
   <div class="kpis" id="kpis" style="display:none;">
@@ -101,15 +127,19 @@
     <div class="kpi nova"><div class="num" id="k-nova">0</div><div class="lbl">Obras novas</div></div>
   </div>
 
-  <div class="card" id="card-tabela" style="display:none;">
-    <div class="sec-title">📋 Obras com alteração de postes</div>
-    <div id="tabela"></div>
-    <div style="margin-top:14px;"><span class="toggle" id="toggle-todas" onclick="verTodas()">Ver todas as obras</span></div>
+  <div class="section" id="card-tabela" style="display:none;">
+    <div class="section-header">
+      <div class="section-label"><span class="section-icon">📋</span> Obras com alteração de postes</div>
+      <span class="toggle" id="toggle-todas" onclick="verTodas()">Ver todas as obras</span>
+    </div>
+    <div class="section-body" style="padding:0;"><div id="tabela"></div></div>
   </div>
 
-  <div class="card" id="card-hist" style="display:none;">
-    <div class="sec-title">🗓️ Histórico de alterações</div>
-    <div id="hist"></div>
+  <div class="section" id="card-hist" style="display:none;">
+    <div class="section-header blue">
+      <div class="section-label"><span class="section-icon blue">🗓️</span> Histórico de alterações</div>
+    </div>
+    <div class="section-body"><div id="hist"></div></div>
   </div>
 </div>
 </div>
