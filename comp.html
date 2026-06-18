@@ -95,6 +95,24 @@
   .hist-header-title{display:block;color:#fff;font-size:0.92rem;font-weight:800;letter-spacing:.5px;}
   .hist-header-sub{display:block;color:rgba(255,255,255,.6);font-size:0.68rem;font-weight:600;margin-top:1px;}
   .table-wrap{overflow-x:auto;}
+  .toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:14px 20px;border-bottom:1px solid #edf0f2;background:#fafbfc;}
+  .toolbar label{font-size:0.68rem;font-weight:800;color:#aaa;letter-spacing:1.5px;text-transform:uppercase;white-space:nowrap;}
+  .filter-btn{background:#fff;border:1.5px solid #e2e8f0;color:#666;padding:6px 14px;border-radius:8px;font-size:0.75rem;font-family:'Barlow',sans-serif;font-weight:700;cursor:pointer;transition:all .15s;}
+  .filter-btn:hover{border-color:#14a085;color:#0d7377;}
+  .filter-btn.active{background:#14a085;border-color:#14a085;color:#fff;}
+  .comp-search{background:#fff;border:1.5px solid #e2e8f0;color:#2d3748;padding:7px 14px;border-radius:8px;font-size:0.82rem;font-family:'Barlow',sans-serif;font-weight:600;min-width:200px;flex:1;margin-left:auto;outline:none;}
+  .comp-search:focus{border-color:#14a085;}
+  .count-tag{background:#0d7377;color:#fff;font-size:0.72rem;font-weight:800;padding:3px 10px;border-radius:5px;}
+  .legend{display:flex;gap:16px;font-size:0.72rem;font-weight:700;color:#888;align-items:center;padding:10px 20px;border-bottom:1px solid #edf0f2;flex-wrap:wrap;}
+  .legend span{display:flex;align-items:center;gap:5px;}
+  .dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+  .status-badge{display:inline-block;padding:3px 9px;border-radius:5px;font-size:0.65rem;font-weight:800;letter-spacing:.5px;text-transform:uppercase;white-space:nowrap;background:#edf2f7;color:#4a5568;}
+  .diff-cell{text-align:center;min-width:130px;} .td-main{font-weight:700;color:#1a365d;}
+  .bottom-bar{position:fixed;bottom:0;left:232px;right:0;z-index:100;display:flex;justify-content:center;align-items:center;gap:10px;padding:12px 20px;background:rgba(255,255,255,.92);backdrop-filter:blur(10px);border-top:1px solid rgba(0,0,0,.08);box-shadow:0 -4px 24px rgba(0,0,0,.1);transition:left .22s ease;}
+  body.sm-collapsed .bottom-bar{left:64px;}
+  .bb-btn{color:#fff;border:none;border-radius:12px;padding:11px 20px;font-family:'Barlow',sans-serif;font-size:0.84rem;font-weight:800;letter-spacing:.5px;cursor:pointer;display:flex;align-items:center;gap:8px;transition:all .2s;}
+  .bb-btn:hover{transform:translateY(-2px);}
+  @media(max-width:780px){ .bottom-bar{left:64px;} }
   @media(max-width:560px){ .kpis{grid-template-columns:1fr;} .comp-fontes{grid-template-columns:1fr;gap:8px;} .comp-fonte-seta{transform:rotate(90deg);} }
 </style>
 </head>
@@ -153,7 +171,24 @@
   <div class="section" id="card-tabela" style="display:none;">
     <div class="section-header">
       <div class="section-label"><span class="section-icon">⚡</span> DETALHAMENTO DE ALTERAÇÕES</div>
-      <span class="toggle" id="toggle-todas" onclick="verTodas()">Ver todas as obras</span>
+      <span class="count-tag" id="count-tag">0</span>
+    </div>
+    <div class="toolbar">
+      <label>Filtrar:</label>
+      <button class="filter-btn active" id="fb-alteradas" onclick="setFiltro('alteradas',this)">Só alteradas</button>
+      <button class="filter-btn" id="fb-todas" onclick="setFiltro('todas',this)" style="border-color:#6b46c1;color:#6b46c1;">📋 Ver todas do mês</button>
+      <input class="comp-search" type="text" id="comp-search" placeholder="🔍 Buscar por obra, PEP..." oninput="aplicarTabela()">
+    </div>
+    <div class="toolbar" style="border-top:none;padding-top:0;">
+      <label>📍 BASE:</label>
+      <button class="filter-btn active" id="bb-TODAS" onclick="setBase('TODAS',this)">Todas</button>
+      <button class="filter-btn" id="bb-JACOBINA" onclick="setBase('JACOBINA',this)" style="border-color:#c05621;color:#c05621;">📍 Jacobina</button>
+      <button class="filter-btn" id="bb-IRECÊ" onclick="setBase('IRECÊ',this)" style="border-color:#2b6cb0;color:#2b6cb0;">📍 Irecê</button>
+    </div>
+    <div class="legend">
+      <span><span class="dot" style="background:#14a085"></span> Aumentou</span>
+      <span><span class="dot" style="background:#e53e3e"></span> Reduziu</span>
+      <span><span class="dot" style="background:#ccc"></span> Sem alteração</span>
     </div>
     <div class="section-body" style="padding:0;"><div class="table-wrap" id="tabela"></div></div>
   </div>
@@ -169,6 +204,11 @@
     <div class="section-body"><div id="hist"></div></div>
   </div>
 </div>
+</div>
+
+<div class="bottom-bar">
+  <button class="bb-btn" style="background:#2b6cb0;" onclick="window.print()">🖨️ SALVAR PRINT</button>
+  <button class="bb-btn" style="background:#0d7377;" onclick="rodar()">🔄 ATUALIZAR</button>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
@@ -236,6 +276,7 @@ function parseCarteira(text, utd){
     return -1;
   };
   const iPep=idx('PEP OBRA'), iTit=idx('TITULO'), iMun=idx('MUNICIPIO');
+  const iSta=idx('STATUS DA OBRA','STATUS');
   // POSTES REALIZADO (não PREVISTOS, não À IMPLANTA)
   let iPos = headers.findIndex(h=>{ const hn=norm(h); return hn.includes('POSTES')&&hn.includes('REALIZAD'); });
   const obras=[];
@@ -247,6 +288,7 @@ function parseCarteira(text, utd){
     obras.push({
       pep, titulo: iTit>=0?String(row[iTit]||'').trim():'',
       utd, mun: iMun>=0?String(row[iMun]||'').trim():'',
+      status: iSta>=0?String(row[iSta]||'').trim():'',
       postes: iPos>=0 ? num(row[iPos]) : null
     });
   }
@@ -343,8 +385,9 @@ async function rodar(){
     document.getElementById('k-tot').textContent = lista.length;
     document.getElementById('k-alt').textContent = alteradas.length;
     document.getElementById('k-nova').textContent = novas;
-    MOSTRANDO_TODAS=false; ULTIMA_ALTERADAS=alteradas; ULTIMA_TEMBASE=temBase;
-    renderTabela(alteradas, temBase);
+    ULTIMA_ALTERADAS=alteradas; ULTIMA_TEMBASE=temBase;
+    document.getElementById('card-tabela').style.display='block';
+    aplicarTabela();
 
     // salva o novo retrato automaticamente
     await salvarBasePostes(novoMapa);
@@ -367,32 +410,51 @@ async function rodar(){
   }
 }
 
-function renderTabela(alteradas, temBase){
-  document.getElementById('card-tabela').style.display='block';
-  const el = document.getElementById('tabela');
-  if(!alteradas.length){
-    el.innerHTML = '<div class="empty"><div class="big">✅</div>'+(temBase?'Nenhuma alteração de postes.':'Primeira carga concluída — valores salvos.')+'<br><span style="font-size:0.8rem;">Clique em "Ver todas as obras" para conferir os postes atuais.</span></div>';
+let FILTRO_VIEW='alteradas', FILTRO_BASE='TODAS';
+function setFiltro(v,btn){
+  FILTRO_VIEW=v;
+  document.querySelectorAll('#fb-alteradas,#fb-todas').forEach(b=>b.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+  aplicarTabela();
+}
+function setBase(b,btn){
+  FILTRO_BASE=b;
+  document.querySelectorAll('#bb-TODAS,#bb-JACOBINA,#bb-IRECÊ').forEach(x=>x.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+  aplicarTabela();
+}
+function aplicarTabela(){
+  const el=document.getElementById('tabela'); if(!el) return;
+  const busca=(document.getElementById('comp-search')?document.getElementById('comp-search').value||'':'').toLowerCase().trim();
+  const filtraBase = o => FILTRO_BASE==='TODAS' || (o.utd||'').toUpperCase()===FILTRO_BASE;
+  const filtraBusca = o => !busca || (o.pep||'').toLowerCase().includes(busca) || (o.titulo||'').toLowerCase().includes(busca);
+  let linhas, modoAlteradas = (FILTRO_VIEW==='alteradas');
+  if(modoAlteradas) linhas = ULTIMA_ALTERADAS.filter(filtraBase).filter(filtraBusca);
+  else linhas = ULTIMA_LISTA.filter(filtraBase).filter(filtraBusca).slice().sort((a,b)=>(a.pep>b.pep?1:-1));
+
+  const ct=document.getElementById('count-tag'); if(ct) ct.textContent=linhas.length;
+
+  if(!linhas.length){
+    el.innerHTML = '<div class="empty"><div class="big">'+(modoAlteradas?'✅':'🔍')+'</div>'
+      + (modoAlteradas ? (ULTIMA_TEMBASE?'Nenhuma alteração de postes.':'Primeira carga concluída — valores salvos.') : 'Nenhuma obra encontrada.')
+      + '<br><span style="font-size:0.8rem;">'+(modoAlteradas?'Use "Ver todas do mês" para conferir os postes atuais.':'Ajuste a busca ou a base.')+'</span></div>';
     return;
   }
-  let h = '<table><thead><tr><th>PEP</th><th>Título</th><th>UTD</th><th>Postes (antes → agora)</th></tr></thead><tbody>';
-  alteradas.forEach(a=>{
-    const de=a.de==null?'—':a.de, para=a.para==null?'—':a.para, diff=(a.para||0)-(a.de||0);
-    const cls=diff>0?'delta-up':'delta-dn', sinal=diff>0?'+':'';
-    h += '<tr><td><code>'+a.pep+'</code></td><td>'+(a.titulo||'')+'</td><td>'+(a.utd||'')+'</td>'
-      +'<td><span class="old">'+de+'</span><span class="arrow">→</span><span class="new">'+para+'</span> <span class="'+cls+'">('+sinal+diff+')</span></td></tr>';
-  });
-  el.innerHTML = h+'</tbody></table>';
-}
-function verTodas(){
-  MOSTRANDO_TODAS=!MOSTRANDO_TODAS;
-  const el=document.getElementById('tabela'), tog=document.getElementById('toggle-todas');
-  if(!MOSTRANDO_TODAS){ tog.textContent='Ver todas as obras'; renderTabela(ULTIMA_ALTERADAS, ULTIMA_TEMBASE); return; }
-  tog.textContent='Mostrar só as alteradas';
-  if(!ULTIMA_LISTA.length){ el.innerHTML='<div class="empty">Rode a comparação primeiro.</div>'; return; }
-  let h='<table><thead><tr><th>PEP</th><th>Título</th><th>UTD</th><th>Postes</th></tr></thead><tbody>';
-  ULTIMA_LISTA.slice().sort((a,b)=>(a.pep>b.pep?1:-1)).forEach(o=>{
-    h+='<tr><td><code>'+o.pep+'</code></td><td>'+(o.titulo||'')+'</td><td>'+(o.utd||'')+'</td><td>'+(o.postes==null?'—':o.postes)+'</td></tr>';
-  });
+  const stBadge = s => s ? '<span class="status-badge">'+s+'</span>' : '<span style="color:#ccc;">–</span>';
+  let h='<table><thead><tr><th>PEP Obra</th><th>Título</th><th>UTD</th><th>Status</th><th class="diff-cell">Postes Realizados</th></tr></thead><tbody>';
+  if(modoAlteradas){
+    linhas.forEach(a=>{
+      const de=a.de==null?'—':a.de, para=a.para==null?'—':a.para, diff=(Number(a.para)||0)-(Number(a.de)||0);
+      const cls=diff>0?'delta-up':'delta-dn', sinal=diff>0?'+':'';
+      h+='<tr><td><code>'+a.pep+'</code></td><td class="td-main">'+(a.titulo||'')+'</td><td>'+(a.utd||'')+'</td><td>'+stBadge(a.status)+'</td>'
+        +'<td class="diff-cell"><span class="old">'+de+'</span><span class="arrow">→</span><span class="new">'+para+'</span> <span class="'+cls+'">('+sinal+diff+')</span></td></tr>';
+    });
+  } else {
+    linhas.forEach(o=>{
+      h+='<tr><td><code>'+o.pep+'</code></td><td class="td-main">'+(o.titulo||'')+'</td><td>'+(o.utd||'')+'</td><td>'+stBadge(o.status)+'</td>'
+        +'<td class="diff-cell"><span class="new">'+(o.postes==null?'—':o.postes)+'</span></td></tr>';
+    });
+  }
   el.innerHTML=h+'</tbody></table>';
 }
 function renderHist(hist){
