@@ -80,6 +80,11 @@
   .toggle{display:inline-block;font-size:0.74rem;font-weight:800;color:#6b46c1;cursor:pointer;border:1.5px solid #d6bcfa;border-radius:18px;padding:6px 16px;background:#faf5ff;transition:all .15s;}
   .toggle:hover{background:#f0e6ff;}
   .hist-item{padding:10px 0;border-bottom:1px solid #f0f0f0;font-size:0.82rem;} .hist-item:last-child{border-bottom:none;} .hist-item .when{font-weight:800;color:#0d7377;}
+  .comp-tag{display:inline-block;font-size:0.7rem;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:#2b6cb0;background:#ebf4ff;padding:6px 14px;border-radius:20px;margin-bottom:16px;}
+  .hist-header{background:linear-gradient(135deg,#2d3748,#1a202c);padding:16px 20px;}
+  .hist-header-title{display:block;color:#fff;font-size:0.92rem;font-weight:800;letter-spacing:.5px;}
+  .hist-header-sub{display:block;color:rgba(255,255,255,.55);font-size:0.7rem;font-weight:600;margin-top:2px;}
+  .table-wrap{overflow-x:auto;}
   @media(max-width:560px){ .kpis{grid-template-columns:1fr;} }
 </style>
 </head>
@@ -107,14 +112,9 @@
 
 <div class="main">
 <div class="wrap">
-  <div class="page-head">
-    <h1>⚡ Comparador de Postes</h1>
-    <p>Lê os postes de cada obra, guarda e avisa quais mudaram.</p>
-    <div class="edge"></div>
-  </div>
-
   <div class="section">
     <div class="section-body">
+      <div class="comp-tag">🔍 Comparar postes — banco vs planilha atual</div>
       <button class="btn-main" id="btn" onclick="rodar()">🔄 ATUALIZAR E COMPARAR</button>
       <div class="status" id="status">Clique para conferir os postes das obras e detectar alterações.</div>
       <div id="errbox"></div>
@@ -122,22 +122,23 @@
   </div>
 
   <div class="kpis" id="kpis" style="display:none;">
-    <div class="kpi tot"><div class="num" id="k-tot">0</div><div class="lbl">Obras conferidas</div></div>
+    <div class="kpi tot"><div class="num" id="k-tot">0</div><div class="lbl">Obras com alteração</div></div>
     <div class="kpi alt"><div class="num" id="k-alt">0</div><div class="lbl">Postes alterados</div></div>
     <div class="kpi nova"><div class="num" id="k-nova">0</div><div class="lbl">Obras novas</div></div>
   </div>
 
   <div class="section" id="card-tabela" style="display:none;">
     <div class="section-header">
-      <div class="section-label"><span class="section-icon">📋</span> Obras com alteração de postes</div>
+      <div class="section-label"><span class="section-icon">⚡</span> Detalhamento de alterações</div>
       <span class="toggle" id="toggle-todas" onclick="verTodas()">Ver todas as obras</span>
     </div>
-    <div class="section-body" style="padding:0;"><div id="tabela"></div></div>
+    <div class="section-body" style="padding:0;"><div class="table-wrap" id="tabela"></div></div>
   </div>
 
   <div class="section" id="card-hist" style="display:none;">
-    <div class="section-header blue">
-      <div class="section-label"><span class="section-icon blue">🗓️</span> Histórico de alterações</div>
+    <div class="hist-header">
+      <span class="hist-header-title">📅 Histórico de alterações por dia</span>
+      <span class="hist-header-sub">Obras modificadas a cada verificação</span>
     </div>
     <div class="section-body"><div id="hist"></div></div>
   </div>
