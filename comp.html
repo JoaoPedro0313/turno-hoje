@@ -7,7 +7,20 @@
 <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;600;700;800;900&display=swap" rel="stylesheet">
 <style>
   *{margin:0;padding:0;box-sizing:border-box;font-family:'Barlow',sans-serif;}
-  body{background:#f0f4f5;color:#222;padding-left:232px;transition:padding .22s ease;}
+  body{background:#f0f4f5;color:#222;padding-left:232px;padding-top:52px;transition:padding .22s ease;}
+  /* top-bar fixa (igual aos outros módulos) */
+  .top-bar{background:linear-gradient(90deg,#0a4a4d 0%,#0d7377 40%,#0f8a82 70%,#0d7377 100%);position:fixed;top:0;left:232px;right:0;z-index:91;height:52px;border-bottom:3px solid #ff6b35;box-shadow:0 2px 16px rgba(0,0,0,0.25);transition:left .22s ease;}
+  body.sm-collapsed .top-bar{left:64px;}
+  .top-bar-inner{display:flex;align-items:center;justify-content:space-between;height:100%;padding:0 18px;gap:12px;}
+  .top-bar-left{display:flex;align-items:center;gap:12px;flex-shrink:0;}
+  .top-bar-title{font-size:0.68rem;font-weight:800;color:rgba(255,255,255,0.7);letter-spacing:2px;text-transform:uppercase;}
+  .top-bar-name{font-size:1.05rem;font-weight:900;color:#fff;letter-spacing:1px;text-shadow:0 1px 4px rgba(0,0,0,0.3);}
+  .top-bar-center{flex:1;display:flex;justify-content:center;}
+  .top-bar-clock{font-size:0.78rem;font-weight:700;color:rgba(255,255,255,0.6);letter-spacing:1px;font-variant-numeric:tabular-nums;}
+  .top-bar-right{display:flex;align-items:center;gap:8px;flex-shrink:0;}
+  .db-badge{display:inline-flex;align-items:center;gap:5px;font-size:0.7rem;font-weight:800;padding:4px 10px;border-radius:6px;letter-spacing:0.5px;border:1px solid rgba(255,255,255,0.3);background:rgba(45,184,100,0.15);color:#9ae6b4;}
+  .db-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;background:#38a169;}
+  @media(max-width:780px){ .top-bar{left:64px;} body{padding-left:64px;} }
   /* menu lateral (igual aos outros módulos) */
   .sm-side{position:fixed;top:0;left:0;bottom:0;width:232px;z-index:110;background:#fff;border-right:1px solid #e6ebee;box-shadow:2px 0 12px rgba(0,0,0,.04);display:flex;flex-direction:column;transition:width .22s ease;font-family:'Barlow',sans-serif}
   .sm-top{display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid #eef2f4;overflow:hidden}
@@ -137,6 +150,21 @@
   </nav>
   <div class="sm-foot">Mariuá · Sistema de Obras</div>
 </aside>
+
+<div class="top-bar">
+  <div class="top-bar-inner">
+    <div class="top-bar-left">
+      <span class="top-bar-name">MARIUÁ</span>
+      <span class="top-bar-title">Comparador de Postes</span>
+    </div>
+    <div class="top-bar-center">
+      <div class="top-bar-clock" id="page-time"></div>
+    </div>
+    <div class="top-bar-right">
+      <div class="db-badge"><span class="db-dot"></span><span>Supabase</span></div>
+    </div>
+  </div>
+</div>
 
 <div class="main">
 <div class="wrap">
@@ -491,6 +519,14 @@ function histToggle(idx){
   d.style.display = open?'block':'none';
   if(ar) ar.textContent = open?'▾':'▸';
 }
+
+// Relógio na top-bar (igual aos outros módulos)
+function tickClock(){
+  const el=document.getElementById('page-time'); if(!el) return;
+  const d=new Date();
+  el.textContent = d.toLocaleDateString('pt-BR',{weekday:'short',day:'2-digit',month:'2-digit'})+' · '+d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+}
+tickClock(); setInterval(tickClock, 30000);
 
 // Roda a comparação automaticamente ao abrir a página (sem precisar clicar)
 function autoRodar(){
