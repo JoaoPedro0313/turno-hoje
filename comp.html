@@ -86,6 +86,7 @@
   tbody tr:hover{background:#f9fbff;}
   td code{color:#0d7377;font-weight:800;font-size:0.8rem;background:#f0fafa;padding:2px 7px;border-radius:4px;}
   .delta-up{color:#0d7377;font-weight:800;background:#d0f0ee;padding:2px 7px;border-radius:5px;font-size:0.72rem;} .delta-dn{color:#c53030;font-weight:800;background:#fde8e8;padding:2px 7px;border-radius:5px;font-size:0.72rem;}
+  .no-change{color:#888;font-weight:700;font-size:0.72rem;}
   .arrow{color:#ccc;margin:0 6px;} .old{color:#aaa;text-decoration:line-through;text-decoration-color:#e53e3e;} .new{font-weight:800;}
   .empty{text-align:center;padding:50px 20px;color:#aaa;font-weight:600;} .empty .big{font-size:3rem;margin-bottom:12px;}
   .err{background:#fff5f5;border:1.5px solid #fc8181;border-radius:10px;padding:14px;color:#c53030;font-size:0.82rem;font-weight:700;margin-top:12px;white-space:pre-wrap;line-height:1.5;}
@@ -221,6 +222,23 @@
     <div class="section-body" style="padding:0;"><div class="table-wrap" id="tabela"></div></div>
   </div>
 
+  <div class="section" id="card-coelba" style="display:none;">
+    <div class="section-header" style="background:#f0fff4;border-bottom-color:#c6f6d5;">
+      <div class="section-label"><span class="section-icon" style="background:#276749;">🔌</span> COMPARAÇÃO COM COELBA</div>
+      <span class="count-tag" id="coelba-count" style="background:#276749;">0</span>
+    </div>
+    <div class="legend">
+      <span>Compara <b>PSTR</b> (postes realizados Coelba) com os postes da carteira, casando pelo PEP (coluna PROCESSO do CSV).</span>
+    </div>
+    <div class="toolbar" style="border-top:none;">
+      <label>Mostrar:</label>
+      <button class="filter-btn active" id="cf-dif" onclick="setCoelbaFiltro('dif',this)">Só divergentes</button>
+      <button class="filter-btn" id="cf-todas" onclick="setCoelbaFiltro('todas',this)">Todas</button>
+      <input class="comp-search" type="text" id="coelba-search" placeholder="🔍 Buscar PEP/obra..." oninput="renderCoelbaAtual()">
+    </div>
+    <div class="section-body" style="padding:0;"><div class="table-wrap" id="coelba-tabela"></div></div>
+  </div>
+
   <div class="section" id="card-hist" style="display:none;">
     <div class="hist-header">
       <div class="hist-header-ic">📅</div>
@@ -236,7 +254,9 @@
 
 <div class="bottom-bar">
   <button class="bb-btn" style="background:#2b6cb0;" onclick="window.print()">🖨️ SALVAR PRINT</button>
+  <button class="bb-btn" style="background:#276749;" onclick="document.getElementById('coelba-file').click()">🔌 IMPORTAR CSV COELBA</button>
   <button class="bb-btn" style="background:#0d7377;" onclick="rodar()">🔄 ATUALIZAR</button>
+  <input type="file" id="coelba-file" accept=".csv" style="display:none" onchange="importarCoelba(this.files[0]); this.value='';">
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
@@ -512,6 +532,81 @@ function renderHist(hist){
       + '</div>';
   }).join('');
 }
+// ===================== COMPARADOR COELBA (CSV Neoex) =====================
+// CSV Neoex: latin-1, separador ; — coluna PROCESSO = PEP, PSTR = postes realizados Coelba.
+let COELBA_LINHAS = [], COELBA_FILTRO = 'dif';
+function importarCoelba(file){
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = e => { try{ processarCoelba(e.target.result); }catch(err){ showErr('Erro ao ler CSV Coelba: '+err.message); } };
+  reader.readAsText(file, 'ISO-8859-1'); // Neoex vem em latin-1
+}
+function processarCoelba(texto){
+  const linhas = String(texto||'').split(/\r?\n/).filter(l=>l.trim());
+  if(!linhas.length){ showErr('CSV Coelba vazio.'); return; }
+  const sep = (linhas[0].split(';').length >= linhas[0].split(',').length) ? ';' : ',';
+  const head = linhas[0].split(sep).map(h=>norm(h));
+  const ix = (...nomes)=>{ for(const n of nomes){ const i=head.indexOf(norm(n)); if(i>=0) return i; } return -1; };
+  const iPep=ix('PROCESSO'), iPstr=ix('PSTR'), iPstp=ix('PSTP'), iTit=ix('TITULO'), iSta=ix('STATUS');
+  if(iPep<0 || iPstr<0){ showErr('CSV Coelba: não achei as colunas PROCESSO e PSTR.\nColunas vistas: '+linhas[0].slice(0,300)); return; }
+  const coelba = {};
+  for(let i=1;i<linhas.length;i++){
+    const v = linhas[i].split(sep);
+    const pep = (v[iPep]||'').trim();
+    if(!pep || !/\d/.test(pep)) continue;
+    coelba[norm(pep)] = { pep, pstr: num(v[iPstr]), pstp: iPstp>=0?num(v[iPstp]):null, titulo: iTit>=0?(v[iTit]||'').trim():'', status: iSta>=0?(v[iSta]||'').trim():'' };
+  }
+  // casa com a carteira (ULTIMA_LISTA) pelo PEP
+  const carteira = {};
+  ULTIMA_LISTA.forEach(o=>{ carteira[norm(o.pep)] = o; });
+  COELBA_LINHAS = Object.keys(coelba).map(k=>{
+    const c = coelba[k], obra = carteira[k];
+    const postCart = obra ? (obra.postes==null?null:Number(obra.postes)) : null;
+    const postCoelba = c.pstr==null?null:Number(c.pstr);
+    return {
+      pep: c.pep,
+      titulo: (obra && obra.titulo) || c.titulo || '',
+      utd: obra ? (obra.utd||'') : '',
+      status: c.status || (obra?obra.status:'') || '',
+      cart: postCart, coelba: postCoelba,
+      dif: (postCoelba==null?0:postCoelba) - (postCart==null?0:postCart),
+      naCarteira: !!obra
+    };
+  }).sort((a,b)=>Math.abs(b.dif)-Math.abs(a.dif));
+  document.getElementById('card-coelba').style.display='block';
+  renderCoelbaAtual();
+  setStatus('✅ CSV Coelba importado: '+COELBA_LINHAS.length+' obras (carteira × Coelba). Divergentes: '+COELBA_LINHAS.filter(r=>r.dif!==0).length+'.');
+  document.getElementById('card-coelba').scrollIntoView({behavior:'smooth',block:'start'});
+}
+function setCoelbaFiltro(f,btn){
+  COELBA_FILTRO=f;
+  document.querySelectorAll('#cf-dif,#cf-todas').forEach(b=>b.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+  renderCoelbaAtual();
+}
+function renderCoelbaAtual(){
+  const el=document.getElementById('coelba-tabela'); if(!el) return;
+  const busca=(document.getElementById('coelba-search')?document.getElementById('coelba-search').value||'':'').toLowerCase().trim();
+  let linhas = COELBA_LINHAS.slice();
+  if(COELBA_FILTRO==='dif') linhas = linhas.filter(r=>r.dif!==0);
+  if(busca) linhas = linhas.filter(r=>(r.pep||'').toLowerCase().includes(busca)||(r.titulo||'').toLowerCase().includes(busca));
+  const ct=document.getElementById('coelba-count'); if(ct) ct.textContent=linhas.length;
+  if(!linhas.length){ el.innerHTML='<div class="empty"><div class="big">✅</div>'+(COELBA_FILTRO==='dif'?'Nenhuma divergência entre carteira e Coelba.':'Nenhuma obra encontrada.')+'</div>'; return; }
+  let h='<table><thead><tr><th>PEP Obra</th><th>Título</th><th>UTD</th><th>Status</th>'
+    +'<th class="diff-cell">Carteira</th><th class="diff-cell">Coelba</th><th class="diff-cell">Diferença</th></tr></thead><tbody>';
+  linhas.forEach(r=>{
+    const cart=r.cart==null?'—':r.cart, coel=r.coelba==null?'—':r.coelba;
+    const cls=r.dif>0?'delta-up':(r.dif<0?'delta-dn':'no-change'), sinal=r.dif>0?'+':'';
+    const stBadge=r.status?'<span class="status-badge">'+r.status+'</span>':'<span style="color:#ccc;">–</span>';
+    const pepCol=r.naCarteira?'<code>'+r.pep+'</code>':'<code style="opacity:.55;">'+r.pep+'</code> <span style="font-size:0.58rem;color:#c05621;font-weight:800;">fora da carteira</span>';
+    h+='<tr><td>'+pepCol+'</td><td class="td-main">'+(r.titulo||'')+'</td><td>'+(r.utd||'')+'</td><td>'+stBadge+'</td>'
+      +'<td class="diff-cell"><span class="new">'+cart+'</span></td>'
+      +'<td class="diff-cell"><span class="new">'+coel+'</span></td>'
+      +'<td class="diff-cell"><span class="'+cls+'">'+(r.dif===0?'✓ igual':sinal+r.dif)+'</span></td></tr>';
+  });
+  el.innerHTML=h+'</tbody></table>';
+}
+
 function histToggle(idx){
   const d=document.getElementById('hist-det-'+idx), ar=document.getElementById('hist-arrow-'+idx);
   if(!d) return;
