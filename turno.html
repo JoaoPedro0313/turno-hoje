@@ -1034,7 +1034,7 @@ function turnoSetState(state) {
   });
   updateBaseFilterButtons();
   updateCentroFilterButtons();
-  render();
+  if (turnoModoHistorico) { turnoHistRender(); } else { render(); }
 }
 
 function turnoSetBase(base) {
@@ -1046,7 +1046,7 @@ function turnoSetBase(base) {
   }
   updateBaseFilterButtons();
   updateCentroFilterButtons();
-  render();
+  if (turnoModoHistorico) { turnoHistRender(); } else { render(); }
 }
 
 // Botões do filtro de Centro de serviço (filtrados pela filial selecionada)
@@ -1080,7 +1080,7 @@ function updateCentroFilterButtons() {
 function turnoSetCentro(id) {
   turnoCentroFilter = id;
   updateCentroFilterButtons();
-  render();
+  if (turnoModoHistorico) { turnoHistRender(); } else { render(); }
 }
 
 // Filtra lista de equipes por estado + filial + centro de custo ativos
