@@ -90,6 +90,19 @@
   .fin-mes-tbl tbody tr:hover{background:#f9fbfd}
   #fin-pda-mes{padding:7px 12px;border:1.5px solid #e2e8f0;border-radius:9px;font-family:inherit;font-size:.82rem;font-weight:700;color:#334155;background:#fff;outline:none}
   .fin-faturas{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;align-items:start}
+  .fin-bc{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:12px;font-size:.82rem;font-weight:700}
+  .fin-bc a{color:#0d7377;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:4px}
+  .fin-bc a:hover{text-decoration:underline}
+  .fin-bc .sep{color:#cbd5e1}
+  .fin-bc .cur{color:#1e293b}
+  .fin-folder{background:#fff;border-radius:14px;box-shadow:0 2px 10px rgba(0,0,0,.06);border:1px solid #eef2f7;padding:16px;cursor:pointer;display:flex;flex-direction:column;gap:10px;transition:all .15s}
+  .fin-folder:hover{box-shadow:0 4px 16px rgba(13,115,119,.14);transform:translateY(-2px)}
+  .fin-folder-top{display:flex;align-items:center;gap:10px}
+  .fin-folder-ic{width:40px;height:40px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0}
+  .fin-folder-nm{font-weight:800;color:#0f3a33;font-size:1.02rem;line-height:1.1}
+  .fin-folder-sub{font-size:.7rem;color:#94a3b8;font-weight:700;margin-top:2px}
+  .fin-folder-tot{font-size:1.05rem;font-weight:900;color:var(--teal)}
+  .fin-folder-cnt{margin-left:auto;background:#f1f5f9;color:#64748b;font-size:.7rem;font-weight:800;padding:3px 10px;border-radius:999px}
   .fat-card{background:#fff;border-radius:14px;box-shadow:0 2px 10px rgba(0,0,0,.06);border:1px solid #eef2f7;overflow:hidden;display:flex;flex-direction:column}
   .fat-head{display:flex;align-items:center;gap:9px;padding:13px 15px;cursor:pointer;user-select:none}
   .fat-dot{width:11px;height:11px;border-radius:3px;flex-shrink:0}
@@ -301,6 +314,7 @@ body.sm-collapsed .bottom-bar{left:64px !important;}
           <input id="f-valor" type="number" step="0.01" placeholder="Total R$" style="max-width:120px">
           <button class="btn add" onclick="addValor()">Salvar</button>
         </div>
+        <div id="fin-breadcrumb" class="fin-bc" style="display:none"></div>
         <div id="fin-faturas" class="fin-faturas"><div style="color:#aaa;text-align:center;padding:30px">Carregando…</div></div>
       </div>
 
@@ -814,34 +828,92 @@ function finPrefixoComum(arr){
   var m=p.match(/^(.*[ \-–·])/); p=m?m[1]:'';
   return p.replace(/[\s\-–·]+$/,'').length>=5 ? p : '';
 }
+var FIN_NAV={forn:null, mes:null};
+function finNavGo(forn, mes){ FIN_NAV.forn=forn||null; FIN_NAV.mes=mes||null; finTabela(FIN_ULTIMAS_ROWS); }
+function finMesLbl(mes){ return mes?(mes.split('-')[1]+'/'+mes.split('-')[0]):'sem data'; }
+function finMesNome(mes){
+  if(!mes) return 'Sem data';
+  var nomes=['','Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+  var p=mes.split('-'); return (nomes[parseInt(p[1],10)]||p[1])+' '+p[0];
+}
+var FIN_ULTIMAS_ROWS=[];
 function finTabela(rows){
   var box=$('fin-faturas'); if(!box)return;
-  if(!rows.length){ box.innerHTML='<div style="color:#aaa;text-align:center;padding:30px;grid-column:1/-1">Nenhum lançamento</div>'; return; }
-  // agrupa por fatura: fornecedor + mês (ordem de aparição respeita o filtro de ordenação)
-  var grupos={}, ordem=[];
+  FIN_ULTIMAS_ROWS=rows||[];
+  var bc=$('fin-breadcrumb');
+  if(!rows.length){
+    if(bc) bc.style.display='none';
+    box.innerHTML='<div style="color:#aaa;text-align:center;padding:30px;grid-column:1/-1">Nenhum lançamento</div>'; return;
+  }
+  // monta a árvore: fornecedor -> mês -> itens
+  var arvore={};
   rows.forEach(function(v){
-    var f=v.fornecedor||'(sem)', mes=(v.data_ref||'').slice(0,7), key=f+'|'+mes;
-    if(!grupos[key]){ grupos[key]={forn:f,mes:mes,itens:[],total:0}; ordem.push(key); }
-    grupos[key].itens.push(v); grupos[key].total+=Number(v.valor||0);
+    var f=v.fornecedor||'(sem)', mes=(v.data_ref||'').slice(0,7);
+    if(!arvore[f]) arvore[f]={total:0, meses:{}};
+    arvore[f].total+=Number(v.valor||0);
+    if(!arvore[f].meses[mes]) arvore[f].meses[mes]={total:0, itens:[]};
+    arvore[f].meses[mes].total+=Number(v.valor||0);
+    arvore[f].meses[mes].itens.push(v);
   });
-  box.innerHTML=ordem.map(function(key){
-    var g=grupos[key], cor=finCorForn(g.forn);
-    var mesLbl=g.mes?(g.mes.split('-')[1]+'/'+g.mes.split('-')[0]):'sem data';
-    var pref=finPrefixoComum(g.itens.map(function(v){return v.descricao||'';}));
-    var itens=g.itens.map(function(v){
-      var d=(v.descricao||''); if(pref){ var r=d.slice(pref.length).trim(); if(r) d=r; }
-      var qu=(v.quantidade!=null&&v.quantidade!==''?finNum(v.quantidade)+'× ':'')+(v.valor_unitario!=null&&v.valor_unitario!==''?finMoney(v.valor_unitario):'');
-      return '<div class="fat-item"><span class="it-desc">'+finEsc(d)+'</span><span class="it-qu">'+qu+'</span><span class="it-val">'+finMoney(v.valor)+'</span></div>';
+
+  // breadcrumb
+  if(bc){
+    bc.style.display='flex';
+    var h='<a onclick="finNavGo(null,null)">🗂️ Fornecedores</a>';
+    if(FIN_NAV.forn){ h+='<span class="sep">›</span>'+(FIN_NAV.mes?'<a onclick="finNavGo(\''+finEsc(FIN_NAV.forn).replace(/'/g,"\\'")+'\',null)">'+finEsc(FIN_NAV.forn)+'</a>':'<span class="cur">'+finEsc(FIN_NAV.forn)+'</span>'); }
+    if(FIN_NAV.mes){ h+='<span class="sep">›</span><span class="cur">'+finMesNome(FIN_NAV.mes)+'</span>'; }
+    bc.innerHTML=h;
+  }
+
+  // se o fornecedor/mês selecionado não existe nos dados filtrados, volta um nível
+  if(FIN_NAV.forn && !arvore[FIN_NAV.forn]){ FIN_NAV.forn=null; FIN_NAV.mes=null; }
+  if(FIN_NAV.forn && FIN_NAV.mes && !arvore[FIN_NAV.forn].meses[FIN_NAV.mes]){ FIN_NAV.mes=null; }
+
+  // NÍVEL 1 — pastas de fornecedores
+  if(!FIN_NAV.forn){
+    box.innerHTML=Object.keys(arvore).sort().map(function(f){
+      var cor=finCorForn(f), nMeses=Object.keys(arvore[f].meses).length;
+      return '<div class="fin-folder" onclick="finNavGo(\''+finEsc(f).replace(/'/g,"\\'")+'\',null)">'
+        +'<div class="fin-folder-top"><div class="fin-folder-ic" style="background:'+cor+'22;color:'+cor+'">📁</div>'
+        +'<div><div class="fin-folder-nm">'+finEsc(f)+'</div><div class="fin-folder-sub">'+nMeses+' '+(nMeses===1?'mês':'meses')+'</div></div>'
+        +'<span class="fin-folder-cnt">'+arvore[f].total.toLocaleString('pt-BR',{style:'currency',currency:'BRL',minimumFractionDigits:0,maximumFractionDigits:0})+'</span></div>'
+        +'</div>';
     }).join('');
-    var sub=pref?'<div class="fat-sub">'+finEsc(pref.replace(/[\s\-–·]+$/,''))+'</div>':'';
-    return '<div class="fat-card"><div class="fat-head" onclick="finToggleFat(this)">'
-      +'<span class="fat-dot" style="background:'+cor+'"></span>'
-      +'<span class="fat-forn">'+finEsc(g.forn)+'</span>'
-      +'<span class="fat-mes">'+mesLbl+'</span>'
-      +'<span class="fat-tot"><b>'+finMoney(g.total)+'</b><small>'+g.itens.length+' '+(g.itens.length===1?'item':'itens')+'</small></span>'
-      +'<span class="fat-chev">▼</span>'
-      +'</div><div class="fat-body">'+sub+'<div class="fat-items">'+itens+'</div></div></div>';
+    return;
+  }
+
+  // NÍVEL 2 — subpastas de meses do fornecedor
+  if(FIN_NAV.forn && !FIN_NAV.mes){
+    var meses=arvore[FIN_NAV.forn].meses, cor=finCorForn(FIN_NAV.forn);
+    box.innerHTML=Object.keys(meses).sort().reverse().map(function(m){
+      var g=meses[m], n=g.itens.length;
+      return '<div class="fin-folder" onclick="finNavGo(\''+finEsc(FIN_NAV.forn).replace(/'/g,"\\'")+'\',\''+m+'\')">'
+        +'<div class="fin-folder-top"><div class="fin-folder-ic" style="background:'+cor+'22;color:'+cor+'">📅</div>'
+        +'<div><div class="fin-folder-nm">'+finMesNome(m)+'</div><div class="fin-folder-sub">'+n+' '+(n===1?'fatura':'faturas')+'</div></div>'
+        +'<span class="fin-folder-cnt">'+g.total.toLocaleString('pt-BR',{style:'currency',currency:'BRL',minimumFractionDigits:0,maximumFractionDigits:0})+'</span></div>'
+        +'</div>';
+    }).join('');
+    return;
+  }
+
+  // NÍVEL 3 — faturas do mês selecionado (cards expansíveis, como antes)
+  var itensMes=arvore[FIN_NAV.forn].meses[FIN_NAV.mes].itens;
+  var pref=finPrefixoComum(itensMes.map(function(v){return v.descricao||'';}));
+  var cor=finCorForn(FIN_NAV.forn);
+  var itens=itensMes.map(function(v){
+    var d=(v.descricao||''); if(pref){ var r=d.slice(pref.length).trim(); if(r) d=r; }
+    var qu=(v.quantidade!=null&&v.quantidade!==''?finNum(v.quantidade)+'× ':'')+(v.valor_unitario!=null&&v.valor_unitario!==''?finMoney(v.valor_unitario):'');
+    return '<div class="fat-item"><span class="it-desc">'+finEsc(d)+'</span><span class="it-qu">'+qu+'</span><span class="it-val">'+finMoney(v.valor)+'</span></div>';
   }).join('');
+  var total=itensMes.reduce(function(s,v){return s+Number(v.valor||0);},0);
+  var sub=pref?'<div class="fat-sub">'+finEsc(pref.replace(/[\s\-–·]+$/,''))+'</div>':'';
+  box.innerHTML='<div class="fat-card open" style="grid-column:1/-1"><div class="fat-head" onclick="finToggleFat(this)">'
+    +'<span class="fat-dot" style="background:'+cor+'"></span>'
+    +'<span class="fat-forn">'+finEsc(FIN_NAV.forn)+'</span>'
+    +'<span class="fat-mes">'+finMesLbl(FIN_NAV.mes)+'</span>'
+    +'<span class="fat-tot"><b>'+finMoney(total)+'</b><small>'+itensMes.length+' '+(itensMes.length===1?'item':'itens')+'</small></span>'
+    +'<span class="fat-chev">▼</span>'
+    +'</div><div class="fat-body">'+sub+'<div class="fat-items">'+itens+'</div></div></div>';
 }
 function finToggleFat(h){ var c=h.closest('.fat-card'); if(c) c.classList.toggle('open'); }
 
