@@ -136,10 +136,14 @@
         : '')
     + '</div>';
 
-  // Painel Dados (reconectar, se houver, + limpar cache)
+  // Painel Dados (importar CSV do RDO + reconectar + limpar cache)
   var paneDados =
     '<div id="gear-content-dados" style="display:' + (firstTab === 'dados' ? '' : 'none') + ';">'
     + '<div class="gear-section-title" style="color:#c53030;border-bottom:2px solid #fde8e8;">🗄️ Dados e Conexão</div>'
+    + '<div class="gear-card"><div style="font-size:0.78rem;font-weight:800;color:#0d7377;margin-bottom:4px;">📋 Importar CSV do RDO</div>'
+    + '<div style="font-size:0.7rem;color:#888;margin-bottom:10px;">Suba o arquivo CSV do RDO para carregar as equipes do dia</div>'
+    + '<input type="file" id="gear-rdo-file" accept=".csv" style="display:none" onchange="(function(inp){ if(window.rdoImportar){ window.rdoImportar(inp.files[0]); document.getElementById(\'gear-modal\').style.display=\'none\'; } else { try{ if(inp.files[0]) sessionStorage.setItem(\'gear_rdo_pending\',\'1\'); }catch(e){} alert(\'Abrindo a aba RDO para importar o CSV...\'); location.href=\'rdo.html\'; } inp.value=\'\'; })(this)">'
+    + '<button onclick="document.getElementById(\'gear-rdo-file\').click()" class="gear-btn" style="background:linear-gradient(135deg,#0d7377,#14a085);color:#fff;">📤 Selecionar CSV do RDO</button></div>'
     + (hasReconect ?
         '<div class="gear-card"><div style="font-size:0.78rem;font-weight:800;color:#2d3748;margin-bottom:4px;">🔄 Conexão com Banco</div>'
         + '<div style="font-size:0.7rem;color:#888;margin-bottom:10px;">Reconecta ao Supabase e recarrega os dados</div>'
