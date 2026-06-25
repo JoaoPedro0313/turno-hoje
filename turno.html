@@ -791,6 +791,7 @@ let bancoDB = null;
 let bancoDBInfo = null;
 let isFetching = false;
 let turnoModoHistorico = false;
+let turnoHistDados = null; // guarda os dados do dia consultado para re-filtrar
 function turnoHistBuscar() {
 const input = document.getElementById('turno-hist-date');
 const statusEl = document.getElementById('turno-hist-status');
@@ -848,26 +849,33 @@ const faltaSetH = new Set([
   ...EQUIPES_ATIVAS.filter(e => !okDispH.has(e) && !justifDispH.has(e))
 ]);
 const faltaTemp = [...faltaSetH].filter(n => { const d=toDisplayName(n); return !okDispH.has(d)&&!justifDispH.has(d); });
-buildGridOk('abriu-grid', filterByBase([...okTemp].sort()));
-buildGridJustif('justif-grid', filterByBase([...justifTemp].sort((a,b)=>a.name.localeCompare(b.name))));
-buildGridFalta('falta-grid', filterByBase([...faltaTemp].sort()));
-document.getElementById('ok-count').textContent = filterByBase(okTemp).length;
-document.getElementById('justif-count').textContent = filterByBase(justifTemp).length;
-document.getElementById('falta-count').textContent = filterByBase(faltaTemp).length;
-// título fixo SISTEMA DE OBRAS
-const _psHist = document.getElementById('page-sub'); if (_psHist) _psHist.textContent = 'Histórico: ' + dataFormatada;
-const total = okTemp.length + justifTemp.length + faltaTemp.length;
-document.getElementById('footer-text').innerHTML =
-'OBRAS - BA &nbsp;|&nbsp; HISTÓRICO &nbsp;|&nbsp; ' + total + ' equipes &nbsp;|&nbsp; ' + dataFormatada;
-statusEl.textContent = '✅ ' + dataFormatada + ' — ' + total + ' equipes (' + fonte + ')';
-statusEl.style.color = '#68d391';
-modoEl.style.display = '';
-setTimeout(() => {
-document.querySelectorAll('#page-turno .card').forEach(c => {
-c.style.pointerEvents = 'none';
-c.style.opacity = '0.85';
-});
-}, 50);
+// guarda os dados do dia consultado para re-aplicar o filtro quando ele mudar
+turnoHistDados = { ok: [...okTemp], justif: [...justifTemp], falta: [...faltaTemp], data: dataFormatada, fonte: fonte };
+turnoHistRender();
+}
+// Re-renderiza o histórico (dia anterior) aplicando o filtro de estado/filial/centro atual.
+function turnoHistRender(){
+  const d = turnoHistDados; if(!d) return;
+  const statusEl = document.getElementById('turno-hist-status');
+  const modoEl = document.getElementById('turno-hist-modo');
+  buildGridOk('abriu-grid', filterByBase([...d.ok].sort()));
+  buildGridJustif('justif-grid', filterByBase([...d.justif].sort((a,b)=>a.name.localeCompare(b.name))));
+  buildGridFalta('falta-grid', filterByBase([...d.falta].sort()));
+  document.getElementById('ok-count').textContent = filterByBase(d.ok).length;
+  document.getElementById('justif-count').textContent = filterByBase(d.justif).length;
+  document.getElementById('falta-count').textContent = filterByBase(d.falta).length;
+  const _psHist = document.getElementById('page-sub'); if (_psHist) _psHist.textContent = 'Histórico: ' + d.data;
+  const total = d.ok.length + d.justif.length + d.falta.length;
+  document.getElementById('footer-text').innerHTML =
+  'OBRAS - BA &nbsp;|&nbsp; HISTÓRICO &nbsp;|&nbsp; ' + total + ' equipes &nbsp;|&nbsp; ' + d.data;
+  if(statusEl){ statusEl.textContent = '✅ ' + d.data + ' — ' + total + ' equipes (' + d.fonte + ')'; statusEl.style.color = '#68d391'; }
+  if(modoEl) modoEl.style.display = '';
+  setTimeout(() => {
+    document.querySelectorAll('#page-turno .card').forEach(c => {
+      c.style.pointerEvents = 'none';
+      c.style.opacity = '0.85';
+    });
+  }, 50);
 }
 function turnoHistHoje() {
 const statusEl = document.getElementById('turno-hist-status');
@@ -1100,7 +1108,7 @@ function updateBaseCounts() {
 }
 
 function render() {
-if (turnoModoHistorico) return;
+if (turnoModoHistorico) { turnoHistRender(); return; }
 // Deduplicar: remove de falta qualquer nome cujo display já exista em ok ou justif
 const okDisplay     = new Set(teams.ok.map(n => toDisplayName(n)));
 const justifDisplay = new Set(teams.justif.map(t => toDisplayName(t.name)));
