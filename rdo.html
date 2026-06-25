@@ -515,6 +515,18 @@ box-shadow:0 2px 8px rgba(0,0,0,0.08)}
   <div id="rdo-centro-btns" style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;overflow-x:auto;"></div>
 </div>
 
+<!-- Consultar dia anterior -->
+<div class="rdo-state-bar" style="gap:10px;">
+  <span style="font-size:0.72rem;font-weight:800;color:rgba(255,255,255,0.6);letter-spacing:1px;text-transform:uppercase;white-space:nowrap;">📅 CONSULTAR DIA:</span>
+  <input type="date" id="rdo-hist-date"
+    style="padding:5px 10px;border:1.5px solid rgba(255,255,255,0.2);border-radius:8px;background:rgba(255,255,255,0.1);color:#fff;font-family:'Barlow',sans-serif;font-size:0.78rem;font-weight:700;outline:none;color-scheme:dark;"
+    onkeydown="if(event.key==='Enter') rdoHistBuscar()">
+  <button onclick="if(window.rdoHistBuscar)window.rdoHistBuscar()" style="padding:6px 16px;background:#14a085;color:#fff;border:none;border-radius:8px;font-family:'Barlow',sans-serif;font-size:0.75rem;font-weight:800;cursor:pointer;letter-spacing:0.5px;transition:background 0.15s;" onmouseover="this.style.background='#0d7377'" onmouseout="this.style.background='#14a085'">🔍 BUSCAR</button>
+  <button onclick="if(window.rdoHistHoje)window.rdoHistHoje()" style="padding:6px 14px;background:transparent;color:rgba(255,255,255,0.5);border:1.5px solid rgba(255,255,255,0.15);border-radius:8px;font-family:'Barlow',sans-serif;font-size:0.75rem;font-weight:800;cursor:pointer;transition:all 0.15s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,0.5)'">↩ HOJE</button>
+  <div id="rdo-hist-status" style="font-size:0.72rem;font-weight:700;color:rgba(255,255,255,0.5);margin-left:4px;"></div>
+  <div id="rdo-hist-modo" style="display:none;margin-left:auto;background:#e53e3e22;border:1px solid #e53e3e66;border-radius:8px;padding:4px 12px;font-size:0.72rem;font-weight:800;color:#fc8181;letter-spacing:0.5px;">👁️ MODO LEITURA — DIA ANTERIOR</div>
+</div>
+
 <!-- Data carregada (o upload do arquivo agora fica em ⚙️ Configurações) -->
 <!-- Upload e data ocultos no topo: upload fica em ⚙️ Configurações. Elementos mantidos no DOM apenas para o JS. -->
 <div class="rdo-upload-bar" style="display:none;">
@@ -805,6 +817,8 @@ async function rdoSalvarBanco() {
 }
 
 async function rdoCarregarBanco() {
+  // não recarrega os dados de hoje enquanto o usuário consulta um dia anterior
+  if (rdoModoHistorico) return;
   // carrega o último RDO salvo (chave fixa), independente da data de hoje
   var bancoOk=false;
   try {
@@ -836,6 +850,78 @@ async function rdoCarregarBanco() {
     }
   } catch(e2) {}
 }
+
+// ===================== CONSULTAR DIA ANTERIOR (RDO) =====================
+let rdoModoHistorico = false;
+let rdoBackupHoje = null; // guarda os dados de hoje enquanto vê um dia anterior
+function rdoHistBuscar() {
+  const input = document.getElementById('rdo-hist-date');
+  const statusEl = document.getElementById('rdo-hist-status');
+  const modoEl = document.getElementById('rdo-hist-modo');
+  if (!input || !input.value) { if(statusEl){ statusEl.textContent = '⚠️ Selecione uma data'; statusEl.style.color='#fc8181'; } return; }
+  const [y, m, d] = input.value.split('-');
+  const dataFormatada = d + '/' + m + '/' + y;
+  const histKey = 'rdo_dia_' + d + '-' + m + '-' + y;
+  if (statusEl) { statusEl.textContent = '⏳ Buscando ' + dataFormatada + '...'; statusEl.style.color='rgba(255,255,255,0.5)'; }
+  // guarda os dados de hoje antes de trocar (só na primeira vez)
+  if (!rdoModoHistorico) rdoBackupHoje = { lancou: rdoData, justif: rdoJustif, date: rdoDate };
+  const controller = new AbortController();
+  const tid = setTimeout(() => controller.abort(), 8000);
+  fetch(SUPA_URL + '/rest/v1/turno_data?select=key,value&key=eq.' + histKey, {
+    headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY },
+    signal: controller.signal
+  })
+  .then(res => res.ok ? res.json() : Promise.reject('HTTP ' + res.status))
+  .then(data => {
+    clearTimeout(tid);
+    if (Array.isArray(data) && data.length > 0 && data[0].value) {
+      rdoHistExibir(data[0].value, dataFormatada, 'Supabase');
+    } else {
+      let local = null; try { local = JSON.parse(localStorage.getItem(histKey)); } catch(e){}
+      if (local) rdoHistExibir(local, dataFormatada, 'cache local');
+      else if (statusEl) { statusEl.textContent = '❌ Sem RDO para ' + dataFormatada; statusEl.style.color = '#fc8181'; }
+    }
+  })
+  .catch(() => {
+    clearTimeout(tid);
+    let local = null; try { local = JSON.parse(localStorage.getItem(histKey)); } catch(e){}
+    if (local) rdoHistExibir(local, dataFormatada, 'cache local');
+    else if (statusEl) { statusEl.textContent = '❌ Sem RDO para ' + dataFormatada + ' (offline)'; statusEl.style.color = '#fc8181'; }
+  });
+}
+function rdoHistExibir(payload, dataFormatada, fonte) {
+  rdoModoHistorico = true;
+  rdoData = payload.lancou || {};
+  rdoJustif = payload.justif || {};
+  rdoDate = payload.date || dataFormatada;
+  const statusEl = document.getElementById('rdo-hist-status');
+  const modoEl = document.getElementById('rdo-hist-modo');
+  const total = Object.keys(rdoData).length;
+  if (statusEl) { statusEl.textContent = '✅ ' + dataFormatada + ' — ' + total + ' equipes (' + fonte + ')'; statusEl.style.color = '#68d391'; }
+  if (modoEl) modoEl.style.display = '';
+  rdoRender();
+}
+function rdoHistHoje() {
+  rdoModoHistorico = false;
+  const input = document.getElementById('rdo-hist-date');
+  const statusEl = document.getElementById('rdo-hist-status');
+  const modoEl = document.getElementById('rdo-hist-modo');
+  if (input) input.value = '';
+  if (statusEl) { statusEl.textContent = ''; statusEl.style.color = 'rgba(255,255,255,0.5)'; }
+  if (modoEl) modoEl.style.display = 'none';
+  // restaura os dados de hoje
+  if (rdoBackupHoje) {
+    rdoData = rdoBackupHoje.lancou || {};
+    rdoJustif = rdoBackupHoje.justif || {};
+    rdoDate = rdoBackupHoje.date || '';
+    rdoBackupHoje = null;
+    rdoRender();
+  } else {
+    rdoCarregarBanco();
+  }
+}
+window.rdoHistBuscar = rdoHistBuscar;
+window.rdoHistHoje = rdoHistHoje;
 
 function rdoRender() {
   const lancouSet = Object.keys(rdoData);
