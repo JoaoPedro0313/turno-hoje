@@ -125,6 +125,25 @@
   .al-cur b{display:block;font-size:.8rem;color:#1a365d}
   .al-cur span{font-size:.7rem;font-weight:800}
   .al-cur span.r{color:#e53e3e}.al-cur span.a{color:#a06800}
+  /* edição */
+  .cedit{margin-left:8px;background:none;border:none;cursor:pointer;font-size:.82rem;opacity:.5;transition:opacity .15s;padding:0}
+  .cedit:hover{opacity:1}
+  .crow.cadd{color:#0d7377;font-weight:800;cursor:pointer;justify-content:center;font-size:.78rem;border-bottom:none;padding-top:10px}
+  .crow.cadd:hover{color:#14a085}
+  .cell.clk{cursor:pointer}.cell.clk:hover{outline:2px solid #14a085;outline-offset:1px}
+  .vcm-ov{position:fixed;inset:0;background:rgba(10,20,30,.6);z-index:600;display:flex;align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(4px)}
+  .vcm-box{background:#fff;border-radius:16px;box-shadow:0 12px 40px rgba(0,0,0,.25);padding:24px;max-width:380px;width:100%}
+  .vcm-h{font-size:1.05rem;font-weight:900;color:#0f3a33;margin-bottom:4px}
+  .vcm-nome{font-size:.84rem;color:#64748b;font-weight:700;margin-bottom:16px}
+  .vcm-field{margin-bottom:14px}
+  .vcm-field label{display:block;font-size:.68rem;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:#94a3b8;margin-bottom:6px}
+  .vcm-field select,.vcm-field input{width:100%;padding:10px 12px;border:1.5px solid #e2e8f0;border-radius:9px;font-family:'Barlow';font-size:.9rem;font-weight:600;outline:none}
+  .vcm-field select:focus,.vcm-field input:focus{border-color:#14a085}
+  .vcm-field small{display:block;font-size:.68rem;color:#aaa;font-weight:600;margin-top:5px}
+  .vcm-acts{display:flex;gap:10px;margin-top:8px}
+  .vcm-cancel{flex:1;padding:11px;border:1.5px solid #e2e8f0;background:#fff;color:#64748b;border-radius:10px;font-family:'Barlow';font-weight:800;cursor:pointer}
+  .vcm-save{flex:2;padding:11px;border:none;background:linear-gradient(135deg,#0d7377,#14a085);color:#fff;border-radius:10px;font-family:'Barlow';font-weight:800;cursor:pointer}
+  .vcm-save:hover{box-shadow:0 4px 14px rgba(13,115,119,.35)}
 </style>
 </head>
 <body>
@@ -329,11 +348,15 @@ function render(){
 
   if(MODE=='cards'){
     box.innerHTML='<div class="cards">'+filt.map(function(d){
+      var key=colKey(d);
       var ps=piorStatus(d), bcls=ps=='r'?'b-r':(ps=='a'?'b-a':'b-g'), blbl=ps=='r'?'Vencido':(ps=='a'?'Vencendo':'Em dia');
       var rows=Object.keys(d.certificados).sort(function(a,b){return dias(d.certificados[a])-dias(d.certificados[b]);}).map(function(c){
         var s=d.certificados[c],st=status(s);
-        return '<div class="crow"><span class="cdot '+st+'"></span><span class="ccur">'+c+'</span><span class="cdt '+st+'">'+fmt(s)+'</span></div>';
+        return '<div class="crow"><span class="cdot '+st+'"></span><span class="ccur">'+esc(c)+'</span>'
+          +'<span class="cdt '+st+'">'+fmt(s)+'</span>'
+          +'<button class="cedit" title="Editar data" onclick="editarData(\''+key+'\',\''+esc(c)+'\')">✏️</button></div>';
       }).join('')||'<div class="crow" style="color:#aaa">Sem certificados</div>';
+      rows+='<div class="crow cadd" onclick="addCurso(\''+key+'\')">➕ Adicionar / atualizar curso</div>';
       return '<div class="card"><div class="card-h" onclick="this.parentNode.classList.toggle(\'open\')">'
         +'<div class="card-av">'+ini(d.nome)+'</div><div><div class="card-nm">'+esc(d.nome)+'</div><div class="card-fn">'+esc(d.funcao||'')+'</div></div>'
         +'<span class="card-badge '+bcls+'">'+blbl+'</span></div><div class="card-b">'+rows+'</div></div>';
@@ -343,10 +366,11 @@ function render(){
     CURSOS.forEach(function(c){ h+='<th>'+c+'</th>'; });
     h+='</tr></thead><tbody>';
     filt.forEach(function(d){
+      var key=colKey(d);
       h+='<tr><td class="nm" title="'+esc(d.nome)+'">'+esc(d.nome)+'</td>';
       CURSOS.forEach(function(c){
-        if(d.certificados[c]){ var st=status(d.certificados[c]); var f=fmt(d.certificados[c]); h+='<td><span class="cell '+st+'">'+f.slice(0,5)+'/'+f.slice(8)+'</span></td>'; }
-        else h+='<td><span class="cell x">–</span></td>';
+        if(d.certificados[c]){ var st=status(d.certificados[c]); var f=fmt(d.certificados[c]); h+='<td><span class="cell '+st+' clk" onclick="editarData(\''+key+'\',\''+esc(c)+'\')" title="Clique para editar">'+f.slice(0,5)+'/'+f.slice(8)+'</span></td>'; }
+        else h+='<td><span class="cell x clk" onclick="editarData(\''+key+'\',\''+esc(c)+'\')" title="Clique para adicionar">–</span></td>';
       });
       h+='</tr>';
     });
@@ -364,9 +388,84 @@ function render(){
     }).join('');
   }
 }
+// ===== edição de datas =====
+function colKey(d){ return (d.matricula&&String(d.matricula).trim()) ? 'M:'+d.matricula : 'N:'+d.nome; }
+function acharColab(key){
+  if(key.slice(0,2)=='M:'){ var m=key.slice(2); return DADOS.find(function(d){return String(d.matricula)==m;}); }
+  var n=key.slice(2); return DADOS.find(function(d){return d.nome==n;});
+}
+function editarData(key, curso){
+  var d=acharColab(key); if(!d) return;
+  var atual=d.certificados[curso]||'';
+  abrirModal(d, curso, atual);
+}
+function addCurso(key){
+  var d=acharColab(key); if(!d) return;
+  // mostra os cursos que ele ainda não tem; se já tem todos, deixa escolher qualquer um
+  abrirModal(d, '', '');
+}
+function abrirModal(d, curso, valor){
+  var ov=document.getElementById('vc-modal');
+  document.getElementById('vcm-nome').textContent=d.nome;
+  var selWrap=document.getElementById('vcm-curso-wrap');
+  var sel=document.getElementById('vcm-curso');
+  if(curso){
+    // edição de um curso específico — mostra fixo
+    selWrap.style.display='none';
+    sel.innerHTML='<option value="'+esc(curso)+'">'+esc(curso)+'</option>';
+    sel.value=curso;
+  } else {
+    selWrap.style.display='';
+    sel.innerHTML=CURSOS.map(function(c){ var tem=d.certificados[c]?' (atual: '+fmt(d.certificados[c])+')':''; return '<option value="'+esc(c)+'">'+esc(c)+tem+'</option>'; }).join('');
+  }
+  document.getElementById('vcm-data').value=valor||'';
+  ov.dataset.key=colKey(d);
+  ov.style.display='flex';
+}
+function fecharModal(){ document.getElementById('vc-modal').style.display='none'; }
+function salvarData(){
+  var ov=document.getElementById('vc-modal');
+  var d=acharColab(ov.dataset.key); if(!d){ fecharModal(); return; }
+  var curso=document.getElementById('vcm-curso').value;
+  var data=document.getElementById('vcm-data').value; // yyyy-mm-dd
+  if(!curso){ alert('Selecione o curso.'); return; }
+  if(!data){
+    // data vazia = remover o curso
+    if(d.certificados[curso] && confirm('Remover o curso '+curso+' deste colaborador?')){ delete d.certificados[curso]; }
+    else { return; }
+  } else {
+    d.certificados[curso]=data;
+  }
+  fecharModal();
+  setStatus('Salvando alteração...');
+  kpis(); render();
+  salvar().then(function(r){ setStatus(r.ok?'✅ Data atualizada e salva no banco.':'⚠️ Alterado, mas falha ao salvar no banco.'); })
+          .catch(function(){ setStatus('⚠️ Alterado, mas falha ao salvar no banco.'); });
+}
+
 function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
 carregar();
 </script>
+<div id="vc-modal" class="vcm-ov" style="display:none">
+  <div class="vcm-box">
+    <div class="vcm-h">📅 Atualizar data de vencimento</div>
+    <div class="vcm-nome" id="vcm-nome"></div>
+    <div id="vcm-curso-wrap" class="vcm-field">
+      <label>Curso</label>
+      <select id="vcm-curso"></select>
+    </div>
+    <div class="vcm-field">
+      <label>Nova data de vencimento</label>
+      <input type="date" id="vcm-data">
+      <small>Deixe em branco para remover o curso.</small>
+    </div>
+    <div class="vcm-acts">
+      <button class="vcm-cancel" onclick="fecharModal()">Cancelar</button>
+      <button class="vcm-save" onclick="salvarData()">Salvar</button>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
