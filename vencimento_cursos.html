@@ -88,8 +88,14 @@
   .vc-empty{text-align:center;padding:60px 20px;color:#aaa;font-weight:600}
   .vc-empty .big{font-size:3rem;margin-bottom:12px}
   /* cartões */
-  .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:12px}
+  .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:12px;align-items:start}
   .card{background:#fff;border-radius:14px;box-shadow:0 2px 10px rgba(0,0,0,.06);border:1px solid #eef2f7;overflow:hidden}
+  .card.open{grid-column:1/-1}
+  .card.open .card-b{column-count:3;column-gap:28px;padding-top:6px}
+  .card.open .card-b .crow{break-inside:avoid}
+  .card.open .card-b .cadd{column-span:all}
+  @media(max-width:900px){ .card.open .card-b{column-count:2} }
+  @media(max-width:600px){ .card.open .card-b{column-count:1} }
   .card-h{padding:14px 16px;cursor:pointer;display:flex;align-items:center;gap:10px}
   .card-av{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,var(--teal),var(--teal2));color:#fff;font-weight:900;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:.85rem}
   .card-nm{font-weight:800;color:#0f3a33;font-size:.9rem;line-height:1.1}
