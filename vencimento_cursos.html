@@ -124,7 +124,11 @@
   .al-ic.r{background:#fde8e8}.al-ic.a{background:#fff4d6}
   .al-nm{font-weight:800;color:#0f3a33;font-size:.86rem}
   .al-sub{font-size:.7rem;color:#94a3b8;font-weight:700}
-  .al-cur{margin-left:auto;text-align:right}
+  .al-main{min-width:180px}
+  .al-curso{flex:1;display:flex;justify-content:center}
+  .al-curso-chip{font-size:.74rem;font-weight:800;padding:5px 14px;border-radius:99px;letter-spacing:.5px}
+  .al-curso-chip.r{background:#fde8e8;color:#c53030}.al-curso-chip.a{background:#fff4d6;color:#a06800}
+  .al-cur{text-align:right;min-width:150px;flex-shrink:0}
   .al-cur b{display:block;font-size:.8rem;color:#1a365d}
   .al-cur span{font-size:.7rem;font-weight:800}
   .al-cur span.r{color:#e53e3e}.al-cur span.a{color:#a06800}
@@ -484,7 +488,8 @@ function render(){
     box.innerHTML=lista.map(function(a){
       var txt=a.dias<0?('Venceu há '+(-a.dias)+' dias'):(a.dias===0?'Vence hoje':'Vence em '+a.dias+' dias');
       return '<div class="alert '+(a.st=='a'?'a':'')+'"><div class="al-ic '+a.st+'">'+(a.st=='r'?'⛔':'⚠️')+'</div>'
-        +'<div><div class="al-nm">'+esc(a.nome)+'</div><div class="al-sub">'+esc(a.curso)+' · '+esc(a.funcao||'')+'</div></div>'
+        +'<div class="al-main"><div class="al-nm">'+esc(a.nome)+'</div><div class="al-sub">'+esc(a.funcao||'')+'</div></div>'
+        +'<div class="al-curso"><span class="al-curso-chip '+a.st+'">'+esc(a.curso)+'</span></div>'
         +'<div class="al-cur"><b>'+fmt(a.data)+'</b><span class="'+a.st+'">'+txt+'</span></div></div>';
     }).join('');
   }
