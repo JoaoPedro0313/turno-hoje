@@ -162,6 +162,23 @@
   .vcm-cancel{flex:1;padding:11px;border:1.5px solid #e2e8f0;background:#fff;color:#64748b;border-radius:10px;font-family:'Barlow';font-weight:800;cursor:pointer}
   .vcm-save{flex:2;padding:11px;border:none;background:linear-gradient(135deg,#0d7377,#14a085);color:#fff;border-radius:10px;font-family:'Barlow';font-weight:800;cursor:pointer}
   .vcm-save:hover{box-shadow:0 4px 14px rgba(13,115,119,.35)}
+  /* falta curso */
+  .falta-chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+  .falta-chip{background:#ede9fe;color:#6b46c1;font-size:.68rem;font-weight:800;padding:3px 9px;border-radius:99px}
+  .mtz-cols{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px}
+  @media(max-width:560px){ .mtz-cols{grid-template-columns:1fr} }
+  .mtz-col-lbl{font-size:.66rem;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:#94a3b8;margin-bottom:8px}
+  .mtz-funcs{max-height:300px;overflow-y:auto;border:1px solid #eef2f7;border-radius:10px}
+  .mtz-func{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 12px;cursor:pointer;border-bottom:1px solid #f4f6f8;font-size:.8rem}
+  .mtz-func:last-child{border-bottom:none}
+  .mtz-func:hover{background:#f8fafc}
+  .mtz-func-sel{background:#f0fafa}
+  .mtz-func-nm{font-weight:700;color:#334155}
+  .mtz-func-n{font-size:.66rem;font-weight:800;color:#0d7377;background:#e1f5ee;padding:2px 8px;border-radius:99px;white-space:nowrap}
+  .mtz-cursos{max-height:300px;overflow-y:auto;display:flex;flex-direction:column;gap:4px}
+  .mtz-curso{display:flex;align-items:center;gap:8px;padding:7px 10px;border:1px solid #eef2f7;border-radius:8px;font-size:.8rem;font-weight:600;color:#334155;cursor:pointer}
+  .mtz-curso:hover{background:#f8fafc}
+  .mtz-curso input{width:16px;height:16px;accent-color:#0d7377;cursor:pointer}
 </style>
 </head>
 <body>
@@ -232,6 +249,7 @@
     <button class="vc-mode" id="m-cards" onclick="setMode('cards',this)">👤 Cartões</button>
     <button class="vc-mode" id="m-tbl" onclick="setMode('tbl',this)">📋 Tabela</button>
     <button class="vc-mode" id="m-edit" onclick="setMode('edit',this)">✏️ Edição</button>
+    <button class="vc-mode" id="m-falta" onclick="setMode('falta',this)">🚫 Falta Curso</button>
     <input class="vc-srch" id="vc-srch" placeholder="🔎 Buscar colaborador..." oninput="render()">
     <button class="vc-imp" onclick="document.getElementById('vc-file').click()">📤 Importar planilha</button>
     <input type="file" id="vc-file" accept=".xlsx,.xls" style="display:none" onchange="importar(this.files[0]);this.value=''">
@@ -265,9 +283,11 @@ var SUPA_URL='https://eqxejfoibebcbtsqymji.supabase.co';
 var SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVxeGVqZm9pYmViY2J0c3F5bWppIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE4NjUzMTEsImV4cCI6MjA4NzQ0MTMxMX0.lwf7_EJ6UchEOpzhW3cVKztxDGy78gaQblRvgiEwWh8';
 var SUPA_H={'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':'application/json'};
 var KEY='sesmt_cursos';
+var KEY_MATRIZ='sesmt_matriz';
 
 var CURSOS=['ASO','NR10','NR10 SEP','NR35','NR12','OP GUINDAUTO','OP RETRO','DIREÇÃO DEFENSIVA','LIDERANÇA','CESTO AÉREO','LINHA VIVA','MOTOPODA','MOTOSERRA'];
 var DADOS=[]; var MODE='alert';
+var MATRIZ={}; // { "FUNÇÃO": ["ASO","NR10",...] }
 function HOJE(){ var d=new Date(); return new Date(d.getFullYear(),d.getMonth(),d.getDate()); }
 function parseDt(s){ var p=s.split('-'); return new Date(+p[0],+p[1]-1,+p[2]); }
 function fmt(s){ var p=s.split('-'); return p[2]+'/'+p[1]+'/'+p[0]; }
@@ -295,6 +315,29 @@ function salvar(){
   var payload={dados:DADOS, atualizado:new Date().toLocaleString('pt-BR')};
   return fetch(SUPA_URL+'/rest/v1/turno_data',{method:'POST',headers:Object.assign({'Prefer':'resolution=merge-duplicates'},SUPA_H),
     body:JSON.stringify({key:KEY,value:payload,updated_at:new Date().toISOString()})});
+}
+// ===== matriz de cursos obrigatórios por função =====
+function carregarMatriz(){
+  return fetch(SUPA_URL+'/rest/v1/turno_data?select=value&key=eq.'+KEY_MATRIZ+'&limit=1',{headers:SUPA_H})
+    .then(function(r){return r.ok?r.json():Promise.reject(r.status);})
+    .then(function(j){ if(Array.isArray(j)&&j.length&&j[0].value&&j[0].value.matriz){ MATRIZ=j[0].value.matriz; } })
+    .catch(function(){});
+}
+function salvarMatriz(){
+  var payload={matriz:MATRIZ, atualizado:new Date().toLocaleString('pt-BR')};
+  return fetch(SUPA_URL+'/rest/v1/turno_data',{method:'POST',headers:Object.assign({'Prefer':'resolution=merge-duplicates'},SUPA_H),
+    body:JSON.stringify({key:KEY_MATRIZ,value:payload,updated_at:new Date().toISOString()})});
+}
+// lista de funções distintas presentes nos dados
+function funcoesDistintas(){
+  var set={}; DADOS.forEach(function(d){ var f=(d.funcao||'').trim().toUpperCase(); if(f) set[f]=true; });
+  return Object.keys(set).sort();
+}
+// cursos obrigatórios que faltam para um colaborador (não tem a data cadastrada)
+function faltantesDe(d){
+  var f=(d.funcao||'').trim().toUpperCase();
+  var obrig=MATRIZ[f]||[];
+  return obrig.filter(function(c){ return !d.certificados[c]; });
 }
 
 // ===== importar XLSX =====
@@ -413,9 +456,29 @@ function render(){
         +'<span class="card-badge '+bcls+'">'+blbl+'</span><span class="ed-chev">▼</span></div>'
         +'<div class="ed-body"><div class="ed-grid">'+campos+'</div></div></div>';
     }).join('')+'</div>';
+  } else if(MODE=='falta'){
+    var temMatriz=Object.keys(MATRIZ).length>0;
+    var head='<div class="ed-info" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">'
+      +'<span style="flex:1">🚫 Mostra os cursos <b>obrigatórios da função</b> que o colaborador ainda <b>não tem</b>. '
+      +(temMatriz?('Matriz com '+Object.keys(MATRIZ).length+' função(ões) configurada(s).'):'Nenhuma matriz configurada ainda.')+'</span>'
+      +'<button class="vc-imp" style="background:#6b46c1" onclick="abrirMatriz()">⚙️ Configurar matriz</button></div>';
+    if(!temMatriz){ box.innerHTML=head+'<div class="vc-empty"><div class="big">📋</div>Configure a matriz de cursos obrigatórios por função para ver quem está faltando curso.</div>'; return; }
+    var linhas=[];
+    filt.forEach(function(d){
+      var falt=faltantesDe(d);
+      if(falt.length) linhas.push({nome:d.nome,funcao:d.funcao,faltam:falt});
+    });
+    linhas.sort(function(a,b){return b.faltam.length-a.faltam.length;});
+    if(!linhas.length){ box.innerHTML=head+'<div class="vc-empty"><div class="big">✅</div>Todos os colaboradores têm os cursos obrigatórios da função.</div>'; return; }
+    box.innerHTML=head+linhas.map(function(a){
+      var chips=a.faltam.map(function(c){return '<span class="falta-chip">'+esc(c)+'</span>';}).join('');
+      return '<div class="alert" style="border-left-color:#6b46c1;align-items:flex-start">'
+        +'<div class="al-ic" style="background:#ede9fe">🚫</div>'
+        +'<div style="flex:1"><div class="al-nm">'+esc(a.nome)+'</div><div class="al-sub">'+esc(a.funcao||'')+'</div>'
+        +'<div class="falta-chips">'+chips+'</div></div>'
+        +'<div class="al-cur"><b style="color:#6b46c1">'+a.faltam.length+'</b><span style="color:#6b46c1">faltando</span></div></div>';
+    }).join('');
   } else {
-    var lista=[];
-    filt.forEach(function(d){ for(var c in d.certificados){ var st=status(d.certificados[c]); if(st=='r'||st=='a') lista.push({nome:d.nome,funcao:d.funcao,curso:c,data:d.certificados[c],st:st,dias:dias(d.certificados[c])}); } });
     lista.sort(function(a,b){return a.dias-b.dias;});
     if(!lista.length){ box.innerHTML='<div class="vc-empty"><div class="big">✅</div>Nenhum curso vencido ou vencendo.</div>'; return; }
     box.innerHTML=lista.map(function(a){
@@ -495,9 +558,57 @@ function salvarData(){
           .catch(function(){ setStatus('⚠️ Alterado, mas falha ao salvar no banco.'); });
 }
 
+// ===== matriz: configuração (função × cursos obrigatórios) =====
+var MTZ_FUNC=null;
+function abrirMatriz(){
+  document.getElementById('mtz-modal').style.display='flex';
+  MTZ_FUNC=null;
+  renderMatrizFuncs();
+  document.getElementById('mtz-cursos-wrap').style.display='none';
+}
+function fecharMatriz(){ document.getElementById('mtz-modal').style.display='none'; render(); }
+function renderMatrizFuncs(){
+  var funcs=funcoesDistintas();
+  var box=document.getElementById('mtz-funcs');
+  if(!funcs.length){ box.innerHTML='<div style="color:#aaa;padding:10px">Importe os dados primeiro (as funções vêm dos colaboradores).</div>'; return; }
+  box.innerHTML=funcs.map(function(f){
+    var n=(MATRIZ[f]||[]).length;
+    var sel=MTZ_FUNC===f?'mtz-func-sel':'';
+    return '<div class="mtz-func '+sel+'" onclick="selMatrizFunc(\''+esc(f).replace(/'/g,"\\'")+'\')">'
+      +'<span class="mtz-func-nm">'+esc(f)+'</span>'
+      +'<span class="mtz-func-n">'+(n?n+' curso(s)':'—')+'</span></div>';
+  }).join('');
+}
+function selMatrizFunc(f){
+  MTZ_FUNC=f;
+  renderMatrizFuncs();
+  var wrap=document.getElementById('mtz-cursos-wrap');
+  wrap.style.display='';
+  document.getElementById('mtz-func-titulo').textContent=f;
+  var obrig=MATRIZ[f]||[];
+  document.getElementById('mtz-cursos').innerHTML=CURSOS.map(function(c){
+    var ck=obrig.indexOf(c)>=0?'checked':'';
+    return '<label class="mtz-curso"><input type="checkbox" value="'+esc(c)+'" '+ck+' onchange="toggleMatrizCurso(this)"> '+esc(c)+'</label>';
+  }).join('');
+}
+function toggleMatrizCurso(inp){
+  if(!MTZ_FUNC) return;
+  var obrig=MATRIZ[MTZ_FUNC]||[];
+  var c=inp.value;
+  if(inp.checked){ if(obrig.indexOf(c)<0) obrig.push(c); }
+  else { obrig=obrig.filter(function(x){return x!==c;}); }
+  if(obrig.length) MATRIZ[MTZ_FUNC]=obrig; else delete MATRIZ[MTZ_FUNC];
+  renderMatrizFuncs();
+}
+function salvarMatrizBanco(){
+  setStatus('Salvando matriz...');
+  salvarMatriz().then(function(r){ setStatus(r.ok?'✅ Matriz salva no banco.':'⚠️ Falha ao salvar matriz.'); fecharMatriz(); })
+                .catch(function(){ setStatus('⚠️ Falha ao salvar matriz.'); });
+}
+
 function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
-carregar();
+carregarMatriz().then(function(){ carregar(); });
 </script>
 <div id="vc-modal" class="vcm-ov" style="display:none">
   <div class="vcm-box">
@@ -515,6 +626,27 @@ carregar();
     <div class="vcm-acts">
       <button class="vcm-cancel" onclick="fecharModal()">Cancelar</button>
       <button class="vcm-save" onclick="salvarData()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<div id="mtz-modal" class="vcm-ov" style="display:none">
+  <div class="vcm-box" style="max-width:680px">
+    <div class="vcm-h">⚙️ Matriz de cursos obrigatórios por função</div>
+    <div class="vcm-nome">Selecione uma função à esquerda e marque os cursos obrigatórios dela.</div>
+    <div class="mtz-cols">
+      <div class="mtz-funcs-wrap">
+        <div class="mtz-col-lbl">Funções</div>
+        <div id="mtz-funcs" class="mtz-funcs"></div>
+      </div>
+      <div id="mtz-cursos-wrap" class="mtz-cursos-wrap" style="display:none">
+        <div class="mtz-col-lbl">Cursos obrigatórios de: <b id="mtz-func-titulo"></b></div>
+        <div id="mtz-cursos" class="mtz-cursos"></div>
+      </div>
+    </div>
+    <div class="vcm-acts">
+      <button class="vcm-cancel" onclick="fecharMatriz()">Fechar</button>
+      <button class="vcm-save" onclick="salvarMatrizBanco()">Salvar matriz</button>
     </div>
   </div>
 </div>
