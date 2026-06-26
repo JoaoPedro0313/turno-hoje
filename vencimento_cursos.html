@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vencimento Cursos · SESMT — Mariuá</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root{ --teal:#0d7377; --teal2:#14a085; --orange:#ff6b35; }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:'Barlow',sans-serif;background:#f0f4f5;color:#1e293b;min-height:100vh;padding-top:52px;padding-left:232px;transition:padding .22s ease}
+  body.sm-collapsed{padding-left:64px}
+  /* top bar */
+  .top-bar{position:fixed;top:0;left:232px;right:0;height:52px;z-index:91;background:linear-gradient(90deg,#0a4a4d,#0d7377 40%,#0f8a82 70%,#0d7377);border-bottom:3px solid var(--orange);box-shadow:0 2px 16px rgba(0,0,0,.25);transition:left .22s ease}
+  body.sm-collapsed .top-bar{left:64px}
+  .top-bar-inner{display:flex;align-items:center;justify-content:space-between;height:100%;padding:0 18px;gap:12px}
+  .tb-left{display:flex;align-items:center;gap:10px}
+  .tb-name{font-size:1.05rem;font-weight:900;color:#fff;letter-spacing:1px}
+  .tb-title{font-size:.68rem;font-weight:800;color:rgba(255,255,255,.7);letter-spacing:2px;text-transform:uppercase}
+  .tb-clock{font-size:.78rem;font-weight:700;color:rgba(255,255,255,.6);letter-spacing:1px;font-variant-numeric:tabular-nums}
+  .tb-badge{display:inline-flex;align-items:center;gap:5px;font-size:.7rem;font-weight:800;padding:4px 10px;border-radius:6px;color:#9ae6b4;border:1px solid rgba(255,255,255,.3);background:rgba(45,184,100,.15)}
+  .tb-dot{width:7px;height:7px;border-radius:50%;background:#38a169}
+  /* sidebar */
+  .sm-side{position:fixed;top:52px;left:0;bottom:0;width:232px;z-index:110;background:#fff;border-right:1px solid #e6ebee;box-shadow:2px 0 12px rgba(0,0,0,.04);display:flex;flex-direction:column;transition:width .22s ease}
+  body.sm-collapsed .sm-side{width:64px}
+  .sm-top{display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid #eef2f4;overflow:hidden}
+  .sm-logo{width:34px;height:34px;flex-shrink:0;object-fit:contain;display:block}
+  .sm-logo-tx{font-weight:800;color:#0d7377;letter-spacing:1px;font-size:1rem;white-space:nowrap;line-height:1.05}
+  .sm-logo-tx small{display:block;font-size:.5rem;letter-spacing:2px;color:#9aa6ab;font-weight:700}
+  .sm-toggle{padding:6px 10px;border-bottom:1px solid #eef2f4;display:flex;justify-content:flex-end}
+  .sm-toggle button{background:#f0fafa;border:1px solid #c0e8e5;color:#0d7377;border-radius:8px;width:30px;height:28px;cursor:pointer;font-weight:800}
+  .sm-nav{flex:1;overflow-y:auto;overflow-x:hidden;padding:8px;display:flex;flex-direction:column;gap:3px}
+  .sm-item{display:flex;align-items:center;gap:12px;padding:9px 11px;border-radius:10px;text-decoration:none;color:#54616a;transition:background .14s,color .14s;white-space:nowrap;cursor:pointer}
+  .sm-item:hover{background:#eef4f4;color:#0d7377}
+  .sm-ic{font-size:1.05rem;width:20px;text-align:center;flex-shrink:0}
+  .sm-tx{font-size:.84rem;font-weight:700}
+  .sm-item.active{background:linear-gradient(135deg,#0d7377,#14a085);color:#fff;box-shadow:0 4px 12px rgba(13,115,119,.28)}
+  .sm-item.active .sm-ic{background:rgba(255,255,255,.22)}
+  .sm-foot{padding:9px 14px;border-top:1px solid #eef2f4;font-size:.6rem;color:#aab4b8;font-weight:700;white-space:nowrap;overflow:hidden}
+  .sm-group{display:flex;flex-direction:column}
+  .sm-group-head{display:flex;align-items:center;gap:12px;padding:9px 11px;border-radius:10px;cursor:pointer;color:#54616a;transition:background .14s,color .14s;white-space:nowrap;user-select:none}
+  .sm-group-head:hover{background:#eef4f4;color:#0d7377}
+  .sm-group-head .sm-tx{flex:1}
+  .sm-arrow{font-size:.7rem;color:#b8c2c6;transition:transform .18s;margin-left:auto}
+  .sm-group.open .sm-arrow{transform:rotate(90deg)}
+  .sm-group-items{display:none;flex-direction:column;gap:2px;padding:2px 0 4px 12px;margin-left:9px;border-left:1.5px solid #eef2f4}
+  .sm-group.open .sm-group-items{display:flex}
+  .sm-sub{padding:7px 11px}
+  .sm-sub .sm-ic{font-size:.95rem}
+  body.sm-collapsed .sm-logo-tx,body.sm-collapsed .sm-tx,body.sm-collapsed .sm-foot,body.sm-collapsed .sm-arrow{display:none}
+  body.sm-collapsed .sm-top{justify-content:center;padding:12px 0}
+  body.sm-collapsed .sm-item,body.sm-collapsed .sm-group-head{justify-content:center;padding:9px 0}
+  body.sm-collapsed .sm-group-items{display:flex!important;padding:0;margin:0;border:none}
+  @media(max-width:780px){
+    body{padding-left:64px} .top-bar{left:64px}
+    .sm-side{width:64px}
+    .sm-logo-tx,.sm-tx,.sm-foot,.sm-arrow{display:none}
+    .sm-top{justify-content:center;padding:12px 0}
+    .sm-item,.sm-group-head{justify-content:center;padding:9px 0}
+    .sm-group-items{display:flex!important;padding:0;margin:0;border:none}
+    body.sm-expanded .sm-side{width:232px}
+    body.sm-expanded .sm-logo-tx,body.sm-expanded .sm-tx,body.sm-expanded .sm-foot,body.sm-expanded .sm-arrow{display:block}
+    body.sm-expanded .sm-tx{display:inline}
+    body.sm-expanded .sm-top{justify-content:flex-start;padding:12px 14px}
+    body.sm-expanded .sm-item,body.sm-expanded .sm-group-head{justify-content:flex-start;padding:9px 11px}
+    body.sm-expanded .sm-group-items{display:flex!important;padding:2px 0 4px 12px;margin-left:9px;border-left:1.5px solid #eef2f4}
+  }
+  /* conteúdo em desenvolvimento */
+  .dev-wrap{display:flex;align-items:center;justify-content:center;min-height:calc(100vh - 92px);padding:24px}
+  .dev-card{background:#fff;border-radius:20px;box-shadow:0 8px 32px rgba(0,0,0,.08);padding:48px 40px;text-align:center;max-width:480px;width:100%;position:relative;overflow:hidden}
+  .dev-card::before{content:'';position:absolute;top:0;left:0;right:0;height:5px;background:linear-gradient(90deg,var(--orange),#ff9a3c,var(--orange))}
+  .dev-ic{font-size:3.4rem;margin-bottom:8px;animation:bob 2.4s ease-in-out infinite}
+  @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+  .dev-tag{display:inline-block;font-size:.7rem;font-weight:900;letter-spacing:2px;text-transform:uppercase;color:var(--orange);background:#fff4ed;padding:6px 16px;border-radius:20px;margin-bottom:18px}
+  .dev-title{font-size:1.6rem;font-weight:900;color:#0f3a33;letter-spacing:.5px;margin-bottom:10px}
+  .dev-sub{font-size:.92rem;color:#64748b;font-weight:600;line-height:1.6;margin-bottom:22px}
+  .dev-bar{height:8px;background:#eef2f4;border-radius:99px;overflow:hidden;margin-bottom:10px}
+  .dev-bar-fill{height:100%;width:35%;background:linear-gradient(90deg,var(--teal),var(--teal2));border-radius:99px;animation:grow 2.5s ease-in-out infinite alternate}
+  @keyframes grow{from{width:25%}to{width:55%}}
+  .dev-foot{font-size:.74rem;color:#94a3b8;font-weight:700}
+</style>
+</head>
+<body>
+
+<div class="top-bar">
+  <div class="top-bar-inner">
+    <div class="tb-left"><span class="tb-name">MARIUÁ</span><span class="tb-title">Vencimento Cursos · SESMT</span></div>
+    <div class="tb-clock" id="page-time"></div>
+    <div class="tb-badge"><span class="tb-dot"></span><span>SESMT</span></div>
+  </div>
+</div>
+
+<aside class="sm-side">
+  <div class="sm-top">
+    <img class="sm-logo" src="assets/logo-mariua.png" alt="Mariuá">
+    <div class="sm-logo-tx">MARIUÁ<small>Construção e Energia</small></div>
+  </div>
+  <div class="sm-toggle"><button type="button" onclick="smToggle()" title="Recolher / expandir">↔</button></div>
+  <nav class="sm-nav">
+    <a class="sm-item" href="index.html"><span class="sm-ic">🏠</span><span class="sm-tx">Início</span></a>
+    <div class="sm-group" data-group="obras">
+      <div class="sm-group-head" onclick="smGroupToggle(this)"><span class="sm-ic">📋</span><span class="sm-tx">Obras</span><span class="sm-arrow">▸</span></div>
+      <div class="sm-group-items">
+        <a class="sm-item sm-sub" href="turno.html"><span class="sm-ic">📋</span><span class="sm-tx">Turno</span></a>
+        <a class="sm-item sm-sub" href="rdo.html"><span class="sm-ic">📊</span><span class="sm-tx">RDO</span></a>
+        <a class="sm-item sm-sub" href="mapa.html"><span class="sm-ic">🗺️</span><span class="sm-tx">Mapa</span></a>
+        <a class="sm-item sm-sub" href="prog.html"><span class="sm-ic">📅</span><span class="sm-tx">Prog. Diária</span></a>
+        <a class="sm-item sm-sub" href="comp.html"><span class="sm-ic">⚡</span><span class="sm-tx">Comparador</span></a>
+      </div>
+    </div>
+    <div class="sm-group" data-group="sesmt">
+      <div class="sm-group-head" onclick="smGroupToggle(this)"><span class="sm-ic">🦺</span><span class="sm-tx">SESMT</span><span class="sm-arrow">▸</span></div>
+      <div class="sm-group-items">
+        <a class="sm-item sm-sub" href="ensaios.html"><span class="sm-ic">🧪</span><span class="sm-tx">Ensaios</span></a>
+        <a class="sm-item sm-sub" href="vencimento_cursos.html"><span class="sm-ic">🎓</span><span class="sm-tx">Vencimento Cursos</span></a>
+      </div>
+    </div>
+    <div class="sm-group" data-group="financeiro">
+      <div class="sm-group-head" onclick="smGroupToggle(this)"><span class="sm-ic">💰</span><span class="sm-tx">Financeiro</span><span class="sm-arrow">▸</span></div>
+      <div class="sm-group-items">
+        <a class="sm-item sm-sub" href="valores.html"><span class="sm-ic">💰</span><span class="sm-tx">Valores</span></a>
+      </div>
+    </div>
+    <div class="sm-group" data-group="gestao">
+      <div class="sm-group-head" onclick="smGroupToggle(this)"><span class="sm-ic">⚙️</span><span class="sm-tx">Gestão</span><span class="sm-arrow">▸</span></div>
+      <div class="sm-group-items">
+        <a class="sm-item sm-sub" href="permissoes.html"><span class="sm-ic">🔐</span><span class="sm-tx">Telas x Usuários</span></a>
+        <a class="sm-item sm-sub" href="projeçao.html"><span class="sm-ic">📈</span><span class="sm-tx">PDA</span></a>
+        <a class="sm-item sm-sub" href="admin.html"><span class="sm-ic">⚙️</span><span class="sm-tx">Admin</span></a>
+      </div>
+    </div>
+  </nav>
+  <div class="sm-foot">Mariuá · Sistema de Obras</div>
+</aside>
+
+<div class="dev-wrap">
+  <div class="dev-card">
+    <div class="dev-ic">🎓</div>
+    <div class="dev-tag">🚧 Em desenvolvimento</div>
+    <div class="dev-title">Vencimento de Cursos</div>
+    <div class="dev-sub">Controle de vencimento de treinamentos (NR-10, NR-35, NR-33...).<br>Esta tela está sendo construída e estará disponível em breve.</div>
+    <div class="dev-bar"><div class="dev-bar-fill"></div></div>
+    <div class="dev-foot">SESMT · Segurança e Medicina do Trabalho</div>
+  </div>
+</div>
+
+<script>
+(function(){
+  function isMobile(){return window.matchMedia('(max-width:780px)').matches;}
+  window.smToggle=function(){
+    if(isMobile()) document.body.classList.toggle('sm-expanded');
+    else document.body.classList.toggle('sm-collapsed');
+  };
+  window.smGroupToggle=function(head){ var g=head.parentNode; if(g) g.classList.toggle('open'); };
+  try{
+    var cur=decodeURIComponent((location.pathname.split('/').pop()||'')).toLowerCase();
+    if(!cur) cur='index.html';
+    document.querySelectorAll('.sm-item').forEach(function(a){
+      var href=decodeURIComponent((a.getAttribute('href')||'')).toLowerCase();
+      if(href===cur){ a.classList.add('active'); var g=a.closest('.sm-group'); if(g) g.classList.add('open'); }
+      a.addEventListener('click',function(){document.body.classList.remove('sm-expanded');});
+    });
+  }catch(e){}
+  function tick(){ var el=document.getElementById('page-time'); if(!el) return;
+    var d=new Date();
+    el.textContent=d.toLocaleDateString('pt-BR',{weekday:'short',day:'2-digit',month:'2-digit'})+' · '+d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+  }
+  tick(); setInterval(tick,30000);
+})();
+</script>
+</body>
+</html>
