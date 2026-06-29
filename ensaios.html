@@ -337,6 +337,11 @@ function ehRigido(desc){
 }
 // meses de validade conforme o tipo
 function mesesValidade(desc){ return ehRigido(desc) ? 12 : 6; }
+// validade correta: recalcula do ensaio + regra (rígido 12m / flexível 6m); fallback p/ a salva
+function validadeDe(d){
+  if(d && d.ensaio) return somaMeses(d.ensaio, mesesValidade(d.desc));
+  return (d && d.validade) || '';
+}
 
 // ===== carregar / salvar =====
 function carregar(){
@@ -404,7 +409,7 @@ function importar(file){
 // ===== KPIs =====
 function kpis(){
   var v=0,p=0,o=0;
-  DADOS.forEach(function(d){ var st=status(d.validade); if(st=='r')v++;else if(st=='a')p++;else if(st=='g')o++; });
+  DADOS.forEach(function(d){ var st=status(validadeDe(d)); if(st=='r')v++;else if(st=='a')p++;else if(st=='g')o++; });
   document.getElementById('k-tot').textContent=DADOS.length;
   document.getElementById('k-venc').textContent=v;
   document.getElementById('k-prox').textContent=p;
@@ -423,21 +428,21 @@ function render(){
     var okBusca=(d.desc||'').toLowerCase().indexOf(q)>=0||(d.nome||'').toLowerCase().indexOf(q)>=0||(d.serie||'').toLowerCase().indexOf(q)>=0||(d.origem||'').toLowerCase().indexOf(q)>=0;
     if(!okBusca) return false;
     if(fFunc && (d.nome||d.origem||'')!==fFunc) return false;
-    if(fTipo==='rigido' && !d.rigido) return false;
-    if(fTipo==='flex' && d.rigido) return false;
-    if(fStatus && (status(d.validade)||'g')!==fStatus) return false;
+    if(fTipo==='rigido' && !ehRigido(d.desc)) return false;
+    if(fTipo==='flex' && ehRigido(d.desc)) return false;
+    if(fStatus && (status(validadeDe(d))||'g')!==fStatus) return false;
     return true;
   });
 
   if(MODE=='cards'){
     // um cartão por equipamento (item individual)
-    var ord=filt.slice().sort(function(a,b){ return (a.validade?dias(a.validade):9e9)-(b.validade?dias(b.validade):9e9); });
+    var ord=filt.slice().sort(function(a,b){ return (validadeDe(a)?dias(validadeDe(a)):9e9)-(validadeDe(b)?dias(validadeDe(b)):9e9); });
     box.innerHTML='<div class="cards">'+ord.map(function(d){
-      var st=status(d.validade)||'g';
+      var st=status(validadeDe(d))||'g';
       var bcls=st=='r'?'b-r':(st=='a'?'b-a':'b-g'), blbl=st=='r'?'Vencido':(st=='a'?'Vencendo':'Em dia');
       var sub=(d.nome||d.origem||'—')+(d.serie?(' · série '+d.serie):'');
-      var reg=d.rigido?'Rígido · 1 ano':'Flexível · 6 meses';
-      var det='<div class="crow"><span class="cdot '+st+'"></span><span class="ccur">Validade</span><span class="cdt '+st+'">'+fmt(d.validade)+'</span></div>'
+      var reg=ehRigido(d.desc)?'Rígido · 1 ano':'Flexível · 6 meses';
+      var det='<div class="crow"><span class="cdot '+st+'"></span><span class="ccur">Validade</span><span class="cdt '+st+'">'+fmt(validadeDe(d))+'</span></div>'
         +'<div class="crow"><span class="cdot g" style="background:#cbd5e1"></span><span class="ccur">Ensaio</span><span class="cdt g">'+fmt(d.ensaio)+'</span></div>'
         +'<div class="crow"><span class="cdot g" style="background:#cbd5e1"></span><span class="ccur">Regra</span><span class="cdt g">'+reg+'</span></div>'
         +(d.lado?'<div class="crow"><span class="cdot g" style="background:#cbd5e1"></span><span class="ccur">Lado</span><span class="cdt g">'+esc(d.lado)+'</span></div>':'')
@@ -449,23 +454,23 @@ function render(){
     }).join('')+'</div>';
   } else if(MODE=='tbl'){
     var h='<div class="tbl-wrap"><table><thead><tr><th class="nm">Equipamento</th><th>Regra</th><th>Colaborador / Origem</th><th>Lado</th><th>Série</th><th>Ensaio</th><th>Validade</th></tr></thead><tbody>';
-    filt.sort(function(a,b){return (a.validade?dias(a.validade):9e9)-(b.validade?dias(b.validade):9e9);}).forEach(function(d){
-      var st=status(d.validade);
-      var reg=d.rigido?'<span class="eq-chip" style="background:#ede9fe;color:#6b46c1">Rígido · 1 ano</span>':'<span class="eq-chip" style="background:#fff4ed;color:#c05621">Flexível · 6 meses</span>';
-      h+='<tr><td class="nm" title="'+esc(d.desc)+'">'+esc(d.desc)+'</td><td>'+reg+'</td><td>'+esc(d.nome||d.origem||'')+'</td><td>'+esc(d.lado||'')+'</td><td>'+esc(d.serie||'')+'</td><td>'+fmt(d.ensaio)+'</td><td><span class="cell '+(st||'x')+'">'+fmt(d.validade)+'</span></td></tr>';
+    filt.sort(function(a,b){return (validadeDe(a)?dias(validadeDe(a)):9e9)-(validadeDe(b)?dias(validadeDe(b)):9e9);}).forEach(function(d){
+      var st=status(validadeDe(d));
+      var reg=ehRigido(d.desc)?'<span class="eq-chip" style="background:#ede9fe;color:#6b46c1">Rígido · 1 ano</span>':'<span class="eq-chip" style="background:#fff4ed;color:#c05621">Flexível · 6 meses</span>';
+      h+='<tr><td class="nm" title="'+esc(d.desc)+'">'+esc(d.desc)+'</td><td>'+reg+'</td><td>'+esc(d.nome||d.origem||'')+'</td><td>'+esc(d.lado||'')+'</td><td>'+esc(d.serie||'')+'</td><td>'+fmt(d.ensaio)+'</td><td><span class="cell '+(st||'x')+'">'+fmt(validadeDe(d))+'</span></td></tr>';
     });
     box.innerHTML=h+'</tbody></table></div>';
   } else {
-    var lista=filt.filter(function(d){ var st=status(d.validade); return st=='r'||st=='a'; });
-    lista.sort(function(a,b){return dias(a.validade)-dias(b.validade);});
+    var lista=filt.filter(function(d){ var st=status(validadeDe(d)); return st=='r'||st=='a'; });
+    lista.sort(function(a,b){return dias(validadeDe(a))-dias(validadeDe(b));});
     if(!lista.length){ box.innerHTML='<div class="vc-empty"><div class="big">✅</div>Nenhum equipamento vencido ou vencendo.</div>'; return; }
     box.innerHTML=lista.map(function(d){
-      var st=status(d.validade), di=dias(d.validade);
+      var st=status(validadeDe(d)), di=dias(validadeDe(d));
       var txt=di<0?('Venceu há '+(-di)+' dias'):(di===0?'Vence hoje':'Vence em '+di+' dias');
       return '<div class="alert '+(st=='a'?'a':'')+'"><div class="al-ic '+st+'">'+(st=='r'?'⛔':'⚠️')+'</div>'
         +'<div class="al-main"><div class="al-nm">'+esc(d.desc)+(d.lado?' ('+esc(d.lado)+')':'')+'</div><div class="al-sub">'+esc(d.nome||d.origem||'')+' · série '+esc(d.serie||d.rastreio)+'</div></div>'
         +'<div class="al-curso"><span class="al-curso-chip '+st+'">'+esc(d.tipo||'EPI')+'</span></div>'
-        +'<div class="al-cur"><b>'+fmt(d.validade)+'</b><span class="'+st+'">'+txt+'</span></div></div>';
+        +'<div class="al-cur"><b>'+fmt(validadeDe(d))+'</b><span class="'+st+'">'+txt+'</span></div></div>';
     }).join('');
   }
 }
