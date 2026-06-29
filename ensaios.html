@@ -297,7 +297,26 @@ function status(s){ if(!s)return ''; var d=dias(s); return d<0?'r':(d<=30?'a':'g
 function ini(n){ var p=String(n||'?').trim().split(' '); return ((p[0]||'')[0]+(p[1]?p[1][0]:'')).toUpperCase(); }
 function setStatus(t){ var el=document.getElementById('vc-status'); if(el) el.textContent=t; }
 // soma 6 meses a uma data ISO yyyy-mm-dd
-function mais6meses(iso){ var d=parseDt(iso); var m=d.getMonth()+6; d.setMonth(m); var y=d.getFullYear(),mm=('0'+(d.getMonth()+1)).slice(-2),dd=('0'+d.getDate()).slice(-2); return y+'-'+mm+'-'+dd; }
+function somaMeses(iso, n){ var d=parseDt(iso); d.setMonth(d.getMonth()+n); var y=d.getFullYear(),mm=('0'+(d.getMonth()+1)).slice(-2),dd=('0'+d.getDate()).slice(-2); return y+'-'+mm+'-'+dd; }
+// Classifica o equipamento: rígido (1 ano) ou flexível (6 meses), pela descrição.
+function ehRigido(desc){
+  var s=String(desc||'').toUpperCase();
+  // a "COBERTURA PARA CONDUTOR ... FLEXÍVEL" é flexível mesmo contendo COBERTURA
+  if(s.indexOf('FLEX')>=0) return false;
+  if(s.indexOf('LENÇOL')>=0||s.indexOf('LENCOL')>=0) return false;
+  if(s.indexOf('LUVA')>=0) return false;
+  if(s.indexOf('MANGA')>=0) return false;
+  // rígidos
+  if(s.indexOf('RIGID')>=0||s.indexOf('RÍGID')>=0) return true;
+  if(s.indexOf('CIRCULAR')>=0) return true;   // cobertura circular = rígida
+  if(s.indexOf('BASTÃO')>=0||s.indexOf('BASTAO')>=0) return true;
+  if(s.indexOf('CAPACETE')>=0) return true;
+  if(s.indexOf('DETECTOR')>=0) return true;
+  // default: trata como flexível (mais conservador — vence antes)
+  return false;
+}
+// meses de validade conforme o tipo
+function mesesValidade(desc){ return ehRigido(desc) ? 12 : 6; }
 
 // ===== carregar / salvar =====
 function carregar(){
@@ -343,19 +362,19 @@ function importar(file){
         var desc=String(r[5]||'').trim();
         var ensaioISO=isoFrom(r[8]);
         if(!desc && !ensaioISO) continue;                  // linha vazia
-        var validade = ensaioISO ? mais6meses(ensaioISO) : '';  // SEMPRE 6 meses após o ensaio
+        var validade = ensaioISO ? somaMeses(ensaioISO, mesesValidade(desc)) : '';  // flexível=6m, rígido=12m
         novos.push({
           rastreio:rast, resp:String(r[1]||'').trim(), matricula:String(r[2]||'').trim(),
           nome:String(r[3]||'').trim(), origem:String(r[4]||'').trim(), desc:desc,
           tipo:String(r[6]||'').trim(), st:String(r[7]||'').trim(),
           ensaio:ensaioISO, lado:String(r[10]||'').trim(), serie:String(r[11]||'').trim(),
-          validade:validade
+          validade:validade, rigido:ehRigido(desc)
         });
       }
       if(!novos.length){ setStatus('❌ Nenhum equipamento encontrado. Confira se é a planilha de rastreabilidade.'); return; }
       DADOS=novos;
       setStatus('Salvando '+DADOS.length+' equipamentos...');
-      salvar().then(function(r){ setStatus(r.ok?('✅ Importado e salvo: '+DADOS.length+' equipamentos (validade = ensaio + 6 meses).'):'⚠️ Importado, mas falha ao salvar.'); kpis(); render(); })
+      salvar().then(function(r){ setStatus(r.ok?('✅ Importado e salvo: '+DADOS.length+' equipamentos (flexível: 6 meses · rígido: 1 ano).'):'⚠️ Importado, mas falha ao salvar.'); kpis(); render(); })
               .catch(function(){ setStatus('⚠️ Importado, mas falha ao salvar.'); kpis(); render(); });
     }catch(err){ setStatus('❌ Erro ao ler planilha: '+err.message); }
   };
@@ -396,10 +415,11 @@ function render(){
         +'<span class="card-badge '+bcls+'">'+blbl+'</span></div><div class="card-b">'+rows+'</div></div>';
     }).join('')+'</div>';
   } else if(MODE=='tbl'){
-    var h='<div class="tbl-wrap"><table><thead><tr><th class="nm">Equipamento</th><th>Tipo</th><th>Colaborador / Origem</th><th>Lado</th><th>Série</th><th>Ensaio</th><th>Validade</th></tr></thead><tbody>';
+    var h='<div class="tbl-wrap"><table><thead><tr><th class="nm">Equipamento</th><th>Regra</th><th>Colaborador / Origem</th><th>Lado</th><th>Série</th><th>Ensaio</th><th>Validade</th></tr></thead><tbody>';
     filt.sort(function(a,b){return (a.validade?dias(a.validade):9e9)-(b.validade?dias(b.validade):9e9);}).forEach(function(d){
       var st=status(d.validade);
-      h+='<tr><td class="nm" title="'+esc(d.desc)+'">'+esc(d.desc)+'</td><td>'+esc(d.tipo||'')+'</td><td>'+esc(d.nome||d.origem||'')+'</td><td>'+esc(d.lado||'')+'</td><td>'+esc(d.serie||'')+'</td><td>'+fmt(d.ensaio)+'</td><td><span class="cell '+(st||'x')+'">'+fmt(d.validade)+'</span></td></tr>';
+      var reg=d.rigido?'<span class="eq-chip" style="background:#ede9fe;color:#6b46c1">Rígido · 1 ano</span>':'<span class="eq-chip" style="background:#fff4ed;color:#c05621">Flexível · 6 meses</span>';
+      h+='<tr><td class="nm" title="'+esc(d.desc)+'">'+esc(d.desc)+'</td><td>'+reg+'</td><td>'+esc(d.nome||d.origem||'')+'</td><td>'+esc(d.lado||'')+'</td><td>'+esc(d.serie||'')+'</td><td>'+fmt(d.ensaio)+'</td><td><span class="cell '+(st||'x')+'">'+fmt(d.validade)+'</span></td></tr>';
     });
     box.innerHTML=h+'</tbody></table></div>';
   } else {
