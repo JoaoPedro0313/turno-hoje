@@ -406,12 +406,15 @@ function render(){
       var its=grupos[k];
       var pr=its.some(function(d){return status(d.validade)=='r';}), pa=its.some(function(d){return status(d.validade)=='a';});
       var ps=pr?'r':(pa?'a':'g'), bcls=ps=='r'?'b-r':(ps=='a'?'b-a':'b-g'), blbl=ps=='r'?'Vencido':(ps=='a'?'Vencendo':'Em dia');
+      // origem(ns) distintas do colaborador
+      var origens={}; its.forEach(function(d){ if(d.origem) origens[d.origem.toUpperCase()]=true; });
+      var origemTxt=Object.keys(origens).join(' · ') || (its.length+' equipamento(s)');
       var rows=its.sort(function(a,b){return (a.validade?dias(a.validade):9e9)-(b.validade?dias(b.validade):9e9);}).map(function(d){
         var st=status(d.validade);
         return '<div class="crow"><span class="cdot '+(st||'g')+'"></span><span class="ccur">'+esc(d.desc)+(d.lado?' <span style="color:#aaa">('+esc(d.lado)+')</span>':'')+' <span class="eq-chip">'+esc(d.serie||d.rastreio)+'</span></span><span class="cdt '+(st||'g')+'">'+fmt(d.validade)+'</span></div>';
       }).join('');
       return '<div class="card"><div class="card-h" onclick="this.parentNode.classList.toggle(\'open\')">'
-        +'<div class="card-av">'+ini(k)+'</div><div><div class="card-nm">'+esc(k)+'</div><div class="card-fn">'+its.length+' equipamento(s)</div></div>'
+        +'<div class="card-av">'+ini(k)+'</div><div><div class="card-nm">'+esc(k)+'</div><div class="card-fn">'+esc(origemTxt)+'</div></div>'
         +'<span class="card-badge '+bcls+'">'+blbl+'</span></div><div class="card-b">'+rows+'</div></div>';
     }).join('')+'</div>';
   } else if(MODE=='tbl'){
