@@ -82,6 +82,10 @@
   .vc-mode.active{background:linear-gradient(135deg,var(--teal),var(--teal2));color:#fff;border-color:var(--teal)}
   .vc-srch{flex:1;min-width:200px;padding:9px 14px;border:1.5px solid #e2e8f0;border-radius:9px;font-family:'Barlow';font-size:.85rem;font-weight:600;outline:none}
   .vc-srch:focus{border-color:var(--teal2)}
+  .vc-filt{padding:8px 12px;border:1.5px solid #e2e8f0;border-radius:9px;font-family:'Barlow';font-size:.8rem;font-weight:700;color:#334155;background:#fff;outline:none;cursor:pointer}
+  .vc-filt:focus{border-color:var(--teal2)}
+  .vc-filt-clear{padding:8px 12px;border:1.5px solid #e2e8f0;border-radius:9px;background:#fff;color:#94a3b8;font-family:'Barlow';font-size:.78rem;font-weight:800;cursor:pointer}
+  .vc-filt-clear:hover{color:#e53e3e;border-color:#fbd5d5}
   .vc-imp{background:#276749;color:#fff;border:none;padding:9px 16px;border-radius:9px;font-family:'Barlow';font-size:.8rem;font-weight:800;cursor:pointer;display:flex;align-items:center;gap:6px}
   .vc-imp:hover{background:#1e5236}
   .vc-status{font-size:.76rem;font-weight:700;color:#888;margin-bottom:12px;min-height:18px}
@@ -258,6 +262,22 @@
     <button class="vc-imp" onclick="document.getElementById('vc-file').click()">📤 Importar planilha</button>
     <input type="file" id="vc-file" accept=".xlsx,.xls,.csv" style="display:none" onchange="importar(this.files[0]);this.value=''">
   </div>
+  <div class="vc-bar" style="margin-top:-4px">
+    <span style="font-size:.7rem;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:1px">Filtros:</span>
+    <select class="vc-filt" id="f-func" onchange="render()"><option value="">👤 Todos os funcionários</option></select>
+    <select class="vc-filt" id="f-tipo" onchange="render()">
+      <option value="">🧰 Todos os tipos</option>
+      <option value="rigido">🟪 Rígido (1 ano)</option>
+      <option value="flex">🟧 Flexível (6 meses)</option>
+    </select>
+    <select class="vc-filt" id="f-status" onchange="render()">
+      <option value="">🚦 Todos os status</option>
+      <option value="r">🔴 Vencidos</option>
+      <option value="a">🟡 Vencem em 30 dias</option>
+      <option value="g">🟢 Em dia</option>
+    </select>
+    <button class="vc-filt-clear" onclick="limparFiltros()">✕ Limpar</button>
+  </div>
   <div class="vc-status" id="vc-status"></div>
 
   <div id="vc-content"></div>
@@ -328,9 +348,9 @@ function carregar(){
         DADOS=j[0].value.dados;
         setStatus('✅ '+DADOS.length+' equipamentos · atualizado '+(j[0].value.atualizado||'')+'.');
       } else { DADOS=[]; setStatus('Nenhum dado salvo. Importe a planilha para começar.'); }
-      kpis(); render();
+      kpis(); popularFiltros(); render();
     })
-    .catch(function(){ setStatus('⚠️ Não foi possível carregar do banco.'); kpis(); render(); });
+    .catch(function(){ setStatus('⚠️ Não foi possível carregar do banco.'); kpis(); popularFiltros(); render(); });
 }
 function salvar(){
   var payload={dados:DADOS, atualizado:new Date().toLocaleString('pt-BR')};
@@ -374,8 +394,8 @@ function importar(file){
       if(!novos.length){ setStatus('❌ Nenhum equipamento encontrado. Confira se é a planilha de rastreabilidade.'); return; }
       DADOS=novos;
       setStatus('Salvando '+DADOS.length+' equipamentos...');
-      salvar().then(function(r){ setStatus(r.ok?('✅ Importado e salvo: '+DADOS.length+' equipamentos (flexível: 6 meses · rígido: 1 ano).'):'⚠️ Importado, mas falha ao salvar.'); kpis(); render(); })
-              .catch(function(){ setStatus('⚠️ Importado, mas falha ao salvar.'); kpis(); render(); });
+      salvar().then(function(r){ setStatus(r.ok?('✅ Importado e salvo: '+DADOS.length+' equipamentos (flexível: 6 meses · rígido: 1 ano).'):'⚠️ Importado, mas falha ao salvar.'); kpis(); popularFiltros(); render(); })
+              .catch(function(){ setStatus('⚠️ Importado, mas falha ao salvar.'); kpis(); popularFiltros(); render(); });
     }catch(err){ setStatus('❌ Erro ao ler planilha: '+err.message); }
   };
   reader.readAsArrayBuffer(file);
@@ -396,7 +416,18 @@ function render(){
   var box=document.getElementById('vc-content');
   var q=(document.getElementById('vc-srch').value||'').toLowerCase();
   if(!DADOS.length){ box.innerHTML='<div class="vc-empty"><div class="big">📭</div>Nenhum dado ainda.<br><span style="font-size:.82rem">Clique em "Importar planilha".</span></div>'; return; }
-  var filt=DADOS.filter(function(d){ return (d.desc||'').toLowerCase().indexOf(q)>=0||(d.nome||'').toLowerCase().indexOf(q)>=0||(d.serie||'').toLowerCase().indexOf(q)>=0||(d.origem||'').toLowerCase().indexOf(q)>=0; });
+  var fFunc=document.getElementById('f-func').value;
+  var fTipo=document.getElementById('f-tipo').value;
+  var fStatus=document.getElementById('f-status').value;
+  var filt=DADOS.filter(function(d){
+    var okBusca=(d.desc||'').toLowerCase().indexOf(q)>=0||(d.nome||'').toLowerCase().indexOf(q)>=0||(d.serie||'').toLowerCase().indexOf(q)>=0||(d.origem||'').toLowerCase().indexOf(q)>=0;
+    if(!okBusca) return false;
+    if(fFunc && (d.nome||d.origem||'')!==fFunc) return false;
+    if(fTipo==='rigido' && !d.rigido) return false;
+    if(fTipo==='flex' && d.rigido) return false;
+    if(fStatus && (status(d.validade)||'g')!==fStatus) return false;
+    return true;
+  });
 
   if(MODE=='cards'){
     // um cartão por equipamento (item individual)
@@ -438,6 +469,22 @@ function render(){
     }).join('');
   }
 }
+function limparFiltros(){
+  document.getElementById('vc-srch').value='';
+  document.getElementById('f-func').value='';
+  document.getElementById('f-tipo').value='';
+  document.getElementById('f-status').value='';
+  render();
+}
+function popularFiltros(){
+  var sel=document.getElementById('f-func'); if(!sel) return;
+  var atual=sel.value;
+  var nomes={}; DADOS.forEach(function(d){ var n=d.nome||d.origem; if(n) nomes[n]=true; });
+  var lista=Object.keys(nomes).sort();
+  sel.innerHTML='<option value="">👤 Todos os funcionários</option>'+lista.map(function(n){ return '<option value="'+esc(n)+'">'+esc(n)+'</option>'; }).join('');
+  if(lista.indexOf(atual)>=0) sel.value=atual;
+}
+
 function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
 carregar();
