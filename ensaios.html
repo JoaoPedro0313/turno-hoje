@@ -350,7 +350,12 @@ function carregar(){
     .then(function(r){return r.ok?r.json():Promise.reject(r.status);})
     .then(function(j){
       if(Array.isArray(j)&&j.length&&j[0].value&&Array.isArray(j[0].value.dados)){
-        DADOS=j[0].value.dados;
+        DADOS=(j[0].value.dados||[]).map(function(d){
+          d.nome=corrigirAcentos(d.nome); d.desc=corrigirAcentos(d.desc);
+          d.origem=corrigirAcentos(d.origem); d.resp=corrigirAcentos(d.resp);
+          d.tipo=corrigirAcentos(d.tipo); d.lado=corrigirAcentos(d.lado);
+          return d;
+        });
         setStatus('✅ '+DADOS.length+' equipamentos · atualizado '+(j[0].value.atualizado||'')+'.');
       } else { DADOS=[]; setStatus('Nenhum dado salvo. Importe a planilha para começar.'); }
       kpis(); popularFiltros(); render();
@@ -369,30 +374,54 @@ function isoFrom(v){
   if(v instanceof Date && !isNaN(v)){ var y=v.getFullYear(),m=('0'+(v.getMonth()+1)).slice(-2),d=('0'+v.getDate()).slice(-2); return y+'-'+m+'-'+d; }
   var s=String(v||'').trim(); var m=s.match(/^(\d{2})\/(\d{2})\/(\d{4})$/); if(m) return m[3]+'-'+m[2]+'-'+m[1]; return '';
 }
+// conserta acentuação corrompida (mojibake: bytes UTF-8 que foram lidos como latin-1/Win-1252)
+function corrigirAcentos(s){
+  if(!s) return s; s=String(s);
+  if(!/[ÃÂ�]/.test(s)) return s;   // sem sinais de mojibake, não mexe
+  try{
+    // reverte: pega cada char como byte latin-1 e re-decodifica como UTF-8
+    var bytes=new Uint8Array(s.length);
+    for(var i=0;i<s.length;i++){ bytes[i]=s.charCodeAt(i)&0xFF; }
+    var fixed=new TextDecoder('utf-8',{fatal:false}).decode(bytes);
+    // se a reversão removeu os sinais de mojibake, usa ela; senão devolve original
+    return /[Ã]/.test(fixed) ? s : fixed;
+  }catch(e){ return s; }
+}
 function importar(file){
   if(!file)return;
   setStatus('Lendo planilha...');
+  var nome=(file.name||'').toLowerCase();
+  var ehCSV = nome.slice(-4)==='.csv';
   var reader=new FileReader();
   reader.onload=function(e){
     try{
-      var wb=XLSX.read(new Uint8Array(e.target.result),{type:'array',cellDates:true,raw:false});
+      var wb;
+      if(ehCSV){
+        // CSV: lê como texto na codificação certa (tenta UTF-8; se corromper acento, usa latin-1)
+        var bytes=new Uint8Array(e.target.result);
+        var txt;
+        try{ txt=new TextDecoder('utf-8',{fatal:false}).decode(bytes); }catch(_){ txt=''; }
+        if(/�/.test(txt)){ try{ txt=new TextDecoder('iso-8859-1').decode(bytes); }catch(_){ } }
+        wb=XLSX.read(txt,{type:'string',cellDates:true,raw:false});
+      } else {
+        wb=XLSX.read(new Uint8Array(e.target.result),{type:'array',cellDates:true,raw:false});
+      }
       var ws=wb.Sheets[wb.SheetNames[0]];
       var rows=XLSX.utils.sheet_to_json(ws,{header:1,raw:false,dateNF:'dd/mm/yyyy'});
-      // procura a primeira linha de dado: col0 numérica (rastreio) e tem descrição
       var novos=[];
       for(var i=0;i<rows.length;i++){
         var r=rows[i]||[];
         var rast=String(r[0]||'').trim();
         if(!rast || !/^\d+$/.test(rast)) continue;        // col0 = número do rastreio
-        var desc=String(r[5]||'').trim();
+        var desc=corrigirAcentos(String(r[5]||'').trim());
         var ensaioISO=isoFrom(r[8]);
         if(!desc && !ensaioISO) continue;                  // linha vazia
         var validade = ensaioISO ? somaMeses(ensaioISO, mesesValidade(desc)) : '';  // flexível=6m, rígido=12m
         novos.push({
-          rastreio:rast, resp:String(r[1]||'').trim(), matricula:String(r[2]||'').trim(),
-          nome:String(r[3]||'').trim(), origem:String(r[4]||'').trim(), desc:desc,
-          tipo:String(r[6]||'').trim(), st:String(r[7]||'').trim(),
-          ensaio:ensaioISO, lado:String(r[10]||'').trim(), serie:String(r[11]||'').trim(),
+          rastreio:rast, resp:corrigirAcentos(String(r[1]||'').trim()), matricula:String(r[2]||'').trim(),
+          nome:corrigirAcentos(String(r[3]||'').trim()), origem:corrigirAcentos(String(r[4]||'').trim()), desc:desc,
+          tipo:corrigirAcentos(String(r[6]||'').trim()), st:String(r[7]||'').trim(),
+          ensaio:ensaioISO, lado:corrigirAcentos(String(r[10]||'').trim()), serie:String(r[11]||'').trim(),
           validade:validade, rigido:ehRigido(desc)
         });
       }
