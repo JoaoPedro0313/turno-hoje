@@ -302,8 +302,9 @@ function piorStatus(d){ var r=false,a=false; for(var c in d.certificados){ var s
 function setStatus(t){ var el=document.getElementById('vc-status'); if(el) el.textContent=t; }
 
 // ===== carregar do Supabase =====
-function carregar(){
-  setStatus('Carregando...');
+function carregar(tentativa){
+  tentativa = tentativa || 1;
+  if(!DADOS.length) setStatus('Carregando...');
   fetch(SUPA_URL+'/rest/v1/turno_data?select=value&key=eq.'+KEY+'&limit=1',{headers:SUPA_H})
     .then(function(r){return r.ok?r.json():Promise.reject(r.status);})
     .then(function(j){
@@ -313,7 +314,14 @@ function carregar(){
       } else { DADOS=[]; setStatus('Nenhum dado salvo. Importe a planilha para começar.'); }
       kpis(); render();
     })
-    .catch(function(){ setStatus('⚠️ Não foi possível carregar do banco.'); kpis(); render(); });
+    .catch(function(){
+      // tenta de novo (até 3x) antes de avisar — evita falso alarme por soluço de rede
+      if(tentativa<3){ setTimeout(function(){ carregar(tentativa+1); }, 1500); return; }
+      // se já tem dados na tela, não mostra erro assustador; só avisa se realmente não carregou nada
+      if(DADOS.length){ setStatus('✅ '+DADOS.length+' colaboradores (offline — usando últimos dados).'); }
+      else { setStatus('⚠️ Sem conexão com o banco. Tentando novamente...'); setTimeout(function(){ carregar(1); }, 5000); }
+      kpis(); render();
+    });
 }
 function salvar(){
   var payload={dados:DADOS, atualizado:new Date().toLocaleString('pt-BR')};
