@@ -252,7 +252,7 @@
 
   <div class="vc-bar">
     <button class="vc-mode active" id="m-alert" onclick="setMode('alert',this)">⚠️ Alertas</button>
-    <button class="vc-mode" id="m-cards" onclick="setMode('cards',this)">👤 Por colaborador</button>
+    <button class="vc-mode" id="m-cards" onclick="setMode('cards',this)">🧰 Equipamentos</button>
     <button class="vc-mode" id="m-tbl" onclick="setMode('tbl',this)">📋 Tabela</button>
     <input class="vc-srch" id="vc-srch" placeholder="🔎 Buscar equipamento, colaborador, série..." oninput="render()">
     <button class="vc-imp" onclick="document.getElementById('vc-file').click()">📤 Importar planilha</button>
@@ -399,23 +399,22 @@ function render(){
   var filt=DADOS.filter(function(d){ return (d.desc||'').toLowerCase().indexOf(q)>=0||(d.nome||'').toLowerCase().indexOf(q)>=0||(d.serie||'').toLowerCase().indexOf(q)>=0||(d.origem||'').toLowerCase().indexOf(q)>=0; });
 
   if(MODE=='cards'){
-    // agrupa por colaborador (ou origem se sem nome)
-    var grupos={};
-    filt.forEach(function(d){ var k=d.nome||d.origem||'(sem)'; (grupos[k]=grupos[k]||[]).push(d); });
-    box.innerHTML='<div class="cards">'+Object.keys(grupos).sort().map(function(k){
-      var its=grupos[k];
-      var pr=its.some(function(d){return status(d.validade)=='r';}), pa=its.some(function(d){return status(d.validade)=='a';});
-      var ps=pr?'r':(pa?'a':'g'), bcls=ps=='r'?'b-r':(ps=='a'?'b-a':'b-g'), blbl=ps=='r'?'Vencido':(ps=='a'?'Vencendo':'Em dia');
-      // origem(ns) distintas do colaborador
-      var origens={}; its.forEach(function(d){ if(d.origem) origens[d.origem.toUpperCase()]=true; });
-      var origemTxt=Object.keys(origens).join(' · ') || (its.length+' equipamento(s)');
-      var rows=its.sort(function(a,b){return (a.validade?dias(a.validade):9e9)-(b.validade?dias(b.validade):9e9);}).map(function(d){
-        var st=status(d.validade);
-        return '<div class="crow"><span class="cdot '+(st||'g')+'"></span><span class="ccur">'+esc(d.desc)+(d.lado?' <span style="color:#aaa">('+esc(d.lado)+')</span>':'')+' <span class="eq-chip">'+esc(d.serie||d.rastreio)+'</span></span><span class="cdt '+(st||'g')+'">'+fmt(d.validade)+'</span></div>';
-      }).join('');
+    // um cartão por equipamento (item individual)
+    var ord=filt.slice().sort(function(a,b){ return (a.validade?dias(a.validade):9e9)-(b.validade?dias(b.validade):9e9); });
+    box.innerHTML='<div class="cards">'+ord.map(function(d){
+      var st=status(d.validade)||'g';
+      var bcls=st=='r'?'b-r':(st=='a'?'b-a':'b-g'), blbl=st=='r'?'Vencido':(st=='a'?'Vencendo':'Em dia');
+      var sub=(d.nome||d.origem||'—')+(d.serie?(' · série '+d.serie):'');
+      var reg=d.rigido?'Rígido · 1 ano':'Flexível · 6 meses';
+      var det='<div class="crow"><span class="cdot '+st+'"></span><span class="ccur">Validade</span><span class="cdt '+st+'">'+fmt(d.validade)+'</span></div>'
+        +'<div class="crow"><span class="cdot g" style="background:#cbd5e1"></span><span class="ccur">Ensaio</span><span class="cdt g">'+fmt(d.ensaio)+'</span></div>'
+        +'<div class="crow"><span class="cdot g" style="background:#cbd5e1"></span><span class="ccur">Regra</span><span class="cdt g">'+reg+'</span></div>'
+        +(d.lado?'<div class="crow"><span class="cdot g" style="background:#cbd5e1"></span><span class="ccur">Lado</span><span class="cdt g">'+esc(d.lado)+'</span></div>':'')
+        +(d.origem?'<div class="crow"><span class="cdot g" style="background:#cbd5e1"></span><span class="ccur">Origem</span><span class="cdt g">'+esc(d.origem)+'</span></div>':'');
       return '<div class="card"><div class="card-h" onclick="this.parentNode.classList.toggle(\'open\')">'
-        +'<div class="card-av">'+ini(k)+'</div><div><div class="card-nm">'+esc(k)+'</div><div class="card-fn">'+esc(origemTxt)+'</div></div>'
-        +'<span class="card-badge '+bcls+'">'+blbl+'</span></div><div class="card-b">'+rows+'</div></div>';
+        +'<div class="card-av">'+ini(d.desc)+'</div>'
+        +'<div><div class="card-nm">'+esc(d.desc)+(d.lado?' ('+esc(d.lado)+')':'')+'</div><div class="card-fn">'+esc(sub)+'</div></div>'
+        +'<span class="card-badge '+bcls+'">'+blbl+'</span></div><div class="card-b">'+det+'</div></div>';
     }).join('')+'</div>';
   } else if(MODE=='tbl'){
     var h='<div class="tbl-wrap"><table><thead><tr><th class="nm">Equipamento</th><th>Regra</th><th>Colaborador / Origem</th><th>Lado</th><th>Série</th><th>Ensaio</th><th>Validade</th></tr></thead><tbody>';
