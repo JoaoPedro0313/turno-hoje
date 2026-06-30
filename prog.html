@@ -247,6 +247,7 @@ const PROG_TOTAIS_ENC = {"AMILTON COSTA": {"valor_previsto": 0.01, "valor_realiz
   <button id="prog-tab-list" onclick="if(window.progSwitchTab)window.progSwitchTab('list')" class="_s24">📋 REGISTROS</button>
   <button id="prog-tab-dash" onclick="if(window.progSwitchTab)window.progSwitchTab('dash')" class="_s24">📊 DASHBOARD</button>
   <button id="prog-tab-mapa" onclick="if(window.progSwitchTab)window.progSwitchTab('mapa')" class="_s24">🗺️ MAPA</button>
+  <button id="prog-tab-neoex" onclick="if(window.progSwitchTab)window.progSwitchTab('neoex')" class="_s24">🧪 NEOEX</button>
 </div>
 </div>
 <div style="margin-bottom:16px;"></div>
@@ -543,6 +544,77 @@ const PROG_TOTAIS_ENC = {"AMILTON COSTA": {"valor_previsto": 0.01, "valor_realiz
         </tr></thead>
         <tbody id="prog-mapa-tbody"></tbody>
       </table>
+    </div>
+  </div>
+
+</div>
+
+<div id="prog-view-neoex" style="display:none;">
+
+  <div style="background:linear-gradient(135deg,#0b5e62,#0d7377,#14a085);border-radius:14px;padding:16px 20px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+    <div style="display:flex;align-items:center;gap:12px;">
+      <span style="font-size:1.6rem;">🧪</span>
+      <div>
+        <div style="color:#fff;font-size:1rem;font-weight:800;letter-spacing:0.5px;">NEOEX — APONTAMENTO × PLANILHA</div>
+        <div style="color:rgba(255,255,255,0.75);font-size:0.7rem;font-weight:600;margin-top:2px;">Importe o relatório de GPM e compare por B- com a planilha do René (mapa)</div>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+      <span id="neoex-base-status" style="font-size:0.7rem;font-weight:800;color:#fff;background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);padding:5px 12px;border-radius:20px;">Planilha do René: carregando…</span>
+    </div>
+  </div>
+
+  <div style="background:#fff;border-radius:14px;padding:18px 20px;box-shadow:0 2px 12px rgba(0,0,0,0.08);margin-bottom:14px;">
+    <div onclick="document.getElementById('neoex-file').click()" id="neoex-drop"
+      style="border:2px dashed #c0e8e5;border-radius:12px;padding:28px 20px;text-align:center;cursor:pointer;transition:all 0.2s;background:linear-gradient(135deg,#f0fafa,#e8f7f5);">
+      <div style="font-size:2rem;margin-bottom:8px;">📥</div>
+      <div style="font-size:0.9rem;font-weight:800;color:#0d7377;">Clique para importar o relatório de GPM (.csv)</div>
+      <div style="font-size:0.72rem;font-weight:600;color:#888;margin-top:5px;">apontamento_faturamento — separado por ponto-e-vírgula</div>
+    </div>
+    <input type="file" id="neoex-file" accept=".csv,.txt" style="display:none;" onchange="neoexImportar(this.files[0])">
+    <div id="neoex-import-msg" style="display:none;margin-top:12px;padding:10px 14px;border-radius:10px;font-size:0.78rem;font-weight:700;text-align:center;"></div>
+  </div>
+
+  <div id="neoex-kpis" style="display:none;gap:10px;flex-wrap:wrap;margin-bottom:14px;"></div>
+
+  <div id="neoex-content" style="display:none;">
+    <div style="background:#fff;border-radius:14px;padding:14px 18px;box-shadow:0 2px 12px rgba(0,0,0,0.08);margin-bottom:12px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+      <input type="text" id="neoex-search" placeholder="🔍 Buscar B-, obra, município..." oninput="neoexRender()"
+        style="flex:1;min-width:220px;padding:9px 14px;border:1.5px solid #e0e8f0;border-radius:9px;font-family:'Barlow',sans-serif;font-size:0.82rem;font-weight:600;outline:none;"
+        onfocus="this.style.borderColor='#0d7377'" onblur="this.style.borderColor='#e0e8f0'">
+      <button id="neoex-fbtn-todos" onclick="neoexSetFiltro('todos')" style="padding:7px 14px;border-radius:8px;border:1.5px solid #0d7377;background:#0d7377;color:#fff;font-family:'Barlow',sans-serif;font-size:0.72rem;font-weight:800;cursor:pointer;">TODOS</button>
+      <button id="neoex-fbtn-div" onclick="neoexSetFiltro('div')" style="padding:7px 14px;border-radius:8px;border:1.5px solid #e2e8f0;background:#fff;color:#666;font-family:'Barlow',sans-serif;font-size:0.72rem;font-weight:800;cursor:pointer;">⚠️ COM DIFERENÇA</button>
+      <button id="neoex-fbtn-ok" onclick="neoexSetFiltro('ok')" style="padding:7px 14px;border-radius:8px;border:1.5px solid #e2e8f0;background:#fff;color:#666;font-family:'Barlow',sans-serif;font-size:0.72rem;font-weight:800;cursor:pointer;">✅ OK</button>
+      <button id="neoex-fbtn-so-gpm" onclick="neoexSetFiltro('so-gpm')" style="padding:7px 14px;border-radius:8px;border:1.5px solid #e2e8f0;background:#fff;color:#666;font-family:'Barlow',sans-serif;font-size:0.72rem;font-weight:800;cursor:pointer;">SÓ NO GPM</button>
+      <button onclick="neoexExportCSV()" style="padding:7px 14px;background:#276749;border:none;border-radius:8px;font-family:'Barlow',sans-serif;font-size:0.72rem;font-weight:800;color:#fff;cursor:pointer;">⬇️ CSV</button>
+    </div>
+
+    <div style="background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.08);">
+      <div style="padding:8px 16px;background:#f0fafa;border-bottom:1px solid #c0e8e5;display:flex;gap:16px;font-size:0.68rem;font-weight:700;color:#666;flex-wrap:wrap;align-items:center;">
+        <span style="display:flex;align-items:center;gap:5px;"><span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:#14a085;"></span>Bate</span>
+        <span style="display:flex;align-items:center;gap:5px;"><span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:#e53e3e;"></span>Diferença previsto × realizado</span>
+        <span style="margin-left:auto;color:#aaa;">GPM = executado no apontamento · René = planilha do mapa</span>
+      </div>
+      <div style="overflow-x:auto;">
+        <table style="width:100%;border-collapse:collapse;font-size:0.76rem;">
+          <thead>
+            <tr style="background:linear-gradient(135deg,#0b5e62,#0d7377);color:#fff;">
+              <th style="padding:10px 12px;text-align:left;font-weight:800;white-space:nowrap;">B- / OBRA</th>
+              <th style="padding:10px 8px;text-align:center;font-weight:800;white-space:nowrap;">COVAS<br><span style="font-size:0.6rem;opacity:0.7;">GPM × René</span></th>
+              <th style="padding:10px 8px;text-align:center;font-weight:800;white-space:nowrap;">POSTES<br><span style="font-size:0.6rem;opacity:0.7;">GPM × René</span></th>
+              <th style="padding:10px 8px;text-align:center;font-weight:800;white-space:nowrap;">ESTRUT.<br><span style="font-size:0.6rem;opacity:0.7;">só GPM</span></th>
+              <th style="padding:10px 8px;text-align:center;font-weight:800;white-space:nowrap;">CABO (m)<br><span style="font-size:0.6rem;opacity:0.7;">só GPM</span></th>
+              <th style="padding:10px 8px;text-align:center;font-weight:800;white-space:nowrap;">PODA<br><span style="font-size:0.6rem;opacity:0.7;">só GPM</span></th>
+              <th style="padding:10px 8px;text-align:center;font-weight:800;white-space:nowrap;">LIGAÇÃO<br><span style="font-size:0.6rem;opacity:0.7;">cliente</span></th>
+            </tr>
+          </thead>
+          <tbody id="neoex-tbody"></tbody>
+        </table>
+      </div>
+      <div id="neoex-empty" style="display:none;text-align:center;padding:50px 20px;color:#aaa;">
+        <div style="font-size:2.4rem;margin-bottom:10px;">📋</div>
+        <div style="font-size:0.88rem;font-weight:600;">Importe o relatório de GPM para ver a comparação.</div>
+      </div>
     </div>
   </div>
 
@@ -4134,7 +4206,7 @@ const selAtiv = document.getElementById('pf-atividade');
 if (selAtiv) selAtiv.innerHTML = '<option value="">Selecione o tipo primeiro...</option>';
 }
 function progSwitchTab(tab) {
-['form','list','dash','mapa'].forEach(t => {
+['form','list','dash','mapa','neoex'].forEach(t => {
 const btn = document.getElementById('prog-tab-'+t);
 const view = document.getElementById('prog-view-'+t);
 const active = t===tab;
@@ -4148,6 +4220,7 @@ setTimeout(() => {
 if (tab==='list') progRenderList();
 if (tab==='dash') progRenderDash();
 if (tab==='mapa') progMapaInit();
+if (tab==='neoex' && typeof neoexOnShow==='function') neoexOnShow();
 }, 10);
 }
 let progMapaMap = null, progMapaLayerGroup = null, progMapaFiltroStatus = 'TODOS';
@@ -5155,5 +5228,297 @@ window.postoFiltro   = postoFiltro;
 })();
 </script>
 <script src="identidade.js?v=3"></script>
+<script>
+/* ===================== NEOEX — comparação GPM × planilha do René ===================== */
+(function(){
+  var neoexGPM = null;       // mapa { 'B-xxxx': {covas,postes,estrutura,cabo,poda,ligacao} }
+  var neoexFiltro = 'todos';
+  var neoexLinhas = [];      // linhas já cruzadas
+
+  function num(s){
+    s = (s==null?'':String(s)).trim();
+    if(!s) return 0;
+    // remove separador de milhar (.) e troca vírgula decimal por ponto
+    s = s.replace(/\./g,'').replace(',', '.');
+    var v = parseFloat(s);
+    return isNaN(v) ? 0 : v;
+  }
+  // número vindo da planilha do René (pode estar "12" ou "12,5" ou vazio)
+  function numReve(s){
+    s = (s==null?'':String(s)).trim();
+    if(!s) return null;
+    s = s.replace(/\./g,'').replace(',', '.');
+    var v = parseFloat(s);
+    return isNaN(v) ? null : v;
+  }
+
+  function categoria(a, grupo){
+    a = (a||'').toUpperCase();
+    grupo = (grupo||'').toUpperCase();
+    if(a.indexOf('CAVA') >= 0) return 'covas';
+    if(a.indexOf('POSTE') === 0 || a.indexOf('TRANSPORTE DE POSTE') >= 0 || a.indexOf('DISTRIBUICAO DE POSTES') >= 0) return 'postes';
+    if(a.indexOf('INSTALAR EST') >= 0 || a.indexOf('INST EST') === 0) return 'estrutura';
+    if(a.indexOf('CONDUTOR') >= 0 || a.indexOf('CABO') >= 0) return 'cabo';
+    if(grupo === 'PODA' || a.indexOf('ARVORE') >= 0 || a.indexOf('ABERTURA DE FAIXA') >= 0 || a.indexOf('PODA') >= 0) return 'poda';
+    if(a.indexOf('LIGAÇÃO DE CLIENTE') >= 0 || a.indexOf('LIGACAO DE CLIENTE') >= 0 || grupo === 'LC' ||
+       a.indexOf('RAMAL DE LIG') >= 0 || a.indexOf('MEDIDOR') >= 0 || a.indexOf('INSTALACAO INTERNA') >= 0) return 'ligacao';
+    return null;
+  }
+
+  // parser CSV com ; e aspas
+  function parseCSVSemicolon(text){
+    if(text.charCodeAt(0) === 0xFEFF) text = text.slice(1); // remove BOM
+    var linhas = [];
+    var i=0, campo='', linha=[], dentroAspas=false;
+    while(i < text.length){
+      var c = text[i];
+      if(dentroAspas){
+        if(c === '"'){
+          if(text[i+1] === '"'){ campo+='"'; i+=2; continue; }
+          dentroAspas = false; i++; continue;
+        }
+        campo += c; i++; continue;
+      }
+      if(c === '"'){ dentroAspas = true; i++; continue; }
+      if(c === ';'){ linha.push(campo); campo=''; i++; continue; }
+      if(c === '\n'){ linha.push(campo); linhas.push(linha); linha=[]; campo=''; i++; continue; }
+      if(c === '\r'){ i++; continue; }
+      campo += c; i++;
+    }
+    if(campo.length || linha.length){ linha.push(campo); linhas.push(linha); }
+    return linhas;
+  }
+
+  window.neoexImportar = function(file){
+    if(!file) return;
+    var msg = document.getElementById('neoex-import-msg');
+    function showMsg(txt, ok){
+      msg.style.display='block';
+      msg.style.background = ok ? '#d0f0ee' : '#fde8e8';
+      msg.style.color = ok ? '#0d7377' : '#c53030';
+      msg.innerHTML = txt;
+    }
+    var reader = new FileReader();
+    reader.onload = function(e){
+      try{
+        var rows = parseCSVSemicolon(e.target.result);
+        if(rows.length < 2){ showMsg('Arquivo vazio ou inválido.', false); return; }
+        var hdr = rows[0].map(function(h){ return (h||'').trim(); });
+        // localizar colunas por nome (robusto a mudança de ordem)
+        function idx(nome){ for(var k=0;k<hdr.length;k++){ if(hdr[k].toUpperCase()===nome.toUpperCase()) return k; } return -1; }
+        var iSS = idx('SS/OT'); if(iSS<0) iSS=14;
+        var iAtiv = idx('des_atividade'); if(iAtiv<0) iAtiv=31;
+        var iQtd = idx('qtd_atividade'); if(iQtd<0) iQtd=34;
+        var iGrupo = idx('des_grupo'); if(iGrupo<0) iGrupo=28;
+
+        var agg = {};
+        var nLinhas = 0;
+        for(var r=1; r<rows.length; r++){
+          var row = rows[r];
+          if(!row || row.length <= iAtiv) continue;
+          var bp = (row[iSS]||'').trim();
+          if(bp.indexOf('B-') !== 0) continue;
+          var cat = categoria(row[iAtiv], row[iGrupo]);
+          var q = num(row[iQtd]);
+          if(!agg[bp]) agg[bp] = {covas:0,postes:0,estrutura:0,cabo:0,poda:0,ligacao:0,ligacaoFlag:false};
+          if(cat){ agg[bp][cat] += q; if(cat==='ligacao' && q>0) agg[bp].ligacaoFlag = true; }
+          nLinhas++;
+        }
+        neoexGPM = agg;
+        var nObras = Object.keys(agg).length;
+        showMsg('✅ GPM importado: <b>'+nObras+'</b> obras (B-) · '+nLinhas+' linhas processadas', true);
+        document.getElementById('neoex-drop').style.borderColor = '#14a085';
+        neoexCruzar();
+      }catch(err){
+        showMsg('Erro ao ler o arquivo: '+err.message, false);
+      }
+    };
+    reader.onerror = function(){ showMsg('Não foi possível ler o arquivo.', false); };
+    // tenta utf-8; se vier mojibake o usuário verá, mas os números/B- não são afetados
+    reader.readAsText(file, 'utf-8');
+  };
+
+  // pega a planilha do René a partir do bancoDB (obras_base, alimentado pelo mapa)
+  function neoexBaseReve(){
+    var base = {};
+    var arr = (typeof bancoDB !== 'undefined' && bancoDB) ? bancoDB : [];
+    arr.forEach(function(o){
+      var pep = (o['PEP OBRA'] || o.pep || '').trim();
+      if(pep.indexOf('B-') !== 0) return;
+      var cava = numReve(o['CAVA REALIZADA'] != null ? o['CAVA REALIZADA'] : o['CAVA  REALIZADA']);
+      var post = numReve(o['POSTES REALIZADO'] != null ? o['POSTES REALIZADO'] : o['POSTES  REALIZADO']);
+      base[pep] = {
+        cava: cava,
+        postR: post,
+        titulo: o['TÍTULO'] || o['TITULO'] || o.titulo || '',
+        mun: o['MUNICIPIO'] || o['MUNICÍPIO'] || o.municipio || ''
+      };
+    });
+    return base;
+  }
+
+  function neoexCruzar(){
+    if(!neoexGPM){ return; }
+    var base = neoexBaseReve();
+    var linhas = [];
+    Object.keys(neoexGPM).forEach(function(bp){
+      var g = neoexGPM[bp];
+      var b = base[bp] || null;
+      var cavaReve = b ? b.cava : null;
+      var postReve = b ? b.postR : null;
+      var covasDiff = (cavaReve!=null) ? (g.covas - cavaReve) : null;
+      var postesDiff = (postReve!=null) ? (g.postes - postReve) : null;
+      linhas.push({
+        pep: bp,
+        titulo: b ? b.titulo : '',
+        mun: b ? b.mun : '',
+        temBase: !!b,
+        gCovas: g.covas, gPostes: g.postes, gEstrut: g.estrutura, gCabo: g.cabo, gPoda: g.poda, gLig: g.ligacaoFlag,
+        rCava: cavaReve, rPost: postReve,
+        covasDiff: covasDiff, postesDiff: postesDiff
+      });
+    });
+    linhas.sort(function(a,b){
+      // diferenças primeiro, depois por B-
+      var da = (a.covasDiff && Math.abs(a.covasDiff)) + (a.postesDiff && Math.abs(a.postesDiff)) || 0;
+      var db = (b.covasDiff && Math.abs(b.covasDiff)) + (b.postesDiff && Math.abs(b.postesDiff)) || 0;
+      if(db !== da) return db - da;
+      return a.pep < b.pep ? -1 : 1;
+    });
+    neoexLinhas = linhas;
+    neoexRenderKpis();
+    document.getElementById('neoex-kpis').style.display = 'flex';
+    document.getElementById('neoex-content').style.display = 'block';
+    neoexRender();
+  }
+
+  function neoexRenderKpis(){
+    var total = neoexLinhas.length;
+    var comDif = neoexLinhas.filter(function(l){ return (l.covasDiff!=null && l.covasDiff!==0) || (l.postesDiff!=null && l.postesDiff!==0); }).length;
+    var soGpm = neoexLinhas.filter(function(l){ return !l.temBase; }).length;
+    var ok = total - comDif - soGpm;
+    function card(val, lbl, cor){
+      return '<div style="flex:1;min-width:130px;background:#fff;border-radius:12px;padding:14px 16px;box-shadow:0 2px 10px rgba(0,0,0,0.06);border-top:3px solid '+cor+';">'
+        +'<div style="font-size:1.7rem;font-weight:800;color:#2d3748;">'+val+'</div>'
+        +'<div style="font-size:0.62rem;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:1px;margin-top:2px;">'+lbl+'</div></div>';
+    }
+    document.getElementById('neoex-kpis').innerHTML =
+      card(total, 'Obras no GPM', '#0d7377') +
+      card(comDif, 'Com diferença', '#e53e3e') +
+      card(ok, 'Batem c/ René', '#14a085') +
+      card(soGpm, 'Só no GPM', '#f0a500');
+  }
+
+  window.neoexSetFiltro = function(f){
+    neoexFiltro = f;
+    ['todos','div','ok','so-gpm'].forEach(function(k){
+      var btn = document.getElementById('neoex-fbtn-'+k);
+      if(!btn) return;
+      var on = k===f;
+      btn.style.background = on ? '#0d7377' : '#fff';
+      btn.style.color = on ? '#fff' : '#666';
+      btn.style.borderColor = on ? '#0d7377' : '#e2e8f0';
+    });
+    neoexRender();
+  };
+
+  function esc(s){ return (s==null?'':String(s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+  function celComp(gpm, reve, diff, unidade){
+    // célula de comparação previsto(René) × realizado(GPM)
+    var fmt = function(v){ return v==null ? '—' : (Math.round(v*100)/100); };
+    if(reve == null){
+      return '<div style="font-weight:800;color:#1a365d;">'+fmt(gpm)+(unidade||'')+'</div><div style="font-size:0.6rem;color:#bbb;">sem René</div>';
+    }
+    var cor = diff===0 ? '#14a085' : '#e53e3e';
+    var sinal = diff>0 ? '+'+ (Math.round(diff*100)/100) : (Math.round(diff*100)/100);
+    var badge = diff===0
+      ? '<span style="display:inline-block;font-size:0.6rem;font-weight:800;padding:1px 6px;border-radius:5px;background:#d0f0ee;color:#0d7377;">OK</span>'
+      : '<span style="display:inline-block;font-size:0.6rem;font-weight:800;padding:1px 6px;border-radius:5px;background:#fde8e8;color:#c53030;">'+sinal+'</span>';
+    return '<div style="display:flex;align-items:center;justify-content:center;gap:5px;">'
+      + '<span style="font-weight:800;color:'+cor+';">'+fmt(gpm)+'</span>'
+      + '<span style="color:#ccc;font-size:0.7rem;">×</span>'
+      + '<span style="color:#888;">'+fmt(reve)+'</span></div>'
+      + '<div style="margin-top:2px;">'+badge+'</div>';
+  }
+
+  window.neoexRender = function(){
+    var tb = document.getElementById('neoex-tbody');
+    var empty = document.getElementById('neoex-empty');
+    if(!tb) return;
+    var q = (document.getElementById('neoex-search').value || '').toLowerCase().trim();
+    var linhas = neoexLinhas.filter(function(l){
+      if(neoexFiltro==='div' && !((l.covasDiff!=null&&l.covasDiff!==0)||(l.postesDiff!=null&&l.postesDiff!==0))) return false;
+      if(neoexFiltro==='ok' && !(l.temBase && (l.covasDiff===0||l.covasDiff==null) && (l.postesDiff===0||l.postesDiff==null))) return false;
+      if(neoexFiltro==='ok' && !l.temBase) return false;
+      if(neoexFiltro==='so-gpm' && l.temBase) return false;
+      if(q){
+        var hay = (l.pep+' '+l.titulo+' '+l.mun).toLowerCase();
+        if(hay.indexOf(q) < 0) return false;
+      }
+      return true;
+    });
+    if(!linhas.length){ tb.innerHTML=''; empty.style.display='block'; return; }
+    empty.style.display='none';
+    var html = '';
+    linhas.forEach(function(l){
+      var temDif = (l.covasDiff!=null&&l.covasDiff!==0)||(l.postesDiff!=null&&l.postesDiff!==0);
+      var borda = temDif ? 'border-left:3px solid #e53e3e;' : (l.temBase ? 'border-left:3px solid #14a085;' : 'border-left:3px solid #f0a500;');
+      html += '<tr style="border-bottom:1px solid #edf0f2;'+borda+'">'
+        + '<td style="padding:10px 12px;"><div style="font-weight:800;color:#0d7377;font-size:0.78rem;">'+esc(l.pep)+'</div>'
+          + '<div style="font-size:0.68rem;color:#555;font-weight:600;max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+esc(l.titulo||'—')+'</div>'
+          + (l.mun?'<div style="font-size:0.62rem;color:#aaa;">'+esc(l.mun)+'</div>':'')
+          + (!l.temBase?'<div style="font-size:0.6rem;color:#b97400;font-weight:800;">⚠️ não está na planilha do René</div>':'')+'</td>'
+        + '<td style="padding:8px;text-align:center;">'+celComp(l.gCovas, l.rCava, l.covasDiff)+'</td>'
+        + '<td style="padding:8px;text-align:center;">'+celComp(l.gPostes, l.rPost, l.postesDiff)+'</td>'
+        + '<td style="padding:8px;text-align:center;font-weight:700;color:#1a365d;">'+(l.gEstrut||0)+'</td>'
+        + '<td style="padding:8px;text-align:center;font-weight:700;color:#1a365d;">'+(Math.round(l.gCabo)||0)+'</td>'
+        + '<td style="padding:8px;text-align:center;font-weight:700;color:#6b21a8;">'+(Math.round(l.gPoda)||0)+'</td>'
+        + '<td style="padding:8px;text-align:center;">'+(l.gLig?'<span style="display:inline-block;font-size:0.62rem;font-weight:800;padding:2px 9px;border-radius:5px;background:#d0f0ee;color:#0d7377;">SIM</span>':'<span style="color:#ccc;">—</span>')+'</td>'
+        + '</tr>';
+    });
+    tb.innerHTML = html;
+  };
+
+  window.neoexExportCSV = function(){
+    if(!neoexLinhas.length){ alert('Importe o GPM primeiro.'); return; }
+    var sep = ';';
+    var head = ['B-','OBRA','MUNICIPIO','GPM_COVAS','RENE_CAVA','DIF_COVAS','GPM_POSTES','RENE_POSTES','DIF_POSTES','GPM_ESTRUTURA','GPM_CABO_M','GPM_PODA','GPM_LIGACAO','SO_NO_GPM'];
+    var linhas = [head.join(sep)];
+    neoexLinhas.forEach(function(l){
+      linhas.push([
+        l.pep, '"'+(l.titulo||'').replace(/"/g,'""')+'"', '"'+(l.mun||'')+'"',
+        l.gCovas, l.rCava==null?'':l.rCava, l.covasDiff==null?'':l.covasDiff,
+        l.gPostes, l.rPost==null?'':l.rPost, l.postesDiff==null?'':l.postesDiff,
+        l.gEstrut, Math.round(l.gCabo), Math.round(l.gPoda), l.gLig?'SIM':'NAO', l.temBase?'NAO':'SIM'
+      ].join(sep));
+    });
+    var blob = new Blob(['\ufeff'+linhas.join('\n')], {type:'text/csv;charset=utf-8;'});
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'neoex_comparacao.csv';
+    a.click();
+  };
+
+  // chamado quando a aba é aberta
+  window.neoexOnShow = function(){
+    var st = document.getElementById('neoex-base-status');
+    var arr = (typeof bancoDB !== 'undefined' && bancoDB) ? bancoDB : null;
+    if(arr && arr.length){
+      st.textContent = 'Planilha do René: ' + arr.length + ' obras carregadas ✓';
+      st.style.background = 'rgba(255,255,255,0.22)';
+    } else {
+      st.textContent = 'Planilha do René: não carregada — abra o MAPA para sincronizar';
+      // tenta carregar do banco
+      if(typeof dbLoadObrasBase === 'function'){
+        dbLoadObrasBase().then(function(){
+          var a2 = (typeof bancoDB !== 'undefined' && bancoDB) ? bancoDB : null;
+          if(a2 && a2.length){ st.textContent = 'Planilha do René: ' + a2.length + ' obras carregadas ✓'; if(neoexGPM) neoexCruzar(); }
+        }).catch(function(){});
+      }
+    }
+  };
+})();
+</script>
 </body>
 </html>
