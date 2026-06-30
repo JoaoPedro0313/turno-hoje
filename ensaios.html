@@ -258,7 +258,7 @@
     <button class="vc-mode active" id="m-alert" onclick="setMode('alert',this)">⚠️ Alertas</button>
     <button class="vc-mode" id="m-cards" onclick="setMode('cards',this)">🧰 Equipamentos</button>
     <button class="vc-mode" id="m-tbl" onclick="setMode('tbl',this)">📋 Tabela</button>
-    <input class="vc-srch" id="vc-srch" placeholder="🔎 Buscar equipamento, colaborador, série..." oninput="render()">
+    <input class="vc-srch" id="vc-srch" placeholder="🔎 Buscar equipamento, rastreio, colaborador, série..." oninput="render()">
     <button class="vc-imp" onclick="document.getElementById('vc-file').click()">📤 Importar planilha</button>
     <input type="file" id="vc-file" accept=".xlsx,.xls,.csv" style="display:none" onchange="importar(this.files[0]);this.value=''">
   </div>
@@ -454,7 +454,7 @@ function render(){
   var fTipo=document.getElementById('f-tipo').value;
   var fStatus=document.getElementById('f-status').value;
   var filt=DADOS.filter(function(d){
-    var okBusca=(d.desc||'').toLowerCase().indexOf(q)>=0||(d.nome||'').toLowerCase().indexOf(q)>=0||(d.serie||'').toLowerCase().indexOf(q)>=0||(d.origem||'').toLowerCase().indexOf(q)>=0;
+    var okBusca=(d.desc||'').toLowerCase().indexOf(q)>=0||(d.nome||'').toLowerCase().indexOf(q)>=0||(d.serie||'').toLowerCase().indexOf(q)>=0||(d.origem||'').toLowerCase().indexOf(q)>=0||String(d.rastreio||'').toLowerCase().indexOf(q)>=0;
     if(!okBusca) return false;
     if(fFunc && (d.nome||d.origem||'')!==fFunc) return false;
     if(fTipo==='rigido' && !ehRigido(d.desc)) return false;
@@ -471,22 +471,24 @@ function render(){
       var bcls=st=='r'?'b-r':(st=='a'?'b-a':'b-g'), blbl=st=='r'?'Vencido':(st=='a'?'Vencendo':'Em dia');
       var sub=(d.nome||d.origem||'—')+(d.serie?(' · série '+d.serie):'');
       var reg=ehRigido(d.desc)?'Rígido · 1 ano':'Flexível · 6 meses';
-      var det='<div class="crow"><span class="cdot '+st+'"></span><span class="ccur">Validade</span><span class="cdt '+st+'">'+fmt(validadeDe(d))+'</span></div>'
+      var det='<div class="crow"><span class="cdot g" style="background:#cbd5e1"></span><span class="ccur">Rastreio</span><span class="cdt g"><span class="eq-chip">#'+esc(d.rastreio)+'</span></span></div>'
+        +'<div class="crow"><span class="cdot '+st+'"></span><span class="ccur">Validade</span><span class="cdt '+st+'">'+fmt(validadeDe(d))+'</span></div>'
         +'<div class="crow"><span class="cdot g" style="background:#cbd5e1"></span><span class="ccur">Ensaio</span><span class="cdt g">'+fmt(d.ensaio)+'</span></div>'
         +'<div class="crow"><span class="cdot g" style="background:#cbd5e1"></span><span class="ccur">Regra</span><span class="cdt g">'+reg+'</span></div>'
+        +(d.serie?'<div class="crow"><span class="cdot g" style="background:#cbd5e1"></span><span class="ccur">Série</span><span class="cdt g">'+esc(d.serie)+'</span></div>':'')
         +(d.lado?'<div class="crow"><span class="cdot g" style="background:#cbd5e1"></span><span class="ccur">Lado</span><span class="cdt g">'+esc(d.lado)+'</span></div>':'')
         +(d.origem?'<div class="crow"><span class="cdot g" style="background:#cbd5e1"></span><span class="ccur">Origem</span><span class="cdt g">'+esc(d.origem)+'</span></div>':'');
       return '<div class="card"><div class="card-h" onclick="this.parentNode.classList.toggle(\'open\')">'
         +'<div class="card-av">'+ini(d.desc)+'</div>'
-        +'<div><div class="card-nm">'+esc(d.desc)+(d.lado?' ('+esc(d.lado)+')':'')+'</div><div class="card-fn">'+esc(sub)+'</div></div>'
+        +'<div><div class="card-nm">'+esc(d.desc)+(d.lado?' ('+esc(d.lado)+')':'')+'</div><div class="card-fn"><span class="eq-chip" style="margin-right:5px">#'+esc(d.rastreio)+'</span>'+esc(sub)+'</div></div>'
         +'<span class="card-badge '+bcls+'">'+blbl+'</span></div><div class="card-b">'+det+'</div></div>';
     }).join('')+'</div>';
   } else if(MODE=='tbl'){
-    var h='<div class="tbl-wrap"><table><thead><tr><th class="nm">Equipamento</th><th>Regra</th><th>Colaborador / Origem</th><th>Lado</th><th>Série</th><th>Ensaio</th><th>Validade</th></tr></thead><tbody>';
+    var h='<div class="tbl-wrap"><table><thead><tr><th>Rastreio</th><th class="nm">Equipamento</th><th>Regra</th><th>Colaborador / Origem</th><th>Lado</th><th>Série</th><th>Ensaio</th><th>Validade</th></tr></thead><tbody>';
     filt.sort(function(a,b){return (validadeDe(a)?dias(validadeDe(a)):9e9)-(validadeDe(b)?dias(validadeDe(b)):9e9);}).forEach(function(d){
       var st=status(validadeDe(d));
       var reg=ehRigido(d.desc)?'<span class="eq-chip" style="background:#ede9fe;color:#6b46c1">Rígido · 1 ano</span>':'<span class="eq-chip" style="background:#fff4ed;color:#c05621">Flexível · 6 meses</span>';
-      h+='<tr><td class="nm" title="'+esc(d.desc)+'">'+esc(d.desc)+'</td><td>'+reg+'</td><td>'+esc(d.nome||d.origem||'')+'</td><td>'+esc(d.lado||'')+'</td><td>'+esc(d.serie||'')+'</td><td>'+fmt(d.ensaio)+'</td><td><span class="cell '+(st||'x')+'">'+fmt(validadeDe(d))+'</span></td></tr>';
+      h+='<tr><td><span class="eq-chip">#'+esc(d.rastreio)+'</span></td><td class="nm" title="'+esc(d.desc)+'">'+esc(d.desc)+'</td><td>'+reg+'</td><td>'+esc(d.nome||d.origem||'')+'</td><td>'+esc(d.lado||'')+'</td><td>'+esc(d.serie||'')+'</td><td>'+fmt(d.ensaio)+'</td><td><span class="cell '+(st||'x')+'">'+fmt(validadeDe(d))+'</span></td></tr>';
     });
     box.innerHTML=h+'</tbody></table></div>';
   } else {
@@ -497,7 +499,7 @@ function render(){
       var st=status(validadeDe(d)), di=dias(validadeDe(d));
       var txt=di<0?('Venceu há '+(-di)+' dias'):(di===0?'Vence hoje':'Vence em '+di+' dias');
       return '<div class="alert '+(st=='a'?'a':'')+'"><div class="al-ic '+st+'">'+(st=='r'?'⛔':'⚠️')+'</div>'
-        +'<div class="al-main"><div class="al-nm">'+esc(d.desc)+(d.lado?' ('+esc(d.lado)+')':'')+'</div><div class="al-sub">'+esc(d.nome||d.origem||'')+' · série '+esc(d.serie||d.rastreio)+'</div></div>'
+        +'<div class="al-main"><div class="al-nm">'+esc(d.desc)+(d.lado?' ('+esc(d.lado)+')':'')+'</div><div class="al-sub"><span class="eq-chip" style="margin-right:5px">#'+esc(d.rastreio)+'</span>'+esc(d.nome||d.origem||'')+(d.serie?(' · série '+esc(d.serie)):'')+'</div></div>'
         +'<div class="al-curso"><span class="al-curso-chip '+st+'">'+esc(d.tipo||'EPI')+'</span></div>'
         +'<div class="al-cur"><b>'+fmt(validadeDe(d))+'</b><span class="'+st+'">'+txt+'</span></div></div>';
     }).join('');
