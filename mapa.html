@@ -536,6 +536,16 @@ body.sm-collapsed .bottom-bar{left:64px !important;}
               <option value="-11.1817,-40.5128">Base Jacobina (-11.18, -40.51)</option>
             </select>
           </div>
+          <!-- novas opções: clicar no mapa OU buscar cidade -->
+          <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:9px;">
+            <button id="btn-mapa-rota-pin" onclick="mapaRotaClicarNoMapa()" style="padding:8px 14px;background:#f0fafa;border:1.5px solid #c0e8e5;color:#0d7377;border-radius:8px;font-family:'Barlow',sans-serif;font-size:0.72rem;font-weight:800;cursor:pointer;white-space:nowrap;">🖱️ Selecionar no mapa</button>
+            <div style="flex:1;min-width:200px;position:relative;">
+              <input type="text" id="mapa-rota-cidade" placeholder="🔍 Pesquisar cidade ou município..." onkeydown="if(event.key==='Enter'){event.preventDefault();mapaRotaBuscarCidade();}" style="width:100%;padding:8px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-family:'Barlow',sans-serif;font-size:0.82rem;font-weight:600;color:#333;outline:none;box-sizing:border-box;">
+              <div id="mapa-rota-cidade-result" style="display:none;position:absolute;top:calc(100% + 4px);left:0;right:0;background:#fff;border:1.5px solid #e2e8f0;border-radius:10px;box-shadow:0 8px 28px rgba(0,0,0,0.16);z-index:120;max-height:240px;overflow-y:auto;"></div>
+            </div>
+            <button onclick="mapaRotaBuscarCidade()" style="padding:8px 14px;background:#0d7377;border:none;color:#fff;border-radius:8px;font-family:'Barlow',sans-serif;font-size:0.72rem;font-weight:800;cursor:pointer;white-space:nowrap;">Buscar</button>
+          </div>
+          <div id="mapa-rota-pin-hint" style="display:none;font-size:0.72rem;font-weight:700;color:#0d7377;background:#f0fafa;border:1px solid #c0e8e5;border-radius:8px;padding:7px 12px;margin-top:8px;">🖱️ Clique em qualquer ponto do mapa para definir o ponto de partida. <span onclick="mapaRotaClicarNoMapaCancelar()" style="color:#c53030;cursor:pointer;text-decoration:underline;font-weight:800;">cancelar</span></div>
         </div>
         <!-- Paradas -->
         <div style="margin-bottom:14px;">
@@ -3025,6 +3035,89 @@ function mapaRotaUsarLocalizacao() {
     {timeout: 10000, maximumAge: 60000}
   );
 }
+// define a origem da rota a partir de lat/lon (usado por clique no mapa e busca de cidade)
+function mapaRotaSetOrigem(lat, lon, rotulo){
+  mapaRotaOrigemLatLon = {lat:lat, lon:lon};
+  var ori = document.getElementById('mapa-rota-origem-txt');
+  if (ori) ori.value = Number(lat).toFixed(5) + ', ' + Number(lon).toFixed(5);
+  if (typeof mapaRotaOrigemAtualizar === 'function') { /* já setado acima */ }
+  // marcador visual no mapa
+  try {
+    if (window.mapaMap) {
+      if (window._mapaRotaOrigemMarker) { window.mapaMap.removeLayer(window._mapaRotaOrigemMarker); }
+      window._mapaRotaOrigemMarker = L.marker([lat, lon], {title: rotulo||'Ponto de partida'}).addTo(window.mapaMap);
+      window._mapaRotaOrigemMarker.bindPopup('🏠 Ponto de partida' + (rotulo?('<br>'+rotulo):'')).openPopup();
+    }
+  } catch(e){}
+}
+// ===== Selecionar no mapa =====
+var _mapaRotaPinAtivo = false;
+function mapaRotaClicarNoMapa(){
+  if (!window.mapaMap){ alert('Abra o mapa primeiro.'); return; }
+  _mapaRotaPinAtivo = true;
+  var hint = document.getElementById('mapa-rota-pin-hint');
+  if (hint) hint.style.display = 'block';
+  var btn = document.getElementById('btn-mapa-rota-pin');
+  if (btn){ btn.textContent = '🖱️ Clique no mapa...'; btn.style.background = '#0d7377'; btn.style.color = '#fff'; }
+  try { window.mapaMap.getContainer().style.cursor = 'crosshair'; } catch(e){}
+}
+function mapaRotaClicarNoMapaCancelar(){
+  _mapaRotaPinAtivo = false;
+  var hint = document.getElementById('mapa-rota-pin-hint');
+  if (hint) hint.style.display = 'none';
+  var btn = document.getElementById('btn-mapa-rota-pin');
+  if (btn){ btn.textContent = '🖱️ Selecionar no mapa'; btn.style.background = '#f0fafa'; btn.style.color = '#0d7377'; }
+  try { if (window.mapaMap) window.mapaMap.getContainer().style.cursor = ''; } catch(e){}
+}
+// registra o clique no mapa (uma vez) para capturar a origem quando o modo pin estiver ativo
+function mapaRotaRegistrarClique(){
+  if (!window.mapaMap || window._mapaRotaCliqueRegistrado) return;
+  window._mapaRotaCliqueRegistrado = true;
+  window.mapaMap.on('click', function(e){
+    if (!_mapaRotaPinAtivo) return;
+    var lat = e.latlng.lat, lon = e.latlng.lng;
+    mapaRotaSetOrigem(lat, lon, 'Selecionado no mapa');
+    mapaRotaClicarNoMapaCancelar();
+  });
+}
+// ===== Buscar cidade / município (Nominatim) =====
+function mapaRotaBuscarCidade(){
+  var inp = document.getElementById('mapa-rota-cidade');
+  var box = document.getElementById('mapa-rota-cidade-result');
+  if (!inp || !box) return;
+  var q = (inp.value||'').trim();
+  if (q.length < 3){ box.style.display='none'; return; }
+  box.style.display = 'block';
+  box.innerHTML = '<div style="padding:10px 14px;color:#888;font-size:0.78rem;font-weight:700;">🔍 Buscando...</div>';
+  // restringe a busca à Bahia/Brasil para resultados mais relevantes
+  var url = 'https://nominatim.openstreetmap.org/search?format=json&limit=6&countrycodes=br&addressdetails=1&q=' + encodeURIComponent(q);
+  fetch(url, {headers:{'Accept':'application/json'}})
+    .then(function(r){ return r.json(); })
+    .then(function(arr){
+      if (!Array.isArray(arr) || !arr.length){
+        box.innerHTML = '<div style="padding:10px 14px;color:#c53030;font-size:0.78rem;font-weight:700;">Nenhuma cidade encontrada.</div>';
+        return;
+      }
+      box.innerHTML = arr.map(function(item){
+        var nome = item.display_name || '';
+        var lat = parseFloat(item.lat), lon = parseFloat(item.lon);
+        var nomeCurto = nome.split(',').slice(0,3).join(', ');
+        return '<div onclick="mapaRotaSelecionarCidade('+lat+','+lon+',\''+nomeCurto.replace(/'/g,"\\'")+'\')" style="padding:9px 14px;border-bottom:1px solid #f1f5f9;cursor:pointer;font-size:0.8rem;font-weight:600;color:#334155;" onmouseover="this.style.background=\'#f0fafa\'" onmouseout="this.style.background=\'#fff\'">📍 '+nomeCurto+'</div>';
+      }).join('');
+    })
+    .catch(function(){
+      box.innerHTML = '<div style="padding:10px 14px;color:#c53030;font-size:0.78rem;font-weight:700;">Erro ao buscar. Tente novamente.</div>';
+    });
+}
+function mapaRotaSelecionarCidade(lat, lon, nome){
+  mapaRotaSetOrigem(lat, lon, nome);
+  var box = document.getElementById('mapa-rota-cidade-result');
+  if (box) box.style.display = 'none';
+  var inp = document.getElementById('mapa-rota-cidade');
+  if (inp) inp.value = nome;
+  // centraliza o mapa na cidade escolhida
+  try { if (window.mapaMap) window.mapaMap.setView([lat, lon], 12); } catch(e){}
+}
 function mapaRotaAtualizarLista() {
   // Respeitar filtros ativos do mapa (status, município, encarregado, UTD)
   const search = (document.getElementById('mapa-search') ? document.getElementById('mapa-search').value || '' : '').toLowerCase();
@@ -4778,8 +4871,14 @@ function mapaEnsureLeaflet(cb) {
         mapaFitFeito = true;
       });
       // Não marcar como movido quando for clique para raio
-      mapaMap.on('click', function() {
+      mapaMap.on('click', function(e) {
         if (mapaRaioModoClick) return; // clique para raio — não marca como movido
+        // modo "selecionar ponto de partida no mapa"
+        if (_mapaRotaPinAtivo && e && e.latlng) {
+          mapaRotaSetOrigem(e.latlng.lat, e.latlng.lng, 'Selecionado no mapa');
+          mapaRotaClicarNoMapaCancelar();
+          return;
+        }
       });
       var _mapaTileOSM = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {attribution:'© OpenStreetMap', maxZoom:20});
       var _mapaTileSat = L.tileLayer('https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {attribution:'© Google Satellite', maxZoom:20, subdomains:['mt0','mt1','mt2','mt3']});
