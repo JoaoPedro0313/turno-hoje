@@ -8,7 +8,7 @@
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:'Barlow',sans-serif;background:#f0f4f5;min-height:100vh;padding-bottom:60px;padding-top:66px;padding-left:232px;transition:padding-left .22s ease}
-.top-bar{background:linear-gradient(90deg,#0a4a4d 0%,#0d7377 40%,#0f8a82 70%,#0d7377 100%);position:fixed;top:0;left:232px;right:0;transition:left .22s ease;z-index:91;height:52px;border-bottom:3px solid #ff6b35;box-shadow:0 2px 16px rgba(0,0,0,0.25)}
+.top-bar{background:linear-gradient(90deg,#0a4a4d 0%,#0d7377 40%,#0f8a82 70%,#0d7377 100%);position:fixed;top:0;left:0;right:0;transition:left .22s ease;z-index:91;height:52px;border-bottom:3px solid #ff6b35;box-shadow:0 2px 16px rgba(0,0,0,0.25)}
 .top-bar-inner{display:flex;align-items:center;justify-content:space-between;height:100%;padding:0 18px;gap:12px}
 .top-bar-left{display:flex;align-items:center;gap:12px;flex-shrink:0}
 .top-bar-logo{height:32px;object-fit:contain;mix-blend-mode:screen;filter:brightness(1.2)}
@@ -49,7 +49,7 @@ body.sm-collapsed .sm-group-items{display:flex!important;padding:0;margin:0;bord
 body.sm-collapsed .sm-group-head{justify-content:center;padding:9px 0}
 @media(max-width:780px){ body:not(.sm-expanded) .sm-arrow{display:none} body:not(.sm-expanded) .sm-group-items{display:flex!important;padding:0;margin:0;border:none} body:not(.sm-expanded) .sm-group-head{justify-content:center;padding:9px 0} }
 .SMGROUPCSS{}
-body.sm-collapsed{padding-left:64px;} body.sm-collapsed .top-bar{left:64px}
+body.sm-collapsed{padding-left:64px;}
 body.sm-collapsed .sm-side{width:64px}
 body.sm-collapsed .sm-logo-tx,body.sm-collapsed .sm-tx,body.sm-collapsed .sm-foot{display:none}
 body.sm-collapsed .sm-top{justify-content:center;padding:12px 0}
@@ -58,7 +58,6 @@ body.sm-collapsed .sm-item{justify-content:center;padding:9px 0}
 body.sm-collapsed .bottom-bar{left:64px !important;}
 @media (max-width:780px){
   body{padding-left:64px !important;}
-  .top-bar{left:64px !important;}
   .sm-side{width:64px}
   .sm-logo-tx,.sm-tx,.sm-foot{display:none}
   .sm-top{justify-content:center;padding:12px 0}
@@ -90,10 +89,6 @@ body.sm-collapsed .bottom-bar{left:64px !important;}
 
 
 <aside class="sm-side">
-  <div class="sm-top">
-    <img class="sm-logo" src="../assets/logo-mariua.png" alt="Mariuá">
-    <div class="sm-logo-tx">MARIUÁ<small>Construção e Energia</small></div>
-  </div>
   <div class="sm-toggle"><button type="button" onclick="smToggle()" title="Recolher / expandir">↔</button></div>
     <nav class="sm-nav">
     <a class="sm-item" href="../index.html"><span class="sm-ic">🏠</span><span class="sm-tx">Início</span></a>

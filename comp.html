@@ -9,7 +9,7 @@
   *{margin:0;padding:0;box-sizing:border-box;font-family:'Barlow',sans-serif;}
   body{background:#f0f4f5;color:#222;padding-left:232px;padding-top:52px;transition:padding .22s ease;}
   /* top-bar fixa (igual aos outros módulos) */
-  .top-bar{background:linear-gradient(90deg,#0a4a4d 0%,#0d7377 40%,#0f8a82 70%,#0d7377 100%);position:fixed;top:0;left:232px;right:0;z-index:91;height:52px;border-bottom:3px solid #ff6b35;box-shadow:0 2px 16px rgba(0,0,0,0.25);transition:left .22s ease;}
+  .top-bar{background:linear-gradient(90deg,#0a4a4d 0%,#0d7377 40%,#0f8a82 70%,#0d7377 100%);position:fixed;top:0;left:0;right:0;z-index:91;height:52px;border-bottom:3px solid #ff6b35;box-shadow:0 2px 16px rgba(0,0,0,0.25);transition:left .22s ease;}
   body.sm-collapsed .top-bar{left:64px;}
   .top-bar-inner{display:flex;align-items:center;justify-content:space-between;height:100%;padding:0 18px;gap:12px;}
   .top-bar-left{display:flex;align-items:center;gap:12px;flex-shrink:0;}
@@ -148,10 +148,6 @@ body.sm-collapsed .sm-group-head{justify-content:center;padding:9px 0}
 </head>
 <body>
 <aside class="sm-side">
-  <div class="sm-top">
-    <img class="sm-logo" src="assets/logo-mariua.png" alt="Mariuá">
-    <div class="sm-logo-tx">MARIUÁ<small>Construção e Energia</small></div>
-  </div>
   <div class="sm-toggle"><button type="button" onclick="smToggle()" title="Recolher / expandir">↔</button></div>
     <nav class="sm-nav">
     <a class="sm-item" href="index.html"><span class="sm-ic">🏠</span><span class="sm-tx">Início</span></a>
