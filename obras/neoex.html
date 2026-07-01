@@ -7,8 +7,8 @@
 <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:'Barlow',sans-serif;background:#f0f4f5;min-height:100vh;padding-bottom:60px;padding-top:66px}
-.top-bar{background:linear-gradient(90deg,#0a4a4d 0%,#0d7377 40%,#0f8a82 70%,#0d7377 100%);position:fixed;top:0;left:0;right:0;z-index:91;height:52px;border-bottom:3px solid #ff6b35;box-shadow:0 2px 16px rgba(0,0,0,0.25)}
+body{font-family:'Barlow',sans-serif;background:#f0f4f5;min-height:100vh;padding-bottom:60px;padding-top:66px;padding-left:232px;transition:padding-left .22s ease}
+.top-bar{background:linear-gradient(90deg,#0a4a4d 0%,#0d7377 40%,#0f8a82 70%,#0d7377 100%);position:fixed;top:0;left:232px;right:0;transition:left .22s ease;z-index:91;height:52px;border-bottom:3px solid #ff6b35;box-shadow:0 2px 16px rgba(0,0,0,0.25)}
 .top-bar-inner{display:flex;align-items:center;justify-content:space-between;height:100%;padding:0 18px;gap:12px}
 .top-bar-left{display:flex;align-items:center;gap:12px;flex-shrink:0}
 .top-bar-logo{height:32px;object-fit:contain;mix-blend-mode:screen;filter:brightness(1.2)}
@@ -19,6 +19,58 @@ body{font-family:'Barlow',sans-serif;background:#f0f4f5;min-height:100vh;padding
 .back-link{display:inline-flex;align-items:center;gap:6px;font-size:0.72rem;font-weight:800;color:#fff;background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);padding:6px 12px;border-radius:8px;text-decoration:none;letter-spacing:0.5px}
 .back-link:hover{background:rgba(255,255,255,0.25)}
 .wrap{max-width:1400px;margin:0 auto;padding:14px 12px}
+.sm-side{position:fixed;top:52px;left:0;bottom:0;width:232px;z-index:110;background:#fff;border-right:1px solid #e6ebee;box-shadow:2px 0 12px rgba(0,0,0,.04);display:flex;flex-direction:column;transition:width .22s ease;font-family:'Barlow',sans-serif}
+.sm-top{display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid #eef2f4;overflow:hidden}
+.sm-logo{width:34px;height:34px;flex-shrink:0;object-fit:contain;display:block}
+.sm-logo-tx{font-weight:800;color:#0d7377;letter-spacing:1px;font-size:1rem;white-space:nowrap;line-height:1.05}
+.sm-logo-tx small{display:block;font-size:.5rem;letter-spacing:2px;color:#9aa6ab;font-weight:700}
+.sm-toggle{display:flex;justify-content:center;padding:7px 0;border-bottom:1px solid #eef2f4}
+.sm-toggle button{background:#f3f6f7;border:1px solid #e6ebee;color:#0d7377;width:38px;height:30px;border-radius:8px;cursor:pointer;font-size:.95rem;display:flex;align-items:center;justify-content:center}
+.sm-toggle button:hover{background:#e7f0f0}
+.sm-nav{flex:1;overflow-y:auto;overflow-x:hidden;padding:8px;display:flex;flex-direction:column;gap:3px}
+.sm-item{display:flex;align-items:center;gap:12px;padding:9px 11px;border-radius:10px;text-decoration:none;color:#54616a;transition:background .14s,color .14s;white-space:nowrap;cursor:pointer}
+.sm-item:hover{background:#eef4f4;color:#0d7377}
+.sm-ic{width:32px;height:32px;border-radius:9px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:1rem;background:#f1f5f6}
+.sm-tx{font-size:.84rem;font-weight:700}
+.sm-item.active{background:linear-gradient(135deg,#0d7377,#14a085);color:#fff;box-shadow:0 4px 12px rgba(13,115,119,.28)}
+.sm-item.active .sm-ic{background:rgba(255,255,255,.22)}
+.sm-foot{padding:9px 14px;border-top:1px solid #eef2f4;font-size:.6rem;color:#aab4b8;font-weight:700;white-space:nowrap;overflow:hidden}.sm-group{display:flex;flex-direction:column}
+.sm-group-head{display:flex;align-items:center;gap:12px;padding:9px 11px;border-radius:10px;cursor:pointer;color:#54616a;transition:background .14s,color .14s;white-space:nowrap;user-select:none}
+.sm-group-head:hover{background:#eef4f4;color:#0d7377}
+.sm-group-head .sm-tx{flex:1}
+.sm-arrow{font-size:.7rem;color:#b8c2c6;transition:transform .18s;margin-left:auto}
+.sm-group.open .sm-arrow{transform:rotate(90deg)}
+.sm-group-items{display:none;flex-direction:column;gap:2px;padding:2px 0 4px 12px;margin-left:9px;border-left:1.5px solid #eef2f4}
+.sm-group.open .sm-group-items{display:flex}
+.sm-sub{padding:7px 11px}
+.sm-sub .sm-ic{font-size:.95rem}
+body.sm-collapsed .sm-arrow{display:none}
+body.sm-collapsed .sm-group-items{display:flex!important;padding:0;margin:0;border:none}
+body.sm-collapsed .sm-group-head{justify-content:center;padding:9px 0}
+@media(max-width:780px){ body:not(.sm-expanded) .sm-arrow{display:none} body:not(.sm-expanded) .sm-group-items{display:flex!important;padding:0;margin:0;border:none} body:not(.sm-expanded) .sm-group-head{justify-content:center;padding:9px 0} }
+.SMGROUPCSS{}
+body.sm-collapsed{padding-left:64px;} body.sm-collapsed .top-bar{left:64px}
+body.sm-collapsed .sm-side{width:64px}
+body.sm-collapsed .sm-logo-tx,body.sm-collapsed .sm-tx,body.sm-collapsed .sm-foot{display:none}
+body.sm-collapsed .sm-top{justify-content:center;padding:12px 0}
+body.sm-collapsed .sm-item{justify-content:center;padding:9px 0}
+.bottom-bar{left:232px !important;}
+body.sm-collapsed .bottom-bar{left:64px !important;}
+@media (max-width:780px){
+  body{padding-left:64px !important;}
+  .top-bar{left:64px !important;}
+  .sm-side{width:64px}
+  .sm-logo-tx,.sm-tx,.sm-foot{display:none}
+  .sm-top{justify-content:center;padding:12px 0}
+  .sm-item{justify-content:center;padding:9px 0}
+  body.sm-expanded .sm-side{width:228px;box-shadow:6px 0 24px rgba(0,0,0,.18)}
+  body.sm-expanded .sm-logo-tx,body.sm-expanded .sm-tx,body.sm-expanded .sm-foot{display:block}
+  body.sm-expanded .sm-tx{display:inline}
+  body.sm-expanded .sm-top{justify-content:flex-start;padding:12px 14px}
+  body.sm-expanded .sm-item{justify-content:flex-start;padding:9px 11px}
+  .bottom-bar,body.sm-collapsed .bottom-bar{left:64px !important;}
+}
+
 </style>
 </head>
 <body>
@@ -35,6 +87,51 @@ body{font-family:'Barlow',sans-serif;background:#f0f4f5;min-height:100vh;padding
     </div>
   </div>
 </div>
+
+
+<aside class="sm-side">
+  <div class="sm-top">
+    <img class="sm-logo" src="../assets/logo-mariua.png" alt="Mariuá">
+    <div class="sm-logo-tx">MARIUÁ<small>Construção e Energia</small></div>
+  </div>
+  <div class="sm-toggle"><button type="button" onclick="smToggle()" title="Recolher / expandir">↔</button></div>
+    <nav class="sm-nav">
+    <a class="sm-item" href="../index.html"><span class="sm-ic">🏠</span><span class="sm-tx">Início</span></a>
+    <div class="sm-group open" data-group="obras">
+      <div class="sm-group-head" onclick="smGroupToggle(this)"><span class="sm-ic">📋</span><span class="sm-tx">Obras</span><span class="sm-arrow">▸</span></div>
+      <div class="sm-group-items">
+        <a class="sm-item sm-sub" href="../turno.html"><span class="sm-ic">📋</span><span class="sm-tx">Turno</span></a>
+        <a class="sm-item sm-sub" href="../rdo.html"><span class="sm-ic">📊</span><span class="sm-tx">RDO</span></a>
+        <a class="sm-item sm-sub" href="../mapa.html"><span class="sm-ic">🗺️</span><span class="sm-tx">Mapa</span></a>
+        <a class="sm-item sm-sub" href="../prog.html"><span class="sm-ic">📅</span><span class="sm-tx">Prog. Diária</span></a>
+        <a class="sm-item sm-sub" href="../comp.html"><span class="sm-ic">⚡</span><span class="sm-tx">Comparador</span></a>
+        <a class="sm-item sm-sub active" href="neoex.html"><span class="sm-ic">🧪</span><span class="sm-tx">NEOEX</span></a>
+      </div>
+    </div>
+    <div class="sm-group" data-group="sesmt">
+      <div class="sm-group-head" onclick="smGroupToggle(this)"><span class="sm-ic">🦺</span><span class="sm-tx">SESMT</span><span class="sm-arrow">▸</span></div>
+      <div class="sm-group-items">
+        <a class="sm-item sm-sub" href="../ensaios.html"><span class="sm-ic">🧪</span><span class="sm-tx">Ensaios</span></a>
+        <a class="sm-item sm-sub" href="../vencimento_cursos.html"><span class="sm-ic">🎓</span><span class="sm-tx">Vencimento Cursos</span></a>
+      </div>
+    </div>
+    <div class="sm-group" data-group="financeiro">
+      <div class="sm-group-head" onclick="smGroupToggle(this)"><span class="sm-ic">💰</span><span class="sm-tx">Financeiro</span><span class="sm-arrow">▸</span></div>
+      <div class="sm-group-items">
+        <a class="sm-item sm-sub" href="../valores.html"><span class="sm-ic">💰</span><span class="sm-tx">Valores</span></a>
+      </div>
+    </div>
+    <div class="sm-group" data-group="gestao">
+      <div class="sm-group-head" onclick="smGroupToggle(this)"><span class="sm-ic">⚙️</span><span class="sm-tx">Gestão</span><span class="sm-arrow">▸</span></div>
+      <div class="sm-group-items">
+        <a class="sm-item sm-sub" href="../permissoes.html"><span class="sm-ic">🔐</span><span class="sm-tx">Telas x Usuários</span></a>
+        <a class="sm-item sm-sub" href="../projeçao.html"><span class="sm-ic">📈</span><span class="sm-tx">PDA</span></a>
+        <a class="sm-item sm-sub" href="../admin.html"><span class="sm-ic">⚙️</span><span class="sm-tx">Admin</span></a>
+      </div>
+    </div>
+  </nav>
+  <div class="sm-foot">Mariuá · Sistema de Obras</div>
+</aside>
 
 <div class="wrap">
 
@@ -113,5 +210,19 @@ var neoexBanco = null; // obras_base (planilha do René)
 (function(){ function t(){ var d=new Date(); var el=document.getElementById('page-time'); if(el) el.textContent=('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2); } t(); setInterval(t,15000); })();
 </script>
 <script src="neoex.js"></script>
+
+<script>
+(function(){
+  function isMobile(){return window.matchMedia('(max-width:780px)').matches;}
+  window.smToggle=function(){
+    if(isMobile()) document.body.classList.toggle('sm-expanded');
+    else document.body.classList.toggle('sm-collapsed');
+  };
+  window.smGroupToggle=function(head){
+    var g=head.parentNode; if(g) g.classList.toggle('open');
+  };
+})();
+</script>
+<script src="../identidade.js?v=3"></script>
 </body>
 </html>
