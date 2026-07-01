@@ -1,0 +1,275 @@
+/* ===================== NEOEX (standalone) — comparação GPM × planilha do René ===================== */
+(function(){
+  var neoexGPM = null;       // { 'B-xxxx': {covas,postes,estrutura,cabo,poda,ligacaoFlag} }
+  var neoexFiltro = 'todos';
+  var neoexLinhas = [];
+
+  function num(s){
+    s = (s==null?'':String(s)).trim();
+    if(!s) return 0;
+    s = s.replace(/\./g,'').replace(',', '.');
+    var v = parseFloat(s);
+    return isNaN(v) ? 0 : v;
+  }
+  function numReve(s){
+    s = (s==null?'':String(s)).trim();
+    if(!s) return null;
+    s = s.replace(/\./g,'').replace(',', '.');
+    var v = parseFloat(s);
+    return isNaN(v) ? null : v;
+  }
+
+  function categoria(a, grupo){
+    a = (a||'').toUpperCase();
+    grupo = (grupo||'').toUpperCase();
+    if(a.indexOf('CAVA') >= 0) return 'covas';
+    if(a.indexOf('POSTE') === 0 || a.indexOf('TRANSPORTE DE POSTE') >= 0 || a.indexOf('DISTRIBUICAO DE POSTES') >= 0) return 'postes';
+    if(a.indexOf('INSTALAR EST') >= 0 || a.indexOf('INST EST') === 0) return 'estrutura';
+    if(a.indexOf('CONDUTOR') >= 0 || a.indexOf('CABO') >= 0) return 'cabo';
+    if(grupo === 'PODA' || a.indexOf('ARVORE') >= 0 || a.indexOf('ABERTURA DE FAIXA') >= 0 || a.indexOf('PODA') >= 0) return 'poda';
+    if(a.indexOf('LIGA\u00c7\u00c3O DE CLIENTE') >= 0 || a.indexOf('LIGACAO DE CLIENTE') >= 0 || grupo === 'LC' ||
+       a.indexOf('RAMAL DE LIG') >= 0 || a.indexOf('MEDIDOR') >= 0 || a.indexOf('INSTALACAO INTERNA') >= 0) return 'ligacao';
+    return null;
+  }
+
+  function parseCSVSemicolon(text){
+    if(text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
+    var linhas = [];
+    var i=0, campo='', linha=[], dentroAspas=false;
+    while(i < text.length){
+      var c = text[i];
+      if(dentroAspas){
+        if(c === '"'){ if(text[i+1] === '"'){ campo+='"'; i+=2; continue; } dentroAspas = false; i++; continue; }
+        campo += c; i++; continue;
+      }
+      if(c === '"'){ dentroAspas = true; i++; continue; }
+      if(c === ';'){ linha.push(campo); campo=''; i++; continue; }
+      if(c === '\n'){ linha.push(campo); linhas.push(linha); linha=[]; campo=''; i++; continue; }
+      if(c === '\r'){ i++; continue; }
+      campo += c; i++;
+    }
+    if(campo.length || linha.length){ linha.push(campo); linhas.push(linha); }
+    return linhas;
+  }
+
+  window.neoexImportar = function(file){
+    if(!file) return;
+    var msg = document.getElementById('neoex-import-msg');
+    function showMsg(txt, ok){
+      msg.style.display='block';
+      msg.style.background = ok ? '#d0f0ee' : '#fde8e8';
+      msg.style.color = ok ? '#0d7377' : '#c53030';
+      msg.innerHTML = txt;
+    }
+    var reader = new FileReader();
+    reader.onload = function(e){
+      try{
+        var rows = parseCSVSemicolon(e.target.result);
+        if(rows.length < 2){ showMsg('Arquivo vazio ou inv\u00e1lido.', false); return; }
+        var hdr = rows[0].map(function(h){ return (h||'').trim(); });
+        function idx(nome){ for(var k=0;k<hdr.length;k++){ if(hdr[k].toUpperCase()===nome.toUpperCase()) return k; } return -1; }
+        var iSS = idx('SS/OT'); if(iSS<0) iSS=14;
+        var iAtiv = idx('des_atividade'); if(iAtiv<0) iAtiv=31;
+        var iQtd = idx('qtd_atividade'); if(iQtd<0) iQtd=34;
+        var iGrupo = idx('des_grupo'); if(iGrupo<0) iGrupo=28;
+
+        var agg = {}, nLinhas = 0;
+        for(var r=1; r<rows.length; r++){
+          var row = rows[r];
+          if(!row || row.length <= iAtiv) continue;
+          var bp = (row[iSS]||'').trim();
+          if(bp.indexOf('B-') !== 0) continue;
+          var cat = categoria(row[iAtiv], row[iGrupo]);
+          var q = num(row[iQtd]);
+          if(!agg[bp]) agg[bp] = {covas:0,postes:0,estrutura:0,cabo:0,poda:0,ligacao:0,ligacaoFlag:false};
+          if(cat){ agg[bp][cat] += q; if(cat==='ligacao' && q>0) agg[bp].ligacaoFlag = true; }
+          nLinhas++;
+        }
+        neoexGPM = agg;
+        var nObras = Object.keys(agg).length;
+        showMsg('\u2705 GPM importado: <b>'+nObras+'</b> obras (B-) \u00b7 '+nLinhas+' linhas processadas', true);
+        document.getElementById('neoex-drop').style.borderColor = '#14a085';
+        neoexCruzar();
+      }catch(err){ showMsg('Erro ao ler o arquivo: '+err.message, false); }
+    };
+    reader.onerror = function(){ showMsg('N\u00e3o foi poss\u00edvel ler o arquivo.', false); };
+    reader.readAsText(file, 'utf-8');
+  };
+
+  // lê a planilha do René (obras_base) direto do Supabase
+  function neoexCarregarBase(){
+    var st = document.getElementById('neoex-base-status');
+    return fetch(SUPA_URL + '/rest/v1/turno_data?select=value&key=eq.obras_base&limit=1', {
+      headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY }
+    }).then(function(r){ return r.json(); }).then(function(arr){
+      var val = (arr && arr[0] && arr[0].value) ? arr[0].value : null;
+      var data = val && val.data ? val.data : null;
+      neoexBanco = data || [];
+      if(neoexBanco.length){
+        st.textContent = 'Planilha do Ren\u00e9: ' + neoexBanco.length + ' obras carregadas \u2713';
+        st.style.background = 'rgba(255,255,255,0.22)';
+      } else {
+        st.textContent = 'Planilha do Ren\u00e9: vazia \u2014 abra o MAPA para sincronizar';
+      }
+      return neoexBanco;
+    }).catch(function(){
+      neoexBanco = [];
+      st.textContent = 'Planilha do Ren\u00e9: erro ao carregar';
+      return neoexBanco;
+    });
+  }
+
+  function neoexBaseReve(){
+    var base = {};
+    (neoexBanco || []).forEach(function(o){
+      var pep = (o['PEP OBRA'] || o.pep || '').trim();
+      if(pep.indexOf('B-') !== 0) return;
+      var cava = numReve(o['CAVA REALIZADA'] != null ? o['CAVA REALIZADA'] : o['CAVA  REALIZADA']);
+      var post = numReve(o['POSTES REALIZADO'] != null ? o['POSTES REALIZADO'] : o['POSTES  REALIZADO']);
+      base[pep] = {
+        cava: cava, postR: post,
+        titulo: o['T\u00cdTULO'] || o['TITULO'] || o.titulo || '',
+        mun: o['MUNICIPIO'] || o['MUNIC\u00cdPIO'] || o.municipio || ''
+      };
+    });
+    return base;
+  }
+
+  function neoexCruzar(){
+    if(!neoexGPM) return;
+    var doCruzamento = function(){
+      var base = neoexBaseReve();
+      var linhas = [];
+      Object.keys(neoexGPM).forEach(function(bp){
+        var g = neoexGPM[bp];
+        var b = base[bp] || null;
+        var cavaReve = b ? b.cava : null;
+        var postReve = b ? b.postR : null;
+        var covasDiff = (cavaReve!=null) ? (g.covas - cavaReve) : null;
+        var postesDiff = (postReve!=null) ? (g.postes - postReve) : null;
+        linhas.push({
+          pep: bp, titulo: b ? b.titulo : '', mun: b ? b.mun : '', temBase: !!b,
+          gCovas: g.covas, gPostes: g.postes, gEstrut: g.estrutura, gCabo: g.cabo, gPoda: g.poda, gLig: g.ligacaoFlag,
+          rCava: cavaReve, rPost: postReve, covasDiff: covasDiff, postesDiff: postesDiff
+        });
+      });
+      linhas.sort(function(a,b){
+        var da = (a.covasDiff && Math.abs(a.covasDiff)) + (a.postesDiff && Math.abs(a.postesDiff)) || 0;
+        var db = (b.covasDiff && Math.abs(b.covasDiff)) + (b.postesDiff && Math.abs(b.postesDiff)) || 0;
+        if(db !== da) return db - da;
+        return a.pep < b.pep ? -1 : 1;
+      });
+      neoexLinhas = linhas;
+      neoexRenderKpis();
+      document.getElementById('neoex-kpis').style.display = 'flex';
+      document.getElementById('neoex-content').style.display = 'block';
+      neoexRender();
+    };
+    if(neoexBanco === null){ neoexCarregarBase().then(doCruzamento); } else { doCruzamento(); }
+  }
+
+  function neoexRenderKpis(){
+    var total = neoexLinhas.length;
+    var comDif = neoexLinhas.filter(function(l){ return (l.covasDiff!=null && l.covasDiff!==0) || (l.postesDiff!=null && l.postesDiff!==0); }).length;
+    var soGpm = neoexLinhas.filter(function(l){ return !l.temBase; }).length;
+    var ok = total - comDif - soGpm;
+    function card(val, lbl, cor){
+      return '<div style="flex:1;min-width:130px;background:#fff;border-radius:12px;padding:14px 16px;box-shadow:0 2px 10px rgba(0,0,0,0.06);border-top:3px solid '+cor+';">'
+        +'<div style="font-size:1.7rem;font-weight:800;color:#2d3748;">'+val+'</div>'
+        +'<div style="font-size:0.62rem;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:1px;margin-top:2px;">'+lbl+'</div></div>';
+    }
+    document.getElementById('neoex-kpis').innerHTML =
+      card(total, 'Obras no GPM', '#0d7377') +
+      card(comDif, 'Com diferen\u00e7a', '#e53e3e') +
+      card(ok, 'Batem c/ Ren\u00e9', '#14a085') +
+      card(soGpm, 'S\u00f3 no GPM', '#f0a500');
+  }
+
+  window.neoexSetFiltro = function(f){
+    neoexFiltro = f;
+    ['todos','div','ok','so-gpm'].forEach(function(k){
+      var btn = document.getElementById('neoex-fbtn-'+k);
+      if(!btn) return;
+      var on = k===f;
+      btn.style.background = on ? '#0d7377' : '#fff';
+      btn.style.color = on ? '#fff' : '#666';
+      btn.style.borderColor = on ? '#0d7377' : '#e2e8f0';
+    });
+    neoexRender();
+  };
+
+  function esc(s){ return (s==null?'':String(s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+  function celComp(gpm, reve, diff){
+    var fmt = function(v){ return v==null ? '\u2014' : (Math.round(v*100)/100); };
+    if(reve == null){
+      return '<div style="font-weight:800;color:#1a365d;">'+fmt(gpm)+'</div><div style="font-size:0.6rem;color:#bbb;">sem Ren\u00e9</div>';
+    }
+    var cor = diff===0 ? '#14a085' : '#e53e3e';
+    var sinal = diff>0 ? '+'+ (Math.round(diff*100)/100) : (Math.round(diff*100)/100);
+    var badge = diff===0
+      ? '<span style="display:inline-block;font-size:0.6rem;font-weight:800;padding:1px 6px;border-radius:5px;background:#d0f0ee;color:#0d7377;">OK</span>'
+      : '<span style="display:inline-block;font-size:0.6rem;font-weight:800;padding:1px 6px;border-radius:5px;background:#fde8e8;color:#c53030;">'+sinal+'</span>';
+    return '<div style="display:flex;align-items:center;justify-content:center;gap:5px;">'
+      + '<span style="font-weight:800;color:'+cor+';">'+fmt(gpm)+'</span>'
+      + '<span style="color:#ccc;font-size:0.7rem;">\u00d7</span>'
+      + '<span style="color:#888;">'+fmt(reve)+'</span></div>'
+      + '<div style="margin-top:2px;">'+badge+'</div>';
+  }
+
+  window.neoexRender = function(){
+    var tb = document.getElementById('neoex-tbody');
+    var empty = document.getElementById('neoex-empty');
+    if(!tb) return;
+    var q = (document.getElementById('neoex-search').value || '').toLowerCase().trim();
+    var linhas = neoexLinhas.filter(function(l){
+      if(neoexFiltro==='div' && !((l.covasDiff!=null&&l.covasDiff!==0)||(l.postesDiff!=null&&l.postesDiff!==0))) return false;
+      if(neoexFiltro==='ok' && !l.temBase) return false;
+      if(neoexFiltro==='ok' && !((l.covasDiff===0||l.covasDiff==null) && (l.postesDiff===0||l.postesDiff==null))) return false;
+      if(neoexFiltro==='so-gpm' && l.temBase) return false;
+      if(q){ var hay=(l.pep+' '+l.titulo+' '+l.mun).toLowerCase(); if(hay.indexOf(q)<0) return false; }
+      return true;
+    });
+    if(!linhas.length){ tb.innerHTML=''; empty.style.display='block'; return; }
+    empty.style.display='none';
+    var html = '';
+    linhas.forEach(function(l){
+      var temDif = (l.covasDiff!=null&&l.covasDiff!==0)||(l.postesDiff!=null&&l.postesDiff!==0);
+      var borda = temDif ? 'border-left:3px solid #e53e3e;' : (l.temBase ? 'border-left:3px solid #14a085;' : 'border-left:3px solid #f0a500;');
+      html += '<tr style="border-bottom:1px solid #edf0f2;'+borda+'">'
+        + '<td style="padding:10px 12px;"><div style="font-weight:800;color:#0d7377;font-size:0.78rem;">'+esc(l.pep)+'</div>'
+          + '<div style="font-size:0.68rem;color:#555;font-weight:600;max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+esc(l.titulo||'\u2014')+'</div>'
+          + (l.mun?'<div style="font-size:0.62rem;color:#aaa;">'+esc(l.mun)+'</div>':'')
+          + (!l.temBase?'<div style="font-size:0.6rem;color:#b97400;font-weight:800;">\u26a0\ufe0f n\u00e3o est\u00e1 na planilha do Ren\u00e9</div>':'')+'</td>'
+        + '<td style="padding:8px;text-align:center;">'+celComp(l.gCovas, l.rCava, l.covasDiff)+'</td>'
+        + '<td style="padding:8px;text-align:center;">'+celComp(l.gPostes, l.rPost, l.postesDiff)+'</td>'
+        + '<td style="padding:8px;text-align:center;font-weight:700;color:#1a365d;">'+(l.gEstrut||0)+'</td>'
+        + '<td style="padding:8px;text-align:center;font-weight:700;color:#1a365d;">'+(Math.round(l.gCabo)||0)+'</td>'
+        + '<td style="padding:8px;text-align:center;font-weight:700;color:#6b21a8;">'+(Math.round(l.gPoda)||0)+'</td>'
+        + '<td style="padding:8px;text-align:center;">'+(l.gLig?'<span style="display:inline-block;font-size:0.62rem;font-weight:800;padding:2px 9px;border-radius:5px;background:#d0f0ee;color:#0d7377;">SIM</span>':'<span style="color:#ccc;">\u2014</span>')+'</td>'
+        + '</tr>';
+    });
+    tb.innerHTML = html;
+  };
+
+  window.neoexExportCSV = function(){
+    if(!neoexLinhas.length){ alert('Importe o GPM primeiro.'); return; }
+    var sep = ';';
+    var head = ['B-','OBRA','MUNICIPIO','GPM_COVAS','RENE_CAVA','DIF_COVAS','GPM_POSTES','RENE_POSTES','DIF_POSTES','GPM_ESTRUTURA','GPM_CABO_M','GPM_PODA','GPM_LIGACAO','SO_NO_GPM'];
+    var linhas = [head.join(sep)];
+    neoexLinhas.forEach(function(l){
+      linhas.push([
+        l.pep, '"'+(l.titulo||'').replace(/"/g,'""')+'"', '"'+(l.mun||'')+'"',
+        l.gCovas, l.rCava==null?'':l.rCava, l.covasDiff==null?'':l.covasDiff,
+        l.gPostes, l.rPost==null?'':l.rPost, l.postesDiff==null?'':l.postesDiff,
+        l.gEstrut, Math.round(l.gCabo), Math.round(l.gPoda), l.gLig?'SIM':'NAO', l.temBase?'NAO':'SIM'
+      ].join(sep));
+    });
+    var blob = new Blob(['\ufeff'+linhas.join('\n')], {type:'text/csv;charset=utf-8;'});
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = 'neoex_comparacao.csv'; a.click();
+  };
+
+  // carrega a base do René ao abrir a página
+  neoexCarregarBase();
+})();
