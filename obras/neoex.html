@@ -135,7 +135,7 @@ body.sm-collapsed .bottom-bar{left:64px !important;}
       <span style="font-size:1.6rem;">🧪</span>
       <div>
         <div style="color:#fff;font-size:1rem;font-weight:800;letter-spacing:0.5px;">NEOEX — APONTAMENTO × PLANILHA</div>
-        <div style="color:rgba(255,255,255,0.75);font-size:0.7rem;font-weight:600;margin-top:2px;">Importe o relatório de GPM e compare por B- com a planilha do René (mapa)</div>
+        <div style="color:rgba(255,255,255,0.75);font-size:0.7rem;font-weight:600;margin-top:2px;">Obras, avanço de materiais (ao vivo) por B- — importe o GPM para comparar covas e postes</div>
       </div>
     </div>
     <span id="neoex-base-status" style="font-size:0.7rem;font-weight:800;color:#fff;background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);padding:5px 12px;border-radius:20px;">Planilha do René: carregando…</span>
@@ -147,7 +147,7 @@ body.sm-collapsed .bottom-bar{left:64px !important;}
       style="border:2px dashed #c0e8e5;border-radius:12px;padding:28px 20px;text-align:center;cursor:pointer;transition:all 0.2s;background:linear-gradient(135deg,#f0fafa,#e8f7f5);">
       <div style="font-size:2rem;margin-bottom:8px;">📥</div>
       <div style="font-size:0.9rem;font-weight:800;color:#0d7377;">Clique para importar o relatório de GPM (.csv)</div>
-      <div style="font-size:0.72rem;font-weight:600;color:#888;margin-top:5px;">apontamento_faturamento — separado por ponto-e-vírgula</div>
+      <div style="font-size:0.72rem;font-weight:600;color:#888;margin-top:5px;">opcional — apontamento_faturamento (;) para comparar covas/postes</div>
     </div>
     <input type="file" id="neoex-file" accept=".csv,.txt" style="display:none;" onchange="neoexImportar(this.files[0])">
     <div id="neoex-import-msg" style="display:none;margin-top:12px;padding:10px 14px;border-radius:10px;font-size:0.78rem;font-weight:700;text-align:center;"></div>
@@ -191,7 +191,7 @@ body.sm-collapsed .bottom-bar{left:64px !important;}
       </div>
       <div id="neoex-empty" style="display:none;text-align:center;padding:50px 20px;color:#aaa;">
         <div style="font-size:2.4rem;margin-bottom:10px;">📋</div>
-        <div style="font-size:0.88rem;font-weight:600;">Importe o relatório de GPM para ver a comparação.</div>
+        <div style="font-size:0.88rem;font-weight:600;">Carregando obras e materiais…</div>
       </div>
     </div>
   </div>

@@ -89,7 +89,7 @@
         var nObras = Object.keys(agg).length;
         showMsg('\u2705 GPM importado: <b>'+nObras+'</b> obras (B-) \u00b7 '+nLinhas+' linhas processadas', true);
         document.getElementById('neoex-drop').style.borderColor = '#14a085';
-        neoexCruzar();
+        neoexMontar();
       }catch(err){ showMsg('Erro ao ler o arquivo: '+err.message, false); }
     };
     reader.onerror = function(){ showMsg('N\u00e3o foi poss\u00edvel ler o arquivo.', false); };
@@ -241,54 +241,61 @@
     return base;
   }
 
-  function neoexCruzar(){
-    if(!neoexGPM) return;
-    var doCruzamento = function(){
-      var base = neoexBaseReve();
-      var linhas = [];
-      Object.keys(neoexGPM).forEach(function(bp){
-        var g = neoexGPM[bp];
-        var b = base[bp] || null;
-        var cavaReve = b ? b.cava : null;
-        var postReve = b ? b.postR : null;
-        var covasDiff = (cavaReve!=null) ? (g.covas - cavaReve) : null;
-        var postesDiff = (postReve!=null) ? (g.postes - postReve) : null;
-        linhas.push({
-          pep: bp, titulo: b ? b.titulo : '', mun: b ? b.mun : '', temBase: !!b,
-          gCovas: g.covas, gPostes: g.postes, gEstrut: g.estrutura, gCabo: g.cabo, gPoda: g.poda, gLig: g.ligacaoFlag,
-          rCava: cavaReve, rPost: postReve, covasDiff: covasDiff, postesDiff: postesDiff
-        });
+  function neoexMontar(){
+    // precisa de pelo menos uma fonte carregada
+    if(neoexBanco===null && neoexMateriais===null && !neoexGPM) return;
+    var base = neoexBaseReve();
+    var peps = {};
+    Object.keys(base).forEach(function(p){ peps[p]=true; });
+    if(neoexMateriais) Object.keys(neoexMateriais).forEach(function(p){ peps[p]=true; });
+    if(neoexGPM) Object.keys(neoexGPM).forEach(function(p){ peps[p]=true; });
+    var linhas = [];
+    Object.keys(peps).forEach(function(bp){
+      var b = base[bp] || null;
+      var g = (neoexGPM && neoexGPM[bp]) || null;
+      var cavaReve = b ? b.cava : null;
+      var postReve = b ? b.postR : null;
+      var gCovas = g ? g.covas : null;
+      var gPostes = g ? g.postes : null;
+      var covasDiff = (g && cavaReve!=null) ? (gCovas - cavaReve) : null;
+      var postesDiff = (g && postReve!=null) ? (gPostes - postReve) : null;
+      linhas.push({
+        pep: bp, titulo: b ? b.titulo : '', mun: b ? b.mun : '', temBase: !!b, temGpm: !!g,
+        gCovas: gCovas, gPostes: gPostes,
+        gEstrut: g ? g.estrutura : null, gCabo: g ? g.cabo : null, gPoda: g ? g.poda : null, gLig: g ? g.ligacaoFlag : false,
+        rCava: cavaReve, rPost: postReve, covasDiff: covasDiff, postesDiff: postesDiff
       });
-      linhas.sort(function(a,b){
-        var da = (a.covasDiff && Math.abs(a.covasDiff)) + (a.postesDiff && Math.abs(a.postesDiff)) || 0;
-        var db = (b.covasDiff && Math.abs(b.covasDiff)) + (b.postesDiff && Math.abs(b.postesDiff)) || 0;
-        if(db !== da) return db - da;
-        return a.pep < b.pep ? -1 : 1;
-      });
-      neoexLinhas = linhas;
-      neoexRenderKpis();
-      document.getElementById('neoex-kpis').style.display = 'flex';
-      document.getElementById('neoex-content').style.display = 'block';
-      neoexRender();
-    };
-    if(neoexBanco === null){ neoexCarregarBase().then(doCruzamento); } else { doCruzamento(); }
+    });
+    linhas.sort(function(a,b){
+      var da = (a.covasDiff && Math.abs(a.covasDiff)) + (a.postesDiff && Math.abs(a.postesDiff)) || 0;
+      var db = (b.covasDiff && Math.abs(b.covasDiff)) + (b.postesDiff && Math.abs(b.postesDiff)) || 0;
+      if(db !== da) return db - da;
+      return a.pep < b.pep ? -1 : 1;
+    });
+    neoexLinhas = linhas;
+    neoexRenderKpis();
+    document.getElementById('neoex-kpis').style.display = 'flex';
+    document.getElementById('neoex-content').style.display = 'block';
+    neoexRender();
   }
 
   function neoexRenderKpis(){
     var total = neoexLinhas.length;
+    var comMat = neoexLinhas.filter(function(l){ var m=neoexMatDe(l.pep); return m&&m.itens; }).length;
+    var avs = neoexLinhas.map(function(l){ var m=neoexMatDe(l.pep); return (m&&m.itens)?m.avanco:null; }).filter(function(v){ return v!=null; });
+    var avMed = avs.length ? Math.round(avs.reduce(function(a,b){return a+b;},0)/avs.length) : 0;
+    var temGpm = neoexLinhas.some(function(l){ return l.temGpm; });
     var comDif = neoexLinhas.filter(function(l){ return (l.covasDiff!=null && l.covasDiff!==0) || (l.postesDiff!=null && l.postesDiff!==0); }).length;
-    var soGpm = neoexLinhas.filter(function(l){ return !l.temBase; }).length;
-    var ok = total - comDif - soGpm;
     function card(val, lbl, cor){
       return '<div style="flex:1;min-width:130px;background:#fff;border-radius:12px;padding:14px 16px;box-shadow:0 2px 10px rgba(0,0,0,0.06);border-top:3px solid '+cor+';">'
         +'<div style="font-size:1.7rem;font-weight:800;color:#2d3748;">'+val+'</div>'
         +'<div style="font-size:0.62rem;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:1px;margin-top:2px;">'+lbl+'</div></div>';
     }
     document.getElementById('neoex-kpis').innerHTML =
-      card(total, 'Obras no GPM', '#0d7377') +
-      card(comDif, 'Com diferen\u00e7a', '#e53e3e') +
-      card(ok, 'Batem c/ Ren\u00e9', '#14a085') +
-      card(soGpm, 'S\u00f3 no GPM', '#f0a500');
+      card(total, 'Obras', '#0d7377') +
+      card(comMat, 'Com materiais', '#2b6cb0') +
+      card(avMed+'%', 'Avan\u00e7o m\u00e9dio', '#14a085') +
+      card(temGpm?comDif:'\u2014', 'Com diferen\u00e7a (GPM)', '#e53e3e');
   }
 
   window.neoexSetFiltro = function(f){
@@ -308,6 +315,11 @@
 
   function celComp(gpm, reve, diff){
     var fmt = function(v){ return v==null ? '\u2014' : (Math.round(v*100)/100); };
+    if(gpm == null){
+      // sem GPM importado: mostra apenas o valor do René
+      if(reve == null) return '<span style="color:#ccc;">\u2014</span>';
+      return '<div style="font-weight:700;color:#888;">'+fmt(reve)+'</div><div style="font-size:0.6rem;color:#bbb;">René</div>';
+    }
     if(reve == null){
       return '<div style="font-weight:800;color:#1a365d;">'+fmt(gpm)+'</div><div style="font-size:0.6rem;color:#bbb;">sem Ren\u00e9</div>';
     }
@@ -349,9 +361,9 @@
           + (!l.temBase?'<div style="font-size:0.6rem;color:#b97400;font-weight:800;">\u26a0\ufe0f n\u00e3o est\u00e1 na planilha do Ren\u00e9</div>':'')+'</td>'
         + '<td style="padding:8px;text-align:center;">'+celComp(l.gCovas, l.rCava, l.covasDiff)+'</td>'
         + '<td style="padding:8px;text-align:center;">'+celComp(l.gPostes, l.rPost, l.postesDiff)+'</td>'
-        + '<td style="padding:8px;text-align:center;font-weight:700;color:#1a365d;">'+(l.gEstrut||0)+'</td>'
-        + '<td style="padding:8px;text-align:center;font-weight:700;color:#1a365d;">'+(Math.round(l.gCabo)||0)+'</td>'
-        + '<td style="padding:8px;text-align:center;font-weight:700;color:#6b21a8;">'+(Math.round(l.gPoda)||0)+'</td>'
+        + '<td style="padding:8px;text-align:center;font-weight:700;color:#1a365d;">'+(l.gEstrut==null?'<span style="color:#ccc;">\u2014</span>':l.gEstrut)+'</td>'
+        + '<td style="padding:8px;text-align:center;font-weight:700;color:#1a365d;">'+(l.gCabo==null?'<span style="color:#ccc;">\u2014</span>':Math.round(l.gCabo))+'</td>'
+        + '<td style="padding:8px;text-align:center;font-weight:700;color:#6b21a8;">'+(l.gPoda==null?'<span style="color:#ccc;">\u2014</span>':Math.round(l.gPoda))+'</td>'
         + '<td style="padding:8px;text-align:center;">'+(l.gLig?'<span style="display:inline-block;font-size:0.62rem;font-weight:800;padding:2px 9px;border-radius:5px;background:#d0f0ee;color:#0d7377;">SIM</span>':'<span style="color:#ccc;">\u2014</span>')+'</td>'
         + '<td style="padding:8px 10px;text-align:center;">'+celMateriais(l.pep)+'</td>'
         + '</tr>';
@@ -360,7 +372,7 @@
   };
 
   window.neoexExportCSV = function(){
-    if(!neoexLinhas.length){ alert('Importe o GPM primeiro.'); return; }
+    if(!neoexLinhas.length){ alert('Nenhuma obra carregada ainda.'); return; }
     var sep = ';';
     var head = ['B-','OBRA','MUNICIPIO','GPM_COVAS','RENE_CAVA','DIF_COVAS','GPM_POSTES','RENE_POSTES','DIF_POSTES','GPM_ESTRUTURA','GPM_CABO_M','GPM_PODA','GPM_LIGACAO','SO_NO_GPM','MAT_AVANCO','MAT_ITENS','MAT_CONCLUIDOS'];
     var linhas = [head.join(sep)];
@@ -379,10 +391,7 @@
     a.href = URL.createObjectURL(blob); a.download = 'neoex_comparacao.csv'; a.click();
   };
 
-  // carrega a base do René ao abrir a página
-  neoexCarregarBase();
-  // carrega os materiais (planilha ao vivo) e re-renderiza se já houver linhas
-  neoexCarregarMateriais().then(function(){
-    if(neoexLinhas && neoexLinhas.length) neoexRender();
-  });
+  // carrega base do René e materiais ao abrir; monta a tabela assim que cada fonte chega
+  neoexCarregarBase().then(function(){ neoexMontar(); });
+  neoexCarregarMateriais().then(function(){ neoexMontar(); });
 })();
