@@ -121,6 +121,7 @@
 
   // ===== MATERIAIS (planilha ao vivo via gviz) =====
   var neoexMateriais = null; // { 'B-xxx': {itens, concluidos, avanco, somaNec, somaMov} }
+  var neoexMatItens = {};    // { 'B-xxx': [ {cod,mat,un,tipo,nec,sep,exp,mov,av} ] }
   var NEOEX_MAT_SHEET = '187jP2WPva-xbotAcAcuY9EFsP-7dbITtlNNfBOk_M1s';
 
   function parseCSVComma(text){
@@ -168,10 +169,16 @@
       var hdr = rows[0].map(function(h){return (h||'').trim().toUpperCase();});
       function col(nome){ for(var k=0;k<hdr.length;k++){ if(hdr[k]===nome) return k; } return -1; }
       var iPep=col('PEP'); if(iPep<0) iPep=1;
+      var iCod=col('COD'); if(iCod<0) iCod=7;
+      var iMat=col('MATERIAL'); if(iMat<0) iMat=8;
+      var iUn=col('UN'); if(iUn<0) iUn=9;
+      var iTipo=col('TIPO MAT'); if(iTipo<0) iTipo=6;
       var iNec=col('NECESSIDADE'); if(iNec<0) iNec=10;
+      var iSep=col('SEPARADO'); if(iSep<0) iSep=12;
+      var iExp=col('EXPEDIDO'); if(iExp<0) iExp=14;
       var iMov=col('MOVIMENTADO (+)'); if(iMov<0) iMov=16;
       var iAv=col('AVANÇO'); if(iAv<0) iAv=col('AVANCO'); if(iAv<0) iAv=23;
-      var agg={};
+      var agg={}; neoexMatItens={};
       for(var r=1;r<rows.length;r++){
         var row=rows[r]; if(!row||row.length<=iPep) continue;
         var pep=(row[iPep]||'').trim();
@@ -186,6 +193,12 @@
         agg[pep].somaNec+=nec;
         agg[pep].somaMov+=mov;
         if(av>=100 || mov>=nec) agg[pep].concluidos++;
+        // guarda o item detalhado
+        if(!neoexMatItens[pep]) neoexMatItens[pep]=[];
+        neoexMatItens[pep].push({
+          cod:(row[iCod]||'').trim(), mat:(row[iMat]||'').trim(), un:(row[iUn]||'').trim(),
+          tipo:(row[iTipo]||'').trim(), nec:nec, sep:numMat(row[iSep]), exp:numMat(row[iExp]), mov:mov, av:av
+        });
       }
       // fecha avanço médio
       Object.keys(agg).forEach(function(k){
@@ -221,6 +234,7 @@
       +   '<div style="height:100%;width:'+Math.min(av,100)+'%;background:'+cor+';"></div>'
       + '</div>'
       + '<div style="font-size:0.6rem;color:#94a3b8;margin-top:2px;">'+m.concluidos+'/'+m.itens+' itens</div>'
+      + '<div style="font-size:0.58rem;color:#0d7377;margin-top:1px;font-weight:700;">clique p/ ver itens</div>'
       + '</div>';
   }
 
@@ -354,8 +368,9 @@
     linhas.forEach(function(l){
       var temDif = (l.covasDiff!=null&&l.covasDiff!==0)||(l.postesDiff!=null&&l.postesDiff!==0);
       var borda = temDif ? 'border-left:3px solid #e53e3e;' : (l.temBase ? 'border-left:3px solid #14a085;' : 'border-left:3px solid #f0a500;');
-      html += '<tr style="border-bottom:1px solid #edf0f2;'+borda+'">'
-        + '<td style="padding:10px 12px;"><div style="font-weight:800;color:#0d7377;font-size:0.78rem;">'+esc(l.pep)+'</div>'
+      var temItens = neoexMatItens[l.pep] && neoexMatItens[l.pep].length;
+      html += '<tr data-pep="'+esc(l.pep)+'" onclick="neoexToggleMat(this,\''+esc(l.pep)+'\')" style="border-bottom:1px solid #edf0f2;'+borda+(temItens?'cursor:pointer;':'')+'">'
+        + '<td style="padding:10px 12px;"><div style="font-weight:800;color:#0d7377;font-size:0.78rem;">'+(temItens?'<span class="neoex-chev" style="display:inline-block;transition:transform .15s;color:#0d7377;margin-right:5px;">\u25b8</span>':'')+esc(l.pep)+'</div>'
           + '<div style="font-size:0.68rem;color:#555;font-weight:600;max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+esc(l.titulo||'\u2014')+'</div>'
           + (l.mun?'<div style="font-size:0.62rem;color:#aaa;">'+esc(l.mun)+'</div>':'')
           + (!l.temBase?'<div style="font-size:0.6rem;color:#b97400;font-weight:800;">\u26a0\ufe0f n\u00e3o est\u00e1 na planilha do Ren\u00e9</div>':'')+'</td>'
@@ -369,6 +384,54 @@
         + '</tr>';
     });
     tb.innerHTML = html;
+  };
+
+  // expande/recolhe a lista de materiais de uma obra
+  window.neoexToggleMat = function(rowEl, pep){
+    var itens = neoexMatItens[pep];
+    if(!itens || !itens.length) return;
+    var next = rowEl.nextSibling;
+    var chev = rowEl.querySelector('.neoex-chev');
+    // se já está aberto, fecha
+    if(next && next.classList && next.classList.contains('neoex-detail')){
+      next.parentNode.removeChild(next);
+      if(chev) chev.style.transform='';
+      return;
+    }
+    if(chev) chev.style.transform='rotate(90deg)';
+    // ordena: pendentes (menor avanço) primeiro
+    var arr = itens.slice().sort(function(a,b){ return a.av - b.av; });
+    var linhas = arr.map(function(it){
+      var cor = it.av>=100?'#14a085':(it.av>=50?'#f0a500':'#e53e3e');
+      return '<tr style="border-bottom:1px solid #eef2f4;">'
+        + '<td style="padding:6px 8px;color:#94a3b8;font-size:0.68rem;">'+esc(it.cod||'')+'</td>'
+        + '<td style="padding:6px 8px;font-weight:600;color:#334155;">'+esc(it.mat||'')+'</td>'
+        + '<td style="padding:6px 8px;text-align:center;color:#64748b;">'+esc(it.un||'')+'</td>'
+        + '<td style="padding:6px 8px;text-align:right;font-weight:700;color:#1a365d;">'+(Math.round(it.nec*100)/100)+'</td>'
+        + '<td style="padding:6px 8px;text-align:right;color:#64748b;">'+(Math.round(it.sep*100)/100)+'</td>'
+        + '<td style="padding:6px 8px;text-align:right;color:#64748b;">'+(Math.round(it.exp*100)/100)+'</td>'
+        + '<td style="padding:6px 8px;text-align:right;font-weight:700;color:#0d7377;">'+(Math.round(it.mov*100)/100)+'</td>'
+        + '<td style="padding:6px 8px;text-align:right;font-weight:800;color:'+cor+';">'+Math.round(it.av)+'%</td>'
+        + '</tr>';
+    }).join('');
+    var det = document.createElement('tr');
+    det.className = 'neoex-detail';
+    det.innerHTML = '<td colspan="8" style="padding:0;background:#f8fafb;">'
+      + '<div style="padding:10px 16px 14px 26px;">'
+      + '<div style="font-size:0.7rem;font-weight:800;color:#0d7377;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">🧱 Materiais de '+esc(pep)+' <span style="color:#94a3b8;font-weight:600;text-transform:none;letter-spacing:0;">('+arr.length+' itens)</span></div>'
+      + '<div style="overflow-x:auto;border:1px solid #e6ecef;border-radius:8px;background:#fff;">'
+      + '<table style="width:100%;border-collapse:collapse;font-size:0.72rem;">'
+      + '<thead><tr style="background:#eef5f5;color:#0d7377;">'
+      +   '<th style="padding:7px 8px;text-align:left;font-weight:800;">COD</th>'
+      +   '<th style="padding:7px 8px;text-align:left;font-weight:800;">MATERIAL</th>'
+      +   '<th style="padding:7px 8px;text-align:center;font-weight:800;">UN</th>'
+      +   '<th style="padding:7px 8px;text-align:right;font-weight:800;">NECESS.</th>'
+      +   '<th style="padding:7px 8px;text-align:right;font-weight:800;">SEPAR.</th>'
+      +   '<th style="padding:7px 8px;text-align:right;font-weight:800;">EXPED.</th>'
+      +   '<th style="padding:7px 8px;text-align:right;font-weight:800;">MOVIM.</th>'
+      +   '<th style="padding:7px 8px;text-align:right;font-weight:800;">AVANÇO</th>'
+      + '</tr></thead><tbody>'+linhas+'</tbody></table></div></div></td>';
+    rowEl.parentNode.insertBefore(det, rowEl.nextSibling);
   };
 
   window.neoexExportCSV = function(){
