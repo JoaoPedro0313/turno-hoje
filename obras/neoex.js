@@ -119,6 +119,112 @@
     });
   }
 
+  // ===== MATERIAIS (planilha ao vivo via gviz) =====
+  var neoexMateriais = null; // { 'B-xxx': {itens, concluidos, avanco, somaNec, somaMov} }
+  var NEOEX_MAT_SHEET = '187jP2WPva-xbotAcAcuY9EFsP-7dbITtlNNfBOk_M1s';
+
+  function parseCSVComma(text){
+    if(text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
+    var linhas=[], i=0, campo='', linha=[], aspas=false;
+    while(i<text.length){
+      var c=text[i];
+      if(aspas){
+        if(c==='"'){ if(text[i+1]==='"'){campo+='"';i+=2;continue;} aspas=false;i++;continue; }
+        campo+=c;i++;continue;
+      }
+      if(c==='"'){aspas=true;i++;continue;}
+      if(c===','){linha.push(campo);campo='';i++;continue;}
+      if(c==='\n'){linha.push(campo);linhas.push(linha);linha=[];campo='';i++;continue;}
+      if(c==='\r'){i++;continue;}
+      campo+=c;i++;
+    }
+    if(campo.length||linha.length){linha.push(campo);linhas.push(linha);}
+    return linhas;
+  }
+  function numMat(s){
+    s=(s==null?'':String(s)).trim();
+    if(!s) return 0;
+    s=s.replace('%','').replace(/\./g,'').replace(',', '.');
+    var v=parseFloat(s); return isNaN(v)?0:v;
+  }
+  function pctMat(s){
+    // AVANÇO pode vir "100%", "0.5", "50%" — normaliza para 0..100
+    s=(s==null?'':String(s)).trim();
+    if(!s) return 0;
+    var temPct = s.indexOf('%')>=0;
+    s=s.replace('%','').replace(',', '.');
+    var v=parseFloat(s); if(isNaN(v)) return 0;
+    if(!temPct && v<=1) v=v*100; // fração 0..1 -> %
+    return v;
+  }
+
+  function neoexCarregarMateriais(){
+    var st = document.getElementById('neoex-mat-status');
+    var url = 'https://docs.google.com/spreadsheets/d/'+NEOEX_MAT_SHEET+'/gviz/tq?tqx=out:csv&sheet=P%C3%A1gina1';
+    return fetch(url).then(function(r){ return r.text(); }).then(function(txt){
+      var rows = parseCSVComma(txt);
+      if(!rows.length){ neoexMateriais={}; if(st) st.textContent='Materiais: vazio'; return neoexMateriais; }
+      // localizar colunas por nome no cabeçalho
+      var hdr = rows[0].map(function(h){return (h||'').trim().toUpperCase();});
+      function col(nome){ for(var k=0;k<hdr.length;k++){ if(hdr[k]===nome) return k; } return -1; }
+      var iPep=col('PEP'); if(iPep<0) iPep=1;
+      var iNec=col('NECESSIDADE'); if(iNec<0) iNec=10;
+      var iMov=col('MOVIMENTADO (+)'); if(iMov<0) iMov=16;
+      var iAv=col('AVANÇO'); if(iAv<0) iAv=col('AVANCO'); if(iAv<0) iAv=23;
+      var agg={};
+      for(var r=1;r<rows.length;r++){
+        var row=rows[r]; if(!row||row.length<=iPep) continue;
+        var pep=(row[iPep]||'').trim();
+        if(pep.indexOf('B-')!==0) continue;
+        var nec=numMat(row[iNec]);
+        if(nec<=0) continue; // só itens necessários
+        var mov=numMat(row[iMov]);
+        var av=pctMat(row[iAv]);
+        if(!agg[pep]) agg[pep]={itens:0,concluidos:0,somaAv:0,somaNec:0,somaMov:0};
+        agg[pep].itens++;
+        agg[pep].somaAv+=av;
+        agg[pep].somaNec+=nec;
+        agg[pep].somaMov+=mov;
+        if(av>=100 || mov>=nec) agg[pep].concluidos++;
+      }
+      // fecha avanço médio
+      Object.keys(agg).forEach(function(k){
+        var a=agg[k];
+        a.avanco = a.itens? Math.round(a.somaAv/a.itens) : 0;
+      });
+      neoexMateriais=agg;
+      var nObras=Object.keys(agg).length;
+      if(st){ st.textContent='Materiais: '+nObras+' obras \u2713'; st.style.background='rgba(255,255,255,0.22)'; }
+      return neoexMateriais;
+    }).catch(function(){
+      neoexMateriais={};
+      if(st) st.textContent='Materiais: erro ao carregar';
+      return neoexMateriais;
+    });
+  }
+
+  function neoexMatDe(pep){
+    return (neoexMateriais && neoexMateriais[pep]) ? neoexMateriais[pep] : null;
+  }
+  function celMateriais(pep){
+    var m = neoexMatDe(pep);
+    if(!m || !m.itens){
+      return '<span style="color:#ccc;font-size:0.72rem;">—</span>';
+    }
+    var av = m.avanco;
+    var cor = av>=100?'#14a085':(av>=50?'#f0a500':'#e53e3e');
+    return '<div style="min-width:90px;">'
+      + '<div style="display:flex;align-items:center;justify-content:center;gap:5px;">'
+      +   '<span style="font-weight:800;color:'+cor+';font-size:0.82rem;">'+av+'%</span>'
+      + '</div>'
+      + '<div style="height:5px;background:#edf2f4;border-radius:3px;overflow:hidden;margin-top:3px;">'
+      +   '<div style="height:100%;width:'+Math.min(av,100)+'%;background:'+cor+';"></div>'
+      + '</div>'
+      + '<div style="font-size:0.6rem;color:#94a3b8;margin-top:2px;">'+m.concluidos+'/'+m.itens+' itens</div>'
+      + '</div>';
+  }
+
+
   function neoexBaseReve(){
     var base = {};
     (neoexBanco || []).forEach(function(o){
@@ -247,6 +353,7 @@
         + '<td style="padding:8px;text-align:center;font-weight:700;color:#1a365d;">'+(Math.round(l.gCabo)||0)+'</td>'
         + '<td style="padding:8px;text-align:center;font-weight:700;color:#6b21a8;">'+(Math.round(l.gPoda)||0)+'</td>'
         + '<td style="padding:8px;text-align:center;">'+(l.gLig?'<span style="display:inline-block;font-size:0.62rem;font-weight:800;padding:2px 9px;border-radius:5px;background:#d0f0ee;color:#0d7377;">SIM</span>':'<span style="color:#ccc;">\u2014</span>')+'</td>'
+        + '<td style="padding:8px 10px;text-align:center;">'+celMateriais(l.pep)+'</td>'
         + '</tr>';
     });
     tb.innerHTML = html;
@@ -255,14 +362,16 @@
   window.neoexExportCSV = function(){
     if(!neoexLinhas.length){ alert('Importe o GPM primeiro.'); return; }
     var sep = ';';
-    var head = ['B-','OBRA','MUNICIPIO','GPM_COVAS','RENE_CAVA','DIF_COVAS','GPM_POSTES','RENE_POSTES','DIF_POSTES','GPM_ESTRUTURA','GPM_CABO_M','GPM_PODA','GPM_LIGACAO','SO_NO_GPM'];
+    var head = ['B-','OBRA','MUNICIPIO','GPM_COVAS','RENE_CAVA','DIF_COVAS','GPM_POSTES','RENE_POSTES','DIF_POSTES','GPM_ESTRUTURA','GPM_CABO_M','GPM_PODA','GPM_LIGACAO','SO_NO_GPM','MAT_AVANCO','MAT_ITENS','MAT_CONCLUIDOS'];
     var linhas = [head.join(sep)];
     neoexLinhas.forEach(function(l){
+      var m = neoexMatDe(l.pep);
       linhas.push([
         l.pep, '"'+(l.titulo||'').replace(/"/g,'""')+'"', '"'+(l.mun||'')+'"',
         l.gCovas, l.rCava==null?'':l.rCava, l.covasDiff==null?'':l.covasDiff,
         l.gPostes, l.rPost==null?'':l.rPost, l.postesDiff==null?'':l.postesDiff,
-        l.gEstrut, Math.round(l.gCabo), Math.round(l.gPoda), l.gLig?'SIM':'NAO', l.temBase?'NAO':'SIM'
+        l.gEstrut, Math.round(l.gCabo), Math.round(l.gPoda), l.gLig?'SIM':'NAO', l.temBase?'NAO':'SIM',
+        m?m.avanco+'%':'', m?m.itens:'', m?m.concluidos:''
       ].join(sep));
     });
     var blob = new Blob(['\ufeff'+linhas.join('\n')], {type:'text/csv;charset=utf-8;'});
@@ -272,4 +381,8 @@
 
   // carrega a base do René ao abrir a página
   neoexCarregarBase();
+  // carrega os materiais (planilha ao vivo) e re-renderiza se já houver linhas
+  neoexCarregarMateriais().then(function(){
+    if(neoexLinhas && neoexLinhas.length) neoexRender();
+  });
 })();
