@@ -313,6 +313,7 @@ body.sm-collapsed .bottom-bar{left:64px !important;}
       <div class="fin-tabs">
         <button class="fin-tab active" id="fintab-lanc" onclick="finTab('lanc')">💰 Lançamentos</button>
         <button class="fin-tab" id="fintab-pda" onclick="finTab('pda')">📲 PDA ocioso</button>
+        <button class="fin-tab" id="fintab-jupiter" onclick="finTab('jupiter')">📈 Projeção Jupiter</button>
       </div>
       <div id="pane-lanc">
         <div id="fin-resumo-tit" class="fin-res-h">Resumo</div>
@@ -397,6 +398,33 @@ body.sm-collapsed .bottom-bar{left:64px !important;}
             <table id="fin-pda-tbl" style="width:100%;border-collapse:collapse;font-size:.82rem">
               <thead><tr id="fin-pda-thead"></tr></thead>
               <tbody id="fin-pda-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div id="pane-jupiter" style="display:none">
+        <div class="fin-card" style="margin-bottom:14px">
+          <div class="fin-card-h" style="margin-bottom:4px">📈 Projeção de custo — Jupiter (usuários PDA rastreados)</div>
+          <div style="font-size:.74rem;color:#64748b;font-weight:600;margin-bottom:12px">Baseada na tendência real dos meses já faturados (tarifa por usuário/mês) · <span id="jup-premissa">crescimento linear</span></div>
+          <div id="jup-kpis" class="fin-kpis" style="margin-bottom:6px"></div>
+        </div>
+        <div class="fin-card" style="margin-bottom:14px">
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px">
+            <div class="fin-card-h" style="margin:0">Realizado × Projetado</div>
+            <div style="margin-left:auto;display:flex;gap:14px;font-size:.72rem;color:#64748b;font-weight:700">
+              <span style="display:flex;align-items:center;gap:5px"><span style="width:14px;height:3px;background:#2b8fd6;display:inline-block;border-radius:2px"></span>Realizado</span>
+              <span style="display:flex;align-items:center;gap:5px"><span style="width:14px;height:0;border-top:3px dashed #e0a63e;display:inline-block"></span>Projetado</span>
+            </div>
+          </div>
+          <div style="position:relative;height:300px"><canvas id="jup-chart"></canvas></div>
+        </div>
+        <div class="fin-card">
+          <div class="fin-card-h" style="margin-bottom:8px">Detalhamento mês a mês</div>
+          <div style="overflow-x:auto">
+            <table style="width:100%;border-collapse:collapse;font-size:.82rem">
+              <thead><tr style="background:#f0fafa;color:#0d7377"><th style="text-align:left;padding:8px 10px">Mês</th><th style="text-align:right;padding:8px 10px">Usuários</th><th style="text-align:right;padding:8px 10px">Custo</th><th style="text-align:left;padding:8px 10px">Tipo</th></tr></thead>
+              <tbody id="jup-tbody"></tbody>
             </table>
           </div>
         </div>
@@ -487,18 +515,97 @@ function finToggleForm(){ var f=$('fin-form'); if(f)f.style.display=(f.style.dis
 
 // ===== Abas Financeiro =====
 function finTab(t){
-  var lanc=$('pane-lanc'), pda=$('pane-pda');
-  var tl=$('fintab-lanc'), tp=$('fintab-pda');
-  if(t==='pda'){
-    if(lanc)lanc.style.display='none'; if(pda)pda.style.display='';
-    if(tl)tl.classList.remove('active'); if(tp)tp.classList.add('active');
-    finPdaOcioso();
-  } else {
-    if(lanc)lanc.style.display=''; if(pda)pda.style.display='none';
-    if(tp)tp.classList.remove('active'); if(tl)tl.classList.add('active');
-  }
+  var lanc=$('pane-lanc'), pda=$('pane-pda'), jup=$('pane-jupiter');
+  var tl=$('fintab-lanc'), tp=$('fintab-pda'), tj=$('fintab-jupiter');
+  [lanc,pda,jup].forEach(function(p){ if(p)p.style.display='none'; });
+  [tl,tp,tj].forEach(function(b){ if(b)b.classList.remove('active'); });
+  if(t==='pda'){ if(pda)pda.style.display=''; if(tp)tp.classList.add('active'); finPdaOcioso(); }
+  else if(t==='jupiter'){ if(jup)jup.style.display=''; if(tj)tj.classList.add('active'); finJupiterProjecao(); }
+  else { if(lanc)lanc.style.display=''; if(tl)tl.classList.add('active'); }
 }
 var FIN_PDA_CACHE=null;
+
+// ===================== PROJEÇÃO JUPITER =====================
+var JUP_CHART=null;
+var JUP_TARIFA=16.53; // R$ por usuário/mês (30 dias)
+function finJupNum(n){ return 'R$ '+Number(n||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function finJupMesLabel(ym){ var M=['','jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez']; var p=(ym||'').split('-'); return p[1]?(M[+p[1]]+'/'+p[0].slice(2)):ym; }
+function finJupProxMes(ym,k){ var p=(ym||'').split('-'); var y=+p[0], m=+p[1]+k; while(m>12){m-=12;y++;} while(m<1){m+=12;y--;} return y+'-'+('0'+m).slice(-2); }
+function finJupiterProjecao(){
+  var data=(typeof FIN_DATA!=='undefined'&&FIN_DATA)?FIN_DATA:[];
+  // faturas do Jupiter, deduplicadas (data_ref+descricao+valor)
+  var seen={}, jup=[];
+  data.forEach(function(v){
+    var f=(v.fornecedor||'').toLowerCase();
+    if(f.indexOf('jupiter')<0) return;
+    var chave=(v.data_ref||'')+'|'+(v.descricao||'')+'|'+(v.valor||'');
+    if(seen[chave]) return; seen[chave]=1;
+    jup.push(v);
+  });
+  var porMes={};
+  jup.forEach(function(v){ var m=(v.data_ref||'').slice(0,7); if(!m) return; if(!porMes[m])porMes[m]={total:0,users:0}; porMes[m].total+=Number(v.valor||0); porMes[m].users+=Number(v.quantidade||0); });
+  var meses=Object.keys(porMes).sort();
+  var kpis=document.getElementById('jup-kpis');
+  var tbody=document.getElementById('jup-tbody');
+  if(meses.length<2){
+    if(kpis) kpis.innerHTML='<div style="color:#94a3b8;padding:14px">Poucos dados do Jupiter para projetar (é preciso pelo menos 2 meses faturados).</div>';
+    if(tbody) tbody.innerHTML='';
+    if(JUP_CHART){ try{JUP_CHART.destroy();}catch(e){} JUP_CHART=null; }
+    return;
+  }
+  // usuários por mês (usa quantidade somada; se ausente, estima total/tarifa)
+  var xs=[], ys=[];
+  meses.forEach(function(m,i){ var u=porMes[m].users>0?porMes[m].users:(porMes[m].total/JUP_TARIFA); xs.push(i+1); ys.push(u); });
+  // regressão linear (usuários vs índice)
+  var n=xs.length, sx=0,sy=0,sxx=0,sxy=0;
+  for(var i=0;i<n;i++){ sx+=xs[i]; sy+=ys[i]; sxx+=xs[i]*xs[i]; sxy+=xs[i]*ys[i]; }
+  var b=(n*sxy - sx*sy)/(n*sxx - sx*sx); var a=(sy - b*sx)/n;
+  if(!isFinite(b)) b=0;
+  // projeta 6 meses
+  var projMeses=[], projUsers=[], ultimo=meses[meses.length-1];
+  for(var k=1;k<=6;k++){ var u=Math.max(0, a + b*(n+k)); projMeses.push(finJupProxMes(ultimo,k)); projUsers.push(u); }
+  var projCustos=projUsers.map(function(u){ return u*JUP_TARIFA; });
+  var totalProj=projCustos.reduce(function(x,y){return x+y;},0);
+  var mediaProj=totalProj/projCustos.length;
+  var mediaReal=meses.reduce(function(x,m){return x+porMes[m].total;},0)/meses.length;
+
+  // premissa
+  var pel=document.getElementById('jup-premissa');
+  if(pel) pel.textContent = b>=0 ? ('crescimento de ~'+Math.round(b)+' usuário(s)/mês') : ('redução de ~'+Math.round(-b)+' usuário(s)/mês');
+
+  // KPIs
+  if(kpis){
+    function card(lbl,val,sub,cor){ return '<div class="fin-kpi" style="border-left-color:'+cor+'"><div class="k-lbl">'+lbl+'</div><div class="k-val" style="color:'+cor+'">'+val+'</div><div class="k-sub">'+sub+'</div></div>'; }
+    kpis.innerHTML =
+      card('Tarifa por usuário', finJupNum(JUP_TARIFA), 'por mês (30 dias)', '#e0a63e') +
+      card('Média projetada', finJupNum(mediaProj), finJupMesLabel(projMeses[0])+' – '+finJupMesLabel(projMeses[5]), '#2b8fd6') +
+      card('Total projetado', finJupNum(totalProj), '6 meses', '#14a085') +
+      card('Média realizada', finJupNum(mediaReal), meses.length+' meses faturados', '#8b7bd8');
+  }
+  // tabela
+  if(tbody){
+    var html='';
+    meses.forEach(function(m){ var u=porMes[m].users>0?porMes[m].users:Math.round(porMes[m].total/JUP_TARIFA); html+='<tr style="border-bottom:1px solid #eef2f7"><td style="padding:7px 10px;font-weight:600;color:#334155">'+finJupMesLabel(m)+'</td><td style="text-align:right;padding:7px 10px">'+Math.round(u)+'</td><td style="text-align:right;padding:7px 10px;font-weight:700;color:#0d7377">'+finJupNum(porMes[m].total)+'</td><td style="padding:7px 10px"><span style="font-size:.62rem;font-weight:800;color:#2076c4;background:#e3f0fb;padding:1px 8px;border-radius:5px">REALIZADO</span></td></tr>'; });
+    projMeses.forEach(function(m,i){ html+='<tr style="border-bottom:1px solid #eef2f7;background:#fffdf6"><td style="padding:7px 10px;font-weight:600;color:#334155">'+finJupMesLabel(m)+'</td><td style="text-align:right;padding:7px 10px">~'+Math.round(projUsers[i])+'</td><td style="text-align:right;padding:7px 10px;font-weight:700;color:#b9821c">'+finJupNum(projCustos[i])+'</td><td style="padding:7px 10px"><span style="font-size:.62rem;font-weight:800;color:#b9821c;background:#fbf0d9;padding:1px 8px;border-radius:5px">PROJETADO</span></td></tr>'; });
+    tbody.innerHTML=html;
+  }
+  // gráfico
+  if(typeof Chart==='undefined') return;
+  if(JUP_CHART){ try{JUP_CHART.destroy();}catch(e){} }
+  var labels=meses.map(finJupMesLabel).concat(projMeses.map(finJupMesLabel));
+  var real=meses.map(function(m){return porMes[m].total;}).concat(projMeses.map(function(){return null;}));
+  var proj=meses.map(function(){return null;}); proj[meses.length-1]=porMes[ultimo].total; proj=proj.concat(projCustos);
+  var ce=document.getElementById('jup-chart'); if(!ce) return;
+  JUP_CHART=new Chart(ce,{type:'line',
+    data:{labels:labels,datasets:[
+      {label:'Realizado',data:real,borderColor:'#2b8fd6',backgroundColor:'rgba(43,143,214,0.10)',fill:true,tension:0.3,borderWidth:2,pointBackgroundColor:'#2b8fd6',pointRadius:4,pointHoverRadius:6},
+      {label:'Projetado',data:proj,borderColor:'#e0a63e',borderDash:[6,5],borderWidth:2,pointBackgroundColor:'#e0a63e',pointRadius:function(c){return c.dataIndex===meses.length-1?0:4;},pointHoverRadius:6,tension:0.3,fill:false}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return c.dataset.label+': '+finJupNum(c.parsed.y);}}}},
+      scales:{x:{ticks:{color:'#8090a4'},grid:{display:false}},y:{ticks:{color:'#8090a4',callback:function(v){return 'R$ '+(v/1000).toFixed(1).replace('.',',')+'k';}},grid:{color:'rgba(20,40,70,0.06)'},beginAtZero:false}}}
+  });
+}
 var FIN_PDA_MESES=null;
 var FIN_PDA_OCMES=null;
 var FIN_PDA_ACC=null;   // comp -> [{nome,mat,imei,data}]
