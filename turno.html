@@ -6192,20 +6192,13 @@ setTimeout(presenceInit, 1500);
           var histKey = 'turno_hist_' + parts[0] + '-' + parts[1] + '-' + parts[2];
           var payload = { ok: okList, justif: [], falta: faltaList, date: date, source: 'csv_hist' };
           try {
-            var r1 = await fetch(SUPA_URL + '/rest/v1/turno_data?key=eq.' + histKey, {
-              method: 'PATCH',
-              headers: Object.assign({}, SUPA_HEADERS, {'Prefer':'return=minimal'}),
+            var r1 = await fetch(SUPA_URL + '/rest/v1/turno_data?on_conflict=key', {
+              method: 'POST',
+              headers: Object.assign({}, SUPA_HEADERS, {'Prefer':'resolution=merge-duplicates,return=minimal'}),
               body: JSON.stringify({ key: histKey, value: payload })
             });
-            if (r1.status === 204 || r1.ok) { saved++; }
-            else {
-              await fetch(SUPA_URL + '/rest/v1/turno_data', {
-                method: 'POST',
-                headers: Object.assign({}, SUPA_HEADERS, {'Prefer':'return=minimal'}),
-                body: JSON.stringify({ key: histKey, value: payload })
-              });
-              saved++;
-            }
+            if (r1.status === 201 || r1.status === 204 || r1.ok) { saved++; }
+            else { failed++; }
           } catch(ex) { failed++; }
           if (msgEl) msgEl.textContent = '⏳ ' + (di+1) + '/' + dates.length + ' dias salvos...';
           if (barEl) barEl.style.width = Math.round((di+1)/dates.length*100) + '%';
