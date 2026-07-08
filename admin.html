@@ -237,6 +237,41 @@ body.sm-collapsed .bottom-bar{left:64px !important;}
             <datalist id="link-func-list"></datalist>
           </div>
         </div>
+
+        <div class="adminbox" style="max-width:none;">
+          <h2>🗂️ Central de Cadastros</h2>
+          <p>Atualize os cadastros por importação de planilha (.csv). Cada card mostra o status atual e substitui a base ao importar.</p>
+          <div id="cc-cards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin-top:8px;">
+
+            <div style="border:1px solid #e6ecf3;border-radius:12px;padding:14px 16px;background:#fff;">
+              <div style="font-size:.95rem;font-weight:800;color:#0d7377;display:flex;align-items:center;gap:8px;">👥 Equipes</div>
+              <div style="font-size:.72rem;color:#64748b;margin:4px 0 8px;">Chave <code>funcionario_equipe</code> · matrícula, equipe, função, tipo, encarregado</div>
+              <div id="cc-eq-status" style="font-size:.72rem;font-weight:700;color:#94a3b8;margin-bottom:8px;">verificando…</div>
+              <input type="file" id="cc-eq-file" accept=".csv,.txt" style="display:none;" onchange="ccImport('equipe',this.files[0])">
+              <button class="btn add" style="width:100%;" onclick="document.getElementById('cc-eq-file').click()">📤 Importar equipes</button>
+              <div id="cc-eq-msg" class="amsg" style="margin-top:8px;"></div>
+            </div>
+
+            <div style="border:1px solid #e6ecf3;border-radius:12px;padding:14px 16px;background:#fff;">
+              <div style="font-size:.95rem;font-weight:800;color:#0d7377;display:flex;align-items:center;gap:8px;">🧑‍🔧 Usuários (funcionários)</div>
+              <div style="font-size:.72rem;color:#64748b;margin:4px 0 8px;">Tabela <code>funcionarios</code> · matrícula, nome, situação, apoio, carro</div>
+              <div id="cc-fu-status" style="font-size:.72rem;font-weight:700;color:#94a3b8;margin-bottom:8px;">verificando…</div>
+              <input type="file" id="cc-fu-file" accept=".csv,.txt" style="display:none;" onchange="ccImport('func',this.files[0])">
+              <button class="btn add" style="width:100%;" onclick="document.getElementById('cc-fu-file').click()">📤 Importar funcionários</button>
+              <div id="cc-fu-msg" class="amsg" style="margin-top:8px;"></div>
+            </div>
+
+            <div style="border:1px solid #e6ecf3;border-radius:12px;padding:14px 16px;background:#fff;">
+              <div style="font-size:.95rem;font-weight:800;color:#0d7377;display:flex;align-items:center;gap:8px;">📲 Usuário PDA</div>
+              <div style="font-size:.72rem;color:#64748b;margin:4px 0 8px;">Chave <code>funcionario_pda</code> · matrícula, nome, situação, aparelho, carrega placa</div>
+              <div id="cc-pda-status" style="font-size:.72rem;font-weight:700;color:#94a3b8;margin-bottom:8px;">verificando…</div>
+              <input type="file" id="cc-pda-file" accept=".csv,.txt" style="display:none;" onchange="ccImport('pda',this.files[0])">
+              <button class="btn add" style="width:100%;" onclick="document.getElementById('cc-pda-file').click()">📤 Importar usuário PDA</button>
+              <div id="cc-pda-msg" class="amsg" style="margin-top:8px;"></div>
+            </div>
+
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -535,6 +570,88 @@ async function vincularRapido(email, btn){
 
 // ao abrir: se já estiver logado, entra direto
 (async()=>{ try{ const {data:{session}}=await sb.auth.getSession(); if(session){ checarGestorEEntrar(); } }catch(e){} })();
+
+/* ===================== CENTRAL DE CADASTROS ===================== */
+function ccParseCSV(text){
+  if(text.charCodeAt(0)===0xFEFF) text=text.slice(1);
+  var delim = (text.split('\n')[0].split(';').length > text.split('\n')[0].split(',').length) ? ';' : ',';
+  var rows=[], i=0, campo='', linha=[], aspas=false;
+  while(i<text.length){
+    var c=text[i];
+    if(aspas){ if(c==='"'){ if(text[i+1]==='"'){campo+='"';i+=2;continue;} aspas=false;i++;continue; } campo+=c;i++;continue; }
+    if(c==='"'){aspas=true;i++;continue;}
+    if(c===delim){linha.push(campo);campo='';i++;continue;}
+    if(c==='\n'){linha.push(campo);rows.push(linha);linha=[];campo='';i++;continue;}
+    if(c==='\r'){i++;continue;}
+    campo+=c;i++;
+  }
+  if(campo.length||linha.length){linha.push(campo);rows.push(linha);}
+  return rows;
+}
+function ccCol(hdr,nomes){ for(var n=0;n<nomes.length;n++){ for(var k=0;k<hdr.length;k++){ if((hdr[k]||'').trim().toLowerCase()===nomes[n].toLowerCase()) return k; } } return -1; }
+function ccApNum(s){ s=(s||'').trim(); var m=s.match(/-\s*(\d+)\s*$/); if(m) return m[1]; if(/^\d+$/.test(s)) return s; return ''; }
+function ccMsg(el,txt,ok){ var m=document.getElementById(el); if(!m)return; m.textContent=txt; m.style.color=ok?'#0d7377':'#c53030'; m.style.fontWeight='700'; }
+function ccSupaGet(key){ return fetch(SUPA_URL+'/rest/v1/turno_data?key=eq.'+key+'&select=value,updated_at',{headers:{apikey:SUPA_KEY,Authorization:'Bearer '+SUPA_KEY}}).then(function(r){return r.ok?r.json():[];}); }
+function ccSupaSet(key,value){
+  return fetch(SUPA_URL+'/rest/v1/turno_data?on_conflict=key',{
+    method:'POST',
+    headers:{apikey:SUPA_KEY,Authorization:'Bearer '+SUPA_KEY,'Content-Type':'application/json',Prefer:'resolution=merge-duplicates'},
+    body:JSON.stringify({key:key,value:value,updated_at:new Date().toISOString()})
+  });
+}
+function ccData(){ var d=new Date(); return ('0'+d.getDate()).slice(-2)+'/'+('0'+(d.getMonth()+1)).slice(-2)+'/'+d.getFullYear(); }
+
+function ccRefreshStatus(){
+  // equipes
+  ccSupaGet('funcionario_equipe').then(function(a){ var v=a&&a[0]&&a[0].value; var n=v&&v.data?String(v.data).split('\n').filter(function(x){return x.trim();}).length:0; var el=document.getElementById('cc-eq-status'); if(el){ el.textContent=n?('✓ '+n+' equipes · atualizado '+(v.updatedAt||'')):'nenhum registro ainda'; el.style.color=n?'#0d7377':'#94a3b8'; } }).catch(function(){});
+  // pda
+  ccSupaGet('funcionario_pda').then(function(a){ var v=a&&a[0]&&a[0].value; var n=(v&&v.count)||(v&&v.data?String(v.data).split('\n').filter(function(x){return x.trim();}).length:0); var el=document.getElementById('cc-pda-status'); if(el){ el.textContent=n?('✓ '+n+' registros · atualizado '+(v.updatedAt||'')):'nenhum registro ainda'; el.style.color=n?'#0d7377':'#94a3b8'; } }).catch(function(){});
+  // funcionarios (tabela)
+  fetch(SUPA_URL+'/rest/v1/funcionarios?select=matricula',{headers:{apikey:SUPA_KEY,Authorization:'Bearer '+SUPA_KEY,Prefer:'count=exact',Range:'0-0'}}).then(function(r){ var cr=r.headers.get('content-range'); var tot=cr?cr.split('/')[1]:'?'; var el=document.getElementById('cc-fu-status'); if(el){ el.textContent='✓ '+tot+' funcionários cadastrados'; el.style.color='#0d7377'; } }).catch(function(){});
+}
+ccRefreshStatus();
+
+function ccImport(tipo,file){
+  if(!file) return;
+  var msgEl = tipo==='equipe'?'cc-eq-msg':(tipo==='func'?'cc-fu-msg':'cc-pda-msg');
+  ccMsg(msgEl,'Lendo arquivo…',true);
+  var reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      var rows=ccParseCSV(e.target.result);
+      if(rows.length<2){ ccMsg(msgEl,'Arquivo vazio ou inválido.',false); return; }
+      var hdr=rows[0].map(function(h){return (h||'').trim();});
+
+      if(tipo==='pda'){
+        var iM=ccCol(hdr,['Login','Matrícula','Matricula']); var iN=ccCol(hdr,['Funcionário','Funcionario','Nome']); var iS=ccCol(hdr,['Situação','Situacao']); var iA=ccCol(hdr,['Aparelho']); var iC=ccCol(hdr,['Carrega Placa','Carrega']);
+        if(iM<0||iN<0){ ccMsg(msgEl,'Colunas não encontradas (precisa de Login/Matrícula e Funcionário).',false); return; }
+        var linhas=[];
+        for(var r=1;r<rows.length;r++){ var row=rows[r]; if(!row||row.length<=iM) continue; var mat=(row[iM]||'').trim(); if(!mat) continue; var nome=(row[iN]||'').trim().replace(/[|\n]/g,' '); var sit=iS>=0?(row[iS]||'').trim():''; var ap=iA>=0?ccApNum(row[iA]):''; var carr=iC>=0?(row[iC]||'').trim():''; linhas.push([mat,nome,sit,ap,carr].join('|')); }
+        var payload={v:1,fmt:'mat|nome|sit|ap|carr',updatedAt:ccData(),count:linhas.length,data:linhas.join('\n')};
+        ccSupaSet('funcionario_pda',payload).then(function(r){ if(r.ok){ ccMsg(msgEl,'✅ '+linhas.length+' registros importados.',true); ccRefreshStatus(); } else ccMsg(msgEl,'Erro ao salvar ('+r.status+').',false); }).catch(function(){ ccMsg(msgEl,'Falha de conexão.',false); });
+
+      } else if(tipo==='equipe'){
+        var eM=ccCol(hdr,['Matrícula','Matricula','Login']); var eE=ccCol(hdr,['Equipe','Time','Turma']); var eF=ccCol(hdr,['Função','Funcao','Cargo']); var eT=ccCol(hdr,['Tipo']); var eEnc=ccCol(hdr,['Encarregado','Encarregada']);
+        if(eM<0||eE<0){ ccMsg(msgEl,'Colunas não encontradas (precisa de Matrícula e Equipe).',false); return; }
+        var lin=[];
+        for(var r2=1;r2<rows.length;r2++){ var rw=rows[r2]; if(!rw||rw.length<=eM) continue; var m2=(rw[eM]||'').trim(); if(!m2) continue; var eq=(rw[eE]||'').trim().replace(/[|\n]/g,' '); var fn=eF>=0?(rw[eF]||'').trim().replace(/[|\n]/g,' '):''; var tp=eT>=0?(rw[eT]||'').trim():''; var enc=eEnc>=0?(rw[eEnc]||'').trim().replace(/[|\n]/g,' '):''; lin.push([m2,eq,fn,tp,enc].join('|')); }
+        var pEq={v:1,fmt:'mat|equipe|funcao|tipo|encarregado',updatedAt:ccData(),count:lin.length,data:lin.join('\n')};
+        ccSupaSet('funcionario_equipe',pEq).then(function(r){ if(r.ok){ ccMsg(msgEl,'✅ '+lin.length+' equipes importadas.',true); ccRefreshStatus(); } else ccMsg(msgEl,'Erro ao salvar ('+r.status+').',false); }).catch(function(){ ccMsg(msgEl,'Falha de conexão.',false); });
+
+      } else if(tipo==='func'){
+        var fM=ccCol(hdr,['Matrícula','Matricula','Matrícula Contratada','Login']); var fN=ccCol(hdr,['Funcionário','Funcionario','Nome']); var fS=ccCol(hdr,['Situação','Situacao']); var fAp=ccCol(hdr,['Apoio']); var fCa=ccCol(hdr,['Carro','Veículo','Veiculo','Placa']);
+        if(fM<0||fN<0){ ccMsg(msgEl,'Colunas não encontradas (precisa de Matrícula e Funcionário/Nome).',false); return; }
+        var regs=[], vistos={};
+        for(var r3=1;r3<rows.length;r3++){ var rr=rows[r3]; if(!rr||rr.length<=fM) continue; var mm=(rr[fM]||'').trim(); if(!mm||vistos[mm]) continue; vistos[mm]=1; regs.push({matricula:mm,nome:(rr[fN]||'').trim(),situacao:fS>=0?(rr[fS]||'').trim():'ATIVO',apoio:fAp>=0?(rr[fAp]||'').trim():'',carro:fCa>=0?(rr[fCa]||'').trim():'',atualizado_em:new Date().toISOString()}); }
+        if(!regs.length){ ccMsg(msgEl,'Nenhum funcionário válido no arquivo.',false); return; }
+        ccMsg(msgEl,'Enviando '+regs.length+' funcionários…',true);
+        sb.rpc('admin_upsert_funcionarios',{p_rows:regs}).then(function(res){ if(res.error){ ccMsg(msgEl,'Erro ao salvar: '+(res.error.message||res.error),false); } else { ccMsg(msgEl,'✅ '+regs.length+' funcionários atualizados.',true); ccRefreshStatus(); } }).catch(function(){ ccMsg(msgEl,'Falha de conexão.',false); });
+      }
+    }catch(err){ ccMsg(msgEl,'Erro: '+err.message,false); }
+  };
+  reader.onerror=function(){ ccMsg(msgEl,'Não foi possível ler o arquivo.',false); };
+  reader.readAsText(file,'utf-8');
+}
 </script>
 <aside class="sm-side">
   <div class="sm-toggle"><button type="button" onclick="smToggle()" title="Recolher / expandir">↔</button></div>
