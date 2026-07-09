@@ -184,6 +184,26 @@ body.sm-collapsed .bottom-bar{left:64px !important;}
         <input id="senha" type="password" placeholder="••••••••" autocomplete="current-password">
         <button class="main" onclick="entrar()">Entrar</button>
         <div style="text-align:center"><button class="link" onclick="esqueci()">Esqueci minha senha</button></div>
+        <div style="text-align:center;margin-top:6px;border-top:1px solid #e6ecf3;padding-top:10px;"><button class="link" onclick="abrirSolicitar()">✋ Sou novo — solicitar cadastro</button></div>
+      </div>
+      <div id="form-solicitar" style="display:none">
+        <p style="font-size:.82rem;color:#64748b;margin:0 0 8px;">Preencha seus dados. O administrador vai analisar e liberar seu acesso.</p>
+        <label>Nome completo</label><input id="s-nome" placeholder="Seu nome completo">
+        <label>E-mail</label><input id="s-email" type="email" placeholder="email@dominio.com">
+        <label>Matrícula</label><input id="s-mat" placeholder="ex.: 27680">
+        <label>Função</label><input id="s-func" placeholder="ex.: Eletricista de Linha Viva">
+        <label>Base</label>
+        <select id="s-base" style="width:100%;">
+          <option value="">Selecione…</option>
+          <option>Irecê</option>
+          <option>Jacobina</option>
+          <option>Congonhal</option>
+          <option>Aracaju</option>
+          <option>Itajubá</option>
+          <option>Outra</option>
+        </select>
+        <button class="main" style="margin-top:10px;" onclick="enviarSolicitacao()">Enviar solicitação</button>
+        <div style="text-align:center;margin-top:6px;"><button class="link" onclick="voltarLogin()">← Voltar ao login</button></div>
       </div>
       <div id="form-reset" style="display:none">
         <label>Nova senha</label>
@@ -206,6 +226,11 @@ body.sm-collapsed .bottom-bar{left:64px !important;}
     </header>
     <div class="wrap">
       <div id="pane-admin">
+        <div class="adminbox" id="box-solicitacoes" style="display:none;max-width:none;border:2px solid #f0a500;">
+          <h2>📋 Solicitações de cadastro <span id="sol-badge" style="font-size:.7rem;background:#f0a500;color:#fff;border-radius:20px;padding:2px 10px;margin-left:6px;"></span></h2>
+          <p>Pessoas que se cadastraram pelo site e aguardam liberação.</p>
+          <div id="sol-lista"></div>
+        </div>
         <div class="adminbox">
           <h2>Criar novo usuário</h2>
           <p>Crie um login (e-mail + senha) para outra pessoa acessar o sistema.</p>
@@ -323,6 +348,7 @@ async function checarGestorEEntrar(){
   $('who').textContent=user?user.email:'';
   $('login-view').style.display='none'; $('app-view').style.display='block';
   carregarGestores();
+  carregarSolicitacoes();
 }
 async function esqueci(){
   const email=$('email').value.trim(); if(!email){setMsg('Digite seu e-mail primeiro.');return;}
@@ -571,7 +597,70 @@ async function vincularRapido(email, btn){
 // ao abrir: se já estiver logado, entra direto
 (async()=>{ try{ const {data:{session}}=await sb.auth.getSession(); if(session){ checarGestorEEntrar(); } }catch(e){} })();
 
-/* ===================== CENTRAL DE CADASTROS ===================== */
+/* ===================== SOLICITAÇÃO DE CADASTRO (auto-cadastro) ===================== */
+function abrirSolicitar(){ $('form-login').style.display='none'; $('form-reset').style.display='none'; $('form-solicitar').style.display='block'; $('login-title').textContent='Solicitar cadastro'; setMsg(''); }
+function voltarLogin(){ $('form-solicitar').style.display='none'; $('form-login').style.display='block'; $('login-title').textContent='Acesso restrito — Admin'; setMsg(''); }
+async function enviarSolicitacao(){
+  var nome=$('s-nome').value.trim(), email=$('s-email').value.trim(), mat=$('s-mat').value.trim(), func=$('s-func').value.trim(), base=$('s-base').value;
+  if(!nome||!email||!mat){ setMsg('Preencha ao menos nome, e-mail e matrícula.'); return; }
+  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){ setMsg('E-mail inválido.'); return; }
+  var btn=event&&event.target; if(btn){ btn.disabled=true; btn.textContent='Enviando…'; }
+  try{
+    var res=await fetch(SUPA_URL+'/rest/v1/solicitacoes',{
+      method:'POST',
+      headers:{apikey:SUPA_KEY,Authorization:'Bearer '+SUPA_KEY,'Content-Type':'application/json',Prefer:'return=minimal'},
+      body:JSON.stringify({nome:nome,email:email,matricula:mat,funcao:func,base:base,status:'pendente'})
+    });
+    if(res.ok){
+      $('form-solicitar').style.display='none'; $('form-login').style.display='block'; $('login-title').textContent='Acesso restrito — Admin';
+      ['s-nome','s-email','s-mat','s-func'].forEach(function(id){$(id).value='';}); $('s-base').value='';
+      setMsg('✅ Solicitação enviada! Aguarde a liberação do administrador.');
+    } else { setMsg('Não foi possível enviar. Tente novamente.'); }
+  }catch(e){ setMsg('Falha de conexão.'); }
+  if(btn){ btn.disabled=false; btn.textContent='Enviar solicitação'; }
+}
+function escHtml(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+async function carregarSolicitacoes(){
+  try{
+    const {data,error}=await sb.from('solicitacoes').select('*').eq('status','pendente').order('criado_em',{ascending:true});
+    const box=$('box-solicitacoes'), lista=$('sol-lista'), badge=$('sol-badge');
+    if(error){ return; }
+    if(!data||!data.length){ if(box)box.style.display='none'; return; }
+    if(box)box.style.display='block';
+    if(badge)badge.textContent=data.length;
+    lista.innerHTML=data.map(function(s){
+      return '<div style="border:1px solid #e6ecf3;border-radius:10px;padding:12px 14px;margin-top:10px;background:#fff;">'
+        +'<div style="display:flex;flex-wrap:wrap;gap:14px;align-items:center;">'
+        +'<div style="flex:1;min-width:200px;"><div style="font-weight:800;color:#16202e;">'+escHtml(s.nome)+'</div>'
+        +'<div style="font-size:.74rem;color:#64748b;">✉️ '+escHtml(s.email)+' · 🆔 '+escHtml(s.matricula)+'</div>'
+        +'<div style="font-size:.74rem;color:#64748b;">🧰 '+escHtml(s.funcao||'—')+' · 🏢 '+escHtml(s.base||'—')+'</div></div>'
+        +'<button class="btn add" onclick="liberarSolic(\''+s.id+'\')">✅ Liberar</button>'
+        +'<button class="btn out" onclick="recusarSolic(\''+s.id+'\')">✕ Recusar</button>'
+        +'</div></div>';
+    }).join('');
+  }catch(e){}
+}
+async function liberarSolic(id){
+  try{
+    const {data}=await sb.from('solicitacoes').select('*').eq('id',id).single();
+    if(data){
+      // pré-preenche o formulário de criar usuário
+      if($('u-nome')) $('u-nome').value=data.nome||'';
+      if($('u-email')) $('u-email').value=data.email||'';
+      if($('u-mat')) $('u-mat').value=data.matricula||'';
+      if($('u-msg')) $('u-msg').textContent='Dados de "'+(data.nome||'')+'" carregados — defina a senha e clique em Criar usuário. (Função: '+(data.funcao||'—')+' · Base: '+(data.base||'—')+')';
+      await sb.from('solicitacoes').update({status:'liberado'}).eq('id',id);
+      carregarSolicitacoes();
+      var box=document.querySelector('.adminbox h2'); if(box) box.scrollIntoView({behavior:'smooth',block:'center'});
+    }
+  }catch(e){}
+}
+async function recusarSolic(id){
+  if(!confirm('Recusar esta solicitação?')) return;
+  try{ await sb.from('solicitacoes').update({status:'recusado'}).eq('id',id); carregarSolicitacoes(); }catch(e){}
+}
+
+
 function ccParseCSV(text){
   if(text.charCodeAt(0)===0xFEFF) text=text.slice(1);
   var delim = (text.split('\n')[0].split(';').length > text.split('\n')[0].split(',').length) ? ';' : ',';
