@@ -354,6 +354,7 @@ window.presenceOpenModal = function() { if(window._presenceOpenModal) window._pr
     <input type="date" id="turno-hist-date"
       style="padding:5px 10px;border:1.5px solid rgba(255,255,255,0.2);border-radius:8px;background:rgba(255,255,255,0.08);color:#fff;font-family:'Barlow',sans-serif;font-size:0.82rem;font-weight:700;outline:none;cursor:pointer;color-scheme:dark;"
       onfocus="this.style.borderColor='#14a085'" onblur="this.style.borderColor='rgba(255,255,255,0.2)'"
+      onchange="if(window.turnoHistBuscar)window.turnoHistBuscar()"
       onkeydown="if(event.key==='Enter') turnoHistBuscar()">
     <button onclick="if(window.turnoCalToggle)window.turnoCalToggle()" title="Ver dias com atividade salva" style="padding:6px 12px;background:rgba(255,255,255,0.08);color:rgba(255,255,255,0.85);border:1.5px solid rgba(255,255,255,0.2);border-radius:8px;font-family:'Barlow',sans-serif;font-size:0.75rem;font-weight:800;cursor:pointer;">🗓️ Dias salvos</button>
     <div id="turno-cal-pop" style="display:none;position:absolute;top:100%;left:16px;margin-top:6px;z-index:200;background:#16202e;border:1px solid #2a3a4d;border-radius:14px;box-shadow:0 16px 48px rgba(0,0,0,0.45);padding:12px;width:290px;font-family:'Barlow',sans-serif;">
@@ -377,7 +378,6 @@ window.presenceOpenModal = function() { if(window._presenceOpenModal) window._pr
         <span id="turno-cal-status" style="margin-left:auto;color:#64748b;"></span>
       </div>
     </div>
-    <button onclick="if(window.turnoHistBuscar)window.turnoHistBuscar()" style="padding:6px 16px;background:#14a085;color:#fff;border:none;border-radius:8px;font-family:'Barlow',sans-serif;font-size:0.75rem;font-weight:800;cursor:pointer;letter-spacing:0.5px;transition:background 0.15s;" onmouseover="this.style.background='#0d7377'" onmouseout="this.style.background='#14a085'">🔍 BUSCAR</button>
     <button onclick="if(window.turnoHistHoje)window.turnoHistHoje()" style="padding:6px 14px;background:transparent;color:rgba(255,255,255,0.5);border:1.5px solid rgba(255,255,255,0.15);border-radius:8px;font-family:'Barlow',sans-serif;font-size:0.75rem;font-weight:800;cursor:pointer;transition:all 0.15s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,0.5)'">↩ HOJE</button>
     <div id="turno-hist-status" style="font-size:0.72rem;font-weight:700;color:rgba(255,255,255,0.5);margin-left:4px;"></div>
     <div id="turno-hist-modo" style="display:none;margin-left:auto;background:#e53e3e22;border:1px solid #e53e3e66;border-radius:8px;padding:4px 12px;font-size:0.72rem;font-weight:800;color:#fc8181;letter-spacing:0.5px;">👁️ MODO LEITURA — DIA ANTERIOR</div>
