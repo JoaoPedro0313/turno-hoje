@@ -318,6 +318,13 @@ body.sm-collapsed .bottom-bar{left:64px !important;}
         <label>Telefone</label><input id="ed-tel" placeholder="(00) 00000-0000">
         <label>Vigência</label><input id="ed-vig" type="date">
         <label class="chk"><input id="ed-gestor" type="checkbox"> Pode ver o Financeiro (gestor)</label>
+        <label>Contrato de acesso</label>
+        <select id="ed-contrato">
+          <option value="">— sem restrição (vê tudo) —</option>
+          <option value="ba">OBRAS - BA</option>
+          <option value="mg">CON_MANUT - MG</option>
+          <option value="se">OBRAS - SE</option>
+        </select>
         <div id="ed-msg" style="font-size:.78rem;font-weight:700;min-height:16px;margin-top:10px;"></div>
         <button class="btn add" style="width:100%;margin-top:6px;" onclick="salvarEdicao()">Salvar alterações</button>
       </div>
@@ -349,6 +356,7 @@ async function checarGestorEEntrar(){
   $('login-view').style.display='none'; $('app-view').style.display='block';
   carregarGestores();
   carregarSolicitacoes();
+  carregarContratos();
 }
 async function esqueci(){
   const email=$('email').value.trim(); if(!email){setMsg('Digite seu e-mail primeiro.');return;}
@@ -523,6 +531,7 @@ function editarUsuario(email){
   $('ed-tel').value=u.telefone||'';
   $('ed-vig').value=u.data_vigencia||'';
   $('ed-gestor').checked=!!u.gestor;
+  $('ed-contrato').value = USUARIO_CONTRATO[normNomeU(u.func_nome||'')] || USUARIO_CONTRATO[normNomeU(u.nome||'')] || '';
   $('ed-titulo').textContent=u.matricula||u.email;
   $('ed-msg').textContent='';
   $('user-edit-ovl').classList.add('open');
@@ -563,7 +572,23 @@ async function salvarEdicao(){
   if(r1.error){ msg.style.color='#c53030'; msg.textContent='Erro: '+r1.error.message; return; }
   var r2=await sb.rpc('admin_definir_gestor',{p_email:email,p_gestor:gestor});
   if(r2.error){ msg.style.color='#c53030'; msg.textContent='Erro: '+r2.error.message; return; }
+  // contrato de acesso (grava pelo nome do funcionário e pelo login, pra casar com o login leve)
+  var funcNome=($('ed-func-atual').textContent||'').replace(/^✓\s*/,'').trim();
+  await definirContratoUsuario([funcNome, nome], $('ed-contrato').value);
   fecharEdicao(); carregarGestores();
+}
+var USUARIO_CONTRATO = {};
+async function carregarContratos(){
+  try{ var r=await fetch(SUPA_URL+'/rest/v1/turno_data?select=value&key=eq.usuario_contrato',{headers:{apikey:SUPA_KEY,Authorization:'Bearer '+SUPA_KEY}}); var arr=r.ok?await r.json():[]; USUARIO_CONTRATO=(arr&&arr[0]&&arr[0].value)||{}; }catch(e){ USUARIO_CONTRATO={}; }
+}
+async function definirContratoUsuario(nomes, state){
+  try{
+    var r=await fetch(SUPA_URL+'/rest/v1/turno_data?select=value&key=eq.usuario_contrato',{headers:{apikey:SUPA_KEY,Authorization:'Bearer '+SUPA_KEY}});
+    var arr=r.ok?await r.json():[]; var map=(arr&&arr[0]&&arr[0].value)||{};
+    (nomes||[]).forEach(function(nm){ var k=normNomeU(nm); if(!k)return; if(state && ['ba','mg','se'].indexOf(state)>=0) map[k]=state; else delete map[k]; });
+    await fetch(SUPA_URL+'/rest/v1/turno_data?on_conflict=key',{method:'POST',headers:{apikey:SUPA_KEY,Authorization:'Bearer '+SUPA_KEY,'Content-Type':'application/json',Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify({key:'usuario_contrato',value:map,updated_at:new Date().toISOString()})});
+    USUARIO_CONTRATO=map;
+  }catch(e){}
 }
 
 // ===== Vínculo rápido inline (usuários criados antes, sem matrícula) =====
