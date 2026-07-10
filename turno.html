@@ -1084,6 +1084,37 @@ const FILIAL_CENTROS = {
   irc:['irc'], jac:['jac'], fsa:['fsa','srr'], pa:['pa','ita'], aju:['aju']
 };
 
+// ===== TRAVA DE FILIAL POR USUÁRIO (login leve) =====
+let turnoLockFilial = null;
+const FILIAL_STATE = { irc:'ba', jac:'ba', fsa:'ba', srr:'ba', pa:'mg', ita:'mg', aju:'se' };
+function turnoNormNome(s){ return (s||'').toString().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase().replace(/\s+/g,' '); }
+function turnoLabelFilial(fid){
+  for (var st in BASE_CONFIG){ var arr=BASE_CONFIG[st]; for(var i=0;i<arr.length;i++){ if(arr[i].id===fid) return arr[i].label; } }
+  return String(fid||'').toUpperCase();
+}
+function turnoAplicarTravaFilial(fid){
+  if(!fid || !FILIAL_STATE[fid]) return;
+  turnoLockFilial = fid;
+  turnoStateFilter = FILIAL_STATE[fid];
+  turnoBaseFilter = fid;
+  turnoCentroFilter = 'todos';
+  var sf = document.getElementById('turno-state-filter'); if(sf) sf.style.display='none';
+  if (typeof updateBaseFilterButtons==='function') updateBaseFilterButtons();
+  if (typeof updateCentroFilterButtons==='function') updateCentroFilterButtons();
+  if (typeof turnoModoHistorico!=='undefined' && turnoModoHistorico) { if(typeof turnoHistRender==='function') turnoHistRender(); }
+  else if (typeof render==='function') render();
+}
+function turnoBuscarTravaUsuario(nome){
+  if(!nome || turnoLockFilial) return;
+  fetch(SUPA_URL + '/rest/v1/turno_data?select=value&key=eq.usuario_filial', { headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY } })
+    .then(function(r){ return r.ok ? r.json() : []; })
+    .then(function(arr){ var map=(arr && arr[0] && arr[0].value) || {}; var fid=map[turnoNormNome(nome)]; if(fid) turnoAplicarTravaFilial(fid); })
+    .catch(function(){});
+}
+document.addEventListener('mariua:user', function(e){ if(e.detail && e.detail.nome) turnoBuscarTravaUsuario(e.detail.nome); });
+window.addEventListener('load', function(){ if(window.MARIUA_USER) turnoBuscarTravaUsuario(window.MARIUA_USER); });
+
+
 // Configuração das bases por estado
 const BASE_CONFIG = {
   ba: [
@@ -1117,6 +1148,10 @@ function updateBaseFilterButtons() {
     return btn;
   }
   container.innerHTML = '';
+  if (turnoLockFilial) {
+    container.appendChild(mkBtn(turnoLockFilial, turnoLabelFilial(turnoLockFilial) + ' 🔒'));
+    return;
+  }
   container.appendChild(mkBtn('todos', 'Todos'));
   const states = turnoStateFilter === 'todos' ? ['ba','mg','se'] : [turnoStateFilter];
   states.forEach(function(st) {
@@ -1127,6 +1162,7 @@ function updateBaseFilterButtons() {
 }
 
 function turnoSetState(state) {
+  if (turnoLockFilial) return;
   turnoStateFilter = state;
   turnoBaseFilter  = 'todos';
   turnoCentroFilter = 'todos';
@@ -1146,6 +1182,7 @@ function turnoSetState(state) {
 }
 
 function turnoSetBase(base) {
+  if (turnoLockFilial) return;
   turnoBaseFilter = base;
   // Centro de serviço deve pertencer à filial selecionada
   if (base !== 'todos') {

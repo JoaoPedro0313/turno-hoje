@@ -650,6 +650,7 @@ async function liberarSolic(id){
       if($('u-mat')) $('u-mat').value=data.matricula||'';
       if($('u-msg')) $('u-msg').textContent='Dados de "'+(data.nome||'')+'" carregados — defina a senha e clique em Criar usuário. (Função: '+(data.funcao||'—')+' · Base: '+(data.base||'—')+')';
       await sb.from('solicitacoes').update({status:'liberado'}).eq('id',id);
+      await salvarFilialUsuario(data.nome, data.base);
       carregarSolicitacoes();
       var box=document.querySelector('.adminbox h2'); if(box) box.scrollIntoView({behavior:'smooth',block:'center'});
     }
@@ -658,6 +659,24 @@ async function liberarSolic(id){
 async function recusarSolic(id){
   if(!confirm('Recusar esta solicitação?')) return;
   try{ await sb.from('solicitacoes').update({status:'recusado'}).eq('id',id); carregarSolicitacoes(); }catch(e){}
+}
+// mapeia a base (nome) para o id de filial usado no Turno e guarda por nome normalizado
+var BASE_FILIAL_ID = {'irece':'irc','irecê':'irc','jacobina':'jac','congonhal':'pa','aracaju':'aju','itajuba':'ita','itajubá':'ita','feira de santana':'fsa','serrinha':'srr'};
+function normNomeU(s){ return (s||'').toString().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase().replace(/\s+/g,' '); }
+async function salvarFilialUsuario(nome, base){
+  var fid = BASE_FILIAL_ID[(base||'').toString().trim().toLowerCase()];
+  if(!fid || !nome){ return; }
+  try{
+    var r = await fetch(SUPA_URL+'/rest/v1/turno_data?select=value&key=eq.usuario_filial',{headers:{apikey:SUPA_KEY,Authorization:'Bearer '+SUPA_KEY}});
+    var arr = r.ok ? await r.json() : [];
+    var map = (arr && arr[0] && arr[0].value) || {};
+    map[normNomeU(nome)] = fid;
+    await fetch(SUPA_URL+'/rest/v1/turno_data?on_conflict=key',{
+      method:'POST',
+      headers:{apikey:SUPA_KEY,Authorization:'Bearer '+SUPA_KEY,'Content-Type':'application/json',Prefer:'resolution=merge-duplicates,return=minimal'},
+      body:JSON.stringify({key:'usuario_filial',value:map,updated_at:new Date().toISOString()})
+    });
+  }catch(e){}
 }
 
 
