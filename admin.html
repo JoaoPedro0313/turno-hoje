@@ -318,13 +318,12 @@ body.sm-collapsed .bottom-bar{left:64px !important;}
         <label>Telefone</label><input id="ed-tel" placeholder="(00) 00000-0000">
         <label>Vigência</label><input id="ed-vig" type="date">
         <label class="chk"><input id="ed-gestor" type="checkbox"> Pode ver o Financeiro (gestor)</label>
-        <label>Contrato de acesso</label>
-        <select id="ed-contrato">
-          <option value="">— sem restrição (vê tudo) —</option>
-          <option value="ba">OBRAS - BA</option>
-          <option value="mg">CON_MANUT - MG</option>
-          <option value="se">OBRAS - SE</option>
-        </select>
+        <label>Contratos de acesso <span style="font-weight:600;color:#94a3b8;font-size:.72rem;">(nenhum marcado = vê tudo)</span></label>
+        <div style="display:flex;flex-direction:column;gap:3px;margin-top:2px;">
+          <label class="chk"><input type="checkbox" class="ed-ct" value="ba"> OBRAS - BA</label>
+          <label class="chk"><input type="checkbox" class="ed-ct" value="mg"> CON_MANUT - MG</label>
+          <label class="chk"><input type="checkbox" class="ed-ct" value="se"> OBRAS - SE</label>
+        </div>
         <div id="ed-msg" style="font-size:.78rem;font-weight:700;min-height:16px;margin-top:10px;"></div>
         <button class="btn add" style="width:100%;margin-top:6px;" onclick="salvarEdicao()">Salvar alterações</button>
       </div>
@@ -531,7 +530,9 @@ function editarUsuario(email){
   $('ed-tel').value=u.telefone||'';
   $('ed-vig').value=u.data_vigencia||'';
   $('ed-gestor').checked=!!u.gestor;
-  $('ed-contrato').value = USUARIO_CONTRATO[normNomeU(u.func_nome||'')] || USUARIO_CONTRATO[normNomeU(u.nome||'')] || '';
+  var _cts = USUARIO_CONTRATO[normNomeU(u.func_nome||'')] || USUARIO_CONTRATO[normNomeU(u.nome||'')] || [];
+  if(!Array.isArray(_cts)) _cts = _cts ? [_cts] : [];
+  document.querySelectorAll('.ed-ct').forEach(function(cb){ cb.checked = _cts.indexOf(cb.value)>=0; });
   $('ed-titulo').textContent=u.matricula||u.email;
   $('ed-msg').textContent='';
   $('user-edit-ovl').classList.add('open');
@@ -572,20 +573,23 @@ async function salvarEdicao(){
   if(r1.error){ msg.style.color='#c53030'; msg.textContent='Erro: '+r1.error.message; return; }
   var r2=await sb.rpc('admin_definir_gestor',{p_email:email,p_gestor:gestor});
   if(r2.error){ msg.style.color='#c53030'; msg.textContent='Erro: '+r2.error.message; return; }
-  // contrato de acesso (grava pelo nome do funcionário e pelo login, pra casar com o login leve)
+  // contratos de acesso (grava pelo nome do funcionário e pelo login, pra casar com o login leve)
   var funcNome=($('ed-func-atual').textContent||'').replace(/^✓\s*/,'').trim();
-  await definirContratoUsuario([funcNome, nome], $('ed-contrato').value);
+  var cts=[]; document.querySelectorAll('.ed-ct').forEach(function(cb){ if(cb.checked) cts.push(cb.value); });
+  await definirContratoUsuario([funcNome, nome], cts);
   fecharEdicao(); carregarGestores();
 }
 var USUARIO_CONTRATO = {};
 async function carregarContratos(){
   try{ var r=await fetch(SUPA_URL+'/rest/v1/turno_data?select=value&key=eq.usuario_contrato',{headers:{apikey:SUPA_KEY,Authorization:'Bearer '+SUPA_KEY}}); var arr=r.ok?await r.json():[]; USUARIO_CONTRATO=(arr&&arr[0]&&arr[0].value)||{}; }catch(e){ USUARIO_CONTRATO={}; }
 }
-async function definirContratoUsuario(nomes, state){
+async function definirContratoUsuario(nomes, states){
+  if(!Array.isArray(states)) states = states?[states]:[];
+  states = states.filter(function(s){ return ['ba','mg','se'].indexOf(s)>=0; });
   try{
     var r=await fetch(SUPA_URL+'/rest/v1/turno_data?select=value&key=eq.usuario_contrato',{headers:{apikey:SUPA_KEY,Authorization:'Bearer '+SUPA_KEY}});
     var arr=r.ok?await r.json():[]; var map=(arr&&arr[0]&&arr[0].value)||{};
-    (nomes||[]).forEach(function(nm){ var k=normNomeU(nm); if(!k)return; if(state && ['ba','mg','se'].indexOf(state)>=0) map[k]=state; else delete map[k]; });
+    (nomes||[]).forEach(function(nm){ var k=normNomeU(nm); if(!k)return; if(states.length) map[k]=states; else delete map[k]; });
     await fetch(SUPA_URL+'/rest/v1/turno_data?on_conflict=key',{method:'POST',headers:{apikey:SUPA_KEY,Authorization:'Bearer '+SUPA_KEY,'Content-Type':'application/json',Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify({key:'usuario_contrato',value:map,updated_at:new Date().toISOString()})});
     USUARIO_CONTRATO=map;
   }catch(e){}
@@ -682,7 +686,7 @@ async function liberarSolic(id){
       if($('u-msg')) $('u-msg').textContent='Dados de "'+(data.nome||'')+'" carregados — defina a senha e clique em Criar usuário. (Função: '+(data.funcao||'—')+' · Base: '+(data.base||'—')+')';
       await sb.from('solicitacoes').update({status:'liberado'}).eq('id',id);
       var ct=$('sol-ct-'+id); var contratoState=ct?ct.value:baseState(data.base);
-      await salvarContratoUsuario(data.nome, contratoState);
+      await definirContratoUsuario([data.nome], [contratoState]);
       carregarSolicitacoes();
       var box=document.querySelector('.adminbox h2'); if(box) box.scrollIntoView({behavior:'smooth',block:'center'});
     }
@@ -701,20 +705,6 @@ function baseState(base){
   return 'ba';
 }
 function normNomeU(s){ return (s||'').toString().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase().replace(/\s+/g,' '); }
-async function salvarContratoUsuario(nome, state){
-  if(!nome || ['ba','mg','se'].indexOf(state)<0){ return; }
-  try{
-    var r = await fetch(SUPA_URL+'/rest/v1/turno_data?select=value&key=eq.usuario_contrato',{headers:{apikey:SUPA_KEY,Authorization:'Bearer '+SUPA_KEY}});
-    var arr = r.ok ? await r.json() : [];
-    var map = (arr && arr[0] && arr[0].value) || {};
-    map[normNomeU(nome)] = state;
-    await fetch(SUPA_URL+'/rest/v1/turno_data?on_conflict=key',{
-      method:'POST',
-      headers:{apikey:SUPA_KEY,Authorization:'Bearer '+SUPA_KEY,'Content-Type':'application/json',Prefer:'resolution=merge-duplicates,return=minimal'},
-      body:JSON.stringify({key:'usuario_contrato',value:map,updated_at:new Date().toISOString()})
-    });
-  }catch(e){}
-}
 
 
 function ccParseCSV(text){

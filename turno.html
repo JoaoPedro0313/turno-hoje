@@ -1084,26 +1084,38 @@ const FILIAL_CENTROS = {
   irc:['irc'], jac:['jac'], fsa:['fsa','srr'], pa:['pa','ita'], aju:['aju']
 };
 
-// ===== TRAVA DE CONTRATO (ESTADO) POR USUÁRIO (login leve) =====
-let turnoLockState = null;
+// ===== TRAVA DE CONTRATO (ESTADO) POR USUÁRIO — múltiplos contratos =====
+let turnoAllowedStates = null; // null = sem restrição; array = estados permitidos
 function turnoNormNome(s){ return (s||'').toString().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase().replace(/\s+/g,' '); }
-function turnoAplicarTravaContrato(state){
-  if(!state || ['ba','mg','se'].indexOf(state)<0) return;
-  turnoLockState = state;
-  turnoStateFilter = state;
-  turnoBaseFilter = 'todos';
-  turnoCentroFilter = 'todos';
-  var sf = document.getElementById('turno-state-filter'); if(sf) sf.style.display='none';
-  if (typeof updateBaseFilterButtons==='function') updateBaseFilterButtons();
-  if (typeof updateCentroFilterButtons==='function') updateCentroFilterButtons();
-  if (typeof turnoModoHistorico!=='undefined' && turnoModoHistorico) { if(typeof turnoHistRender==='function') turnoHistRender(); }
-  else if (typeof render==='function') render();
+function turnoAplicarTravaContrato(states){
+  if(!Array.isArray(states)) states = states ? [states] : [];
+  states = states.filter(function(s){ return ['ba','mg','se'].indexOf(s)>=0; });
+  var sf = document.getElementById('turno-state-filter');
+  if(!states.length || states.length===3){ turnoAllowedStates=null; if(sf) sf.style.display=''; return; }
+  turnoAllowedStates = states;
+  // mostra só os botões de estado permitidos (+ Todos)
+  ['todos','ba','mg','se'].forEach(function(s){
+    var el=document.getElementById('state-btn-'+s);
+    if(el) el.style.display = (s==='todos' || states.indexOf(s)>=0) ? '' : 'none';
+  });
+  if(states.length===1){
+    turnoStateFilter = states[0];
+    if(sf) sf.style.display='none';
+  } else {
+    turnoStateFilter = 'todos'; // "Todos" = todos os contratos do usuário
+    if(sf) sf.style.display='';
+  }
+  turnoBaseFilter='todos'; turnoCentroFilter='todos';
+  if(typeof updateBaseFilterButtons==='function') updateBaseFilterButtons();
+  if(typeof updateCentroFilterButtons==='function') updateCentroFilterButtons();
+  if(typeof turnoModoHistorico!=='undefined' && turnoModoHistorico){ if(typeof turnoHistRender==='function') turnoHistRender(); }
+  else if(typeof render==='function') render();
 }
 function turnoBuscarTravaUsuario(nome){
-  if(!nome || turnoLockState) return;
+  if(!nome || turnoAllowedStates) return;
   fetch(SUPA_URL + '/rest/v1/turno_data?select=value&key=eq.usuario_contrato', { headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY } })
     .then(function(r){ return r.ok ? r.json() : []; })
-    .then(function(arr){ var map=(arr && arr[0] && arr[0].value) || {}; var st=map[turnoNormNome(nome)]; if(st) turnoAplicarTravaContrato(st); })
+    .then(function(arr){ var map=(arr && arr[0] && arr[0].value) || {}; var v=map[turnoNormNome(nome)]; if(v) turnoAplicarTravaContrato(v); })
     .catch(function(){});
 }
 document.addEventListener('mariua:user', function(e){ if(e.detail && e.detail.nome) turnoBuscarTravaUsuario(e.detail.nome); });
@@ -1144,7 +1156,7 @@ function updateBaseFilterButtons() {
   }
   container.innerHTML = '';
   container.appendChild(mkBtn('todos', 'Todos'));
-  const states = turnoStateFilter === 'todos' ? ['ba','mg','se'] : [turnoStateFilter];
+  const states = turnoStateFilter === 'todos' ? (turnoAllowedStates || ['ba','mg','se']) : [turnoStateFilter];
   states.forEach(function(st) {
     (FILIAL_CONFIG[st]||[]).forEach(function(b) {
       container.appendChild(mkBtn(b.id, b.label));
@@ -1153,7 +1165,7 @@ function updateBaseFilterButtons() {
 }
 
 function turnoSetState(state) {
-  if (turnoLockState) return;
+  if (turnoAllowedStates && state!=='todos' && turnoAllowedStates.indexOf(state)<0) return;
   turnoStateFilter = state;
   turnoBaseFilter  = 'todos';
   turnoCentroFilter = 'todos';
@@ -1206,7 +1218,7 @@ function updateCentroFilterButtons() {
     // Só os centros de serviço da filial selecionada
     ids = (FILIAL_CENTROS[turnoBaseFilter] || []).slice();
   } else {
-    const states = turnoStateFilter === 'todos' ? ['ba','mg','se'] : [turnoStateFilter];
+    const states = turnoStateFilter === 'todos' ? (turnoAllowedStates || ['ba','mg','se']) : [turnoStateFilter];
     states.forEach(function(st) { (BASE_CONFIG[st]||[]).forEach(function(b) { ids.push(b.id); }); });
   }
   ids.forEach(function(id) { container.appendChild(mkBtn(id, CENTRO_CUSTO[id] || id)); });
@@ -1223,6 +1235,7 @@ function filterByStateAndBase(arr) {
   return arr.filter(n => {
     const name = typeof n === 'string' ? n : (n.name || '');
     const st = teamState(name);
+    if (turnoAllowedStates && turnoAllowedStates.indexOf(st) < 0) return false;
     if (turnoStateFilter !== 'todos' && st !== turnoStateFilter) return false;
     if (turnoBaseFilter  !== 'todos' && teamFilial(name) !== turnoBaseFilter) return false;
     if (turnoCentroFilter !== 'todos' && teamBase(name) !== turnoCentroFilter) return false;
