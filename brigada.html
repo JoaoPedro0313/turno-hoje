@@ -273,6 +273,7 @@
     <button class="vc-mode active" id="m-alert" onclick="setMode('alert',this)">⚠️ Alertas</button>
     <button class="vc-mode" id="m-pav" onclick="setMode('pav',this)">🏢 Por pavimento</button>
     <button class="vc-mode" id="m-tbl" onclick="setMode('tbl',this)">📋 Tabela</button>
+    <button class="vc-mode" id="m-insp" onclick="setMode('insp',this)">🔎 Inspeções</button>
     <input class="vc-srch" id="vc-srch" placeholder="🔎 Buscar extintor, localização, tipo..." oninput="render()">
     <button class="vc-imp" onclick="abrirNovo()">➕ Novo extintor</button>
     <button class="vc-imp" style="background:#0d7377" onclick="document.getElementById('vc-file').click()">📤 Importar planilha</button>
@@ -358,6 +359,21 @@ var SUPA_URL='https://eqxejfoibebcbtsqymji.supabase.co';
 var SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVxeGVqZm9pYmViY2J0c3F5bWppIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE4NjUzMTEsImV4cCI6MjA4NzQ0MTMxMX0.lwf7_EJ6UchEOpzhW3cVKztxDGy78gaQblRvgiEwWh8';
 var SUPA_H={'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':'application/json'};
 var KEY='sesmt_brigada';
+var KEY_I='sesmt_brigada_inspecoes';
+
+var INSP=[];
+function carregarInsp(){
+  fetch(SUPA_URL+'/rest/v1/turno_data?select=value&key=eq.'+KEY_I+'&limit=1',{headers:SUPA_H})
+    .then(function(r){return r.ok?r.json():[];})
+    .then(function(j){ if(Array.isArray(j)&&j.length&&j[0].value&&Array.isArray(j[0].value.dados)) INSP=j[0].value.dados||[]; render(); })
+    .catch(function(){});
+}
+function salvarInsp(){
+  var payload={dados:INSP, atualizado:new Date().toLocaleString('pt-BR')};
+  return fetch(SUPA_URL+'/rest/v1/turno_data?on_conflict=key',{method:'POST',
+    headers:Object.assign({'Prefer':'resolution=merge-duplicates,return=minimal'},SUPA_H),
+    body:JSON.stringify({key:KEY_I,value:payload,updated_at:new Date().toISOString()})});
+}
 
 var DADOS=[]; var MODE='alert';
 function HOJE(){ var d=new Date(); return new Date(d.getFullYear(),d.getMonth(),d.getDate()); }
@@ -428,6 +444,15 @@ function importar(file){
         wb=XLSX.read(new Uint8Array(e.target.result),{type:'array',cellDates:true,raw:false});
       }
       var novos=[];
+      // detecta o formato: relatório de INSPEÇÕES (Nº Inspeção/Tipo/Veículo) x planilha de EXTINTORES
+      var ws0=wb.Sheets[wb.SheetNames[0]];
+      var r0=XLSX.utils.sheet_to_json(ws0,{header:1,raw:false});
+      var ehInspecao=false;
+      for(var k=0;k<Math.min(r0.length,6);k++){
+        var linha=(r0[k]||[]).map(function(x){return String(x||'').toLowerCase();}).join('|');
+        if(linha.indexOf('inspe')>=0 && (linha.indexOf('veículo')>=0||linha.indexOf('veiculo')>=0||linha.indexOf('lotação')>=0||linha.indexOf('lotacao')>=0)){ ehInspecao=true; break; }
+      }
+      if(ehInspecao){ importarInspecoes(r0); return; }
       wb.SheetNames.forEach(function(sn){
         var rows=XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1,raw:false,dateNF:'dd/mm/yyyy'});
         var pav='';
@@ -460,6 +485,112 @@ function importar(file){
     }catch(err){ setStatus('❌ Erro ao ler planilha: '+err.message); }
   };
   reader.readAsArrayBuffer(file);
+}
+
+// ===== importar relatório de INSPEÇÕES realizadas =====
+function importarInspecoes(rows){
+  var hi=-1;
+  for(var i=0;i<Math.min(rows.length,8);i++){
+    var l=(rows[i]||[]).map(function(x){return String(x||'').trim().toLowerCase();});
+    if(l.some(function(x){return x.indexOf('inspe')>=0;})){ hi=i; break; }
+  }
+  if(hi<0){ setStatus('❌ Cabeçalho não encontrado no relatório de inspeções.'); return; }
+  var hdr=(rows[hi]||[]).map(function(x){return String(x||'').trim().toLowerCase();});
+  function ix(nomes){ for(var n=0;n<nomes.length;n++){ for(var c=0;c<hdr.length;c++){ if(hdr[c].indexOf(nomes[n])>=0) return c; } } return -1; }
+  var iNum=ix(['nº inspe','n inspe','numero']), iTipo=ix(['tipo']), iEnc=ix(['encarregado']), iSup=ix(['supervisor']),
+      iLot=ix(['lotação','lotacao']), iVei=ix(['veículo','veiculo']), iAtiv=ix(['atividade']),
+      iObs=ix(['obs']), iCargo=ix(['cargo']), iGrav=ix(['gravidade']), iData=ix(['data']);
+  var novos=[];
+  for(var r=hi+1;r<rows.length;r++){
+    var row=rows[r]||[]; if(!row.length) continue;
+    var dt=String(iData>=0?(row[iData]||''):'').trim();
+    var m=dt.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+    var iso=m?(m[3]+'-'+('0'+m[2]).slice(-2)+'-'+('0'+m[1]).slice(-2)):'';
+    var hora=(dt.match(/(\d{2}:\d{2})/)||[])[1]||'';
+    var num=String(iNum>=0?(row[iNum]||''):'').trim();
+    var vei=String(iVei>=0?(row[iVei]||''):'').trim();
+    if(!num && !vei && !iso) continue;
+    novos.push({
+      num:num, tipo:String(iTipo>=0?(row[iTipo]||''):'').trim(),
+      tec:String(iEnc>=0?(row[iEnc]||''):'').trim().split(' - ')[0],
+      sup:String(iSup>=0?(row[iSup]||''):'').trim(),
+      lot:String(iLot>=0?(row[iLot]||''):'').trim(), vei:vei,
+      ativ:String(iAtiv>=0?(row[iAtiv]||''):'').trim(),
+      obs:String(iObs>=0?(row[iObs]||''):'').trim(),
+      cargo:String(iCargo>=0?(row[iCargo]||''):'').trim(),
+      grav:String(iGrav>=0?(row[iGrav]||''):'').trim(),
+      data:iso, hora:hora
+    });
+  }
+  if(!novos.length){ setStatus('❌ Nenhuma inspeção encontrada no arquivo.'); return; }
+  INSP=novos;
+  setStatus('Salvando '+INSP.length+' inspeções...');
+  salvarInsp().then(function(r){
+    setStatus(r.ok?('✅ Importado: '+INSP.length+' inspeções realizadas.'):'⚠️ Importado, mas falha ao salvar.');
+    var b=document.getElementById('m-insp'); setMode('insp', b);
+  }).catch(function(){ setStatus('⚠️ Importado, mas falha ao salvar.'); });
+}
+
+// ===== render: inspeções realizadas =====
+function renderInsp(el){
+  if(!INSP.length){ el.innerHTML='<div style="text-align:center;padding:50px 20px;color:#94a3b8"><div style="font-size:2.4rem">🔎</div><div style="font-weight:700;margin-top:8px">Nenhuma inspeção importada</div><div style="font-size:.85rem;margin-top:4px">Importe o relatório <b>consulta_inspeção_de_segurança</b> (.csv).</div></div>'; return; }
+  var q=(document.getElementById('vc-srch').value||'').toLowerCase().trim();
+  var lista=INSP.filter(function(d){ if(!q) return true; return [d.vei,d.lot,d.tec,d.tipo,d.num].join(' ').toLowerCase().indexOf(q)>=0; });
+  // agrupa por veículo: última inspeção
+  var porVei={};
+  lista.forEach(function(d){ var k=d.vei||'(sem veículo)'; if(!porVei[k]||(d.data>porVei[k].data)) porVei[k]=d; });
+  var veics=Object.keys(porVei).sort(function(a,b){ return (porVei[b].data||'').localeCompare(porVei[a].data||''); });
+  var hoje=HOJE();
+  function diasDe(iso){ if(!iso) return null; return Math.round((hoje-parseDt(iso))/86400000); }
+  var atrasados=veics.filter(function(v){ var d=diasDe(porVei[v].data); return d!=null && d>30; }).length;
+  var ult30=lista.filter(function(d){ var x=diasDe(d.data); return x!=null && x<=30; }).length;
+  var tecs={}; lista.forEach(function(d){ if(d.tec) tecs[d.tec]=(tecs[d.tec]||0)+1; });
+
+  var cards='<div class="kpis" style="margin-bottom:14px">'
+    +'<div class="kpi t"><div class="n">'+lista.length+'</div><div class="l">Inspeções</div></div>'
+    +'<div class="kpi g"><div class="n">'+veics.length+'</div><div class="l">Veículos inspecionados</div></div>'
+    +'<div class="kpi a"><div class="n">'+ult30+'</div><div class="l">Nos últimos 30 dias</div></div>'
+    +'<div class="kpi r"><div class="n">'+atrasados+'</div><div class="l">Veículos há +30 dias</div></div>'
+    +'</div>';
+
+  var porVeiHtml=veics.map(function(v){
+    var d=porVei[v], dd=diasDe(d.data);
+    var cor = dd==null?'#94a3b8':(dd>30?'#e53e3e':(dd>15?'#f0a500':'#14a085'));
+    var txt = dd==null?'sem data':('há '+dd+' dia'+(dd===1?'':'s'));
+    var qtd = lista.filter(function(x){return (x.vei||'(sem veículo)')===v;}).length;
+    return '<div style="background:#fff;border-radius:12px;padding:12px 16px;margin-bottom:8px;box-shadow:0 1px 4px rgba(0,0,0,.06);border-left:4px solid '+cor+';display:flex;align-items:center;gap:14px;flex-wrap:wrap">'
+      +'<div style="font-size:1.4rem">🚗</div>'
+      +'<div style="flex:1;min-width:180px"><div style="font-weight:800;color:#1a202c">'+esc(v)+'</div>'
+      +'<div style="font-size:.74rem;color:#64748b">📍 '+esc(d.lot||'—')+' · '+qtd+' inspeção(ões)</div></div>'
+      +'<div style="text-align:right"><div style="font-weight:800;color:'+cor+';font-size:.8rem">'+txt+'</div>'
+      +'<div style="font-size:.72rem;color:#64748b">última: '+fmt(d.data)+(d.hora?' '+d.hora:'')+'</div></div>'
+      +'<div style="font-size:.72rem;color:#94a3b8;min-width:150px;text-align:right">👷 '+esc(d.tec||'—')+'</div></div>';
+  }).join('');
+
+  var tec=Object.keys(tecs).sort(function(a,b){return tecs[b]-tecs[a];})
+    .map(function(t){ return '<span style="display:inline-block;font-size:.72rem;font-weight:700;background:#f0fafa;color:#0d7377;padding:4px 10px;border-radius:20px;margin:0 6px 6px 0">👷 '+esc(t)+' · '+tecs[t]+'</span>'; }).join('');
+
+  var tbl='<div style="background:#fff;border-radius:12px;box-shadow:0 1px 4px rgba(0,0,0,.06);overflow-x:auto;margin-top:12px">'
+    +'<table style="width:100%;border-collapse:collapse;font-size:.8rem">'
+    +'<thead><tr style="background:#0d7377;color:#fff;text-align:left">'
+    +'<th style="padding:10px">Nº</th><th style="padding:10px">DATA</th><th style="padding:10px">VEÍCULO</th>'
+    +'<th style="padding:10px">LOTAÇÃO</th><th style="padding:10px">RESPONSÁVEL</th><th style="padding:10px">ATIVIDADE</th></tr></thead><tbody>'
+    + lista.slice().sort(function(a,b){return (b.data||'').localeCompare(a.data||'');}).map(function(d){
+      return '<tr style="border-bottom:1px solid #eef2f4">'
+        +'<td style="padding:8px 10px;color:#94a3b8">'+esc(d.num)+'</td>'
+        +'<td style="padding:8px 10px;font-weight:700">'+fmt(d.data)+'<div style="font-size:.65rem;color:#94a3b8">'+esc(d.hora)+'</div></td>'
+        +'<td style="padding:8px 10px;font-weight:800;color:#0d7377">'+esc(d.vei||'—')+'</td>'
+        +'<td style="padding:8px 10px">'+esc(d.lot||'—')+'</td>'
+        +'<td style="padding:8px 10px">'+esc(d.tec||'—')+'<div style="font-size:.65rem;color:#94a3b8">'+esc(d.cargo||'')+'</div></td>'
+        +'<td style="padding:8px 10px">'+esc(d.ativ||'—')+'</td></tr>';
+    }).join('')
+    +'</tbody></table></div>';
+
+  el.innerHTML = cards
+    + '<div style="font-size:.72rem;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:1px;margin:4px 0 8px">Por veículo · última inspeção</div>'
+    + porVeiHtml
+    + (tec?('<div style="margin-top:10px">'+tec+'</div>'):'')
+    + tbl;
 }
 
 // ===== KPIs / filtros =====
@@ -518,6 +649,7 @@ function linhaTbl(d,i){
 }
 function render(){
   var el=document.getElementById('vc-content'); if(!el) return;
+  if(MODE==='insp'){ renderInsp(el); return; }
   var lista=filtrados();
   if(!DADOS.length){ el.innerHTML='<div style="text-align:center;padding:50px 20px;color:#94a3b8"><div style="font-size:2.4rem">🧯</div><div style="font-weight:700;margin-top:8px">Nenhum extintor cadastrado</div><div style="font-size:.85rem;margin-top:4px">Clique em <b>Novo extintor</b> ou importe a planilha de inspeção.</div></div>'; return; }
   if(!lista.length){ el.innerHTML='<div style="text-align:center;padding:40px;color:#94a3b8">Nenhum extintor encontrado com esses filtros.</div>'; return; }
@@ -643,6 +775,7 @@ function exportarCSV(){
 }
 
 carregar();
+carregarInsp();
 
 </script>
 </body>
