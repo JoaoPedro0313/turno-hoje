@@ -97,9 +97,12 @@
   /* Modal editar usuário */
   .uovl{display:none;position:fixed;inset:0;background:rgba(10,20,30,.6);z-index:600;align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(3px)}
   .uovl.open{display:flex}
-  .ubox{background:#fff;border-radius:16px;width:100%;max-width:380px;box-shadow:0 24px 70px rgba(0,0,0,.28);overflow:hidden}
+  .ubox{background:#fff;border-radius:16px;width:100%;max-width:720px;box-shadow:0 24px 70px rgba(0,0,0,.28);overflow:hidden}
   .ubox-h{background:linear-gradient(135deg,#0b5e62,#0d7377);padding:14px 20px;color:#fff;font-weight:800;display:flex;align-items:center;justify-content:space-between}
-  .ubox-b{padding:18px 20px}
+  .ubox-b{padding:18px 22px;display:grid;grid-template-columns:1fr 1fr;gap:2px 20px}
+  .ubox-b .fg{display:flex;flex-direction:column;min-width:0}
+  .ubox-b .fg-full{grid-column:1 / -1}
+  @media(max-width:560px){ .ubox-b{grid-template-columns:1fr} }
   .ubox-b label{display:block;font-size:.7rem;font-weight:800;color:#64748b;text-transform:uppercase;letter-spacing:.5px;margin:10px 0 4px}
   .ubox-b input{width:100%;padding:9px 12px;border:1.5px solid #e2e8f0;border-radius:9px;font-family:'Barlow',sans-serif;font-size:.9rem;box-sizing:border-box}
   .ubox-b .chk{display:flex;align-items:center;gap:8px;margin-top:12px;font-weight:700;color:#334155;font-size:.88rem}
@@ -309,23 +312,29 @@ body.sm-collapsed .bottom-bar{left:64px !important;}
       </div>
       <div class="ubox-b">
         <input id="ed-email" type="hidden">
-        <label>Nome</label><input id="ed-nome" placeholder="Nome da pessoa">
-        <label>Matrícula (vínculo com funcionário)</label>
-        <input id="ed-mat" placeholder="ex.: 27680" oninput="atualizarFuncAtual(this.value)">
-        <input id="ed-func-busca" placeholder="🔍 buscar funcionário por nome…" list="ed-func-list" oninput="buscarFunc(this.value)" onchange="escolherFunc(this.value)" style="margin-top:6px;">
-        <datalist id="ed-func-list"></datalist>
-        <div id="ed-func-atual" style="font-size:.72rem;color:#0d7377;font-weight:700;margin-top:4px;min-height:14px;"></div>
-        <label>Telefone</label><input id="ed-tel" placeholder="(00) 00000-0000">
-        <label>Vigência</label><input id="ed-vig" type="date">
-        <label class="chk"><input id="ed-gestor" type="checkbox"> Pode ver o Financeiro (gestor)</label>
-        <label>Contratos de acesso <span style="font-weight:600;color:#94a3b8;font-size:.72rem;">(nenhum marcado = vê tudo)</span></label>
-        <div style="display:flex;flex-direction:column;gap:3px;margin-top:2px;">
-          <label class="chk"><input type="checkbox" class="ed-ct" value="ba"> OBRAS - BA</label>
-          <label class="chk"><input type="checkbox" class="ed-ct" value="mg"> CON_MANUT - MG</label>
-          <label class="chk"><input type="checkbox" class="ed-ct" value="se"> OBRAS - SE</label>
+        <div class="fg">
+          <label>Nome</label><input id="ed-nome" placeholder="Nome da pessoa">
+          <label>Telefone</label><input id="ed-tel" placeholder="(00) 00000-0000">
+          <label>Vigência</label><input id="ed-vig" type="date">
+          <label class="chk" style="margin-top:10px;"><input id="ed-gestor" type="checkbox"> Pode ver o Financeiro (gestor)</label>
         </div>
-        <div id="ed-msg" style="font-size:.78rem;font-weight:700;min-height:16px;margin-top:10px;"></div>
-        <button class="btn add" style="width:100%;margin-top:6px;" onclick="salvarEdicao()">Salvar alterações</button>
+        <div class="fg">
+          <label>Matrícula (vínculo com funcionário)</label>
+          <input id="ed-mat" placeholder="ex.: 27680" oninput="atualizarFuncAtual(this.value)">
+          <input id="ed-func-busca" placeholder="🔍 buscar funcionário por nome…" list="ed-func-list" oninput="buscarFunc(this.value)" onchange="escolherFunc(this.value)" style="margin-top:6px;">
+          <datalist id="ed-func-list"></datalist>
+          <div id="ed-func-atual" style="font-size:.72rem;color:#0d7377;font-weight:700;margin-top:4px;min-height:14px;"></div>
+          <label>Contratos de acesso <span style="font-weight:600;color:#94a3b8;font-size:.72rem;">(nenhum marcado = vê tudo)</span></label>
+          <div style="display:flex;flex-direction:column;gap:3px;margin-top:2px;">
+            <label class="chk"><input type="checkbox" class="ed-ct" value="ba"> OBRAS - BA</label>
+            <label class="chk"><input type="checkbox" class="ed-ct" value="mg"> CON_MANUT - MG</label>
+            <label class="chk"><input type="checkbox" class="ed-ct" value="se"> OBRAS - SE</label>
+          </div>
+        </div>
+        <div class="fg-full">
+          <div id="ed-msg" style="font-size:.78rem;font-weight:700;min-height:16px;margin-top:10px;"></div>
+          <button class="btn add" style="width:100%;margin-top:6px;" onclick="salvarEdicao()">Salvar alterações</button>
+        </div>
       </div>
     </div>
   </div>
