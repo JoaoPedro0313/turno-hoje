@@ -159,8 +159,20 @@ body.sm-collapsed .bottom-bar{left:64px !important;}
 </style>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.47.0/tabler-icons.min.css">
   <style>.sm-ic .ti{font-size:19px;line-height:1}</style>
+<style>
+/* barra lateral: abre ao passar o mouse (hover), sobrepondo o conteudo */
+body.sm-collapsed .sm-side{overflow:hidden}
+body.sm-collapsed .sm-side:hover{width:232px;box-shadow:6px 0 24px rgba(0,0,0,.18);z-index:120}
+body.sm-collapsed .sm-side:hover .sm-logo-tx,
+body.sm-collapsed .sm-side:hover .sm-foot{display:block}
+body.sm-collapsed .sm-side:hover .sm-tx{display:inline;flex:1}
+body.sm-collapsed .sm-side:hover .sm-arrow{display:block}
+body.sm-collapsed .sm-side:hover .sm-top{justify-content:flex-start;padding:12px 14px}
+body.sm-collapsed .sm-side:hover .sm-item{justify-content:flex-start;padding:9px 11px}
+body.sm-collapsed .sm-side:hover .sm-group-head{justify-content:flex-start;padding:9px 11px}
+</style>
 </head>
-<body>
+<body class="sm-collapsed">
 
 <div class="top-bar">
   <div class="top-bar-inner">
