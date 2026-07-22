@@ -354,7 +354,10 @@ function coCarregar(){
       out.push(reg);
     }
     CO_ROWS=out;
-    coSt('✅ '+out.length+' obras carregadas da carteira e mapeadas para o modelo.','#0d7377');
+    var comPostes=out.filter(function(r){return (r['Postes']||'').trim()!=='';}).length;
+    function _nm(i){ return i>=0 ? ((rows[hi][i]||'').trim()||'(vazio)') : '(NÃO ACHOU)'; }
+    var amostra=out.slice(0,5).map(function(r){return r['Postes']||'—';}).join(', ');
+    coSt('✅ '+out.length+' obras carregadas. Postes: coluna "'+_nm(cPost)+'" (índice '+cPost+') · '+comPostes+' com valor · amostra: '+amostra,'#0d7377');
     document.getElementById('co-count').textContent='· '+out.length+' obras';
     var b=document.getElementById('co-baixar'); b.disabled=false; b.style.opacity='1';
     coPreview();
