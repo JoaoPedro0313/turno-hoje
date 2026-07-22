@@ -144,10 +144,14 @@ body.sm-collapsed .bottom-bar{left:64px !important;}
     </div>
 
     <input type="hidden" id="co-mes">
+    <input type="hidden" id="co-base">
+    <div style="font-size:.68rem;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px;">Base</div>
+    <div id="co-base-btns" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;"></div>
+    <div style="font-size:.68rem;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px;">Mês</div>
     <div id="co-mes-btns" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
 
     <div id="co-config" style="display:none;margin-top:14px;padding-top:12px;border-top:1px dashed #e6ecf3;">
-      <label style="font-size:.72rem;font-weight:700;color:#64748b;">Link ou ID da planilha</label>
+      <label style="font-size:.72rem;font-weight:700;color:#64748b;">Link ou ID da planilha <span style="color:#94a3b8;">(da base selecionada)</span></label>
       <input id="co-link" value="https://docs.google.com/spreadsheets/d/14ImbZb8-OCBp78jDtd0QFkSLrMG5vXA7tzrM-x6KQVo/edit?gid=1847275425" style="width:100%;padding:8px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:.8rem;margin:3px 0 8px;">
       <div style="display:flex;gap:8px;align-items:end;flex-wrap:wrap;">
         <div><label style="font-size:.72rem;font-weight:700;color:#64748b;">Aba (gid) do mês selecionado</label><br><input id="co-gid" style="padding:8px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:.8rem;width:150px;"></div>
@@ -216,17 +220,45 @@ var CO_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI
 var CO_H={'apikey':CO_KEY,'Authorization':'Bearer '+CO_KEY,'Content-Type':'application/json'};
 var CO_MESES=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 var CO_ANO=2026;
-var CO_MAP={};  // 'YYYY-MM' -> gid
+// bases disponíveis
+var CO_BASES=[{id:'irc',nome:'Irecê'},{id:'jac',nome:'Jacobina'},{id:'fsa',nome:'Feira'},{id:'srr',nome:'Serrinha'}];
+var CO_DATA={};   // { baseId: { link:'', meses:{ 'YYYY-MM': gid } } }
+var CO_BASE='irc';
 
 function coMesKey(){ return document.getElementById('co-mes').value; }
+function coBaseId(){ return document.getElementById('co-base').value || CO_BASE; }
+function coBaseObj(){ var b=coBaseId(); if(!CO_DATA[b]) CO_DATA[b]={link:'',meses:{}}; return CO_DATA[b]; }
 function coToggleConfig(){ var c=document.getElementById('co-config'); c.style.display = c.style.display==='none' ? 'block' : 'none'; }
+
+function coPopularBases(){
+  var box=document.getElementById('co-base-btns'); if(!box) return;
+  var sel=coBaseId();
+  box.innerHTML=CO_BASES.map(function(b){
+    var d=CO_DATA[b.id]||{}; var tem=d.link && Object.keys(d.meses||{}).length;
+    var ativo=(b.id===sel);
+    var bg=ativo?'#0d7377':(tem?'#eef4f4':'#f8fafc');
+    var cor=ativo?'#fff':(tem?'#0d7377':'#94a3b8');
+    var bd=ativo?'#0d7377':(tem?'#cfe3e2':'#e6ecf3');
+    return '<button onclick="coSelecionarBase(\''+b.id+'\')" style="padding:8px 14px;border-radius:9px;border:1.5px solid '+bd+';background:'+bg+';color:'+cor+';font-family:inherit;font-weight:800;font-size:.78rem;cursor:pointer;">'+b.nome+'</button>';
+  }).join('');
+}
+function coSelecionarBase(id){
+  document.getElementById('co-base').value=id; CO_BASE=id;
+  var d=coBaseObj();
+  document.getElementById('co-link').value=d.link||'';
+  coPopularBases(); coPopularMeses();
+  coSt('Base '+coNomeBase(id)+' selecionada. Escolha o mês.','#64748b');
+}
+function coNomeBase(id){ for(var i=0;i<CO_BASES.length;i++){ if(CO_BASES[i].id===id) return CO_BASES[i].nome; } return id; }
+
 function coPopularMeses(){
   var box=document.getElementById('co-mes-btns'); if(!box) return;
+  var meses=coBaseObj().meses||{};
   var sel=coMesKey();
   if(!sel){ var hoje=new Date(); sel=CO_ANO+'-'+('0'+(hoje.getMonth()+1)).slice(-2); document.getElementById('co-mes').value=sel; }
   box.innerHTML=CO_MESES.map(function(nome,i){
     var k=CO_ANO+'-'+('0'+(i+1)).slice(-2);
-    var tem=!!CO_MAP[k];
+    var tem=!!meses[k];
     var ativo=(k===sel);
     var bg=ativo?'#0d7377':(tem?'#eef4f4':'#f8fafc');
     var cor=ativo?'#fff':(tem?'#0d7377':'#94a3b8');
@@ -239,32 +271,36 @@ function coPopularMeses(){
 }
 function coSelecionarMes(k){
   document.getElementById('co-mes').value=k;
-  var gid=CO_MAP[k]||'';
+  var meses=coBaseObj().meses||{}; var gid=meses[k]||'';
   document.getElementById('co-gid').value=gid;
   coPopularMeses();
   if(gid){ coCarregar(); }
-  else { coSt('O mês de '+coNomeMes(k)+' ainda não tem aba configurada. Clique em "⚙️ Configurar abas", cole o gid e salve.','#b9821c'); document.getElementById('co-config').style.display='block'; }
+  else { coSt('A base '+coNomeBase(coBaseId())+' não tem aba de '+coNomeMes(k)+' configurada. Clique em "⚙️ Configurar abas", cole o link e o gid, e salve.','#b9821c'); document.getElementById('co-config').style.display='block'; }
 }
 function coMesMudou(){ coSelecionarMes(coMesKey()); }
+
 function coCarregarMapa(){
-  return fetch(CO_SUPA+'/rest/v1/turno_data?select=value&key=eq.cadastro_obra_meses&limit=1',{headers:{apikey:CO_KEY,Authorization:'Bearer '+CO_KEY}})
+  return fetch(CO_SUPA+'/rest/v1/turno_data?select=value&key=eq.cadastro_obra_bases&limit=1',{headers:{apikey:CO_KEY,Authorization:'Bearer '+CO_KEY}})
     .then(function(r){return r.ok?r.json():[];})
-    .then(function(j){ if(Array.isArray(j)&&j.length&&j[0].value) CO_MAP=j[0].value||{}; })
+    .then(function(j){ if(Array.isArray(j)&&j.length&&j[0].value) CO_DATA=j[0].value||{}; })
     .catch(function(){})
     .then(function(){
-      // semente: mês atual da planilha aberta (AGO/2026) se ainda não houver nada salvo
-      if(!Object.keys(CO_MAP).length){ CO_MAP['2026-08']='1847275425'; }
-      coPopularMeses(); coMesSync();
+      // semente: Irecê com a planilha atual + AGO/2026
+      if(!CO_DATA.irc || !CO_DATA.irc.link){ CO_DATA.irc={link:'https://docs.google.com/spreadsheets/d/14ImbZb8-OCBp78jDtd0QFkSLrMG5vXA7tzrM-x6KQVo/edit?gid=1847275425', meses:{'2026-08':'1847275425'}}; }
+      document.getElementById('co-base').value=CO_BASE;
+      coSelecionarBase(CO_BASE);
     });
 }
-function coMesSync(){ var k=coMesKey(); if(CO_MAP[k]) document.getElementById('co-gid').value=CO_MAP[k]; }
 function coSalvarAba(){
-  var k=coMesKey(); var gid=(document.getElementById('co-gid').value||'').trim();
-  if(!gid){ var m=(document.getElementById('co-link').value||'').match(/[?#&]gid=(\d+)/); gid=m?m[1]:''; }
+  var b=coBaseId(), k=coMesKey();
+  var link=(document.getElementById('co-link').value||'').trim();
+  var gid=(document.getElementById('co-gid').value||'').trim();
+  if(!gid){ var m=link.match(/[?#&]gid=(\d+)/); gid=m?m[1]:''; }
   if(!/^\d+$/.test(gid)){ coSt('Informe um gid válido (só números) antes de salvar.','#c53030'); return; }
-  CO_MAP[k]=gid;
-  fetch(CO_SUPA+'/rest/v1/turno_data?on_conflict=key',{method:'POST',headers:Object.assign({'Prefer':'resolution=merge-duplicates,return=minimal'},CO_H),body:JSON.stringify({key:'cadastro_obra_meses',value:CO_MAP,updated_at:new Date().toISOString()})})
-    .then(function(r){ coSt(r.ok?('✅ Aba salva para '+coNomeMes(k)+'.'):'⚠️ Não foi possível salvar a aba.', r.ok?'#0d7377':'#c53030'); coPopularMeses(); document.getElementById('co-mes').value=k; })
+  if(!CO_DATA[b]) CO_DATA[b]={link:'',meses:{}};
+  CO_DATA[b].link=link; CO_DATA[b].meses[k]=gid;
+  fetch(CO_SUPA+'/rest/v1/turno_data?on_conflict=key',{method:'POST',headers:Object.assign({'Prefer':'resolution=merge-duplicates,return=minimal'},CO_H),body:JSON.stringify({key:'cadastro_obra_bases',value:CO_DATA,updated_at:new Date().toISOString()})})
+    .then(function(r){ coSt(r.ok?('✅ Aba salva: '+coNomeBase(b)+' · '+coNomeMes(k)+'.'):'⚠️ Não foi possível salvar.', r.ok?'#0d7377':'#c53030'); coPopularBases(); coPopularMeses(); })
     .catch(function(){ coSt('Falha ao salvar a aba.','#c53030'); });
 }
 function coNomeMes(k){ var p=(k||'').split('-'); return CO_MESES[(+p[1])-1]+'/'+p[0]; }
