@@ -444,5 +444,17 @@ coPopularEstados();
 coCarregarMapa();
 
 </script>
+<script>
+(function(){
+  function isMobile(){return window.matchMedia('(max-width:780px)').matches;}
+  window.smToggle=function(){
+    if(isMobile()) document.body.classList.toggle('sm-expanded');
+    else document.body.classList.toggle('sm-collapsed');
+  };
+  window.smGroupToggle=function(head){
+    var g=head.parentNode; if(g) g.classList.toggle('open');
+  };
+})();
+</script>
 </body>
 </html>
