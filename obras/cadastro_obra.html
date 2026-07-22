@@ -322,8 +322,10 @@ function coCarregar(){
     if(hi<0){ coSt('❌ Não encontrei o cabeçalho da carteira (PEP OBRA / TÍTULO / MUNICIPIO). Confira a aba (gid) e se a planilha está compartilhada como "qualquer pessoa com o link".','#c53030'); return; }
     var hdr=rows[hi].map(coNorm);
     function col(nomes){ for(var n=0;n<nomes.length;n++){ var idx=hdr.indexOf(nomes[n]); if(idx>=0) return idx; } return -1; }
+    function colLike(palavras){ for(var c=0;c<hdr.length;c++){ var ok=true; for(var w=0;w<palavras.length;w++){ if(hdr[c].indexOf(palavras[w])<0){ ok=false; break; } } if(ok) return c; } return -1; }
     var cPep=col(['PEP OBRA','PEP']), cTit=col(['TITULO']), cMun=col(['MUNICIPIO']), cSup=col(['SUPERVISOR']),
-        cPost=col(['POSTES PREVISTOS','POSTES']), cLat=col(['LATITUDE']), cLon=col(['LONGITUDE']), cStat=col(['STATUS DA OBRA','STATUS']);
+        cPost=col(['POSTES PREVISTOS','POSTES PREVISTO']), cLat=col(['LATITUDE']), cLon=col(['LONGITUDE']), cStat=col(['STATUS DA OBRA','STATUS']);
+    if(cPost<0) cPost=colLike(['POSTES','PREVIST']);
     if(cPep<0){ coSt('❌ Coluna PEP OBRA não encontrada.','#c53030'); return; }
 
     var out=[];
