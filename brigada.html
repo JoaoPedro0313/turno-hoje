@@ -396,7 +396,10 @@ var INSP=[];
 function carregarInsp(){
   fetch(SUPA_URL+'/rest/v1/turno_data?select=value&key=eq.'+KEY_I+'&limit=1',{headers:SUPA_H})
     .then(function(r){return r.ok?r.json():[];})
-    .then(function(j){ if(Array.isArray(j)&&j.length&&j[0].value&&Array.isArray(j[0].value.dados)) INSP=j[0].value.dados||[]; render(); })
+    .then(function(j){ if(Array.isArray(j)&&j.length&&j[0].value&&Array.isArray(j[0].value.dados)) INSP=j[0].value.dados||[];
+      // se não há extintores cadastrados mas há inspeções, abre direto na visão de Inspeções
+      if(INSP.length && !DADOS.length){ var b=document.getElementById('m-insp'); if(b && typeof setMode==='function'){ setMode('insp', b); return; } }
+      render(); })
     .catch(function(){});
 }
 function salvarInsp(){
