@@ -142,9 +142,15 @@ body.sm-collapsed .bottom-bar{left:64px !important;}
     <label style="font-size:.72rem;font-weight:700;color:#64748b;">Link ou ID da planilha</label>
     <input id="co-link" value="https://docs.google.com/spreadsheets/d/14ImbZb8-OCBp78jDtd0QFkSLrMG5vXA7tzrM-x6KQVo/edit?gid=1847275425" style="width:100%;padding:8px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:.8rem;margin:3px 0 8px;">
     <div style="display:flex;gap:8px;align-items:end;flex-wrap:wrap;">
-      <div><label style="font-size:.72rem;font-weight:700;color:#64748b;">Aba (gid)</label><br><input id="co-gid" value="1847275425" style="padding:8px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:.8rem;width:150px;"></div>
+      <div>
+        <label style="font-size:.72rem;font-weight:700;color:#64748b;">Mês</label><br>
+        <select id="co-mes" onchange="coMesMudou()" style="padding:8px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:.8rem;min-width:150px;"></select>
+      </div>
+      <div><label style="font-size:.72rem;font-weight:700;color:#64748b;">Aba (gid)</label><br><input id="co-gid" value="1847275425" style="padding:8px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:.8rem;width:130px;"></div>
+      <button onclick="coSalvarAba()" title="Salvar o gid como a aba deste mês" style="padding:9px 12px;background:#eef4f4;color:#0d7377;border:1px solid #cfe3e2;border-radius:8px;font-weight:800;font-size:.78rem;cursor:pointer;">💾 Salvar aba do mês</button>
       <button onclick="coCarregar()" style="padding:9px 16px;background:#14a085;color:#fff;border:0;border-radius:8px;font-weight:800;font-size:.82rem;cursor:pointer;">Carregar carteira</button>
     </div>
+    <div style="font-size:.68rem;color:#94a3b8;margin-top:6px;">Dica: abra a aba do mês na planilha, copie o número do <code>gid</code> da URL, cole aqui e clique em "Salvar aba do mês". Fica salvo — depois é só escolher o mês.</div>
     <div id="co-status" style="font-size:.76rem;font-weight:700;color:#94a3b8;margin-top:10px;"></div>
   </div>
 
@@ -198,6 +204,52 @@ function coParseCSV(text){
   return rows;
 }
 function coNorm(s){ return (s||'').toString().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase().replace(/\s+/g,' '); }
+
+// ===== meses -> gid (salvos no Supabase) =====
+var CO_SUPA='https://eqxejfoibebcbtsqymji.supabase.co';
+var CO_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVxeGVqZm9pYmViY2J0c3F5bWppIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE4NjUzMTEsImV4cCI6MjA4NzQ0MTMxMX0.lwf7_EJ6UchEOpzhW3cVKztxDGy78gaQblRvgiEwWh8';
+var CO_H={'apikey':CO_KEY,'Authorization':'Bearer '+CO_KEY,'Content-Type':'application/json'};
+var CO_MESES=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+var CO_ANO=2026;
+var CO_MAP={};  // 'YYYY-MM' -> gid
+
+function coMesKey(){ return document.getElementById('co-mes').value; }
+function coPopularMeses(){
+  var sel=document.getElementById('co-mes'); if(!sel) return;
+  var hoje=new Date(); var atual=CO_ANO+'-'+('0'+(hoje.getMonth()+1)).slice(-2);
+  sel.innerHTML=CO_MESES.map(function(nome,i){
+    var k=CO_ANO+'-'+('0'+(i+1)).slice(-2);
+    var tem=CO_MAP[k]?' ✓':'';
+    return '<option value="'+k+'"'+(k===atual?' selected':'')+'>'+nome+'/'+CO_ANO+tem+'</option>';
+  }).join('');
+}
+function coMesMudou(){
+  var k=coMesKey(); var gid=CO_MAP[k]||'';
+  document.getElementById('co-gid').value=gid;
+  if(gid){ coCarregar(); } else { coSt('Este mês ainda não tem aba salva. Cole o gid da aba e clique em "Salvar aba do mês".','#b9821c'); }
+}
+function coCarregarMapa(){
+  return fetch(CO_SUPA+'/rest/v1/turno_data?select=value&key=eq.cadastro_obra_meses&limit=1',{headers:{apikey:CO_KEY,Authorization:'Bearer '+CO_KEY}})
+    .then(function(r){return r.ok?r.json():[];})
+    .then(function(j){ if(Array.isArray(j)&&j.length&&j[0].value) CO_MAP=j[0].value||{}; })
+    .catch(function(){})
+    .then(function(){
+      // semente: mês atual da planilha aberta (AGO/2026) se ainda não houver nada salvo
+      if(!Object.keys(CO_MAP).length){ CO_MAP['2026-08']='1847275425'; }
+      coPopularMeses(); coMesSync();
+    });
+}
+function coMesSync(){ var k=coMesKey(); if(CO_MAP[k]) document.getElementById('co-gid').value=CO_MAP[k]; }
+function coSalvarAba(){
+  var k=coMesKey(); var gid=(document.getElementById('co-gid').value||'').trim();
+  if(!gid){ var m=(document.getElementById('co-link').value||'').match(/[?#&]gid=(\d+)/); gid=m?m[1]:''; }
+  if(!/^\d+$/.test(gid)){ coSt('Informe um gid válido (só números) antes de salvar.','#c53030'); return; }
+  CO_MAP[k]=gid;
+  fetch(CO_SUPA+'/rest/v1/turno_data?on_conflict=key',{method:'POST',headers:Object.assign({'Prefer':'resolution=merge-duplicates,return=minimal'},CO_H),body:JSON.stringify({key:'cadastro_obra_meses',value:CO_MAP,updated_at:new Date().toISOString()})})
+    .then(function(r){ coSt(r.ok?('✅ Aba salva para '+coNomeMes(k)+'.'):'⚠️ Não foi possível salvar a aba.', r.ok?'#0d7377':'#c53030'); coPopularMeses(); document.getElementById('co-mes').value=k; })
+    .catch(function(){ coSt('Falha ao salvar a aba.','#c53030'); });
+}
+function coNomeMes(k){ var p=(k||'').split('-'); return CO_MESES[(+p[1])-1]+'/'+p[0]; }
 
 function coCarregar(){
   var id=coSheetId(document.getElementById('co-link').value);
@@ -278,6 +330,8 @@ function coBaixar(){
 
 // data padrão = hoje
 (function(){ var d=new Date(); var el=document.getElementById('co-data'); if(el) el.value=d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2); })();
+// carrega o mapa de meses -> gid e popula o seletor
+coCarregarMapa();
 
 </script>
 </body>
