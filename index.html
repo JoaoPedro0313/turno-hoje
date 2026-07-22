@@ -501,6 +501,20 @@ body.sm-collapsed .sm-side:hover .sm-group-head{justify-content:flex-start;paddi
 .stat-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
 @media(max-width:560px){ .lx{padding:18px 14px 50px} .lx-grid{grid-template-columns:1fr} .lx-hello{font-size:1.25rem} }
 </style>
+<style>
+/* Dashboard - indicadores (KPIs) */
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px;margin:20px 0 30px}
+.kpi{display:flex;align-items:center;gap:14px;background:#fff;border:1px solid #e6ebee;border-radius:14px;padding:18px;text-decoration:none;position:relative;overflow:hidden;transition:box-shadow .16s,transform .16s,border-color .16s}
+.kpi::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--kc,#0d7377)}
+.kpi:hover{box-shadow:0 8px 22px rgba(0,0,0,.08);transform:translateY(-2px);border-color:var(--kc,#0d7377)}
+.kpi-ic{width:46px;height:46px;border-radius:11px;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:var(--kbg,#eef6f5);color:var(--kc,#0d7377)}
+.kpi-ic .ti{font-size:24px;line-height:1}
+.kpi-main{display:flex;flex-direction:column;min-width:0}
+.kpi-num{font-size:1.75rem;font-weight:800;color:#1f2a35;line-height:1;letter-spacing:-.5px}
+.kpi-num.loading{color:#cbd5e1;font-size:1.3rem}
+.kpi-lbl{font-size:.74rem;font-weight:700;color:#64748b;margin-top:5px;text-transform:uppercase;letter-spacing:.4px}
+@media(max-width:560px){ .kpi-grid{grid-template-columns:1fr 1fr;gap:8px} .kpi{padding:14px} .kpi-num{font-size:1.4rem} }
+</style>
 </head>
 <body class="sm-collapsed">
 <script>try{if(localStorage.getItem("mariua_menu")==="aberto")document.body.classList.remove("sm-collapsed");}catch(e){}</script>
@@ -578,6 +592,26 @@ body.sm-collapsed .sm-side:hover .sm-group-head{justify-content:flex-start;paddi
       <div class="stat-pill"><span class="stat-dot" style="background:#e69020;"></span><span id="stat-date"></span></div>
     </div>
   </div>
+
+  <div class="kpi-grid">
+    <a class="kpi" href="turno.html" style="--kc:#0d7377;--kbg:#eef6f5">
+      <span class="kpi-ic"><i class="ti ti-clipboard-check"></i></span>
+      <span class="kpi-main"><span class="kpi-num loading" id="kpi-turnos">—</span><span class="kpi-lbl">Turnos abertos</span></span>
+    </a>
+    <a class="kpi" href="rdo.html" style="--kc:#2b6cb0;--kbg:#eaf2fb">
+      <span class="kpi-ic"><i class="ti ti-file-description"></i></span>
+      <span class="kpi-main"><span class="kpi-num loading" id="kpi-rdos">—</span><span class="kpi-lbl">RDOs lançados</span></span>
+    </a>
+    <a class="kpi" href="vencimento_cursos.html" style="--kc:#c53030;--kbg:#fdecec">
+      <span class="kpi-ic"><i class="ti ti-certificate"></i></span>
+      <span class="kpi-main"><span class="kpi-num loading" id="kpi-cursos">—</span><span class="kpi-lbl">Cursos vencidos</span></span>
+    </a>
+    <a class="kpi" href="brigada.html" style="--kc:#c05621;--kbg:#fdefe4">
+      <span class="kpi-ic"><i class="ti ti-flame"></i></span>
+      <span class="kpi-main"><span class="kpi-num loading" id="kpi-extintores">—</span><span class="kpi-lbl">Extintores a vencer</span></span>
+    </a>
+  </div>
+
   <div class="lx-sec">
     <div class="lx-sec-tit">Operação</div>
     <div class="lx-grid">
@@ -667,5 +701,21 @@ window.smGroupToggle = function(head){ var g=head.parentNode; if(g) g.classList.
 </script>
 <script src="identidade.js?v=3"></script>
 <script>window.addEventListener("load",function(){var _t=window.smToggle;if(typeof _t==="function"){window.smToggle=function(){_t();try{localStorage.setItem("mariua_menu",document.body.classList.contains("sm-collapsed")?"recolhido":"aberto");}catch(e){}};}});</script>
+<script>
+// Dashboard: carrega indicadores do Supabase
+(function(){
+  var SUPA='https://eqxejfoibebcbtsqymji.supabase.co';
+  var K='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVxeGVqZm9pYmViY2J0c3F5bWppIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE4NjUzMTEsImV4cCI6MjA4NzQ0MTMxMX0.lwf7_EJ6UchEOpzhW3cVKztxDGy78gaQblRvgiEwWh8';
+  var H={apikey:K,Authorization:'Bearer '+K};
+  function get(k){ return fetch(SUPA+'/rest/v1/turno_data?select=value&key=eq.'+k+'&limit=1',{headers:H}).then(function(r){return r.json();}).then(function(a){return (a&&a[0])?a[0].value:null;}).catch(function(){return null;}); }
+  function set(id,v){ var e=document.getElementById(id); if(e){ e.textContent=v; e.classList.remove('loading'); } }
+  var HOJE=new Date(); HOJE.setHours(0,0,0,0);
+  function dias(s){ if(!s) return null; var p=new Date(String(s)+'T00:00:00'); if(isNaN(p)) return null; return Math.round((p-HOJE)/86400000); }
+  get('turno').then(function(v){ set('kpi-turnos',(v&&Array.isArray(v.ok))?v.ok.length:0); });
+  get('rdo_atual').then(function(v){ set('kpi-rdos',(v&&v.lancou)?Object.keys(v.lancou).length:0); });
+  get('sesmt_cursos').then(function(v){ var n=0; if(v&&Array.isArray(v.dados)){ v.dados.forEach(function(p){ var c=p.certificados||{}; Object.keys(c).forEach(function(k){ var d=dias(c[k]); if(d!==null&&d<0) n++; }); }); } set('kpi-cursos',n); });
+  get('sesmt_brigada').then(function(v){ var n=0; if(v&&Array.isArray(v.dados)){ v.dados.forEach(function(d){ var a=d.recp||'',b=d.hidp||''; var prox=(a&&b)?(dias(a)<=dias(b)?a:b):(a||b||''); var dd=dias(prox); if(dd!==null&&dd<=30) n++; }); } set('kpi-extintores',n); });
+})();
+</script>
 </body>
 </html>
