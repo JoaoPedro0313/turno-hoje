@@ -100,8 +100,8 @@ body.sm-collapsed .bottom-bar{left:64px !important;}
         <a class="sm-item sm-sub" href="../mapa.html"><span class="sm-ic">🗺️</span><span class="sm-tx">Mapa</span></a>
         <a class="sm-item sm-sub" href="../prog.html"><span class="sm-ic">📅</span><span class="sm-tx">Prog. Diária</span></a>
         <a class="sm-item sm-sub" href="../comp.html"><span class="sm-ic">⚡</span><span class="sm-tx">Comparador</span></a>
-        <a class="sm-item sm-sub active" href="neoex.html"><span class="sm-ic">🧪</span><span class="sm-tx">NEOEX</span></a>
-        <a class="sm-item sm-sub" href="cadastro_obra.html"><span class="sm-ic">🏗️</span><span class="sm-tx">Cadastro de Obra</span></a>
+        <a class="sm-item sm-sub" href="neoex.html"><span class="sm-ic">🧪</span><span class="sm-tx">NEOEX</span></a>
+        <a class="sm-item sm-sub active" href="cadastro_obra.html"><span class="sm-ic">🏗️</span><span class="sm-tx">Cadastro de Obra</span></a>
       </div>
     </div>
     <div class="sm-group" data-group="sesmt">
@@ -132,96 +132,153 @@ body.sm-collapsed .bottom-bar{left:64px !important;}
 
 <div class="wrap">
 
-  <div style="background:linear-gradient(135deg,#0b5e62,#0d7377,#14a085);border-radius:14px;padding:16px 20px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
-    <div style="display:flex;align-items:center;gap:12px;">
-      <span style="font-size:1.6rem;">🧪</span>
-      <div>
-        <div style="color:#fff;font-size:1rem;font-weight:800;letter-spacing:0.5px;">NEOEX — APONTAMENTO × PLANILHA</div>
-        <div style="color:rgba(255,255,255,0.75);font-size:0.7rem;font-weight:600;margin-top:2px;">Obras, avanço de materiais (ao vivo) por B- — importe o GPM para comparar covas e postes</div>
-      </div>
-    </div>
-    <span id="neoex-base-status" style="font-size:0.7rem;font-weight:800;color:#fff;background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);padding:5px 12px;border-radius:20px;">Planilha do René: carregando…</span>
-    <span id="neoex-mat-status" style="font-size:0.7rem;font-weight:800;color:#fff;background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);padding:5px 12px;border-radius:20px;margin-left:8px;">Materiais: carregando…</span>
+  <div style="background:linear-gradient(135deg,#0b5e62,#0d7377,#14a085);border-radius:14px;padding:16px 20px;margin-bottom:14px;">
+    <div style="color:#fff;font-size:1.15rem;font-weight:800;letter-spacing:.3px;">Cadastro de Obra</div>
+    <div style="color:rgba(255,255,255,.85);font-size:.82rem;">Puxa a carteira do Google e converte para o modelo de importação (55 colunas).</div>
   </div>
 
-  <div style="background:#fff;border-radius:14px;padding:18px 20px;box-shadow:0 2px 12px rgba(0,0,0,0.08);margin-bottom:14px;">
-    <div onclick="document.getElementById('neoex-file').click()" id="neoex-drop"
-      style="border:2px dashed #c0e8e5;border-radius:12px;padding:28px 20px;text-align:center;cursor:pointer;transition:all 0.2s;background:linear-gradient(135deg,#f0fafa,#e8f7f5);">
-      <div style="font-size:2rem;margin-bottom:8px;">📥</div>
-      <div style="font-size:0.9rem;font-weight:800;color:#0d7377;">Clique para importar o relatório de GPM (.csv)</div>
-      <div style="font-size:0.72rem;font-weight:600;color:#888;margin-top:5px;">opcional — apontamento_faturamento (;) para comparar covas/postes</div>
+  <div style="background:#fff;border:1px solid #e6ecf3;border-radius:14px;padding:16px;margin-bottom:14px;">
+    <div style="font-size:.78rem;font-weight:800;color:#0d7377;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">1 · Carteira (Google Sheets)</div>
+    <label style="font-size:.72rem;font-weight:700;color:#64748b;">Link ou ID da planilha</label>
+    <input id="co-link" value="https://docs.google.com/spreadsheets/d/14ImbZb8-OCBp78jDtd0QFkSLrMG5vXA7tzrM-x6KQVo/edit?gid=1847275425" style="width:100%;padding:8px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:.8rem;margin:3px 0 8px;">
+    <div style="display:flex;gap:8px;align-items:end;flex-wrap:wrap;">
+      <div><label style="font-size:.72rem;font-weight:700;color:#64748b;">Aba (gid)</label><br><input id="co-gid" value="1847275425" style="padding:8px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:.8rem;width:150px;"></div>
+      <button onclick="coCarregar()" style="padding:9px 16px;background:#14a085;color:#fff;border:0;border-radius:8px;font-weight:800;font-size:.82rem;cursor:pointer;">Carregar carteira</button>
     </div>
-    <input type="file" id="neoex-file" accept=".csv,.txt" style="display:none;" onchange="neoexImportar(this.files[0])">
-    <div id="neoex-import-msg" style="display:none;margin-top:12px;padding:10px 14px;border-radius:10px;font-size:0.78rem;font-weight:700;text-align:center;"></div>
+    <div id="co-status" style="font-size:.76rem;font-weight:700;color:#94a3b8;margin-top:10px;"></div>
   </div>
 
-  <div id="neoex-kpis" style="display:none;gap:10px;flex-wrap:wrap;margin-bottom:14px;"></div>
-
-  <div id="neoex-content" style="display:none;">
-    <div style="background:#fff;border-radius:14px;padding:14px 18px;box-shadow:0 2px 12px rgba(0,0,0,0.08);margin-bottom:12px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
-      <input type="text" id="neoex-search" placeholder="🔍 Buscar B-, obra, município..." oninput="neoexRender()"
-        style="flex:1;min-width:220px;padding:9px 14px;border:1.5px solid #e0e8f0;border-radius:9px;font-family:'Barlow',sans-serif;font-size:0.82rem;font-weight:600;outline:none;">
-      <button id="neoex-fbtn-todos" onclick="neoexSetFiltro('todos')" style="padding:7px 14px;border-radius:8px;border:1.5px solid #0d7377;background:#0d7377;color:#fff;font-family:'Barlow',sans-serif;font-size:0.72rem;font-weight:800;cursor:pointer;">TODOS</button>
-      <button id="neoex-fbtn-div" onclick="neoexSetFiltro('div')" style="padding:7px 14px;border-radius:8px;border:1.5px solid #e2e8f0;background:#fff;color:#666;font-family:'Barlow',sans-serif;font-size:0.72rem;font-weight:800;cursor:pointer;">⚠️ COM DIFERENÇA</button>
-      <button id="neoex-fbtn-ok" onclick="neoexSetFiltro('ok')" style="padding:7px 14px;border-radius:8px;border:1.5px solid #e2e8f0;background:#fff;color:#666;font-family:'Barlow',sans-serif;font-size:0.72rem;font-weight:800;cursor:pointer;">✅ OK</button>
-      <button id="neoex-fbtn-so-gpm" onclick="neoexSetFiltro('so-gpm')" style="padding:7px 14px;border-radius:8px;border:1.5px solid #e2e8f0;background:#fff;color:#666;font-family:'Barlow',sans-serif;font-size:0.72rem;font-weight:800;cursor:pointer;">SÓ NO GPM</button>
-      <button onclick="neoexExportCSV()" style="padding:7px 14px;background:#276749;border:none;border-radius:8px;font-family:'Barlow',sans-serif;font-size:0.72rem;font-weight:800;color:#fff;cursor:pointer;">⬇️ CSV</button>
+  <div style="background:#fff;border:1px solid #e6ecf3;border-radius:14px;padding:16px;margin-bottom:14px;">
+    <div style="font-size:.78rem;font-weight:800;color:#0d7377;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">2 · Valores fixos do contrato</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;">
+      <div><label style="font-size:.7rem;font-weight:700;color:#64748b;">Contrato</label><input id="co-contrato" value="OBRAS - BA" style="width:100%;padding:7px 9px;border:1.5px solid #e2e8f0;border-radius:7px;font-size:.78rem;"></div>
+      <div><label style="font-size:.7rem;font-weight:700;color:#64748b;">Tipo de obra</label><input id="co-tipoobra" value="BA - Construção e Manutenção" style="width:100%;padding:7px 9px;border:1.5px solid #e2e8f0;border-radius:7px;font-size:.78rem;"></div>
+      <div><label style="font-size:.7rem;font-weight:700;color:#64748b;">Tipo serviço</label><input id="co-tiposervico" value="SERVICOS_RUR-BA" style="width:100%;padding:7px 9px;border:1.5px solid #e2e8f0;border-radius:7px;font-size:.78rem;"></div>
+      <div><label style="font-size:.7rem;font-weight:700;color:#64748b;">Natureza</label><input id="co-natureza" value="RURAL" style="width:100%;padding:7px 9px;border:1.5px solid #e2e8f0;border-radius:7px;font-size:.78rem;"></div>
+      <div><label style="font-size:.7rem;font-weight:700;color:#64748b;">Status</label><input id="co-statusobra" value="Em Execução" style="width:100%;padding:7px 9px;border:1.5px solid #e2e8f0;border-radius:7px;font-size:.78rem;"></div>
+      <div><label style="font-size:.7rem;font-weight:700;color:#64748b;">Obriga vistoria</label><input id="co-vistoria" value="NÃO" style="width:100%;padding:7px 9px;border:1.5px solid #e2e8f0;border-radius:7px;font-size:.78rem;"></div>
+      <div><label style="font-size:.7rem;font-weight:700;color:#64748b;">Data recebimento</label><input id="co-data" type="date" style="width:100%;padding:7px 9px;border:1.5px solid #e2e8f0;border-radius:7px;font-size:.78rem;"></div>
     </div>
+    <div style="font-size:.68rem;color:#94a3b8;margin-top:8px;">Responsável = Supervisor · Centro de serviço = "BA-" + município · Postes, latitude e longitude vêm da carteira.</div>
+  </div>
 
-    <div style="background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.08);">
-      <div style="padding:8px 16px;background:#f0fafa;border-bottom:1px solid #c0e8e5;display:flex;gap:16px;font-size:0.68rem;font-weight:700;color:#666;flex-wrap:wrap;align-items:center;">
-        <span style="display:flex;align-items:center;gap:5px;"><span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:#14a085;"></span>Bate</span>
-        <span style="display:flex;align-items:center;gap:5px;"><span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:#e53e3e;"></span>Diferença previsto × realizado</span>
-        <span style="margin-left:auto;color:#aaa;">GPM = executado no apontamento · René = planilha do mapa</span>
-      </div>
-      <div style="overflow-x:auto;">
-        <table style="width:100%;border-collapse:collapse;font-size:0.76rem;">
-          <thead>
-            <tr style="background:linear-gradient(135deg,#0b5e62,#0d7377);color:#fff;">
-              <th style="padding:10px 12px;text-align:left;font-weight:800;white-space:nowrap;">B- / OBRA</th>
-              <th style="padding:10px 8px;text-align:center;font-weight:800;white-space:nowrap;">COVAS<br><span style="font-size:0.6rem;opacity:0.7;">GPM × René</span></th>
-              <th style="padding:10px 8px;text-align:center;font-weight:800;white-space:nowrap;">POSTES<br><span style="font-size:0.6rem;opacity:0.7;">GPM × René</span></th>
-              <th style="padding:10px 8px;text-align:center;font-weight:800;white-space:nowrap;">ESTRUT.<br><span style="font-size:0.6rem;opacity:0.7;">só GPM</span></th>
-              <th style="padding:10px 8px;text-align:center;font-weight:800;white-space:nowrap;">CABO (m)<br><span style="font-size:0.6rem;opacity:0.7;">só GPM</span></th>
-              <th style="padding:10px 8px;text-align:center;font-weight:800;white-space:nowrap;">PODA<br><span style="font-size:0.6rem;opacity:0.7;">só GPM</span></th>
-              <th style="padding:10px 8px;text-align:center;font-weight:800;white-space:nowrap;">LIGAÇÃO<br><span style="font-size:0.6rem;opacity:0.7;">cliente</span></th>
-              <th style="padding:10px 10px;text-align:center;font-weight:800;white-space:nowrap;">MATERIAIS<br><span style="font-size:0.6rem;opacity:0.7;">avanço</span></th>
-            </tr>
-          </thead>
-          <tbody id="neoex-tbody"></tbody>
-        </table>
-      </div>
-      <div id="neoex-empty" style="display:none;text-align:center;padding:50px 20px;color:#aaa;">
-        <div style="font-size:2.4rem;margin-bottom:10px;">📋</div>
-        <div style="font-size:0.88rem;font-weight:600;">Carregando obras e materiais…</div>
-      </div>
+  <div style="background:#fff;border:1px solid #e6ecf3;border-radius:14px;padding:16px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px;">
+      <div style="font-size:.78rem;font-weight:800;color:#0d7377;text-transform:uppercase;letter-spacing:.5px;">3 · Prévia e exportação <span id="co-count" style="color:#94a3b8;"></span></div>
+      <button id="co-baixar" onclick="coBaixar()" disabled style="padding:9px 16px;background:#0d7377;color:#fff;border:0;border-radius:8px;font-weight:800;font-size:.82rem;cursor:pointer;opacity:.5;">⬇️ Baixar CSV (modelo)</button>
     </div>
+    <div id="co-preview" style="overflow-x:auto;font-size:.74rem;color:#94a3b8;">Carregue a carteira para ver a prévia.</div>
   </div>
 
 </div>
 
-<script>
-var SUPA_URL = 'https://eqxejfoibebcbtsqymji.supabase.co';
-var SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVxeGVqZm9pYmViY2J0c3F5bWppIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE4NjUzMTEsImV4cCI6MjA4NzQ0MTMxMX0.lwf7_EJ6UchEOpzhW3cVKztxDGy78gaQblRvgiEwWh8';
-var neoexBanco = null; // obras_base (planilha do René)
-
-// relógio
-(function(){ function t(){ var d=new Date(); var el=document.getElementById('page-time'); if(el) el.textContent=('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2); } t(); setInterval(t,15000); })();
-</script>
-<script src="neoex.js"></script>
-
-<script>
-(function(){
-  function isMobile(){return window.matchMedia('(max-width:780px)').matches;}
-  window.smToggle=function(){
-    if(isMobile()) document.body.classList.toggle('sm-expanded');
-    else document.body.classList.toggle('sm-collapsed');
-  };
-  window.smGroupToggle=function(head){
-    var g=head.parentNode; if(g) g.classList.toggle('open');
-  };
-})();
-</script>
 <script src="../identidade.js?v=3"></script>
+<script src="../filiais.js"></script>
+<script>
+var CO_HEADERS = ["Projeto*","Titulo da obra*","Municipio*","Contrato*","TIPO DE OBRA*","NATUREZA OBRAS","CENTRO SERVICO","RESPONSAVEL*","TIPO SERVICO*","DATA_RECEBIMENTO*","DATA_PREVISTO_RECEBIMENTO","OBRIGA VISTORIA","DATA_PREVISAO_INICIO","DATA_PREVISAO_FIM","PROCESSO","STATUS*","OBSERVACAO","Postes","fiscal_concessionaria","LATITUDE","LONGITUDE","MEDIDOR","SUPERVISOR","REFERENCIA","OS","ENDEREÇO","data_inicio","qtd_clientes","Bairro","CEP","Fator K","Interessado","Projeto Investimento","qtd_transformadores","qtd_extensao_bt","qtd_extensao_mt","reserva","lcl","ato_progressivo","lote","contra","descricao_orcamento","valor_orcamento_mao_obra","valor_orcamento_material","tipo_prioridade","psm_aux","sm","plano_manobra","origem","data_aceite","data_prazo_venc","data_limite_vist","valor_previsto_obra","odi","odd"];
+var CO_ROWS = [];
+
+function coSt(t,cor){ var el=document.getElementById('co-status'); if(el){ el.textContent=t; el.style.color=cor||'#94a3b8'; } }
+function coSheetId(link){ var m=(link||'').match(/\/d\/([a-zA-Z0-9_-]{20,})/); return m?m[1]:(link||'').trim(); }
+function coGid(){ var g=(document.getElementById('co-gid').value||'').trim(); if(g) return g; var m=(document.getElementById('co-link').value||'').match(/[?#&]gid=(\d+)/); return m?m[1]:'0'; }
+
+// parser CSV robusto
+function coParseCSV(text){
+  var rows=[],i=0,f='',row=[],q=false;
+  while(i<text.length){
+    var c=text[i];
+    if(q){ if(c==='"'){ if(text[i+1]==='"'){f+='"';i+=2;continue;} q=false;i++;continue;} f+=c;i++;continue; }
+    if(c==='"'){q=true;i++;continue;}
+    if(c===','){row.push(f);f='';i++;continue;}
+    if(c==='\n'){row.push(f);rows.push(row);row=[];f='';i++;continue;}
+    if(c==='\r'){i++;continue;}
+    f+=c;i++;
+  }
+  if(f.length||row.length){row.push(f);rows.push(row);}
+  return rows;
+}
+function coNorm(s){ return (s||'').toString().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase().replace(/\s+/g,' '); }
+
+function coCarregar(){
+  var id=coSheetId(document.getElementById('co-link').value);
+  if(!id){ coSt('Informe o link ou ID da planilha.','#c53030'); return; }
+  var url='https://docs.google.com/spreadsheets/d/'+id+'/gviz/tq?tqx=out:csv&gid='+coGid();
+  coSt('Carregando carteira do Google...');
+  fetch(url).then(function(r){ if(!r.ok) throw new Error('HTTP '+r.status); return r.text(); })
+  .then(function(txt){
+    var rows=coParseCSV(txt);
+    // acha a linha de cabeçalho (contém PEP OBRA e TÍTULO/MUNICIPIO)
+    var hi=-1;
+    for(var k=0;k<Math.min(rows.length,15);k++){
+      var lin=rows[k].map(coNorm);
+      if(lin.indexOf('PEP OBRA')>=0 || (lin.indexOf('TITULO')>=0 && lin.indexOf('MUNICIPIO')>=0)){ hi=k; break; }
+    }
+    if(hi<0){ coSt('❌ Não encontrei o cabeçalho da carteira (PEP OBRA / TÍTULO / MUNICIPIO). Confira a aba (gid) e se a planilha está compartilhada como "qualquer pessoa com o link".','#c53030'); return; }
+    var hdr=rows[hi].map(coNorm);
+    function col(nomes){ for(var n=0;n<nomes.length;n++){ var idx=hdr.indexOf(nomes[n]); if(idx>=0) return idx; } return -1; }
+    var cPep=col(['PEP OBRA','PEP']), cTit=col(['TITULO']), cMun=col(['MUNICIPIO']), cSup=col(['SUPERVISOR']),
+        cPost=col(['POSTES PREVISTOS','POSTES']), cLat=col(['LATITUDE']), cLon=col(['LONGITUDE']), cStat=col(['STATUS DA OBRA','STATUS']);
+    if(cPep<0){ coSt('❌ Coluna PEP OBRA não encontrada.','#c53030'); return; }
+
+    var out=[];
+    for(var r=hi+1;r<rows.length;r++){
+      var row=rows[r]; if(!row) continue;
+      var pep=(row[cPep]||'').trim();
+      if(!/^[A-Za-z]-?\d{3,}/.test(pep)) continue; // só linhas de obra (B-1234567)
+      var mun=(cMun>=0?(row[cMun]||''):'').trim();
+      var reg={};
+      reg['Projeto*']=pep;
+      reg['Titulo da obra*']=(cTit>=0?(row[cTit]||''):'').trim();
+      reg['Municipio*']=mun;
+      reg['Contrato*']=document.getElementById('co-contrato').value.trim();
+      reg['TIPO DE OBRA*']=document.getElementById('co-tipoobra').value.trim();
+      reg['NATUREZA OBRAS']=document.getElementById('co-natureza').value.trim();
+      reg['CENTRO SERVICO']=mun?('BA-'+mun.toUpperCase()):'';
+      reg['RESPONSAVEL*']=(cSup>=0?(row[cSup]||''):'').split(' - ')[0].trim();
+      reg['TIPO SERVICO*']=document.getElementById('co-tiposervico').value.trim();
+      reg['DATA_RECEBIMENTO*']=coDataBR();
+      reg['OBRIGA VISTORIA']=document.getElementById('co-vistoria').value.trim();
+      reg['STATUS*']=((cStat>=0 && (row[cStat]||'').trim()) ? row[cStat].trim() : document.getElementById('co-statusobra').value.trim());
+      reg['Postes']=(cPost>=0?(row[cPost]||''):'').trim();
+      reg['LATITUDE']=(cLat>=0?(row[cLat]||''):'').trim().replace('.',',');
+      reg['LONGITUDE']=(cLon>=0?(row[cLon]||''):'').trim().replace('.',',');
+      reg['SUPERVISOR']=(cSup>=0?(row[cSup]||''):'').split(' - ')[0].trim();
+      out.push(reg);
+    }
+    CO_ROWS=out;
+    coSt('✅ '+out.length+' obras carregadas da carteira e mapeadas para o modelo.','#0d7377');
+    document.getElementById('co-count').textContent='· '+out.length+' obras';
+    var b=document.getElementById('co-baixar'); b.disabled=false; b.style.opacity='1';
+    coPreview();
+  })
+  .catch(function(e){ coSt('❌ Falha ao carregar: '+e.message+'. Verifique se a planilha está compartilhada (qualquer pessoa com o link pode ver) e se o gid está correto.','#c53030'); });
+}
+
+function coDataBR(){ var v=document.getElementById('co-data').value; if(v){ var p=v.split('-'); return p[2]+'/'+p[1]+'/'+p[0]; } var d=new Date(); return ('0'+d.getDate()).slice(-2)+'/'+('0'+(d.getMonth()+1)).slice(-2)+'/'+d.getFullYear(); }
+
+function coPreview(){
+  var cols=['Projeto*','Titulo da obra*','Municipio*','RESPONSAVEL*','CENTRO SERVICO','Postes','LATITUDE','LONGITUDE','STATUS*'];
+  var h='<table style="width:100%;border-collapse:collapse;font-size:.72rem;color:#334155;"><thead><tr style="background:#f0fafa;color:#0d7377;">'+cols.map(function(c){return '<th style="text-align:left;padding:6px 8px;white-space:nowrap;">'+c+'</th>';}).join('')+'</tr></thead><tbody>';
+  CO_ROWS.slice(0,25).forEach(function(reg){ h+='<tr style="border-bottom:1px solid #eef2f7;">'+cols.map(function(c){return '<td style="padding:6px 8px;white-space:nowrap;">'+(reg[c]||'').replace(/</g,'&lt;')+'</td>';}).join('')+'</tr>'; });
+  h+='</tbody></table>';
+  if(CO_ROWS.length>25) h+='<div style="font-size:.7rem;color:#94a3b8;margin-top:6px;">Mostrando 25 de '+CO_ROWS.length+' — o CSV terá todas.</div>';
+  document.getElementById('co-preview').innerHTML=h;
+}
+
+function coBaixar(){
+  if(!CO_ROWS.length) return;
+  var sep=';';
+  var linhas=[CO_HEADERS.join(sep)];
+  CO_ROWS.forEach(function(reg){
+    linhas.push(CO_HEADERS.map(function(h){ var v=(reg[h]==null?'':String(reg[h])); if(v.indexOf(sep)>=0||v.indexOf('"')>=0||v.indexOf('\n')>=0){ v='"'+v.replace(/"/g,'""')+'"'; } return v; }).join(sep));
+  });
+  var blob=new Blob(['\ufeff'+linhas.join('\r\n')],{type:'text/csv;charset=utf-8'});
+  var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='importar_obras_'+coGid()+'.csv'; a.click();
+}
+
+// data padrão = hoje
+(function(){ var d=new Date(); var el=document.getElementById('co-data'); if(el) el.value=d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2); })();
+
+</script>
 </body>
 </html>
