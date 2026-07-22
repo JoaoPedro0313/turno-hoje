@@ -279,7 +279,9 @@ function coSelecionarBase(id){
   var d=coBaseObj();
   document.getElementById('co-link').value=d.link||'';
   coPopularBases(); coPopularMeses();
-  coSt('Base '+coNomeBase(id)+' selecionada. Escolha o mês.','#64748b');
+  var k=coMesKey(); var gid=(d.meses||{})[k];
+  if(gid){ document.getElementById('co-gid').value=gid; coCarregar(); }
+  else { coSt('Base '+coNomeBase(id)+' selecionada. Escolha o mês.','#64748b'); }
 }
 function coNomeBase(id){ for(var i=0;i<CO_BASES.length;i++){ if(CO_BASES[i].id===id) return CO_BASES[i].nome; } return id; }
 
