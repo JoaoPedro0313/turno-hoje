@@ -227,6 +227,11 @@ body.sm-collapsed .sm-side:hover .sm-top{justify-content:flex-start;padding:12px
 body.sm-collapsed .sm-side:hover .sm-item{justify-content:flex-start;padding:9px 11px}
 body.sm-collapsed .sm-side:hover .sm-group-head{justify-content:flex-start;padding:9px 11px}
 </style>
+<style>
+/* mapa: menu lateral acima das camadas do Leaflet, inclusive ao expandir no hover */
+.sm-side{z-index:1300}
+body.sm-collapsed .sm-side:hover{z-index:1300}
+</style>
 </head>
 <body class="sm-collapsed">
 
