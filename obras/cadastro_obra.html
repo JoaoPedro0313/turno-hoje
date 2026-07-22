@@ -138,20 +138,25 @@ body.sm-collapsed .bottom-bar{left:64px !important;}
   </div>
 
   <div style="background:#fff;border:1px solid #e6ecf3;border-radius:14px;padding:16px;margin-bottom:14px;">
-    <div style="font-size:.78rem;font-weight:800;color:#0d7377;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">1 · Carteira (Google Sheets)</div>
-    <label style="font-size:.72rem;font-weight:700;color:#64748b;">Link ou ID da planilha</label>
-    <input id="co-link" value="https://docs.google.com/spreadsheets/d/14ImbZb8-OCBp78jDtd0QFkSLrMG5vXA7tzrM-x6KQVo/edit?gid=1847275425" style="width:100%;padding:8px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:.8rem;margin:3px 0 8px;">
-    <div style="display:flex;gap:8px;align-items:end;flex-wrap:wrap;">
-      <div>
-        <label style="font-size:.72rem;font-weight:700;color:#64748b;">Mês</label><br>
-        <select id="co-mes" onchange="coMesMudou()" style="padding:8px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:.8rem;min-width:150px;"></select>
-      </div>
-      <div><label style="font-size:.72rem;font-weight:700;color:#64748b;">Aba (gid)</label><br><input id="co-gid" value="1847275425" style="padding:8px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:.8rem;width:130px;"></div>
-      <button onclick="coSalvarAba()" title="Salvar o gid como a aba deste mês" style="padding:9px 12px;background:#eef4f4;color:#0d7377;border:1px solid #cfe3e2;border-radius:8px;font-weight:800;font-size:.78rem;cursor:pointer;">💾 Salvar aba do mês</button>
-      <button onclick="coCarregar()" style="padding:9px 16px;background:#14a085;color:#fff;border:0;border-radius:8px;font-weight:800;font-size:.82rem;cursor:pointer;">Carregar carteira</button>
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:12px;">
+      <div style="font-size:.78rem;font-weight:800;color:#0d7377;text-transform:uppercase;letter-spacing:.5px;">1 · Carteira — escolha o mês</div>
+      <button onclick="coToggleConfig()" style="font-size:.72rem;font-weight:700;color:#64748b;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:8px;padding:5px 10px;cursor:pointer;">⚙️ Configurar abas</button>
     </div>
-    <div style="font-size:.68rem;color:#94a3b8;margin-top:6px;">Dica: abra a aba do mês na planilha, copie o número do <code>gid</code> da URL, cole aqui e clique em "Salvar aba do mês". Fica salvo — depois é só escolher o mês.</div>
-    <div id="co-status" style="font-size:.76rem;font-weight:700;color:#94a3b8;margin-top:10px;"></div>
+
+    <input type="hidden" id="co-mes">
+    <div id="co-mes-btns" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
+
+    <div id="co-config" style="display:none;margin-top:14px;padding-top:12px;border-top:1px dashed #e6ecf3;">
+      <label style="font-size:.72rem;font-weight:700;color:#64748b;">Link ou ID da planilha</label>
+      <input id="co-link" value="https://docs.google.com/spreadsheets/d/14ImbZb8-OCBp78jDtd0QFkSLrMG5vXA7tzrM-x6KQVo/edit?gid=1847275425" style="width:100%;padding:8px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:.8rem;margin:3px 0 8px;">
+      <div style="display:flex;gap:8px;align-items:end;flex-wrap:wrap;">
+        <div><label style="font-size:.72rem;font-weight:700;color:#64748b;">Aba (gid) do mês selecionado</label><br><input id="co-gid" style="padding:8px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:.8rem;width:150px;"></div>
+        <button onclick="coSalvarAba()" style="padding:9px 12px;background:#eef4f4;color:#0d7377;border:1px solid #cfe3e2;border-radius:8px;font-weight:800;font-size:.78rem;cursor:pointer;">💾 Salvar aba do mês</button>
+      </div>
+      <div style="font-size:.68rem;color:#94a3b8;margin-top:6px;">Abra a aba do mês na planilha, copie o número do <code>gid</code> da URL, cole aqui e salve. Fica salvo — depois é só clicar no botão do mês.</div>
+    </div>
+
+    <div id="co-status" style="font-size:.76rem;font-weight:700;color:#94a3b8;margin-top:12px;"></div>
   </div>
 
   <div style="background:#fff;border:1px solid #e6ecf3;border-radius:14px;padding:16px;margin-bottom:14px;">
@@ -214,20 +219,33 @@ var CO_ANO=2026;
 var CO_MAP={};  // 'YYYY-MM' -> gid
 
 function coMesKey(){ return document.getElementById('co-mes').value; }
+function coToggleConfig(){ var c=document.getElementById('co-config'); c.style.display = c.style.display==='none' ? 'block' : 'none'; }
 function coPopularMeses(){
-  var sel=document.getElementById('co-mes'); if(!sel) return;
-  var hoje=new Date(); var atual=CO_ANO+'-'+('0'+(hoje.getMonth()+1)).slice(-2);
-  sel.innerHTML=CO_MESES.map(function(nome,i){
+  var box=document.getElementById('co-mes-btns'); if(!box) return;
+  var sel=coMesKey();
+  if(!sel){ var hoje=new Date(); sel=CO_ANO+'-'+('0'+(hoje.getMonth()+1)).slice(-2); document.getElementById('co-mes').value=sel; }
+  box.innerHTML=CO_MESES.map(function(nome,i){
     var k=CO_ANO+'-'+('0'+(i+1)).slice(-2);
-    var tem=CO_MAP[k]?' ✓':'';
-    return '<option value="'+k+'"'+(k===atual?' selected':'')+'>'+nome+'/'+CO_ANO+tem+'</option>';
+    var tem=!!CO_MAP[k];
+    var ativo=(k===sel);
+    var bg=ativo?'#0d7377':(tem?'#eef4f4':'#f8fafc');
+    var cor=ativo?'#fff':(tem?'#0d7377':'#94a3b8');
+    var bd=ativo?'#0d7377':(tem?'#cfe3e2':'#e6ecf3');
+    return '<button onclick="coSelecionarMes(\''+k+'\')" style="padding:8px 12px;border-radius:9px;border:1.5px solid '+bd+';background:'+bg+';color:'+cor+';font-family:inherit;font-weight:800;font-size:.78rem;cursor:pointer;display:flex;align-items:center;gap:5px;">'
+      + nome.slice(0,3)
+      + (tem?'<span style="width:6px;height:6px;border-radius:50%;background:'+(ativo?'#7ff0d0':'#14a085')+';display:inline-block;"></span>':'')
+      + '</button>';
   }).join('');
 }
-function coMesMudou(){
-  var k=coMesKey(); var gid=CO_MAP[k]||'';
+function coSelecionarMes(k){
+  document.getElementById('co-mes').value=k;
+  var gid=CO_MAP[k]||'';
   document.getElementById('co-gid').value=gid;
-  if(gid){ coCarregar(); } else { coSt('Este mês ainda não tem aba salva. Cole o gid da aba e clique em "Salvar aba do mês".','#b9821c'); }
+  coPopularMeses();
+  if(gid){ coCarregar(); }
+  else { coSt('O mês de '+coNomeMes(k)+' ainda não tem aba configurada. Clique em "⚙️ Configurar abas", cole o gid e salve.','#b9821c'); document.getElementById('co-config').style.display='block'; }
 }
+function coMesMudou(){ coSelecionarMes(coMesKey()); }
 function coCarregarMapa(){
   return fetch(CO_SUPA+'/rest/v1/turno_data?select=value&key=eq.cadastro_obra_meses&limit=1',{headers:{apikey:CO_KEY,Authorization:'Bearer '+CO_KEY}})
     .then(function(r){return r.ok?r.json():[];})
