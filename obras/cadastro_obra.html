@@ -339,23 +339,30 @@ function coSalvarAba(){
 }
 function coNomeMes(k){ var p=(k||'').split('-'); return CO_MESES[(+p[1])-1]+'/'+p[0]; }
 
+var CO_CACHE={};      // 'id|gid' -> texto CSV bruto (evita rebuscar)
+var CO_LAST_TXT=null; // último CSV carregado (pra re-mapear ao mudar estado)
 function coCarregar(){
   var id=coSheetId(document.getElementById('co-link').value);
   if(!id){ coSt('Informe o link ou ID da planilha.','#c53030'); return; }
   var gid=coGid();
+  var ck=id+'|'+gid;
+  if(CO_CACHE[ck]){ coProcessar(CO_CACHE[ck]); return; }  // instantâneo (já em cache)
   var urlExport='https://docs.google.com/spreadsheets/d/'+id+'/export?format=csv&gid='+gid;
   var urlGviz='https://docs.google.com/spreadsheets/d/'+id+'/gviz/tq?tqx=out:csv&gid='+gid+'&headers=0';
   coSt('Carregando carteira do Google...');
   // 1) tenta o export bruto (grade exata); 2) se falhar (CORS/erro), tenta o gviz
   fetch(urlExport).then(function(r){ if(!r.ok) throw new Error('export HTTP '+r.status); return r.text(); })
-    .then(function(txt){ coProcessar(txt); })
+    .then(function(txt){ CO_CACHE[ck]=txt; coProcessar(txt); })
     .catch(function(){
       fetch(urlGviz).then(function(r){ if(!r.ok) throw new Error('gviz HTTP '+r.status); return r.text(); })
-        .then(function(txt){ coProcessar(txt); })
+        .then(function(txt){ CO_CACHE[ck]=txt; coProcessar(txt); })
         .catch(function(e){ coSt('❌ Falha ao carregar: '+e.message+'. Verifique se a planilha está compartilhada (qualquer pessoa com o link pode ver) e se o gid está correto.','#c53030'); });
     });
 }
+// re-mapeia com os valores fixos atuais, sem rebuscar (usado ao trocar o estado)
+function coRemapear(){ if(CO_LAST_TXT) coProcessar(CO_LAST_TXT); }
 function coProcessar(txt){
+    CO_LAST_TXT=txt;
     var rows=coParseCSV(txt);
     // acha a linha de cabeçalho (contém PEP OBRA e TÍTULO/MUNICIPIO)
     var hi=-1;
