@@ -431,13 +431,14 @@
 
   /* ─── RESPONSIVE ─── */
   @media (max-width: 960px) {
-    body { padding-left: 64px; }
+    body { padding-left: 232px; }
+    body.sm-collapsed { padding-left: 64px; }
     .sm-logo-tx, .sm-tx, .sm-foot, .sm-arrow { display: none; }
     .sm-group-items{display:flex!important;padding:0;margin:0;border:none}
     .sm-group-head{justify-content:center;padding:9px 0}
     .sm-top { justify-content: center; padding: 12px 0; }
     .sm-item { justify-content: center; padding: 9px 0; }
-    .sm-side { width: 64px; }
+    body.sm-collapsed .sm-side { width: 64px; }
     .radial-wrapper { width: 520px; height: 520px; }
     .orbit-ring { width: 390px; height: 390px; }
     .orbit-ring-inner { width: 265px; height: 265px; }
@@ -478,6 +479,7 @@ body.sm-collapsed .sm-side:hover .sm-group-head{justify-content:flex-start;paddi
 </style>
 </head>
 <body class="sm-collapsed">
+<script>try{if(localStorage.getItem("mariua_menu")==="aberto")document.body.classList.remove("sm-collapsed");}catch(e){}</script>
 
 <!-- TOP BAR -->
 <div class="top-bar">
@@ -699,5 +701,6 @@ window.smGroupToggle = function(head){ var g=head.parentNode; if(g) g.classList.
 })();
 </script>
 <script src="identidade.js?v=3"></script>
+<script>window.addEventListener("load",function(){var _t=window.smToggle;if(typeof _t==="function"){window.smToggle=function(){_t();try{localStorage.setItem("mariua_menu",document.body.classList.contains("sm-collapsed")?"recolhido":"aberto");}catch(e){}};}});</script>
 </body>
 </html>

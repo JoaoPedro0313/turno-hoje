@@ -285,6 +285,7 @@ body.sm-collapsed .sm-side:hover .sm-group-head{justify-content:flex-start;paddi
 </style>
 </head>
 <body class="sm-collapsed">
+<script>try{if(localStorage.getItem("mariua_menu")==="aberto")document.body.classList.remove("sm-collapsed");}catch(e){}</script>
 
 <style>.page-nav a.page-nav-btn{text-decoration:none;}</style>
 <script>
@@ -5703,7 +5704,8 @@ setTimeout(presenceInit, 1500);
       + freqHtml
       + '</div>'
       + '<div style="text-align:center;padding:16px;font-size:0.65rem;color:#aaa;font-weight:600;">Mariuá Construção e Energia · Sistema de Obras</div>'
-      + '</body></html>';
+      + '<script>window.addEventListener("load",function(){var _t=window.smToggle;if(typeof _t==="function"){window.smToggle=function(){_t();try{localStorage.setItem("mariua_menu",document.body.classList.contains("sm-collapsed")?"recolhido":"aberto");}catch(e){}};}});</script>
+</body></html>';
 
     const w = window.open('', '_blank', 'width=900,height=700');
     if (w) {

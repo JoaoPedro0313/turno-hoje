@@ -234,6 +234,7 @@ body.sm-collapsed .sm-side:hover{z-index:1300}
 </style>
 </head>
 <body class="sm-collapsed">
+<script>try{if(localStorage.getItem("mariua_menu")==="aberto")document.body.classList.remove("sm-collapsed");}catch(e){}</script>
 
 <div class="top-bar">
   <div class="top-bar-inner">
@@ -6749,6 +6750,7 @@ setTimeout(presenceInit, 1500);
 })();
 </script>
 <script src="identidade.js?v=3"></script>
+<script>window.addEventListener("load",function(){var _t=window.smToggle;if(typeof _t==="function"){window.smToggle=function(){_t();try{localStorage.setItem("mariua_menu",document.body.classList.contains("sm-collapsed")?"recolhido":"aberto");}catch(e){}};}});</script>
 </body>
 </html>
 <script>
