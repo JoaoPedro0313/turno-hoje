@@ -167,6 +167,9 @@ body.sm-collapsed .bottom-bar{left:64px !important;}
 
   <div style="background:#fff;border:1px solid #e6ecf3;border-radius:14px;padding:16px;margin-bottom:14px;">
     <div style="font-size:.78rem;font-weight:800;color:#0d7377;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">2 · Valores fixos do contrato</div>
+    <input type="hidden" id="co-estado" value="ba">
+    <div style="font-size:.68rem;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px;">Estado</div>
+    <div id="co-estado-btns" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;"></div>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;">
       <div><label style="font-size:.7rem;font-weight:700;color:#64748b;">Contrato</label><input id="co-contrato" value="OBRAS - BA" style="width:100%;padding:7px 9px;border:1.5px solid #e2e8f0;border-radius:7px;font-size:.78rem;"></div>
       <div><label style="font-size:.7rem;font-weight:700;color:#64748b;">Tipo de obra</label><input id="co-tipoobra" value="BA - Construção e Manutenção" style="width:100%;padding:7px 9px;border:1.5px solid #e2e8f0;border-radius:7px;font-size:.78rem;"></div>
@@ -194,6 +197,33 @@ body.sm-collapsed .bottom-bar{left:64px !important;}
 <script>
 var CO_HEADERS = ["Projeto*","Titulo da obra*","Municipio*","Contrato*","TIPO DE OBRA*","NATUREZA OBRAS","CENTRO SERVICO","RESPONSAVEL*","TIPO SERVICO*","DATA_RECEBIMENTO*","DATA_PREVISTO_RECEBIMENTO","OBRIGA VISTORIA","DATA_PREVISAO_INICIO","DATA_PREVISAO_FIM","PROCESSO","STATUS*","OBSERVACAO","Postes","fiscal_concessionaria","LATITUDE","LONGITUDE","MEDIDOR","SUPERVISOR","REFERENCIA","OS","ENDEREÇO","data_inicio","qtd_clientes","Bairro","CEP","Fator K","Interessado","Projeto Investimento","qtd_transformadores","qtd_extensao_bt","qtd_extensao_mt","reserva","lcl","ato_progressivo","lote","contra","descricao_orcamento","valor_orcamento_mao_obra","valor_orcamento_material","tipo_prioridade","psm_aux","sm","plano_manobra","origem","data_aceite","data_prazo_venc","data_limite_vist","valor_previsto_obra","odi","odd"];
 var CO_ROWS = [];
+
+// ===== estado -> valores fixos do contrato =====
+var CO_ESTADO_DEF={
+  ba:{sigla:'BA', nome:'Bahia',   contrato:'OBRAS - BA',    tipoObra:'BA - Construção e Manutenção', tipoServico:'SERVICOS_RUR-BA'},
+  mg:{sigla:'MG', nome:'Minas',   contrato:'CON_MANUT-MG',  tipoObra:'',                              tipoServico:''},
+  se:{sigla:'SE', nome:'Sergipe', contrato:'OBRAS-SE',      tipoObra:'SE_PROCESSO',                   tipoServico:'SERVICOS_RDU-SE'}
+};
+function coEstado(){ return document.getElementById('co-estado').value || 'ba'; }
+function coPopularEstados(){
+  var box=document.getElementById('co-estado-btns'); if(!box) return;
+  var sel=coEstado();
+  box.innerHTML=Object.keys(CO_ESTADO_DEF).map(function(uf){
+    var d=CO_ESTADO_DEF[uf], ativo=(uf===sel);
+    var bg=ativo?'#0d7377':'#f8fafc', cor=ativo?'#fff':'#0d7377', bd=ativo?'#0d7377':'#cfe3e2';
+    return '<button onclick="coSelecionarEstado(\''+uf+'\')" style="padding:8px 16px;border-radius:9px;border:1.5px solid '+bd+';background:'+bg+';color:'+cor+';font-family:inherit;font-weight:800;font-size:.78rem;cursor:pointer;">'+d.sigla+' — '+d.nome+'</button>';
+  }).join('');
+}
+function coSelecionarEstado(uf){
+  document.getElementById('co-estado').value=uf;
+  var d=CO_ESTADO_DEF[uf];
+  document.getElementById('co-contrato').value=d.contrato;
+  document.getElementById('co-tipoobra').value=d.tipoObra;
+  document.getElementById('co-tiposervico').value=d.tipoServico;
+  coPopularEstados();
+  // se já houver obras carregadas, re-mapeia pra atualizar o centro de serviço
+  if(CO_ROWS.length && typeof coRemapear==='function') coRemapear();
+}
 
 function coSt(t,cor){ var el=document.getElementById('co-status'); if(el){ el.textContent=t; el.style.color=cor||'#94a3b8'; } }
 function coSheetId(link){ var m=(link||'').match(/\/d\/([a-zA-Z0-9_-]{20,})/); return m?m[1]:(link||'').trim(); }
@@ -353,7 +383,7 @@ function coProcessar(txt){
       reg['Contrato*']=document.getElementById('co-contrato').value.trim();
       reg['TIPO DE OBRA*']=document.getElementById('co-tipoobra').value.trim();
       reg['NATUREZA OBRAS']=document.getElementById('co-natureza').value.trim();
-      reg['CENTRO SERVICO']=mun?('BA-'+mun.toUpperCase()):'';
+      reg['CENTRO SERVICO']=mun?(CO_ESTADO_DEF[coEstado()].sigla+'-'+mun.toUpperCase()):'';
       reg['RESPONSAVEL*']=(cSup>=0?(row[cSup]||''):'').split(' - ')[0].trim();
       reg['TIPO SERVICO*']=document.getElementById('co-tiposervico').value.trim();
       reg['DATA_RECEBIMENTO*']=coDataBR();
@@ -399,7 +429,8 @@ function coBaixar(){
 
 // data padrão = hoje
 (function(){ var d=new Date(); var el=document.getElementById('co-data'); if(el) el.value=d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2); })();
-// carrega o mapa de meses -> gid e popula o seletor
+// estados + mapa de bases/meses
+coPopularEstados();
 coCarregarMapa();
 
 </script>
