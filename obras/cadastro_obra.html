@@ -308,10 +308,20 @@ function coNomeMes(k){ var p=(k||'').split('-'); return CO_MESES[(+p[1])-1]+'/'+
 function coCarregar(){
   var id=coSheetId(document.getElementById('co-link').value);
   if(!id){ coSt('Informe o link ou ID da planilha.','#c53030'); return; }
-  var url='https://docs.google.com/spreadsheets/d/'+id+'/gviz/tq?tqx=out:csv&gid='+coGid();
+  var gid=coGid();
+  var urlExport='https://docs.google.com/spreadsheets/d/'+id+'/export?format=csv&gid='+gid;
+  var urlGviz='https://docs.google.com/spreadsheets/d/'+id+'/gviz/tq?tqx=out:csv&gid='+gid+'&headers=0';
   coSt('Carregando carteira do Google...');
-  fetch(url).then(function(r){ if(!r.ok) throw new Error('HTTP '+r.status); return r.text(); })
-  .then(function(txt){
+  // 1) tenta o export bruto (grade exata); 2) se falhar (CORS/erro), tenta o gviz
+  fetch(urlExport).then(function(r){ if(!r.ok) throw new Error('export HTTP '+r.status); return r.text(); })
+    .then(function(txt){ coProcessar(txt); })
+    .catch(function(){
+      fetch(urlGviz).then(function(r){ if(!r.ok) throw new Error('gviz HTTP '+r.status); return r.text(); })
+        .then(function(txt){ coProcessar(txt); })
+        .catch(function(e){ coSt('❌ Falha ao carregar: '+e.message+'. Verifique se a planilha está compartilhada (qualquer pessoa com o link pode ver) e se o gid está correto.','#c53030'); });
+    });
+}
+function coProcessar(txt){
     var rows=coParseCSV(txt);
     // acha a linha de cabeçalho (contém PEP OBRA e TÍTULO/MUNICIPIO)
     var hi=-1;
@@ -361,8 +371,6 @@ function coCarregar(){
     document.getElementById('co-count').textContent='· '+out.length+' obras';
     var b=document.getElementById('co-baixar'); b.disabled=false; b.style.opacity='1';
     coPreview();
-  })
-  .catch(function(e){ coSt('❌ Falha ao carregar: '+e.message+'. Verifique se a planilha está compartilhada (qualquer pessoa com o link pode ver) e se o gid está correto.','#c53030'); });
 }
 
 function coDataBR(){ var v=document.getElementById('co-data').value; if(v){ var p=v.split('-'); return p[2]+'/'+p[1]+'/'+p[0]; } var d=new Date(); return ('0'+d.getDate()).slice(-2)+'/'+('0'+(d.getMonth()+1)).slice(-2)+'/'+d.getFullYear(); }
