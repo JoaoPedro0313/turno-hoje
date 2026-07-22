@@ -238,6 +238,8 @@ body.sm-collapsed .bottom-bar{left:64px !important;}
   .bottom-bar,body.sm-collapsed .bottom-bar{left:64px !important;}
 }
 </style>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.47.0/tabler-icons.min.css">
+  <style>.sm-ic .ti{font-size:19px;line-height:1}</style>
 </head>
 
 <style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Barlow',sans-serif;background:#f0f4f5;min-height:100vh;padding-bottom:80px;padding-top:100px}.db-badge{display:inline-flex;align-items:center;gap:5px;font-size:0.7rem;font-weight:800;padding:4px 10px;border-radius:6px;letter-spacing:0.5px;position:relative;border:1px solid rgba(255,255,255,0.3)}.db-badge.offline{background:rgba(229,62,62,0.3);color:#ffc0c0}.db-badge.online{background:rgba(45,184,100,0.3);color:#b0ffd0}.db-badge.local{background:rgba(45,184,100,0.15);color:#9ae6b4}.db-badge.syncing{background:rgba(240,165,0,0.3);color:#ffe9a0}.db-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}.db-badge.offline .db-dot{background:#e53e3e}.db-badge.online .db-dot{background:#14a085;box-shadow:0 0 6px #14a085}.db-badge.syncing .db-dot{background:#f0a500;animation:blink 1s infinite}.db-badge.local .db-dot{background:#38a169}@keyframes blink{0%,100%{opacity:1}50%{opacity:0.3}}.presence-btn{display:inline-flex;align-items:center;gap:6px;font-size:0.7rem;font-weight:800;padding:4px 10px;border-radius:6px;letter-spacing:0.5px;margin-left:6px;position:relative;background:rgba(45,184,100,0.2);color:#b0ffd0;border:1px solid rgba(255,255,255,0.3);cursor:pointer;transition:all 0.2s}.presence-btn:hover{background:rgba(45,184,100,0.35)}.presence-dot{width:7px;height:7px;border-radius:50%;background:#38d996;box-shadow:0 0 6px #38d996;flex-shrink:0;animation:blink 2s infinite}.presence-modal{display:none;position:fixed;inset:0;background:rgba(10,20,30,0.65);z-index:300;align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(4px)}.presence-modal.open{display:flex}.presence-box{background:#fff;border-radius:20px;width:100%;max-width:520px;box-shadow:0 32px 80px rgba(0,0,0,0.25);overflow:hidden;max-height:90vh;display:flex;flex-direction:column}.presence-header{background:linear-gradient(135deg,#0b5e62,#14a085);padding:18px 24px;display:flex;align-items:center;justify-content:space-between}.presence-body{overflow-y:auto;padding:20px 24px}.presence-user-row{display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:10px;margin-bottom:6px;background:#f0fafa;border:1px solid #c0e8e5;transition:all 0.15s}.presence-user-row.me{background:#f0fff4;border-color:#c6f6d5}.presence-avatar{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#0d7377,#14a085);color:#fff;font-size:0.9rem;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0}
@@ -1201,39 +1203,39 @@ function rdoFoto() {
 <aside class="sm-side">
   <div class="sm-toggle"><button type="button" onclick="smToggle()" title="Recolher / expandir">↔</button></div>
     <nav class="sm-nav">
-    <a class="sm-item" href="index.html"><span class="sm-ic">🏠</span><span class="sm-tx">Início</span></a>
+    <a class="sm-item" href="index.html"><span class="sm-ic"><i class="ti ti-home"></i></span><span class="sm-tx">Início</span></a>
     <div class="sm-group" data-group="obras">
-      <div class="sm-group-head" onclick="smGroupToggle(this)"><span class="sm-ic">📋</span><span class="sm-tx">Obras</span><span class="sm-arrow">▸</span></div>
+      <div class="sm-group-head" onclick="smGroupToggle(this)"><span class="sm-ic"><i class="ti ti-briefcase"></i></span><span class="sm-tx">Obras</span><span class="sm-arrow">▸</span></div>
       <div class="sm-group-items">
-        <a class="sm-item sm-sub" href="turno.html"><span class="sm-ic">📋</span><span class="sm-tx">Turno</span></a>
-        <a class="sm-item sm-sub" href="rdo.html"><span class="sm-ic">📊</span><span class="sm-tx">RDO</span></a>
-        <a class="sm-item sm-sub" href="mapa.html"><span class="sm-ic">🗺️</span><span class="sm-tx">Mapa</span></a>
-        <a class="sm-item sm-sub" href="prog.html"><span class="sm-ic">📅</span><span class="sm-tx">Prog. Diária</span></a>
-        <a class="sm-item sm-sub" href="comp.html"><span class="sm-ic">⚡</span><span class="sm-tx">Comparador</span></a>
-        <a class="sm-item sm-sub" href="obras/neoex.html"><span class="sm-ic">🧪</span><span class="sm-tx">NEOEX</span></a>
-        <a class="sm-item sm-sub" href="obras/cadastro_obra.html"><span class="sm-ic">🏗️</span><span class="sm-tx">Cadastro de Obra</span></a>
+        <a class="sm-item sm-sub" href="turno.html"><span class="sm-ic"><i class="ti ti-clipboard-list"></i></span><span class="sm-tx">Turno</span></a>
+        <a class="sm-item sm-sub" href="rdo.html"><span class="sm-ic"><i class="ti ti-file-description"></i></span><span class="sm-tx">RDO</span></a>
+        <a class="sm-item sm-sub" href="mapa.html"><span class="sm-ic"><i class="ti ti-map-2"></i></span><span class="sm-tx">Mapa</span></a>
+        <a class="sm-item sm-sub" href="prog.html"><span class="sm-ic"><i class="ti ti-calendar-event"></i></span><span class="sm-tx">Prog. Diária</span></a>
+        <a class="sm-item sm-sub" href="comp.html"><span class="sm-ic"><i class="ti ti-git-compare"></i></span><span class="sm-tx">Comparador</span></a>
+        <a class="sm-item sm-sub" href="obras/neoex.html"><span class="sm-ic"><i class="ti ti-box"></i></span><span class="sm-tx">NEOEX</span></a>
+        <a class="sm-item sm-sub" href="obras/cadastro_obra.html"><span class="sm-ic"><i class="ti ti-building"></i></span><span class="sm-tx">Cadastro de Obra</span></a>
       </div>
     </div>
     <div class="sm-group" data-group="sesmt">
-      <div class="sm-group-head" onclick="smGroupToggle(this)"><span class="sm-ic">🦺</span><span class="sm-tx">SESMT</span><span class="sm-arrow">▸</span></div>
+      <div class="sm-group-head" onclick="smGroupToggle(this)"><span class="sm-ic"><i class="ti ti-shield-check"></i></span><span class="sm-tx">SESMT</span><span class="sm-arrow">▸</span></div>
       <div class="sm-group-items">
-        <a class="sm-item sm-sub" href="ensaios.html"><span class="sm-ic">🧪</span><span class="sm-tx">Ensaios</span></a>
-        <a class="sm-item sm-sub" href="vencimento_cursos.html"><span class="sm-ic">🎓</span><span class="sm-tx">Vencimento Cursos</span></a>
-        <a class="sm-item sm-sub" href="brigada.html"><span class="sm-ic">🧯</span><span class="sm-tx">Brigada</span></a>
+        <a class="sm-item sm-sub" href="ensaios.html"><span class="sm-ic"><i class="ti ti-test-pipe"></i></span><span class="sm-tx">Ensaios</span></a>
+        <a class="sm-item sm-sub" href="vencimento_cursos.html"><span class="sm-ic"><i class="ti ti-certificate"></i></span><span class="sm-tx">Vencimento Cursos</span></a>
+        <a class="sm-item sm-sub" href="brigada.html"><span class="sm-ic"><i class="ti ti-flame"></i></span><span class="sm-tx">Brigada</span></a>
       </div>
     </div>
     <div class="sm-group" data-group="financeiro">
-      <div class="sm-group-head" onclick="smGroupToggle(this)"><span class="sm-ic">💰</span><span class="sm-tx">Financeiro</span><span class="sm-arrow">▸</span></div>
+      <div class="sm-group-head" onclick="smGroupToggle(this)"><span class="sm-ic"><i class="ti ti-cash"></i></span><span class="sm-tx">Financeiro</span><span class="sm-arrow">▸</span></div>
       <div class="sm-group-items">
-        <a class="sm-item sm-sub" href="valores.html"><span class="sm-ic">💰</span><span class="sm-tx">Valores</span></a>
+        <a class="sm-item sm-sub" href="valores.html"><span class="sm-ic"><i class="ti ti-file-invoice"></i></span><span class="sm-tx">Valores</span></a>
       </div>
     </div>
     <div class="sm-group" data-group="gestao">
-      <div class="sm-group-head" onclick="smGroupToggle(this)"><span class="sm-ic">⚙️</span><span class="sm-tx">Gestão</span><span class="sm-arrow">▸</span></div>
+      <div class="sm-group-head" onclick="smGroupToggle(this)"><span class="sm-ic"><i class="ti ti-adjustments"></i></span><span class="sm-tx">Gestão</span><span class="sm-arrow">▸</span></div>
       <div class="sm-group-items">
-        <a class="sm-item sm-sub" href="permissoes.html"><span class="sm-ic">🔐</span><span class="sm-tx">Telas x Usuários</span></a>
-        <a class="sm-item sm-sub" href="projeçao.html"><span class="sm-ic">📈</span><span class="sm-tx">PDA</span></a>
-        <a class="sm-item sm-sub" href="admin.html"><span class="sm-ic">⚙️</span><span class="sm-tx">Admin</span></a>
+        <a class="sm-item sm-sub" href="permissoes.html"><span class="sm-ic"><i class="ti ti-lock"></i></span><span class="sm-tx">Telas x Usuários</span></a>
+        <a class="sm-item sm-sub" href="projeçao.html"><span class="sm-ic"><i class="ti ti-device-mobile"></i></span><span class="sm-tx">PDA</span></a>
+        <a class="sm-item sm-sub" href="admin.html"><span class="sm-ic"><i class="ti ti-settings"></i></span><span class="sm-tx">Admin</span></a>
       </div>
     </div>
   </nav>
