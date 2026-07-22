@@ -200,9 +200,9 @@ var CO_ROWS = [];
 
 // ===== estado -> valores fixos do contrato =====
 var CO_ESTADO_DEF={
-  ba:{sigla:'BA', nome:'Bahia',   contrato:'OBRAS - BA',    tipoObra:'BA - Construção e Manutenção', tipoServico:'SERVICOS_RUR-BA'},
-  mg:{sigla:'MG', nome:'Minas',   contrato:'CON_MANUT-MG',  tipoObra:'',                              tipoServico:''},
-  se:{sigla:'SE', nome:'Sergipe', contrato:'OBRAS-SE',      tipoObra:'SE_PROCESSO',                   tipoServico:'SERVICOS_RDU-SE'}
+  ba:{sigla:'BA', nome:'Bahia',   contrato:'OBRAS - BA',    tipoObra:'BA - Construção e Manutenção', tipoServico:'SERVICOS_RUR-BA', processo:''},
+  mg:{sigla:'MG', nome:'Minas',   contrato:'CON_MANUT-MG',  tipoObra:'',                              tipoServico:'',                processo:''},
+  se:{sigla:'SE', nome:'Sergipe', contrato:'OBRAS-SE',      tipoObra:'SE - Construção e Manutenção',  tipoServico:'SERVICOS_RDU-SE', processo:'SE_PROCESSO'}
 };
 function coEstado(){ return document.getElementById('co-estado').value || 'ba'; }
 function coPopularEstados(){
@@ -382,6 +382,7 @@ function coProcessar(txt){
       reg['Municipio*']=mun;
       reg['Contrato*']=document.getElementById('co-contrato').value.trim();
       reg['TIPO DE OBRA*']=document.getElementById('co-tipoobra').value.trim();
+      reg['PROCESSO']=CO_ESTADO_DEF[coEstado()].processo||'';
       reg['NATUREZA OBRAS']=document.getElementById('co-natureza').value.trim();
       reg['CENTRO SERVICO']=mun?(CO_ESTADO_DEF[coEstado()].sigla+'-'+mun.toUpperCase()):'';
       reg['RESPONSAVEL*']=(cSup>=0?(row[cSup]||''):'').split(' - ')[0].trim();
