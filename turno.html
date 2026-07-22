@@ -2402,7 +2402,7 @@ try { render(); } catch(e) {}
 // ── FASE 1: renderiza imediatamente do cache local (< 50ms) ──────────────
 const now=new Date(); const pad=n=>String(n).padStart(2,'0');
 document.getElementById('page-time').textContent =
-'Gerado em: '+pad(now.getDate())+'/'+pad(now.getMonth()+1)+'/'+now.getFullYear()+' as '+pad(now.getHours())+':'+pad(now.getMinutes());
+'';
 loadFromLocalStorage();
 try { render(); } catch(e) {}
 if (aprData && aprData.length > 0) { try { renderApr(); } catch(e) {} }

@@ -2243,7 +2243,7 @@ if (lo) { lo.classList.remove('show'); lo.style.display = 'none'; }
 }, 2000);
 const now=new Date(); const pad=n=>String(n).padStart(2,'0');
 document.getElementById('page-time').textContent =
-'Gerado em: '+pad(now.getDate())+'/'+pad(now.getMonth()+1)+'/'+now.getFullYear()+' as '+pad(now.getHours())+':'+pad(now.getMinutes());
+'';
 loadFromLocalStorage();
 try { render(); } catch(e) {}
 if (aprData && aprData.length > 0) { try { renderApr(); } catch(e) {} }
@@ -5091,7 +5091,7 @@ window.postoFiltro   = postoFiltro;
     var el = document.getElementById('page-time');
     if (!el) return;
     var now = new Date();
-    el.textContent = 'Gerado em: ' + pad(now.getDate()) + '/' + pad(now.getMonth()+1) + '/' + now.getFullYear() + ' as ' + pad(now.getHours()) + ':' + pad(now.getMinutes());
+    el.textContent = '';
   }
   updateClock();
   setInterval(updateClock, 60000);

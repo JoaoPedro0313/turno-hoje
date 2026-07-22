@@ -2166,7 +2166,7 @@ autoRefreshTimer = setInterval(checkForUpdates, AUTO_REFRESH_MS);
 // FASE 1: UI instantânea do cache local
 const now=new Date(); const pad=n=>String(n).padStart(2,'0');
 document.getElementById('page-time').textContent =
-'Gerado em: '+pad(now.getDate())+'/'+pad(now.getMonth()+1)+'/'+now.getFullYear()+' as '+pad(now.getHours())+':'+pad(now.getMinutes());
+'';
 loadFromLocalStorage();
 try { render(); } catch(e) {}
 if (aprData && aprData.length > 0) { try { renderApr(); } catch(e) {} }
@@ -6587,7 +6587,7 @@ setTimeout(presenceInit, 1500);
     var el = document.getElementById('page-time');
     if (!el) return;
     var now = new Date();
-    el.textContent = 'Gerado em: ' + pad(now.getDate()) + '/' + pad(now.getMonth()+1) + '/' + now.getFullYear() + ' as ' + pad(now.getHours()) + ':' + pad(now.getMinutes());
+    el.textContent = '';
   }
   updateClock();
   setInterval(updateClock, 60000);
