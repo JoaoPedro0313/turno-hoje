@@ -570,32 +570,38 @@ function renderInsp(el){
   if(!INSP.length){ el.innerHTML='<div style="text-align:center;padding:50px 20px;color:#94a3b8"><div style="font-size:2.4rem">🔎</div><div style="font-weight:700;margin-top:8px">Nenhuma inspeção importada</div><div style="font-size:.85rem;margin-top:4px">Importe o relatório <b>consulta_inspeção_de_segurança</b> (.csv).</div></div>'; return; }
   var q=(document.getElementById('vc-srch').value||'').toLowerCase().trim();
   var lista=INSP.filter(function(d){ if(!q) return true; return [d.vei,d.lot,d.tec,d.tipo,d.num].join(' ').toLowerCase().indexOf(q)>=0; });
-  // agrupa por veículo: última inspeção
-  var porVei={};
-  lista.forEach(function(d){ var k=d.vei||'(sem veículo)'; if(!porVei[k]||(d.data>porVei[k].data)) porVei[k]=d; });
-  var veics=Object.keys(porVei).sort(function(a,b){ return (porVei[b].data||'').localeCompare(porVei[a].data||''); });
+  // agrupa por LOTAÇÃO/base. "TRANSPORTE" = veículo; demais = base fixa (ex.: Irecê/Bahia)
+  function ehTransporte(lot){ return /TRANSPORTE/i.test(lot||''); }
+  var porLot={};
+  lista.forEach(function(d){ var k=d.lot||'(sem lotação)'; if(!porLot[k]) porLot[k]={ult:d,qtd:0,placas:{}}; if((d.data||'')>(porLot[k].ult.data||'')) porLot[k].ult=d; porLot[k].qtd++; if(d.vei) porLot[k].placas[d.vei]=1; });
+  var lots=Object.keys(porLot).sort(function(a,b){ return (porLot[b].ult.data||'').localeCompare(porLot[a].ult.data||''); });
   var hoje=HOJE();
   function diasDe(iso){ if(!iso) return null; return Math.round((hoje-parseDt(iso))/86400000); }
-  var atrasados=veics.filter(function(v){ var d=diasDe(porVei[v].data); return d!=null && d>30; }).length;
+  var atrasados=lots.filter(function(v){ var d=diasDe(porLot[v].ult.data); return d!=null && d>30; }).length;
   var ult30=lista.filter(function(d){ var x=diasDe(d.data); return x!=null && x<=30; }).length;
   var tecs={}; lista.forEach(function(d){ if(d.tec) tecs[d.tec]=(tecs[d.tec]||0)+1; });
 
   var cards='<div class="kpis" style="margin-bottom:14px">'
     +'<div class="kpi t"><div class="n">'+lista.length+'</div><div class="l">Inspeções</div></div>'
-    +'<div class="kpi g"><div class="n">'+veics.length+'</div><div class="l">Veículos inspecionados</div></div>'
+    +'<div class="kpi g"><div class="n">'+lots.length+'</div><div class="l">Lotações / bases</div></div>'
     +'<div class="kpi a"><div class="n">'+ult30+'</div><div class="l">Nos últimos 30 dias</div></div>'
-    +'<div class="kpi r"><div class="n">'+atrasados+'</div><div class="l">Veículos há +30 dias</div></div>'
+    +'<div class="kpi r"><div class="n">'+atrasados+'</div><div class="l">Há +30 dias sem inspeção</div></div>'
     +'</div>';
 
-  var porVeiHtml=veics.map(function(v){
-    var d=porVei[v], dd=diasDe(d.data);
+  var porVeiHtml=lots.map(function(k){
+    var g=porLot[k], d=g.ult, dd=diasDe(d.data);
+    var transp=ehTransporte(k);
     var cor = dd==null?'#94a3b8':(dd>30?'#e53e3e':(dd>15?'#f0a500':'#14a085'));
     var txt = dd==null?'sem data':('há '+dd+' dia'+(dd===1?'':'s'));
-    var qtd = lista.filter(function(x){return (x.vei||'(sem veículo)')===v;}).length;
+    var placas=Object.keys(g.placas);
+    var icon = transp?'🚚':'🏢';
+    var sub = transp
+      ? ('🚚 Veículo'+(placas.length>1?'s':'')+': '+(placas.join(', ')||'—'))
+      : ('🧯 Base fixa'+(placas.length?(' · '+placas.join(', ')):''));
     return '<div style="background:#fff;border-radius:12px;padding:12px 16px;margin-bottom:8px;box-shadow:0 1px 4px rgba(0,0,0,.06);border-left:4px solid '+cor+';display:flex;align-items:center;gap:14px;flex-wrap:wrap">'
-      +'<div style="font-size:1.4rem">🚗</div>'
-      +'<div style="flex:1;min-width:180px"><div style="font-weight:800;color:#1a202c">'+esc(v)+'</div>'
-      +'<div style="font-size:.74rem;color:#64748b">📍 '+esc(d.lot||'—')+' · '+qtd+' inspeção(ões)</div></div>'
+      +'<div style="font-size:1.4rem">'+icon+'</div>'
+      +'<div style="flex:1;min-width:180px"><div style="font-weight:800;color:#1a202c">'+esc(k)+'</div>'
+      +'<div style="font-size:.74rem;color:#64748b">'+sub+' · '+g.qtd+' inspeção(ões)</div></div>'
       +'<div style="text-align:right"><div style="font-weight:800;color:'+cor+';font-size:.8rem">'+txt+'</div>'
       +'<div style="font-size:.72rem;color:#64748b">última: '+fmt(d.data)+(d.hora?' '+d.hora:'')+'</div></div>'
       +'<div style="font-size:.72rem;color:#94a3b8;min-width:150px;text-align:right">👷 '+esc(d.tec||'—')+'</div></div>';
@@ -621,7 +627,7 @@ function renderInsp(el){
     +'</tbody></table></div>';
 
   el.innerHTML = cards
-    + '<div style="font-size:.72rem;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:1px;margin:4px 0 8px">Por veículo · última inspeção</div>'
+    + '<div style="font-size:.72rem;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:1px;margin:4px 0 8px">Por lotação / base · última inspeção</div>'
     + porVeiHtml
     + (tec?('<div style="margin-top:10px">'+tec+'</div>'):'')
     + tbl;
