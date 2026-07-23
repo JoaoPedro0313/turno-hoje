@@ -395,7 +395,7 @@ function coProcessar(txt){
     if(cPost<0) cPost=colLike(['POSTES','PREVIST']);
     if(cPep<0){ coSt('❌ Coluna PEP OBRA não encontrada.','#c53030'); return; }
 
-    var out=[];
+    var out=[]; var foraFiltro=0; var foraDet={};
     for(var r=hi+1;r<rows.length;r++){
       var row=rows[r]; if(!row) continue;
       var pep=(row[cPep]||'').trim();
@@ -419,13 +419,17 @@ function coProcessar(txt){
       reg['LATITUDE']=(cLat>=0?(row[cLat]||''):'').trim().replace('.',',');
       reg['LONGITUDE']=(cLon>=0?(row[cLon]||''):'').trim().replace('.',',');
       reg['SUPERVISOR']=(cSup>=0?(row[cSup]||''):'').split(' - ')[0].trim();
+      // só obras em Execução ou Programada
+      var _st=coNorm(reg['STATUS*']||'');
+      if(_st.indexOf('EXECUCAO')<0 && _st.indexOf('PROGRAMAD')<0){ foraFiltro++; var _k=_st||'(vazio)'; foraDet[_k]=(foraDet[_k]||0)+1; continue; }
       out.push(reg);
     }
     CO_ROWS=out;
     var comPostes=out.filter(function(r){return (r['Postes']||'').trim()!=='';}).length;
     function _nm(i){ return i>=0 ? ((rows[hi][i]||'').trim()||'(vazio)') : '(NÃO ACHOU)'; }
     var amostra=out.slice(0,5).map(function(r){return r['Postes']||'—';}).join(', ');
-    coSt('✅ '+out.length+' obras carregadas. Postes: coluna "'+_nm(cPost)+'" (índice '+cPost+') · '+comPostes+' com valor · amostra: '+amostra,'#0d7377');
+    var foraTxt=Object.keys(foraDet).sort(function(a,b){return foraDet[b]-foraDet[a];}).slice(0,4).map(function(k){return k+' ('+foraDet[k]+')';}).join(', ');
+    coSt('✅ '+out.length+' obras carregadas (só Execução/Programada)'+(foraFiltro?' · '+foraFiltro+' fora do filtro: '+foraTxt:'')+'. Postes: coluna "'+_nm(cPost)+'" (índice '+cPost+') · '+comPostes+' com valor · amostra: '+amostra,'#0d7377');
     document.getElementById('co-count').textContent='· '+out.length+' obras';
     var b=document.getElementById('co-baixar'); b.disabled=false; b.style.opacity='1';
     coPreview();
