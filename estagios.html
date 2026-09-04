@@ -344,7 +344,7 @@ try{if(localStorage.getItem("mariua_darkmode")==="1")document.body.classList.add
       <div class="top-bar-clock" id="page-time"></div>
     </div>
     <div class="top-bar-right">
-      <div class="db-badge local" id="db-badge"><span class="db-dot"></span><span id="db-text">Dados locais</span></div>
+      <div class="db-badge syncing" id="db-badge" onclick="if(window.dbBadgeClick)window.dbBadgeClick()" title="Clique para recarregar do banco" style="cursor:pointer"><span class="db-dot"></span><span id="db-text">Conectando…</span></div>
       <button id="user-avatar" onclick="if(window.mariuaPerfil)window.mariuaPerfil()" title="Quem está usando" style="display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;margin-left:6px;border-radius:50%;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.35);color:#fff;cursor:pointer;flex-shrink:0;padding:0;"><svg width="19" height="19" viewBox="0 0 24 24" fill="currentColor"><path d="M12 12c2.5 0 4.5-2 4.5-4.5S14.5 3 12 3 7.5 5 7.5 7.5 9.5 12 12 12zm0 2.2c-3 0-9 1.5-9 4.5V21h18v-2.3c0-3-6-4.5-9-4.5z"/></svg></button>
     </div>
   </div>
@@ -455,11 +455,30 @@ try{if(localStorage.getItem("mariua_darkmode")==="1")document.body.classList.add
   let pendencyTags = {};  // { rowId: ['retro','poda', ...] }  (local only)
   let pendencyTypes = [];  // [{key, label, color}] — tipos de pendencia, customizaveis
 
+  // ===== Supabase (mesma tabela chave-valor das outras telas) =====
+  const SUPA_URL = 'https://eqxejfoibebcbtsqymji.supabase.co';
+  const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVxeGVqZm9pYmViY2J0c3F5bWppIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE4NjUzMTEsImV4cCI6MjA4NzQ0MTMxMX0.lwf7_EJ6UchEOpzhW3cVKztxDGy78gaQblRvgiEwWh8';
+  const SUPA_H = {'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':'application/json'};
+  const DB_KEY = 'estagios_board';
+  const POLL_MS = 30000;
+
+  let bancoCarregado = false;   // trava: nao salva no banco antes de ler dele
+  let carimboAtual   = '';      // marca da ultima versao vista, evita re-render a toa
+  let timerSalvar    = null;
+
   const $ = sel => document.querySelector(sel);
   const board = $('#board');
   const boardEmpty = $('#boardEmpty');
   const statusDot = $('#statusDot');
   const statusText = $('#statusText');
+
+  function setDbStatus(status, msg){
+    const b = document.getElementById('db-badge');
+    if(b) b.className = 'db-badge ' + status;
+    const t = document.getElementById('db-text');
+    if(t) t.textContent = msg;
+  }
+  window.dbBadgeClick = function(){ setDbStatus('syncing','Reconectando...'); dbCarregar(false); };
 
   function setStatus(type, text){
     statusDot.className = 'status-dot' + (type ? ' ' + type : '');
@@ -482,14 +501,97 @@ try{if(localStorage.getItem("mariua_darkmode")==="1")document.body.classList.add
     }
     if(!pendencyTypes.length) pendencyTypes = DEFAULT_PENDENCY_TYPES.map(p => ({...p}));
   }
+  // Cache offline. O banco e a fonte da verdade; isto so evita tela vazia sem rede.
+  function salvarCacheLocal(){
+    try{
+      localStorage.setItem(LS_KEY, JSON.stringify({
+        sheetUrl: $('#sheetUrl').value,
+        columns, overrides, pendencyTags, pendencyTypes
+      }));
+    }catch(e){}
+  }
+  // Mantido com o nome antigo: todo ponto que ja salvava passa a sincronizar tambem.
   function saveLocal(){
-    localStorage.setItem(LS_KEY, JSON.stringify({
-      sheetUrl: $('#sheetUrl').value,
-      columns, overrides, pendencyTags, pendencyTypes
-    }));
+    salvarCacheLocal();
+    agendarSalvar();
   }
 
   function getTags(id){ return pendencyTags[id] || []; }
+
+  // Monta o pacote que vai para o banco — o quadro inteiro, compartilhado.
+  function pacoteAtual(){
+    return {
+      sheetUrl: $('#sheetUrl').value,
+      columns, overrides, pendencyTags, pendencyTypes,
+      atualizado: new Date().toISOString(),
+      por: window.MARIUA_USER || ''   // nome exposto por identidade.js
+    };
+  }
+
+  function aplicarPacote(v){
+    if(!v) return;
+    if(v.sheetUrl && !$('#sheetUrl').value) $('#sheetUrl').value = v.sheetUrl;
+    if(Array.isArray(v.columns) && v.columns.length) columns = v.columns;
+    if(v.overrides) overrides = v.overrides;
+    if(v.pendencyTags) pendencyTags = v.pendencyTags;
+    if(Array.isArray(v.pendencyTypes) && v.pendencyTypes.length) pendencyTypes = v.pendencyTypes;
+    carimboAtual = v.atualizado || '';
+  }
+
+  async function dbCarregar(silencioso){
+    if(!silencioso) setDbStatus('syncing','Carregando...');
+    try{
+      const r = await fetch(SUPA_URL+'/rest/v1/turno_data?select=value&key=eq.'+DB_KEY+'&limit=1',{headers:SUPA_H});
+      if(!r.ok) throw new Error('HTTP '+r.status);
+      const j = await r.json();
+      const v = (Array.isArray(j) && j.length) ? j[0].value : null;
+      const novo = v && v.atualizado !== carimboAtual;
+      if(novo){
+        aplicarPacote(v);
+        salvarCacheLocal();
+        preencherMeses(); preencherCidadesExtras();
+        renderConfig(); renderPendConfig(); renderBoard();
+      }
+      bancoCarregado = true;
+      const autor = v && v.por ? ' por ' + v.por : '';
+      setDbStatus('online', v ? ('Compartilhado · ' + carimboFmt(v.atualizado) + autor) : 'Compartilhado · vazio');
+      return true;
+    }catch(e){
+      console.error('estagios: falha ao ler o banco', e);
+      setDbStatus('offline','Sem conexão · usando cache');
+      return false;
+    }
+  }
+
+  function carimboFmt(iso){
+    try{ return new Date(iso).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}); }
+    catch(e){ return ''; }
+  }
+
+  async function dbSalvar(){
+    if(!bancoCarregado) return;   // nunca sobrescreve o compartilhado com estado nao lido
+    const pacote = pacoteAtual();
+    try{
+      setDbStatus('syncing','Salvando...');
+      const r = await fetch(SUPA_URL+'/rest/v1/turno_data',{
+        method:'POST',
+        headers:Object.assign({'Prefer':'resolution=merge-duplicates'},SUPA_H),
+        body:JSON.stringify({key:DB_KEY,value:pacote,updated_at:new Date().toISOString()})
+      });
+      if(!r.ok) throw new Error('HTTP '+r.status);
+      carimboAtual = pacote.atualizado;
+      setDbStatus('online','Compartilhado · ' + carimboFmt(pacote.atualizado));
+    }catch(e){
+      console.error('estagios: falha ao salvar no banco', e);
+      setDbStatus('offline','Alteração só no aparelho');
+    }
+  }
+
+  // Editar cor num seletor dispara dezenas de eventos — por isso o atraso.
+  function agendarSalvar(){
+    clearTimeout(timerSalvar);
+    timerSalvar = setTimeout(dbSalvar, 900);
+  }
   function toggleTag(id, key){
     const cur = new Set(getTags(id));
     if(cur.has(key)) cur.delete(key); else cur.add(key);
@@ -951,7 +1053,7 @@ try{if(localStorage.getItem("mariua_darkmode")==="1")document.body.classList.add
       preencherCidadesExtras();
       renderConfig();
       renderBoard();
-      saveLocal();
+      saveLocal();   // grava tambem o link da planilha para os demais usuarios
       setStatus('ok', `${rows.length} obras carregadas`);
     }catch(err){
       console.error(err);
@@ -1015,7 +1117,24 @@ try{if(localStorage.getItem("mariua_darkmode")==="1")document.body.classList.add
   renderConfig();
   renderPendConfig();
   renderBoard();
-  if($('#sheetUrl').value){ loadSheet(); } else { setStatus('', 'Aguardando planilha…'); }
+  setStatus('', 'Aguardando planilha…');
+
+  dbCarregar(false).then(() => {
+    if($('#sheetUrl').value) loadSheet();
+  });
+
+  // Traz o que os outros usuarios mudaram. Pausa se a aba esta em segundo plano
+  // ou se alguem esta com o cursor num campo do painel — nao puxa o tapete.
+  setInterval(() => {
+    if(document.visibilityState !== 'visible') return;
+    const foco = document.activeElement;
+    if(foco && foco.closest && foco.closest('#configBody')) return;
+    if(timerSalvar) return;
+    dbCarregar(true);
+  }, POLL_MS);
+  document.addEventListener('visibilitychange', () => {
+    if(document.visibilityState === 'visible') dbCarregar(true);
+  });
 })();
 </script>
 <aside class="sm-side">
