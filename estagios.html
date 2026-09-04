@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Estágios de Obras · Mariuá</title>
 <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;600;700;800&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:'Barlow',sans-serif;background:#f0f4f5;min-height:100vh;padding-bottom:60px;padding-top:100px}
@@ -377,9 +376,17 @@ try{if(localStorage.getItem("mariua_darkmode")==="1")document.body.classList.add
         <button class="btn" id="btnReload" title="Recarregar da mesma planilha">🔄</button>
       </div>
       <div class="toolbar-row">
-        <span class="field-label">📁 Ou arquivo</span>
-        <input id="fileInput" type="file" accept=".csv,.tsv,.xlsx,.xls" style="max-width:280px;">
-        <span class="field-label" style="letter-spacing:0.3px;text-transform:none;font-weight:600;">para testar sem link (CSV ou Excel)</span>
+        <span class="field-label">📅 Mês</span>
+        <select id="filtroMes" style="min-width:150px;"><option value="">Todos os meses</option></select>
+        <span class="field-label">🏙️ Cidade</span>
+        <select id="filtroCidade" style="min-width:150px;">
+          <option value="">Todas as cidades</option>
+          <option value="jacobina">Jacobina</option>
+          <option value="irece">Irecê</option>
+          <option value="serrinha">Serrinha</option>
+        </select>
+        <button class="btn btn-sm" id="btnLimparFiltros" type="button">✕ Limpar filtros</button>
+        <span class="field-label" id="filtroInfo" style="letter-spacing:0.3px;text-transform:none;font-weight:600;color:#888;"></span>
       </div>
       <div class="toolbar-row">
         <span class="field-label">🔎 Buscar</span>
@@ -570,6 +577,14 @@ try{if(localStorage.getItem("mariua_darkmode")==="1")document.body.classList.add
     utd: ['utd'],
     supervisor: ['supervisor']
   };
+  // Coluna de data/mes — testada nesta ordem, a primeira que casar vence.
+  const MES_CANDIDATES = ['mes','competencia','periodo','data prevista','previsao','data'];
+  const CIDADES_FIXAS = [
+    { valor:'jacobina', label:'Jacobina' },
+    { valor:'irece',    label:'Irecê' },
+    { valor:'serrinha', label:'Serrinha' }
+  ];
+  const MES_NOMES = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
   let fieldMap = {}; // e.g. { pep: 'PEP OBRA', titulo: 'TÍTULO', ... } -> actual header text
 
   function buildFieldMap(){
@@ -579,6 +594,42 @@ try{if(localStorage.getItem("mariua_darkmode")==="1")document.body.classList.add
       const found = headers.find(h => cands.some(c => norm(h).includes(c)));
       if(found) fieldMap[key] = found;
     });
+    for(let i=0; i<MES_CANDIDATES.length && !fieldMap.mes; i++){
+      const achado = headers.find(h => norm(h).includes(MES_CANDIDATES[i]));
+      if(achado) fieldMap.mes = achado;
+    }
+  }
+
+  // Aceita 2026-01-15, 15/01/2026, 01/2026, jan/26, "Janeiro" e afins.
+  // Devolve {chave:'AAAA-MM', rotulo:'Jan/2026'} ou null.
+  function parseMes(valor){
+    const v = norm(valor);
+    if(!v) return null;
+    let ano = null, mes = null;
+    let m = v.match(/(\d{4})[-\/.](\d{1,2})(?:[-\/.](\d{1,2}))?/);           // 2026-01[-15]
+    if(m){ ano = +m[1]; mes = +m[2]; }
+    if(mes === null){
+      m = v.match(/(?:(\d{1,2})[-\/.])?(\d{1,2})[-\/.](\d{2,4})$/);          // [15/]01/2026
+      if(m){ mes = +m[2]; ano = +m[3]; if(ano < 100) ano += 2000; }
+    }
+    if(mes === null){
+      const nomes = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+      const idx = nomes.findIndex(n => v.startsWith(n) || v.includes(' ' + n) || v.includes('/' + n));
+      if(idx >= 0){
+        mes = idx + 1;
+        const ma = v.match(/(\d{2,4})/);
+        if(ma){ ano = +ma[1]; if(ano < 100) ano += 2000; }
+      }
+    }
+    if(mes === null || mes < 1 || mes > 12) return null;
+    if(!ano){
+      return { chave: '0000-' + String(mes).padStart(2,'0'), rotulo: MES_NOMES[mes-1] };
+    }
+    return { chave: ano + '-' + String(mes).padStart(2,'0'), rotulo: MES_NOMES[mes-1] + '/' + ano };
+  }
+
+  function mesDaLinha(r){
+    return fieldMap.mes ? parseMes(r[fieldMap.mes]) : null;
   }
   function get(r, key){
     return (fieldMap[key] && r[fieldMap[key]] !== undefined) ? r[fieldMap[key]] : '';
@@ -714,8 +765,67 @@ try{if(localStorage.getItem("mariua_darkmode")==="1")document.body.classList.add
     return Object.values(r).some(v => (v||'').toLowerCase().includes(q));
   }
 
-  function renderBoard(){
+  function passaCidade(r, cidade){
+    if(!cidade) return true;
+    const mun = norm(get(r,'municipio'));
+    if(cidade === '__outras'){
+      return !CIDADES_FIXAS.some(c => mun.includes(c.valor));
+    }
+    return mun.includes(cidade);
+  }
+
+  function passaMes(r, chave){
+    if(!chave) return true;
+    const m = mesDaLinha(r);
+    return !!m && m.chave === chave;
+  }
+
+  // Fonte unica da filtragem — usada pelo quadro e pela exportacao.
+  function linhasFiltradas(){
     const q = $('#search').value.trim();
+    const cidade = $('#filtroCidade').value;
+    const chaveMes = $('#filtroMes').value;
+    return rows.filter(r => matchesSearch(r,q) && passaCidade(r,cidade) && passaMes(r,chaveMes));
+  }
+
+  // Preenche o seletor de meses com os meses que existem na planilha carregada.
+  function preencherMeses(){
+    const sel = $('#filtroMes');
+    const anterior = sel.value;
+    const vistos = new Map();
+    rows.forEach(r => { const m = mesDaLinha(r); if(m && !vistos.has(m.chave)) vistos.set(m.chave, m.rotulo); });
+    const ordenados = Array.from(vistos.entries()).sort((a,b) => a[0].localeCompare(b[0]));
+    sel.innerHTML = '<option value="">Todos os meses</option>' +
+      ordenados.map(([chave,rot]) => `<option value="${chave}">${rot}</option>`).join('');
+    sel.value = vistos.has(anterior) ? anterior : '';
+    const semColuna = !fieldMap.mes;
+    sel.disabled = semColuna || !ordenados.length;
+    const info = $('#filtroInfo');
+    if(semColuna) info.textContent = 'Nenhuma coluna de mês/data encontrada na planilha.';
+    else if(!ordenados.length) info.textContent = 'A coluna "' + fieldMap.mes + '" não trouxe datas reconhecíveis.';
+    else info.textContent = 'Mês lido da coluna "' + fieldMap.mes + '".';
+  }
+
+  // Acrescenta ao seletor de cidades qualquer municipio da planilha fora das tres fixas.
+  function preencherCidadesExtras(){
+    const sel = $('#filtroCidade');
+    const anterior = sel.value;
+    const extras = new Map();
+    rows.forEach(r => {
+      const bruto = (get(r,'municipio') || '').trim();
+      const mun = norm(bruto);
+      if(!mun || CIDADES_FIXAS.some(c => mun.includes(c.valor))) return;
+      if(!extras.has(mun)) extras.set(mun, bruto);
+    });
+    sel.innerHTML = '<option value="">Todas as cidades</option>' +
+      CIDADES_FIXAS.map(c => `<option value="${c.valor}">${c.label}</option>`).join('') +
+      (extras.size ? '<option value="__outras">— Outras cidades —</option>' +
+        Array.from(extras.entries()).sort((a,b) => a[1].localeCompare(b[1]))
+          .map(([v,rot]) => `<option value="${v}">${rot}</option>`).join('') : '');
+    sel.value = Array.from(sel.options).some(o => o.value === anterior) ? anterior : '';
+  }
+
+  function renderBoard(){
     board.innerHTML = '';
 
     if(!rows.length){
@@ -727,7 +837,7 @@ try{if(localStorage.getItem("mariua_darkmode")==="1")document.body.classList.add
     }
     boardEmpty.style.display = 'none';
 
-    const filtered = rows.filter(r => matchesSearch(r,q));
+    const filtered = linhasFiltradas();
     const municipios = new Set(filtered.map(r => get(r,'municipio')).filter(Boolean));
     $('#statTotal').textContent = filtered.length;
     $('#statColunas').textContent = columns.length;
@@ -837,6 +947,8 @@ try{if(localStorage.getItem("mariua_darkmode")==="1")document.body.classList.add
       const matrix = gvizToMatrix(json);
       if(!matrix.length) throw new Error('Planilha vazia');
       rows = rowsFromCsv(matrix);
+      preencherMeses();
+      preencherCidadesExtras();
       renderConfig();
       renderBoard();
       saveLocal();
@@ -847,38 +959,14 @@ try{if(localStorage.getItem("mariua_darkmode")==="1")document.body.classList.add
     }
   }
 
-  function loadFromFile(file){
-    if(!file) return;
-    setStatus('loading', `Lendo ${file.name}…`);
-    const reader = new FileReader();
-    reader.onerror = () => setStatus('err','Não foi possível ler o arquivo.');
-    reader.onload = (e) => {
-      try{
-        const data = new Uint8Array(e.target.result);
-        const wb = XLSX.read(data, { type:'array' });
-        const firstSheetName = wb.SheetNames[0];
-        const ws = wb.Sheets[firstSheetName];
-        const matrix = XLSX.utils.sheet_to_json(ws, { header:1, raw:false, defval:'' })
-          .map(r => r.map(v => (v === null || v === undefined) ? '' : String(v)))
-          .filter(r => r.some(v => v.trim() !== ''));
-        if(!matrix.length) throw new Error('Arquivo vazio');
-        rows = rowsFromCsv(matrix);
-        renderConfig();
-        renderBoard();
-        setStatus('ok', `${rows.length} obras carregadas de ${file.name} (aba "${firstSheetName}")`);
-      }catch(err){
-        console.error(err);
-        setStatus('err','Não foi possível interpretar esse arquivo. Confirme que é um CSV, TSV ou Excel válido.');
-      }
-    };
-    reader.readAsArrayBuffer(file);
-  }
 
   function exportCsv(){
     if(!rows.length) return;
+    const alvo = linhasFiltradas();
+    if(!alvo.length){ setStatus('err','Nenhuma obra no filtro atual para exportar.'); return; }
     const cols = ['PEP','TÍTULO','MUNICÍPIO','UTD','ENCARREGADO','ETAPA','PENDÊNCIAS'];
     const lines = [cols.join(',')];
-    rows.forEach(r => {
+    alvo.forEach(r => {
       const stage = stageKeyForRow(r);
       const tagLabels = getTags(r.__id).map(k => (pendencyTypes.find(pt => pt.key === k) || {}).label).filter(Boolean).join(' / ');
       const vals = [get(r,'pep'), get(r,'titulo'), get(r,'municipio'), get(r,'utd'), get(r,'encarregado'), stage, tagLabels];
@@ -896,9 +984,13 @@ try{if(localStorage.getItem("mariua_darkmode")==="1")document.body.classList.add
   $('#btnReload').addEventListener('click', loadSheet);
   $('#btnExport').addEventListener('click', exportCsv);
   $('#search').addEventListener('input', renderBoard);
-  $('#fileInput').addEventListener('change', (e) => {
-    const file = e.target.files && e.target.files[0];
-    if(file) loadFromFile(file);
+  $('#filtroMes').addEventListener('change', renderBoard);
+  $('#filtroCidade').addEventListener('change', renderBoard);
+  $('#btnLimparFiltros').addEventListener('click', () => {
+    $('#search').value = '';
+    $('#filtroMes').value = '';
+    $('#filtroCidade').value = '';
+    renderBoard();
   });
   $('#btnAddPend').addEventListener('click', addPendencyType);
   $('#btnResetPend').addEventListener('click', () => {
@@ -918,6 +1010,8 @@ try{if(localStorage.getItem("mariua_darkmode")==="1")document.body.classList.add
   });
 
   loadLocal();
+  preencherMeses();
+  preencherCidadesExtras();
   renderConfig();
   renderPendConfig();
   renderBoard();
