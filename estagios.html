@@ -241,6 +241,22 @@ body.dark input[type="url"],body.dark input[type="file"]{background:#243044 !imp
 body.dark .col-editor{background:#141f2e !important;border-color:#243044 !important}
 body.dark .col-editor input[type=text]{color:#e2e8f0 !important;background:transparent !important}
 body.dark .config-sub{border-top-color:#243044 !important}
+.graf-card{background:#fff;border-radius:14px;box-shadow:0 2px 14px rgba(0,0,0,0.08);padding:14px 20px;margin-bottom:10px}
+.graf-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;cursor:pointer;user-select:none}
+.graf-titulo{font-size:0.68rem;font-weight:800;color:#e5484d;letter-spacing:1.5px;text-transform:uppercase;white-space:nowrap}
+.graf-sub{font-size:0.66rem;color:#aaa;font-weight:700}
+.graf-corpo{margin-top:12px;display:flex;flex-direction:column;gap:8px}
+.graf-corpo.oculto{display:none}
+.graf-linha{display:grid;grid-template-columns:minmax(90px,150px) 1fr auto;align-items:center;gap:10px;cursor:pointer}
+.graf-linha:hover .graf-rot{color:#000}
+.graf-rot{font-size:0.74rem;font-weight:800;color:#555;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.graf-trilho{background:#f1f5f9;border-radius:6px;height:18px;overflow:hidden}
+.graf-barra{height:100%;border-radius:6px;transition:width 0.25s}
+.graf-val{font-size:0.74rem;font-weight:800;color:#2d3748;white-space:nowrap;min-width:64px;text-align:right}
+.graf-vazio{font-size:0.76rem;color:#aaa;font-weight:700;padding:6px 0}
+body.dark .graf-card{background:#101a28 !important}
+body.dark .graf-trilho{background:#1c2838 !important}
+body.dark .graf-rot,body.dark .graf-val{color:#cbd5e1 !important}
 body.dark .column{background:#1a2535 !important;box-shadow:0 2px 12px rgba(0,0,0,0.4) !important}
 body.dark .column-head{background:#141f2e !important;border-bottom-color:#243044 !important}
 body.dark .column-head .title{color:#e2e8f0 !important}
@@ -406,6 +422,14 @@ try{if(localStorage.getItem("mariua_darkmode")==="1")document.body.classList.add
   <div style="background:#fff;border-radius:14px;box-shadow:0 2px 14px rgba(0,0,0,0.08);padding:12px 20px;margin-bottom:10px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
     <span style="font-size:0.68rem;font-weight:800;color:#e5484d;letter-spacing:1.5px;text-transform:uppercase;white-space:nowrap;">🏷️ PENDÊNCIA:</span>
     <div id="est-pend-bar" style="display:flex;gap:6px;flex-wrap:wrap;flex:1;"></div>
+  </div>
+  <div class="graf-card">
+    <div class="graf-head" id="grafToggle">
+      <span class="graf-titulo">📊 Pendências mais comuns</span>
+      <span class="graf-sub" id="grafResumo"></span>
+      <span class="graf-sub" id="grafSeta">▾</span>
+    </div>
+    <div class="graf-corpo" id="grafCorpo"></div>
   </div>
   <div id="est-mes-wrapper" style="display:none;background:#fff;border-radius:14px;box-shadow:0 2px 14px rgba(0,0,0,0.08);padding:12px 20px;margin-bottom:10px;align-items:center;gap:10px;flex-wrap:wrap;">
     <span style="font-size:0.68rem;font-weight:800;color:#6b46c1;letter-spacing:1.5px;text-transform:uppercase;white-space:nowrap;">📅 MÊS:</span>
@@ -1005,7 +1029,47 @@ try{if(localStorage.getItem("mariua_darkmode")==="1")document.body.classList.add
     if(info) info.textContent = fieldMap.mes ? 'coluna "' + fieldMap.mes + '"' : '';
   }
 
-  function renderBarras(){ renderBarraCidades(); renderBarraMeses(); renderBarraPendencias(); }
+  // Barras horizontais em HTML puro — sem biblioteca de grafico, para nao
+  // acrescentar download numa tela usada em campo.
+  function renderGraficoPendencias(){
+    const corpo = $('#grafCorpo'), resumo = $('#grafResumo');
+    if(!corpo) return;
+    // Ignora o filtro de pendencia: o grafico mostra a distribuicao inteira do
+    // recorte atual, senao filtrar por um tipo deixaria so uma barra em pe.
+    const base = linhasFiltradas({ ignorarPend: true });
+    const total = base.length;
+    const dados = pendencyTypes.map(pt => ({
+      key: pt.key, label: pt.label, cor: pt.color,
+      n: base.filter(r => getTags(r.__id).includes(pt.key)).length
+    })).filter(d => d.n > 0).sort((a,b) => b.n - a.n);
+
+    const comTag = base.filter(r => getTags(r.__id).length).length;
+    if(resumo){
+      resumo.textContent = total
+        ? (comTag + ' de ' + total + ' obras com pendência (' + Math.round(comTag/total*100) + '%)')
+        : '';
+    }
+    if(!dados.length){
+      corpo.innerHTML = '<div class="graf-vazio">' +
+        (total ? 'Nenhuma pendência marcada neste recorte.' : 'Sem obras no filtro atual.') + '</div>';
+      return;
+    }
+    // Escala pelo maior valor, nao pelo total: com poucas marcacoes as barras
+    // ficariam todas invisiveis se a base fosse o total de obras.
+    const maior = dados[0].n;
+    corpo.innerHTML = dados.map(d => {
+      const larg = Math.max(2, Math.round(d.n / maior * 100));
+      const pct = total ? Math.round(d.n / total * 100) : 0;
+      return '<div class="graf-linha" onclick="estSetPend(\'' + escJs(d.key) + '\')" title="Filtrar por ' +
+        escHtml(d.label) + '">' +
+        '<span class="graf-rot">' + escHtml(d.label) + '</span>' +
+        '<span class="graf-trilho"><span class="graf-barra" style="width:' + larg + '%;background:' + d.cor + '"></span></span>' +
+        '<span class="graf-val">' + d.n + ' · ' + pct + '%</span>' +
+      '</div>';
+    }).join('');
+  }
+
+  function renderBarras(){ renderBarraCidades(); renderBarraMeses(); renderBarraPendencias(); renderGraficoPendencias(); }
 
   function renderBoard(){
     board.innerHTML = '';
@@ -1175,6 +1239,11 @@ try{if(localStorage.getItem("mariua_darkmode")==="1")document.body.classList.add
       if(!pendencyTags[id].length) delete pendencyTags[id];
     });
     saveLocal(); renderPendConfig(); renderBoard();
+  });
+  $('#grafToggle').addEventListener('click', () => {
+    const c = $('#grafCorpo');
+    const oculto = c.classList.toggle('oculto');
+    $('#grafSeta').textContent = oculto ? '▸' : '▾';
   });
   $('#configToggle').addEventListener('click', () => {
     const body = $('#configBody');
