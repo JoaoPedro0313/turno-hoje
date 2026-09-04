@@ -435,6 +435,45 @@ try{if(localStorage.getItem("mariua_darkmode")==="1")document.body.classList.add
     <span style="font-size:0.68rem;font-weight:800;color:#6b46c1;letter-spacing:1.5px;text-transform:uppercase;white-space:nowrap;">📅 MÊS:</span>
     <div id="est-mes-bar" style="display:flex;gap:6px;flex-wrap:wrap;flex:1;"></div>
     <span id="est-mes-info" style="font-size:0.66rem;color:#aaa;font-weight:700;white-space:nowrap;"></span>
+    <button type="button" onclick="estAbrirModalMes()" title="Cadastrar a aba de um mês" style="padding:5px 14px;border-radius:20px;border:2px dashed #c4b5fd;background:#faf5ff;font-family:'Barlow',sans-serif;font-size:0.75rem;font-weight:800;cursor:pointer;color:#6b46c1;white-space:nowrap;">+ Novo mês</button>
+  </div>
+</div>
+
+<div id="est-mm-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:200;align-items:center;justify-content:center;padding:16px;" onclick="if(event.target===this)estFecharModalMes()">
+  <div style="background:#fff;border-radius:16px;max-width:520px;width:100%;max-height:88vh;overflow:auto;padding:20px 22px;box-shadow:0 12px 40px rgba(0,0,0,0.3);">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+      <b style="font-size:1rem;color:#553c9a;">📅 Meses da planilha</b>
+      <button type="button" onclick="estFecharModalMes()" style="background:none;border:none;font-size:1.3rem;cursor:pointer;color:#aaa;line-height:1;">×</button>
+    </div>
+    <div style="background:#faf5ff;border:1px solid #e9d8fd;border-radius:10px;padding:10px 14px;margin-bottom:14px;font-size:0.72rem;color:#555;line-height:1.6;">
+      Abra a planilha de Estágios, clique na <b>aba do mês</b> e copie a URL do navegador. O sistema extrai a planilha e o gid da aba. A lista é salva no banco e vale para todos os usuários.
+    </div>
+    <div style="display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap;">
+      <div style="flex:1;min-width:110px;">
+        <label style="display:block;font-size:0.66rem;font-weight:800;color:#666;letter-spacing:0.8px;text-transform:uppercase;margin-bottom:4px;">Ano</label>
+        <input id="est-mm-ano" type="number" min="2024" max="2035" style="width:100%;padding:9px 12px;border:1.5px solid #d6bcfa;border-radius:9px;font-family:'Barlow',sans-serif;font-weight:700;box-sizing:border-box;">
+      </div>
+      <div style="flex:1;min-width:130px;">
+        <label style="display:block;font-size:0.66rem;font-weight:800;color:#666;letter-spacing:0.8px;text-transform:uppercase;margin-bottom:4px;">Mês</label>
+        <select id="est-mm-mes" style="width:100%;padding:9px 12px;border:1.5px solid #d6bcfa;border-radius:9px;font-family:'Barlow',sans-serif;font-weight:700;box-sizing:border-box;">
+          <option value="1">Janeiro</option><option value="2">Fevereiro</option><option value="3">Março</option>
+          <option value="4">Abril</option><option value="5">Maio</option><option value="6">Junho</option>
+          <option value="7">Julho</option><option value="8">Agosto</option><option value="9">Setembro</option>
+          <option value="10">Outubro</option><option value="11">Novembro</option><option value="12">Dezembro</option>
+        </select>
+      </div>
+    </div>
+    <div style="margin-bottom:14px;">
+      <label style="display:block;font-size:0.66rem;font-weight:800;color:#666;letter-spacing:0.8px;text-transform:uppercase;margin-bottom:4px;">Link da aba</label>
+      <input id="est-mm-url" type="text" placeholder="https://docs.google.com/spreadsheets/d/.../edit#gid=..." oninput="estMMPreview()" style="width:100%;padding:10px 14px;border:1.5px solid #d6bcfa;border-radius:9px;font-family:'Barlow',sans-serif;font-size:0.8rem;font-weight:600;box-sizing:border-box;">
+      <div id="est-mm-preview" style="font-size:0.68rem;margin-top:4px;font-weight:700;"></div>
+    </div>
+    <div id="est-mm-erro" style="display:none;background:#fde8e8;color:#c53030;font-size:0.78rem;font-weight:700;padding:10px 14px;border-radius:9px;margin-bottom:12px;border-left:3px solid #c53030;"></div>
+    <button type="button" onclick="estMMSalvar()" style="width:100%;padding:12px;background:linear-gradient(135deg,#553c9a,#6b46c1);color:#fff;border:none;border-radius:10px;font-family:'Barlow',sans-serif;font-size:0.9rem;font-weight:800;cursor:pointer;letter-spacing:0.5px;">💾 Salvar e abrir o mês</button>
+    <div style="margin-top:18px;padding-top:14px;border-top:1px dashed #e2e8f0;">
+      <div style="font-size:0.66rem;font-weight:800;color:#888;letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;">Meses cadastrados</div>
+      <div id="est-mm-lista"></div>
+    </div>
   </div>
 </div>
 
@@ -482,6 +521,8 @@ try{if(localStorage.getItem("mariua_darkmode")==="1")document.body.classList.add
   let overrides = {};     // { rowId: columnKey }  (drag changes, local only)
   let pendencyTags = {};  // { rowId: ['retro','poda', ...] }  (local only)
   let pendencyTypes = [];  // [{key, label, color}] — tipos de pendencia, customizaveis
+  let mesesEstagios = [];  // [{ano, mes, id, gid}] — abas mensais, compartilhadas no banco
+  const MES_ABREV = ['','JAN','FEV','MAR','ABR','MAI','JUN','JUL','AGO','SET','OUT','NOV','DEZ'];
 
   // ===== Supabase (mesma tabela chave-valor das outras telas) =====
   const SUPA_URL = 'https://eqxejfoibebcbtsqymji.supabase.co';
@@ -523,6 +564,8 @@ try{if(localStorage.getItem("mariua_darkmode")==="1")document.body.classList.add
       pendencyTypes = (saved.pendencyTypes && saved.pendencyTypes.length)
         ? saved.pendencyTypes
         : DEFAULT_PENDENCY_TYPES.map(p => ({...p}));
+      if(Array.isArray(saved.meses)) mesesEstagios = saved.meses;
+      if(saved.mesAtivo) mesAtivo = saved.mesAtivo;
     }catch(e){
       columns = DEFAULT_COLUMNS.map(c => ({...c}));
       pendencyTypes = DEFAULT_PENDENCY_TYPES.map(p => ({...p}));
@@ -534,7 +577,8 @@ try{if(localStorage.getItem("mariua_darkmode")==="1")document.body.classList.add
     try{
       localStorage.setItem(LS_KEY, JSON.stringify({
         sheetUrl: $('#sheetUrl').value,
-        columns, overrides, pendencyTags, pendencyTypes
+        columns, overrides, pendencyTags, pendencyTypes,
+        meses: mesesEstagios, mesAtivo
       }));
     }catch(e){}
   }
@@ -551,6 +595,7 @@ try{if(localStorage.getItem("mariua_darkmode")==="1")document.body.classList.add
     return {
       sheetUrl: $('#sheetUrl').value,
       columns, overrides, pendencyTags, pendencyTypes,
+      meses: mesesEstagios,
       atualizado: new Date().toISOString(),
       por: window.MARIUA_USER || ''   // nome exposto por identidade.js
     };
@@ -563,6 +608,7 @@ try{if(localStorage.getItem("mariua_darkmode")==="1")document.body.classList.add
     if(v.overrides) overrides = v.overrides;
     if(v.pendencyTags) pendencyTags = v.pendencyTags;
     if(Array.isArray(v.pendencyTypes) && v.pendencyTypes.length) pendencyTypes = v.pendencyTypes;
+    if(Array.isArray(v.meses)) mesesEstagios = v.meses;
     carimboAtual = v.atualizado || '';
   }
 
@@ -707,14 +753,11 @@ try{if(localStorage.getItem("mariua_darkmode")==="1")document.body.classList.add
     utd: ['utd'],
     supervisor: ['supervisor']
   };
-  // Coluna de data/mes — testada nesta ordem, a primeira que casar vence.
-  const MES_CANDIDATES = ['mes','competencia','periodo','data prevista','previsao','data'];
   const CIDADES_FIXAS = [
     { valor:'jacobina', label:'Jacobina' },
     { valor:'irece',    label:'Irecê' },
     { valor:'serrinha', label:'Serrinha' }
   ];
-  const MES_NOMES = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
   let fieldMap = {}; // e.g. { pep: 'PEP OBRA', titulo: 'TÍTULO', ... } -> actual header text
 
   function buildFieldMap(){
@@ -724,43 +767,8 @@ try{if(localStorage.getItem("mariua_darkmode")==="1")document.body.classList.add
       const found = headers.find(h => cands.some(c => norm(h).includes(c)));
       if(found) fieldMap[key] = found;
     });
-    for(let i=0; i<MES_CANDIDATES.length && !fieldMap.mes; i++){
-      const achado = headers.find(h => norm(h).includes(MES_CANDIDATES[i]));
-      if(achado) fieldMap.mes = achado;
-    }
   }
 
-  // Aceita 2026-01-15, 15/01/2026, 01/2026, jan/26, "Janeiro" e afins.
-  // Devolve {chave:'AAAA-MM', rotulo:'Jan/2026'} ou null.
-  function parseMes(valor){
-    const v = norm(valor);
-    if(!v) return null;
-    let ano = null, mes = null;
-    let m = v.match(/(\d{4})[-\/.](\d{1,2})(?:[-\/.](\d{1,2}))?/);           // 2026-01[-15]
-    if(m){ ano = +m[1]; mes = +m[2]; }
-    if(mes === null){
-      m = v.match(/(?:(\d{1,2})[-\/.])?(\d{1,2})[-\/.](\d{2,4})$/);          // [15/]01/2026
-      if(m){ mes = +m[2]; ano = +m[3]; if(ano < 100) ano += 2000; }
-    }
-    if(mes === null){
-      const nomes = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
-      const idx = nomes.findIndex(n => v.startsWith(n) || v.includes(' ' + n) || v.includes('/' + n));
-      if(idx >= 0){
-        mes = idx + 1;
-        const ma = v.match(/(\d{2,4})/);
-        if(ma){ ano = +ma[1]; if(ano < 100) ano += 2000; }
-      }
-    }
-    if(mes === null || mes < 1 || mes > 12) return null;
-    if(!ano){
-      return { chave: '0000-' + String(mes).padStart(2,'0'), rotulo: MES_NOMES[mes-1] };
-    }
-    return { chave: ano + '-' + String(mes).padStart(2,'0'), rotulo: MES_NOMES[mes-1] + '/' + ano };
-  }
-
-  function mesDaLinha(r){
-    return fieldMap.mes ? parseMes(r[fieldMap.mes]) : null;
-  }
   function get(r, key){
     return (fieldMap[key] && r[fieldMap[key]] !== undefined) ? r[fieldMap[key]] : '';
   }
@@ -790,7 +798,10 @@ try{if(localStorage.getItem("mariua_darkmode")==="1")document.body.classList.add
     return matrix.slice(headerIdx + 1).map((r, idx) => {
       const obj = {};
       head.forEach((h,i) => { if(h) obj[h] = (r[i] !== undefined ? r[i].trim() : ''); });
-      obj.__id = get(obj,'pep') || ('row-' + idx);
+      // Com PEP a etiqueta acompanha a obra entre meses, que e o desejado.
+      // Sem PEP, o indice sozinho colidiria entre abas — por isso o prefixo do mes.
+      const escopo = mesAtivo ? (mesAtivo.ano + '-' + mesAtivo.mes + '-') : '';
+      obj.__id = get(obj,'pep') || ('row-' + escopo + idx);
       return obj;
     });
   }
@@ -914,15 +925,10 @@ try{if(localStorage.getItem("mariua_darkmode")==="1")document.body.classList.add
     return tags.includes(filtro);
   }
 
-  function passaMes(r, chave){
-    if(!chave) return true;
-    const m = mesDaLinha(r);
-    return !!m && m.chave === chave;
-  }
 
   // Fonte unica da filtragem — usada pelo quadro, pelas barras e pela exportacao.
   let filtroCidade = '';   // '' = todas
-  let filtroMes    = '';   // '' = todos
+  let mesAtivo     = null; // {ano,mes} — escolha de visualizacao, por usuario
   let filtroPend   = '';   // '' = todas | chave do tipo | '__com' | '__sem'
 
   function linhasFiltradas(opts){
@@ -931,13 +937,11 @@ try{if(localStorage.getItem("mariua_darkmode")==="1")document.body.classList.add
     return rows.filter(r =>
       matchesSearch(r,q) &&
       (o.ignorarCidade ? true : passaCidade(r, filtroCidade)) &&
-      (o.ignorarMes    ? true : passaMes(r, filtroMes)) &&
       (o.ignorarPend   ? true : passaPend(r, filtroPend))
     );
   }
 
   window.estSetCidade = function(v){ filtroCidade = v; renderBoard(); };
-  window.estSetMes    = function(v){ filtroMes    = v; renderBoard(); };
   window.estSetPend   = function(v){ filtroPend   = v; renderBoard(); };
 
   // Botao no mesmo padrao visual das barras do mapa.
@@ -1001,73 +1005,102 @@ try{if(localStorage.getItem("mariua_darkmode")==="1")document.body.classList.add
     }
   }
 
+  function rotuloMes(e){ return (MES_ABREV[e.mes] || '?') + '/' + String(e.ano).slice(-2); }
+
   function renderBarraMeses(){
     const wrap = $('#est-mes-wrapper'), bar = $('#est-mes-bar'), info = $('#est-mes-info');
     if(!wrap || !bar) return;
-    const base = linhasFiltradas({ ignorarMes: true });
-    const vistos = new Map();
-    base.forEach(r => {
-      const m = mesDaLinha(r);
-      if(!m) return;
-      if(!vistos.has(m.chave)) vistos.set(m.chave, { rotulo: m.rotulo, n: 0 });
-      vistos.get(m.chave).n++;
-    });
-    const ordenados = Array.from(vistos.entries()).sort((a,b) => a[0].localeCompare(b[0]));
-    if(!ordenados.length){
-      wrap.style.display = 'none';
-      if(filtroMes){ filtroMes = ''; }
-      return;
-    }
     wrap.style.display = 'flex';
-    let html = botaoFiltro({ rotulo:'📅 Todos', valor:'', contagem:base.length,
-                             ativo:filtroMes === '', setter:'estSetMes', raio:'20px', cor:'#6b46c1' });
-    ordenados.forEach(([chave, v]) => {
-      html += botaoFiltro({ rotulo:'📅 ' + v.rotulo.toUpperCase(), valor:chave, contagem:v.n,
-                            ativo:filtroMes === chave, setter:'estSetMes', raio:'20px', cor:'#6b46c1' });
-    });
-    bar.innerHTML = html;
-    if(info) info.textContent = fieldMap.mes ? 'coluna "' + fieldMap.mes + '"' : '';
+    const ordenados = mesesEstagios.slice().sort((a,b) => a.ano!==b.ano ? a.ano-b.ano : a.mes-b.mes);
+    bar.innerHTML = ordenados.length
+      ? ordenados.map(e => botaoFiltro({
+          rotulo: '📅 ' + rotuloMes(e),
+          valor: e.ano + '-' + e.mes,
+          contagem: null,
+          ativo: !!mesAtivo && mesAtivo.ano === e.ano && mesAtivo.mes === e.mes,
+          setter: 'estCarregarMes', raio: '20px', cor: '#6b46c1'
+        })).join('')
+      : '<span style="font-size:0.74rem;color:#aaa;font-weight:700;">Nenhum mês cadastrado — use "+ Novo mês".</span>';
+    if(info) info.textContent = '';
   }
 
-  // Barras horizontais em HTML puro — sem biblioteca de grafico, para nao
-  // acrescentar download numa tela usada em campo.
-  function renderGraficoPendencias(){
-    const corpo = $('#grafCorpo'), resumo = $('#grafResumo');
-    if(!corpo) return;
-    // Ignora o filtro de pendencia: o grafico mostra a distribuicao inteira do
-    // recorte atual, senao filtrar por um tipo deixaria so uma barra em pe.
-    const base = linhasFiltradas({ ignorarPend: true });
-    const total = base.length;
-    const dados = pendencyTypes.map(pt => ({
-      key: pt.key, label: pt.label, cor: pt.color,
-      n: base.filter(r => getTags(r.__id).includes(pt.key)).length
-    })).filter(d => d.n > 0).sort((a,b) => b.n - a.n);
+  window.estCarregarMes = function(chave){
+    const [ano, mes] = chave.split('-').map(Number);
+    const e = mesesEstagios.find(x => x.ano===ano && x.mes===mes);
+    if(!e) return;
+    mesAtivo = { ano, mes };
+    salvarCacheLocal();
+    carregarAba(e.id, e.gid, rotuloMes(e));
+  };
 
-    const comTag = base.filter(r => getTags(r.__id).length).length;
-    if(resumo){
-      resumo.textContent = total
-        ? (comTag + ' de ' + total + ' obras com pendência (' + Math.round(comTag/total*100) + '%)')
-        : '';
+  // ---------- cadastro de meses ----------
+  window.estAbrirModalMes = function(){
+    const ov = $('#est-mm-overlay');
+    if(!ov) return;
+    const hoje = new Date();
+    $('#est-mm-ano').value = hoje.getFullYear();
+    $('#est-mm-mes').value = hoje.getMonth() + 1;
+    $('#est-mm-url').value = '';
+    $('#est-mm-erro').style.display = 'none';
+    estMMPreview();
+    estMMLista();
+    ov.style.display = 'flex';
+  };
+  window.estFecharModalMes = function(){ const ov = $('#est-mm-overlay'); if(ov) ov.style.display = 'none'; };
+
+  window.estMMPreview = function(){
+    const el = $('#est-mm-preview'); if(!el) return;
+    const v = $('#est-mm-url').value.trim();
+    const p = v ? parseSheetUrl(v) : null;
+    el.innerHTML = p
+      ? '<span style="color:#38a169;">✔ Planilha e aba identificadas (gid <b>' + escHtml(p.gid) + '</b>)</span>'
+      : (v ? '<span style="color:#c53030;">Link inválido — cole a URL completa da aba, não o link de "Publicar na web".</span>' : '');
+  };
+
+  window.estMMLista = function(){
+    const el = $('#est-mm-lista'); if(!el) return;
+    const ordenados = mesesEstagios.slice().sort((a,b) => a.ano!==b.ano ? a.ano-b.ano : a.mes-b.mes);
+    el.innerHTML = ordenados.length ? ordenados.map(e =>
+      '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 12px;border-radius:9px;background:#f8fafc;border:1.5px solid #e8ecef;margin-bottom:6px;">' +
+        '<span style="font-size:0.8rem;font-weight:800;color:#2d3748;">📅 ' + rotuloMes(e) + '</span>' +
+        '<span style="font-size:0.65rem;color:#888;font-weight:700;">gid ' + escHtml(e.gid) + '</span>' +
+        '<button type="button" onclick="estMMRemover(' + e.ano + ',' + e.mes + ')" title="Remover" style="background:#fde8e8;color:#c53030;border:none;border-radius:7px;width:26px;height:26px;cursor:pointer;font-weight:800;">×</button>' +
+      '</div>'
+    ).join('') : '<div style="color:#aaa;font-size:0.78rem;padding:8px 0;">Nenhum mês cadastrado ainda.</div>';
+  };
+
+  window.estMMRemover = function(ano, mes){
+    const e = mesesEstagios.find(x => x.ano===ano && x.mes===mes);
+    if(!e || !confirm('Remover ' + rotuloMes(e) + ' da lista de meses?')) return;
+    mesesEstagios = mesesEstagios.filter(x => !(x.ano===ano && x.mes===mes));
+    if(mesAtivo && mesAtivo.ano===ano && mesAtivo.mes===mes) mesAtivo = null;
+    saveLocal(); estMMLista(); renderBarraMeses();
+  };
+
+  window.estMMSalvar = function(){
+    const erro = $('#est-mm-erro');
+    const ano = parseInt($('#est-mm-ano').value, 10);
+    const mes = parseInt($('#est-mm-mes').value, 10);
+    const p = parseSheetUrl($('#est-mm-url').value.trim() || '');
+    const falha = (t) => { erro.textContent = t; erro.style.display = 'block'; };
+    if(isNaN(ano) || ano < 2024 || ano > 2035) return falha('Ano inválido. Use entre 2024 e 2035.');
+    if(isNaN(mes) || mes < 1 || mes > 12) return falha('Mês inválido.');
+    if(!p) return falha('Não consegui ler o link. Cole a URL completa da aba (com /spreadsheets/d/… e gid).');
+    erro.style.display = 'none';
+    const novo = { ano, mes, id: p.id, gid: p.gid };
+    const i = mesesEstagios.findIndex(x => x.ano===ano && x.mes===mes);
+    if(i >= 0){
+      if(!confirm(rotuloMes(novo) + ' já está cadastrado. Substituir o link?')) return;
+      mesesEstagios[i] = novo;
+    } else {
+      mesesEstagios.push(novo);
     }
-    if(!dados.length){
-      corpo.innerHTML = '<div class="graf-vazio">' +
-        (total ? 'Nenhuma pendência marcada neste recorte.' : 'Sem obras no filtro atual.') + '</div>';
-      return;
-    }
-    // Escala pelo maior valor, nao pelo total: com poucas marcacoes as barras
-    // ficariam todas invisiveis se a base fosse o total de obras.
-    const maior = dados[0].n;
-    corpo.innerHTML = dados.map(d => {
-      const larg = Math.max(2, Math.round(d.n / maior * 100));
-      const pct = total ? Math.round(d.n / total * 100) : 0;
-      return '<div class="graf-linha" onclick="estSetPend(\'' + escJs(d.key) + '\')" title="Filtrar por ' +
-        escHtml(d.label) + '">' +
-        '<span class="graf-rot">' + escHtml(d.label) + '</span>' +
-        '<span class="graf-trilho"><span class="graf-barra" style="width:' + larg + '%;background:' + d.cor + '"></span></span>' +
-        '<span class="graf-val">' + d.n + ' · ' + pct + '%</span>' +
-      '</div>';
-    }).join('');
-  }
+    saveLocal();          // grava no banco: a lista de meses e compartilhada
+    estMMLista();
+    renderBarraMeses();
+    estFecharModalMes();
+    estCarregarMes(ano + '-' + mes);
+  };
 
   function renderBarras(){ renderBarraCidades(); renderBarraMeses(); renderBarraPendencias(); renderGraficoPendencias(); }
 
@@ -1183,10 +1216,14 @@ try{if(localStorage.getItem("mariua_darkmode")==="1")document.body.classList.add
     if(!url){ setStatus('err','Cole o link da planilha primeiro.'); return; }
     const parsed = parseSheetUrl(url);
     if(!parsed){ setStatus('err','Link inválido — cole o link normal de compartilhamento da aba (não o link de "Publicar na web").'); return; }
+    mesAtivo = null;   // carga avulsa pelo link: nenhum botao de mes fica aceso
+    return carregarAba(parsed.id, parsed.gid, '');
+  }
 
-    setStatus('loading','Carregando planilha…');
+  async function carregarAba(id, gid, rotulo){
+    setStatus('loading', 'Carregando ' + (rotulo || 'planilha') + '…');
     try{
-      const json = await fetchGvizJson(parsed.id, parsed.gid);
+      const json = await fetchGvizJson(id, gid);
       if(json && json.status === 'error'){
         const msg = (json.errors && json.errors[0] && json.errors[0].detailed_message) || 'Erro ao ler a planilha.';
         throw new Error(msg);
@@ -1196,8 +1233,8 @@ try{if(localStorage.getItem("mariua_darkmode")==="1")document.body.classList.add
       rows = rowsFromCsv(matrix);
       renderConfig();
       renderBoard();
-      saveLocal();   // grava tambem o link da planilha para os demais usuarios
-      setStatus('ok', `${rows.length} obras carregadas`);
+      saveLocal();
+      setStatus('ok', rows.length + ' obras carregadas' + (rotulo ? ' — ' + rotulo : ''));
     }catch(err){
       console.error(err);
       setStatus('err','Não foi possível carregar essa aba. Confirme que o compartilhamento está como "Qualquer pessoa com o link → Leitor" e que o link inclui o gid correto da aba.');
@@ -1258,7 +1295,11 @@ try{if(localStorage.getItem("mariua_darkmode")==="1")document.body.classList.add
   setStatus('', 'Aguardando planilha…');
 
   dbCarregar(false).then(() => {
-    if($('#sheetUrl').value) loadSheet();
+    const disponiveis = mesesEstagios.slice().sort((a,b) => a.ano!==b.ano ? a.ano-b.ano : a.mes-b.mes);
+    const escolhido = (mesAtivo && disponiveis.find(e => e.ano===mesAtivo.ano && e.mes===mesAtivo.mes))
+      || disponiveis[disponiveis.length - 1];
+    if(escolhido) estCarregarMes(escolhido.ano + '-' + escolhido.mes);
+    else if($('#sheetUrl').value) loadSheet();
   });
 
   // Traz o que os outros usuarios mudaram. Pausa se a aba esta em segundo plano
