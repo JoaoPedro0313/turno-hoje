@@ -376,19 +376,6 @@ try{if(localStorage.getItem("mariua_darkmode")==="1")document.body.classList.add
         <button class="btn" id="btnReload" title="Recarregar da mesma planilha">🔄</button>
       </div>
       <div class="toolbar-row">
-        <span class="field-label">📅 Mês</span>
-        <select id="filtroMes" style="min-width:150px;"><option value="">Todos os meses</option></select>
-        <span class="field-label">🏙️ Cidade</span>
-        <select id="filtroCidade" style="min-width:150px;">
-          <option value="">Todas as cidades</option>
-          <option value="jacobina">Jacobina</option>
-          <option value="irece">Irecê</option>
-          <option value="serrinha">Serrinha</option>
-        </select>
-        <button class="btn btn-sm" id="btnLimparFiltros" type="button">✕ Limpar filtros</button>
-        <span class="field-label" id="filtroInfo" style="letter-spacing:0.3px;text-transform:none;font-weight:600;color:#888;"></span>
-      </div>
-      <div class="toolbar-row">
         <span class="field-label">🔎 Buscar</span>
         <input id="search" type="text" placeholder="PEP, título, município, encarregado…" style="min-width:220px;">
         <button class="btn btn-sm" id="btnExport">⬇️ Exportar CSV</button>
@@ -407,6 +394,18 @@ try{if(localStorage.getItem("mariua_darkmode")==="1")document.body.classList.add
         </div>
       </div>
     </div>
+  </div>
+</div>
+
+<div class="container">
+  <div style="background:#fff;border-radius:14px;box-shadow:0 2px 14px rgba(0,0,0,0.08);padding:14px 20px;margin-bottom:10px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+    <span style="font-size:0.68rem;font-weight:800;color:#888;letter-spacing:1.5px;text-transform:uppercase;white-space:nowrap;">🏗️ UTD:</span>
+    <div id="est-utd-bar" style="display:flex;gap:8px;flex-wrap:wrap;"></div>
+  </div>
+  <div id="est-mes-wrapper" style="display:none;background:#fff;border-radius:14px;box-shadow:0 2px 14px rgba(0,0,0,0.08);padding:12px 20px;margin-bottom:10px;align-items:center;gap:10px;flex-wrap:wrap;">
+    <span style="font-size:0.68rem;font-weight:800;color:#6b46c1;letter-spacing:1.5px;text-transform:uppercase;white-space:nowrap;">📅 MÊS:</span>
+    <div id="est-mes-bar" style="display:flex;gap:6px;flex-wrap:wrap;flex:1;"></div>
+    <span id="est-mes-info" style="font-size:0.66rem;color:#aaa;font-weight:700;white-space:nowrap;"></span>
   </div>
 </div>
 
@@ -549,7 +548,7 @@ try{if(localStorage.getItem("mariua_darkmode")==="1")document.body.classList.add
       if(novo){
         aplicarPacote(v);
         salvarCacheLocal();
-        preencherMeses(); preencherCidadesExtras();
+        renderBarras();
         renderConfig(); renderPendConfig(); renderBoard();
       }
       bancoCarregado = true;
@@ -882,53 +881,97 @@ try{if(localStorage.getItem("mariua_darkmode")==="1")document.body.classList.add
     return !!m && m.chave === chave;
   }
 
-  // Fonte unica da filtragem — usada pelo quadro e pela exportacao.
-  function linhasFiltradas(){
+  // Fonte unica da filtragem — usada pelo quadro, pelas barras e pela exportacao.
+  let filtroCidade = '';   // '' = todas
+  let filtroMes    = '';   // '' = todos
+
+  function linhasFiltradas(opts){
+    const o = opts || {};
     const q = $('#search').value.trim();
-    const cidade = $('#filtroCidade').value;
-    const chaveMes = $('#filtroMes').value;
-    return rows.filter(r => matchesSearch(r,q) && passaCidade(r,cidade) && passaMes(r,chaveMes));
+    return rows.filter(r =>
+      matchesSearch(r,q) &&
+      (o.ignorarCidade ? true : passaCidade(r, filtroCidade)) &&
+      (o.ignorarMes    ? true : passaMes(r, filtroMes))
+    );
   }
 
-  // Preenche o seletor de meses com os meses que existem na planilha carregada.
-  function preencherMeses(){
-    const sel = $('#filtroMes');
-    const anterior = sel.value;
-    const vistos = new Map();
-    rows.forEach(r => { const m = mesDaLinha(r); if(m && !vistos.has(m.chave)) vistos.set(m.chave, m.rotulo); });
-    const ordenados = Array.from(vistos.entries()).sort((a,b) => a[0].localeCompare(b[0]));
-    sel.innerHTML = '<option value="">Todos os meses</option>' +
-      ordenados.map(([chave,rot]) => `<option value="${chave}">${rot}</option>`).join('');
-    sel.value = vistos.has(anterior) ? anterior : '';
-    const semColuna = !fieldMap.mes;
-    sel.disabled = semColuna || !ordenados.length;
-    const info = $('#filtroInfo');
-    if(semColuna) info.textContent = 'Nenhuma coluna de mês/data encontrada na planilha.';
-    else if(!ordenados.length) info.textContent = 'A coluna "' + fieldMap.mes + '" não trouxe datas reconhecíveis.';
-    else info.textContent = 'Mês lido da coluna "' + fieldMap.mes + '".';
+  window.estSetCidade = function(v){ filtroCidade = v; renderBoard(); };
+  window.estSetMes    = function(v){ filtroMes    = v; renderBoard(); };
+
+  // Botao no mesmo padrao visual das barras do mapa.
+  function escHtml(t){
+    const d = document.createElement('div'); d.textContent = t == null ? '' : String(t); return d.innerHTML;
+  }
+  function escJs(t){ return String(t == null ? '' : t).replace(/\\/g,'\\\\').replace(/'/g,"\\'"); }
+
+  function botaoFiltro(rotulo, valor, contagem, ativo, cor){
+    const c = cor || '#0d7377';
+    return '<button type="button" onclick="' + (cor ? 'estSetMes' : 'estSetCidade') + "('" + escJs(valor) + "')" + '"' +
+      ' style="padding:8px 20px;border-radius:' + (cor ? '20px' : '10px') + ';border:2px solid ' + (ativo ? c : '#e2e8f0') +
+      ';background:' + (ativo ? c : '#fff') + ";font-family:'Barlow',sans-serif;font-size:0.8rem;font-weight:800;cursor:pointer;color:" +
+      (ativo ? '#fff' : '#555') + ';transition:all 0.15s;white-space:nowrap;">' + escHtml(rotulo) +
+      (contagem === null ? '' : ' <span style="opacity:0.75;font-size:0.72rem;">(' + contagem + ')</span>') + '</button>';
   }
 
-  // Acrescenta ao seletor de cidades qualquer municipio da planilha fora das tres fixas.
-  function preencherCidadesExtras(){
-    const sel = $('#filtroCidade');
-    const anterior = sel.value;
+  // Cidades: as tres fixas sempre visiveis + qualquer municipio extra da planilha.
+  function renderBarraCidades(){
+    const bar = $('#est-utd-bar');
+    if(!bar) return;
+    // Contagem por cidade ignora o filtro de cidade, mas respeita mes e busca —
+    // assim o numero no botao e o que voce vai ver ao clicar nele.
+    const base = linhasFiltradas({ ignorarCidade: true });
     const extras = new Map();
-    rows.forEach(r => {
+    base.forEach(r => {
       const bruto = (get(r,'municipio') || '').trim();
       const mun = norm(bruto);
       if(!mun || CIDADES_FIXAS.some(c => mun.includes(c.valor))) return;
       if(!extras.has(mun)) extras.set(mun, bruto);
     });
-    sel.innerHTML = '<option value="">Todas as cidades</option>' +
-      CIDADES_FIXAS.map(c => `<option value="${c.valor}">${c.label}</option>`).join('') +
-      (extras.size ? '<option value="__outras">— Outras cidades —</option>' +
-        Array.from(extras.entries()).sort((a,b) => a[1].localeCompare(b[1]))
-          .map(([v,rot]) => `<option value="${v}">${rot}</option>`).join('') : '');
-    sel.value = Array.from(sel.options).some(o => o.value === anterior) ? anterior : '';
+    let html = botaoFiltro('🗺️ Todas', '', base.length, filtroCidade === '');
+    CIDADES_FIXAS.forEach(c => {
+      html += botaoFiltro('📍 ' + c.label, c.valor,
+        base.filter(r => norm(get(r,'municipio')).includes(c.valor)).length,
+        filtroCidade === c.valor);
+    });
+    Array.from(extras.entries()).sort((a,b) => a[1].localeCompare(b[1])).forEach(([v,rot]) => {
+      html += botaoFiltro('📍 ' + rot, v,
+        base.filter(r => norm(get(r,'municipio')).includes(v)).length,
+        filtroCidade === v);
+    });
+    bar.innerHTML = html;
   }
+
+  function renderBarraMeses(){
+    const wrap = $('#est-mes-wrapper'), bar = $('#est-mes-bar'), info = $('#est-mes-info');
+    if(!wrap || !bar) return;
+    const base = linhasFiltradas({ ignorarMes: true });
+    const vistos = new Map();
+    base.forEach(r => {
+      const m = mesDaLinha(r);
+      if(!m) return;
+      if(!vistos.has(m.chave)) vistos.set(m.chave, { rotulo: m.rotulo, n: 0 });
+      vistos.get(m.chave).n++;
+    });
+    const ordenados = Array.from(vistos.entries()).sort((a,b) => a[0].localeCompare(b[0]));
+    if(!ordenados.length){
+      wrap.style.display = 'none';
+      if(filtroMes){ filtroMes = ''; }
+      return;
+    }
+    wrap.style.display = 'flex';
+    let html = botaoFiltro('📅 Todos', '', base.length, filtroMes === '', '#6b46c1');
+    ordenados.forEach(([chave, v]) => {
+      html += botaoFiltro('📅 ' + v.rotulo.toUpperCase(), chave, v.n, filtroMes === chave, '#6b46c1');
+    });
+    bar.innerHTML = html;
+    if(info) info.textContent = fieldMap.mes ? 'coluna "' + fieldMap.mes + '"' : '';
+  }
+
+  function renderBarras(){ renderBarraCidades(); renderBarraMeses(); }
 
   function renderBoard(){
     board.innerHTML = '';
+    renderBarras();
 
     if(!rows.length){
       boardEmpty.style.display = 'block';
@@ -1049,8 +1092,6 @@ try{if(localStorage.getItem("mariua_darkmode")==="1")document.body.classList.add
       const matrix = gvizToMatrix(json);
       if(!matrix.length) throw new Error('Planilha vazia');
       rows = rowsFromCsv(matrix);
-      preencherMeses();
-      preencherCidadesExtras();
       renderConfig();
       renderBoard();
       saveLocal();   // grava tambem o link da planilha para os demais usuarios
@@ -1086,14 +1127,6 @@ try{if(localStorage.getItem("mariua_darkmode")==="1")document.body.classList.add
   $('#btnReload').addEventListener('click', loadSheet);
   $('#btnExport').addEventListener('click', exportCsv);
   $('#search').addEventListener('input', renderBoard);
-  $('#filtroMes').addEventListener('change', renderBoard);
-  $('#filtroCidade').addEventListener('change', renderBoard);
-  $('#btnLimparFiltros').addEventListener('click', () => {
-    $('#search').value = '';
-    $('#filtroMes').value = '';
-    $('#filtroCidade').value = '';
-    renderBoard();
-  });
   $('#btnAddPend').addEventListener('click', addPendencyType);
   $('#btnResetPend').addEventListener('click', () => {
     if(!confirm('Restaurar os quatro tipos originais? Pendências criadas por você serão removidas.')) return;
@@ -1112,8 +1145,6 @@ try{if(localStorage.getItem("mariua_darkmode")==="1")document.body.classList.add
   });
 
   loadLocal();
-  preencherMeses();
-  preencherCidadesExtras();
   renderConfig();
   renderPendConfig();
   renderBoard();
