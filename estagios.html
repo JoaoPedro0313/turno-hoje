@@ -401,6 +401,11 @@ try{if(localStorage.getItem("mariua_darkmode")==="1")document.body.classList.add
   <div style="background:#fff;border-radius:14px;box-shadow:0 2px 14px rgba(0,0,0,0.08);padding:14px 20px;margin-bottom:10px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
     <span style="font-size:0.68rem;font-weight:800;color:#888;letter-spacing:1.5px;text-transform:uppercase;white-space:nowrap;">🏗️ UTD:</span>
     <div id="est-utd-bar" style="display:flex;gap:8px;flex-wrap:wrap;"></div>
+    <span id="est-utd-aviso" style="font-size:0.66rem;color:#aaa;font-weight:700;margin-left:auto;white-space:nowrap;"></span>
+  </div>
+  <div style="background:#fff;border-radius:14px;box-shadow:0 2px 14px rgba(0,0,0,0.08);padding:12px 20px;margin-bottom:10px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+    <span style="font-size:0.68rem;font-weight:800;color:#e5484d;letter-spacing:1.5px;text-transform:uppercase;white-space:nowrap;">🏷️ PENDÊNCIA:</span>
+    <div id="est-pend-bar" style="display:flex;gap:6px;flex-wrap:wrap;flex:1;"></div>
   </div>
   <div id="est-mes-wrapper" style="display:none;background:#fff;border-radius:14px;box-shadow:0 2px 14px rgba(0,0,0,0.08);padding:12px 20px;margin-bottom:10px;align-items:center;gap:10px;flex-wrap:wrap;">
     <span style="font-size:0.68rem;font-weight:800;color:#6b46c1;letter-spacing:1.5px;text-transform:uppercase;white-space:nowrap;">📅 MÊS:</span>
@@ -866,13 +871,23 @@ try{if(localStorage.getItem("mariua_darkmode")==="1")document.body.classList.add
     return Object.values(r).some(v => (v||'').toLowerCase().includes(q));
   }
 
+  // A carteira vem da coluna UTD da planilha. Se ela nao existir, cai para o
+  // municipio — que e menos preciso, porque uma carteira cobre varios municipios.
+  function valorCarteira(r){
+    const utd = fieldMap.utd ? norm(get(r,'utd')) : '';
+    return utd || norm(get(r,'municipio'));
+  }
   function passaCidade(r, cidade){
     if(!cidade) return true;
-    const mun = norm(get(r,'municipio'));
-    if(cidade === '__outras'){
-      return !CIDADES_FIXAS.some(c => mun.includes(c.valor));
-    }
-    return mun.includes(cidade);
+    return valorCarteira(r).includes(cidade);
+  }
+
+  function passaPend(r, filtro){
+    if(!filtro) return true;
+    const tags = getTags(r.__id);
+    if(filtro === '__sem') return tags.length === 0;
+    if(filtro === '__com') return tags.length > 0;
+    return tags.includes(filtro);
   }
 
   function passaMes(r, chave){
@@ -884,6 +899,7 @@ try{if(localStorage.getItem("mariua_darkmode")==="1")document.body.classList.add
   // Fonte unica da filtragem — usada pelo quadro, pelas barras e pela exportacao.
   let filtroCidade = '';   // '' = todas
   let filtroMes    = '';   // '' = todos
+  let filtroPend   = '';   // '' = todas | chave do tipo | '__com' | '__sem'
 
   function linhasFiltradas(opts){
     const o = opts || {};
@@ -891,12 +907,14 @@ try{if(localStorage.getItem("mariua_darkmode")==="1")document.body.classList.add
     return rows.filter(r =>
       matchesSearch(r,q) &&
       (o.ignorarCidade ? true : passaCidade(r, filtroCidade)) &&
-      (o.ignorarMes    ? true : passaMes(r, filtroMes))
+      (o.ignorarMes    ? true : passaMes(r, filtroMes)) &&
+      (o.ignorarPend   ? true : passaPend(r, filtroPend))
     );
   }
 
   window.estSetCidade = function(v){ filtroCidade = v; renderBoard(); };
   window.estSetMes    = function(v){ filtroMes    = v; renderBoard(); };
+  window.estSetPend   = function(v){ filtroPend   = v; renderBoard(); };
 
   // Botao no mesmo padrao visual das barras do mapa.
   function escHtml(t){
@@ -904,41 +922,59 @@ try{if(localStorage.getItem("mariua_darkmode")==="1")document.body.classList.add
   }
   function escJs(t){ return String(t == null ? '' : t).replace(/\\/g,'\\\\').replace(/'/g,"\\'"); }
 
-  function botaoFiltro(rotulo, valor, contagem, ativo, cor){
-    const c = cor || '#0d7377';
-    return '<button type="button" onclick="' + (cor ? 'estSetMes' : 'estSetCidade') + "('" + escJs(valor) + "')" + '"' +
-      ' style="padding:8px 20px;border-radius:' + (cor ? '20px' : '10px') + ';border:2px solid ' + (ativo ? c : '#e2e8f0') +
-      ';background:' + (ativo ? c : '#fff') + ";font-family:'Barlow',sans-serif;font-size:0.8rem;font-weight:800;cursor:pointer;color:" +
-      (ativo ? '#fff' : '#555') + ';transition:all 0.15s;white-space:nowrap;">' + escHtml(rotulo) +
-      (contagem === null ? '' : ' <span style="opacity:0.75;font-size:0.72rem;">(' + contagem + ')</span>') + '</button>';
+  // setter e cor explicitos — antes a cor decidia qual filtro o botao acionava,
+  // o que quebraria ao surgir uma terceira barra.
+  function botaoFiltro(o){
+    const c = o.cor || '#0d7377';
+    const raio = o.raio || '10px';
+    return '<button type="button" onclick="' + o.setter + "('" + escJs(o.valor) + "')" + '"' +
+      ' style="padding:8px 18px;border-radius:' + raio + ';border:2px solid ' + (o.ativo ? c : '#e2e8f0') +
+      ';background:' + (o.ativo ? c : '#fff') + ";font-family:'Barlow',sans-serif;font-size:0.8rem;font-weight:800;cursor:pointer;color:" +
+      (o.ativo ? '#fff' : '#555') + ';transition:all 0.15s;white-space:nowrap;">' + escHtml(o.rotulo) +
+      (o.contagem == null ? '' : ' <span style="opacity:0.75;font-size:0.72rem;">(' + o.contagem + ')</span>') + '</button>';
   }
 
-  // Cidades: as tres fixas sempre visiveis + qualquer municipio extra da planilha.
+  // Só as tres carteiras. Nada de municipio avulso virando botao.
   function renderBarraCidades(){
     const bar = $('#est-utd-bar');
     if(!bar) return;
-    // Contagem por cidade ignora o filtro de cidade, mas respeita mes e busca —
-    // assim o numero no botao e o que voce vai ver ao clicar nele.
+    // A contagem ignora o proprio filtro de carteira, mas respeita mes, pendencia
+    // e busca — o numero no botao e o que voce vera ao clicar nele.
     const base = linhasFiltradas({ ignorarCidade: true });
-    const extras = new Map();
-    base.forEach(r => {
-      const bruto = (get(r,'municipio') || '').trim();
-      const mun = norm(bruto);
-      if(!mun || CIDADES_FIXAS.some(c => mun.includes(c.valor))) return;
-      if(!extras.has(mun)) extras.set(mun, bruto);
-    });
-    let html = botaoFiltro('🗺️ Todas', '', base.length, filtroCidade === '');
+    let html = botaoFiltro({ rotulo:'🗺️ Todas', valor:'', contagem:base.length,
+                             ativo:filtroCidade === '', setter:'estSetCidade' });
     CIDADES_FIXAS.forEach(c => {
-      html += botaoFiltro('📍 ' + c.label, c.valor,
-        base.filter(r => norm(get(r,'municipio')).includes(c.valor)).length,
-        filtroCidade === c.valor);
-    });
-    Array.from(extras.entries()).sort((a,b) => a[1].localeCompare(b[1])).forEach(([v,rot]) => {
-      html += botaoFiltro('📍 ' + rot, v,
-        base.filter(r => norm(get(r,'municipio')).includes(v)).length,
-        filtroCidade === v);
+      html += botaoFiltro({ rotulo:'📍 ' + c.label, valor:c.valor,
+        contagem: base.filter(r => valorCarteira(r).includes(c.valor)).length,
+        ativo: filtroCidade === c.valor, setter:'estSetCidade' });
     });
     bar.innerHTML = html;
+    const fora = base.filter(r => !CIDADES_FIXAS.some(c => valorCarteira(r).includes(c.valor))).length;
+    const av = $('#est-utd-aviso');
+    if(av) av.textContent = fora ? (fora + ' obra(s) fora das três carteiras — visíveis em "Todas"') : '';
+  }
+
+  function renderBarraPendencias(){
+    const bar = $('#est-pend-bar');
+    if(!bar) return;
+    const base = linhasFiltradas({ ignorarPend: true });
+    const comTag = base.filter(r => getTags(r.__id).length).length;
+    let html = botaoFiltro({ rotulo:'🏷️ Todas', valor:'', contagem:base.length,
+                             ativo:filtroPend === '', setter:'estSetPend', raio:'20px', cor:'#e5484d' });
+    html += botaoFiltro({ rotulo:'Com pendência', valor:'__com', contagem:comTag,
+                          ativo:filtroPend === '__com', setter:'estSetPend', raio:'20px', cor:'#e5484d' });
+    html += botaoFiltro({ rotulo:'Sem pendência', valor:'__sem', contagem:base.length - comTag,
+                          ativo:filtroPend === '__sem', setter:'estSetPend', raio:'20px', cor:'#718096' });
+    pendencyTypes.forEach(pt => {
+      html += botaoFiltro({ rotulo:pt.label, valor:pt.key,
+        contagem: base.filter(r => getTags(r.__id).includes(pt.key)).length,
+        ativo: filtroPend === pt.key, setter:'estSetPend', raio:'20px', cor:pt.color });
+    });
+    bar.innerHTML = html;
+    // Um tipo removido no painel nao pode continuar filtrando escondido.
+    if(filtroPend && !['__com','__sem'].includes(filtroPend) && !pendencyTypes.some(pt => pt.key === filtroPend)){
+      filtroPend = '';
+    }
   }
 
   function renderBarraMeses(){
@@ -959,15 +995,17 @@ try{if(localStorage.getItem("mariua_darkmode")==="1")document.body.classList.add
       return;
     }
     wrap.style.display = 'flex';
-    let html = botaoFiltro('📅 Todos', '', base.length, filtroMes === '', '#6b46c1');
+    let html = botaoFiltro({ rotulo:'📅 Todos', valor:'', contagem:base.length,
+                             ativo:filtroMes === '', setter:'estSetMes', raio:'20px', cor:'#6b46c1' });
     ordenados.forEach(([chave, v]) => {
-      html += botaoFiltro('📅 ' + v.rotulo.toUpperCase(), chave, v.n, filtroMes === chave, '#6b46c1');
+      html += botaoFiltro({ rotulo:'📅 ' + v.rotulo.toUpperCase(), valor:chave, contagem:v.n,
+                            ativo:filtroMes === chave, setter:'estSetMes', raio:'20px', cor:'#6b46c1' });
     });
     bar.innerHTML = html;
     if(info) info.textContent = fieldMap.mes ? 'coluna "' + fieldMap.mes + '"' : '';
   }
 
-  function renderBarras(){ renderBarraCidades(); renderBarraMeses(); }
+  function renderBarras(){ renderBarraCidades(); renderBarraMeses(); renderBarraPendencias(); }
 
   function renderBoard(){
     board.innerHTML = '';
