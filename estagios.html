@@ -446,16 +446,16 @@ try{if(localStorage.getItem("mariua_darkmode")==="1")document.body.classList.add
       <button type="button" onclick="estFecharModalMes()" style="background:none;border:none;font-size:1.3rem;cursor:pointer;color:#aaa;line-height:1;">×</button>
     </div>
     <div style="background:#faf5ff;border:1px solid #e9d8fd;border-radius:10px;padding:10px 14px;margin-bottom:14px;font-size:0.72rem;color:#555;line-height:1.6;">
-      Abra a planilha de Estágios, clique na <b>aba do mês</b> e copie a URL do navegador. O sistema extrai a planilha e o gid da aba. A lista é salva no banco e vale para todos os usuários.
+      Uma aba por carteira, por mês. Abra a planilha, clique na <b>aba do mês</b> da carteira e copie a URL do navegador. A lista é salva no banco e vale para todos os usuários.
     </div>
     <div style="display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap;">
       <div style="flex:1;min-width:110px;">
         <label style="display:block;font-size:0.66rem;font-weight:800;color:#666;letter-spacing:0.8px;text-transform:uppercase;margin-bottom:4px;">Ano</label>
-        <input id="est-mm-ano" type="number" min="2024" max="2035" style="width:100%;padding:9px 12px;border:1.5px solid #d6bcfa;border-radius:9px;font-family:'Barlow',sans-serif;font-weight:700;box-sizing:border-box;">
+        <input id="est-mm-ano" type="number" min="2024" max="2035" oninput="estMMTrocouPeriodo()" style="width:100%;padding:9px 12px;border:1.5px solid #d6bcfa;border-radius:9px;font-family:'Barlow',sans-serif;font-weight:700;box-sizing:border-box;">
       </div>
       <div style="flex:1;min-width:130px;">
         <label style="display:block;font-size:0.66rem;font-weight:800;color:#666;letter-spacing:0.8px;text-transform:uppercase;margin-bottom:4px;">Mês</label>
-        <select id="est-mm-mes" style="width:100%;padding:9px 12px;border:1.5px solid #d6bcfa;border-radius:9px;font-family:'Barlow',sans-serif;font-weight:700;box-sizing:border-box;">
+        <select id="est-mm-mes" onchange="estMMTrocouPeriodo()" style="width:100%;padding:9px 12px;border:1.5px solid #d6bcfa;border-radius:9px;font-family:'Barlow',sans-serif;font-weight:700;box-sizing:border-box;">
           <option value="1">Janeiro</option><option value="2">Fevereiro</option><option value="3">Março</option>
           <option value="4">Abril</option><option value="5">Maio</option><option value="6">Junho</option>
           <option value="7">Julho</option><option value="8">Agosto</option><option value="9">Setembro</option>
@@ -464,10 +464,21 @@ try{if(localStorage.getItem("mariua_darkmode")==="1")document.body.classList.add
       </div>
     </div>
     <div style="margin-bottom:14px;">
-      <label style="display:block;font-size:0.66rem;font-weight:800;color:#666;letter-spacing:0.8px;text-transform:uppercase;margin-bottom:4px;">Link da aba</label>
-      <input id="est-mm-url" type="text" placeholder="https://docs.google.com/spreadsheets/d/.../edit#gid=..." oninput="estMMPreview()" style="width:100%;padding:10px 14px;border:1.5px solid #d6bcfa;border-radius:9px;font-family:'Barlow',sans-serif;font-size:0.8rem;font-weight:600;box-sizing:border-box;">
-      <div id="est-mm-preview" style="font-size:0.68rem;margin-top:4px;font-weight:700;"></div>
+      <label style="display:block;font-size:0.66rem;font-weight:800;color:#666;letter-spacing:0.8px;text-transform:uppercase;margin-bottom:4px;">📍 Link da aba — Jacobina</label>
+      <input id="est-mm-url-jacobina" type="text" placeholder="https://docs.google.com/spreadsheets/d/.../edit#gid=..." oninput="estMMPreview()" style="width:100%;padding:10px 14px;border:1.5px solid #d6bcfa;border-radius:9px;font-family:'Barlow',sans-serif;font-size:0.8rem;font-weight:600;box-sizing:border-box;">
+      <div id="est-mm-preview-jacobina" style="font-size:0.68rem;margin-top:4px;font-weight:700;"></div>
     </div>
+    <div style="margin-bottom:14px;">
+      <label style="display:block;font-size:0.66rem;font-weight:800;color:#666;letter-spacing:0.8px;text-transform:uppercase;margin-bottom:4px;">📍 Link da aba — Irecê</label>
+      <input id="est-mm-url-irece" type="text" placeholder="https://docs.google.com/spreadsheets/d/.../edit#gid=..." oninput="estMMPreview()" style="width:100%;padding:10px 14px;border:1.5px solid #d6bcfa;border-radius:9px;font-family:'Barlow',sans-serif;font-size:0.8rem;font-weight:600;box-sizing:border-box;">
+      <div id="est-mm-preview-irece" style="font-size:0.68rem;margin-top:4px;font-weight:700;"></div>
+    </div>
+    <div style="margin-bottom:14px;">
+      <label style="display:block;font-size:0.66rem;font-weight:800;color:#666;letter-spacing:0.8px;text-transform:uppercase;margin-bottom:4px;">📍 Link da aba — Serrinha</label>
+      <input id="est-mm-url-serrinha" type="text" placeholder="https://docs.google.com/spreadsheets/d/.../edit#gid=..." oninput="estMMPreview()" style="width:100%;padding:10px 14px;border:1.5px solid #d6bcfa;border-radius:9px;font-family:'Barlow',sans-serif;font-size:0.8rem;font-weight:600;box-sizing:border-box;">
+      <div id="est-mm-preview-serrinha" style="font-size:0.68rem;margin-top:4px;font-weight:700;"></div>
+    </div>
+    <div style="font-size:0.68rem;color:#888;font-weight:600;line-height:1.5;margin-bottom:12px;">Preencha as carteiras que existirem — as vazias são ignoradas. Reabrindo um mês já cadastrado, os links atuais aparecem preenchidos e você pode só acrescentar a carteira que falta.</div>
     <div id="est-mm-erro" style="display:none;background:#fde8e8;color:#c53030;font-size:0.78rem;font-weight:700;padding:10px 14px;border-radius:9px;margin-bottom:12px;border-left:3px solid #c53030;"></div>
     <button type="button" onclick="estMMSalvar()" style="width:100%;padding:12px;background:linear-gradient(135deg,#553c9a,#6b46c1);color:#fff;border:none;border-radius:10px;font-family:'Barlow',sans-serif;font-size:0.9rem;font-weight:800;cursor:pointer;letter-spacing:0.5px;">💾 Salvar e abrir o mês</button>
     <div style="margin-top:18px;padding-top:14px;border-top:1px dashed #e2e8f0;">
@@ -523,6 +534,7 @@ try{if(localStorage.getItem("mariua_darkmode")==="1")document.body.classList.add
   let pendencyTypes = [];  // [{key, label, color}] — tipos de pendencia, customizaveis
   let mesesEstagios = [];  // [{ano, mes, id, gid}] — abas mensais, compartilhadas no banco
   const MES_ABREV = ['','JAN','FEV','MAR','ABR','MAI','JUN','JUL','AGO','SET','OUT','NOV','DEZ'];
+  const CARTEIRA_LABEL = { jacobina:'Jacobina', irece:'Irecê', serrinha:'Serrinha' };
 
   // ===== Supabase (mesma tabela chave-valor das outras telas) =====
   const SUPA_URL = 'https://eqxejfoibebcbtsqymji.supabase.co';
@@ -790,7 +802,7 @@ try{if(localStorage.getItem("mariua_darkmode")==="1")document.body.classList.add
     return bestScore >= 2 ? bestIdx : 0;
   }
 
-  function rowsFromCsv(matrix){
+  function rowsFromCsv(matrix, carteira, escopo){
     const headerIdx = detectHeaderRowIndex(matrix);
     const head = matrix[headerIdx].map(normHeader);
     headers = head;
@@ -798,10 +810,11 @@ try{if(localStorage.getItem("mariua_darkmode")==="1")document.body.classList.add
     return matrix.slice(headerIdx + 1).map((r, idx) => {
       const obj = {};
       head.forEach((h,i) => { if(h) obj[h] = (r[i] !== undefined ? r[i].trim() : ''); });
+      // A carteira vem da aba de origem — e o mesmo criterio que o mapa usa.
+      if(carteira) obj.__carteira = carteira;
       // Com PEP a etiqueta acompanha a obra entre meses, que e o desejado.
-      // Sem PEP, o indice sozinho colidiria entre abas — por isso o prefixo do mes.
-      const escopo = mesAtivo ? (mesAtivo.ano + '-' + mesAtivo.mes + '-') : '';
-      obj.__id = get(obj,'pep') || ('row-' + escopo + idx);
+      // Sem PEP, o indice sozinho colidiria entre abas — dai o prefixo.
+      obj.__id = get(obj,'pep') || ('row-' + (escopo||'') + '-' + (carteira||'') + '-' + idx);
       return obj;
     });
   }
@@ -909,6 +922,7 @@ try{if(localStorage.getItem("mariua_darkmode")==="1")document.body.classList.add
   // A carteira vem da coluna UTD da planilha. Se ela nao existir, cai para o
   // municipio — que e menos preciso, porque uma carteira cobre varios municipios.
   function valorCarteira(r){
+    if(r.__carteira) return r.__carteira;            // veio da aba daquela carteira
     const utd = fieldMap.utd ? norm(get(r,'utd')) : '';
     return utd || norm(get(r,'municipio'));
   }
@@ -1024,49 +1038,80 @@ try{if(localStorage.getItem("mariua_darkmode")==="1")document.body.classList.add
     if(info) info.textContent = '';
   }
 
+  // Aceita o formato antigo ({id,gid} solto) e o novo ({abas:{carteira:{id,gid}}}).
+  function refsDoMes(e){
+    if(e && e.abas){
+      return Object.keys(CARTEIRA_LABEL).map(c => ({ carteira:c, ref: e.abas[c] || null }));
+    }
+    return [{ carteira: null, ref: (e && e.id) ? { id:e.id, gid:e.gid } : null }];
+  }
+
   window.estCarregarMes = function(chave){
     const [ano, mes] = chave.split('-').map(Number);
     const e = mesesEstagios.find(x => x.ano===ano && x.mes===mes);
     if(!e) return;
     mesAtivo = { ano, mes };
     salvarCacheLocal();
-    carregarAba(e.id, e.gid, rotuloMes(e));
+    carregarAbas(refsDoMes(e), rotuloMes(e));
   };
 
   // ---------- cadastro de meses ----------
+  const CARTEIRAS = Object.keys(CARTEIRA_LABEL);
+
+  function mmPreencher(ano, mes){
+    const e = mesesEstagios.find(x => x.ano===ano && x.mes===mes);
+    CARTEIRAS.forEach(c => {
+      const inp = $('#est-mm-url-' + c);
+      if(!inp) return;
+      const ref = e && e.abas ? e.abas[c] : null;
+      inp.value = ref ? ('https://docs.google.com/spreadsheets/d/' + ref.id + '/edit#gid=' + ref.gid) : '';
+    });
+    estMMPreview();
+  }
+
   window.estAbrirModalMes = function(){
     const ov = $('#est-mm-overlay');
     if(!ov) return;
     const hoje = new Date();
     $('#est-mm-ano').value = hoje.getFullYear();
     $('#est-mm-mes').value = hoje.getMonth() + 1;
-    $('#est-mm-url').value = '';
     $('#est-mm-erro').style.display = 'none';
-    estMMPreview();
+    mmPreencher(hoje.getFullYear(), hoje.getMonth() + 1);
     estMMLista();
     ov.style.display = 'flex';
   };
   window.estFecharModalMes = function(){ const ov = $('#est-mm-overlay'); if(ov) ov.style.display = 'none'; };
+  window.estMMTrocouPeriodo = function(){
+    const ano = parseInt($('#est-mm-ano').value, 10);
+    const mes = parseInt($('#est-mm-mes').value, 10);
+    if(!isNaN(ano) && !isNaN(mes)) mmPreencher(ano, mes);
+  };
 
   window.estMMPreview = function(){
-    const el = $('#est-mm-preview'); if(!el) return;
-    const v = $('#est-mm-url').value.trim();
-    const p = v ? parseSheetUrl(v) : null;
-    el.innerHTML = p
-      ? '<span style="color:#38a169;">✔ Planilha e aba identificadas (gid <b>' + escHtml(p.gid) + '</b>)</span>'
-      : (v ? '<span style="color:#c53030;">Link inválido — cole a URL completa da aba, não o link de "Publicar na web".</span>' : '');
+    CARTEIRAS.forEach(c => {
+      const el = $('#est-mm-preview-' + c), inp = $('#est-mm-url-' + c);
+      if(!el || !inp) return;
+      const v = inp.value.trim();
+      const pr = v ? parseSheetUrl(v) : null;
+      el.innerHTML = pr
+        ? '<span style="color:#38a169;">✔ aba identificada (gid <b>' + escHtml(pr.gid) + '</b>)</span>'
+        : (v ? '<span style="color:#c53030;">Link inválido — cole a URL completa da aba.</span>' : '');
+    });
   };
 
   window.estMMLista = function(){
     const el = $('#est-mm-lista'); if(!el) return;
     const ordenados = mesesEstagios.slice().sort((a,b) => a.ano!==b.ano ? a.ano-b.ano : a.mes-b.mes);
-    el.innerHTML = ordenados.length ? ordenados.map(e =>
-      '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 12px;border-radius:9px;background:#f8fafc;border:1.5px solid #e8ecef;margin-bottom:6px;">' +
+    el.innerHTML = ordenados.length ? ordenados.map(e => {
+      const tem = e.abas
+        ? CARTEIRAS.filter(c => e.abas[c]).map(c => CARTEIRA_LABEL[c]).join(' · ')
+        : 'aba única (formato antigo)';
+      return '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 12px;border-radius:9px;background:#f8fafc;border:1.5px solid #e8ecef;margin-bottom:6px;">' +
         '<span style="font-size:0.8rem;font-weight:800;color:#2d3748;">📅 ' + rotuloMes(e) + '</span>' +
-        '<span style="font-size:0.65rem;color:#888;font-weight:700;">gid ' + escHtml(e.gid) + '</span>' +
+        '<span style="font-size:0.65rem;color:#888;font-weight:700;text-align:right;flex:1;">' + escHtml(tem || 'nenhuma carteira') + '</span>' +
         '<button type="button" onclick="estMMRemover(' + e.ano + ',' + e.mes + ')" title="Remover" style="background:#fde8e8;color:#c53030;border:none;border-radius:7px;width:26px;height:26px;cursor:pointer;font-weight:800;">×</button>' +
-      '</div>'
-    ).join('') : '<div style="color:#aaa;font-size:0.78rem;padding:8px 0;">Nenhum mês cadastrado ainda.</div>';
+      '</div>';
+    }).join('') : '<div style="color:#aaa;font-size:0.78rem;padding:8px 0;">Nenhum mês cadastrado ainda.</div>';
   };
 
   window.estMMRemover = function(ano, mes){
@@ -1079,23 +1124,25 @@ try{if(localStorage.getItem("mariua_darkmode")==="1")document.body.classList.add
 
   window.estMMSalvar = function(){
     const erro = $('#est-mm-erro');
+    const falha = (t) => { erro.textContent = t; erro.style.display = 'block'; };
     const ano = parseInt($('#est-mm-ano').value, 10);
     const mes = parseInt($('#est-mm-mes').value, 10);
-    const p = parseSheetUrl($('#est-mm-url').value.trim() || '');
-    const falha = (t) => { erro.textContent = t; erro.style.display = 'block'; };
     if(isNaN(ano) || ano < 2024 || ano > 2035) return falha('Ano inválido. Use entre 2024 e 2035.');
     if(isNaN(mes) || mes < 1 || mes > 12) return falha('Mês inválido.');
-    if(!p) return falha('Não consegui ler o link. Cole a URL completa da aba (com /spreadsheets/d/… e gid).');
-    erro.style.display = 'none';
-    const novo = { ano, mes, id: p.id, gid: p.gid };
-    const i = mesesEstagios.findIndex(x => x.ano===ano && x.mes===mes);
-    if(i >= 0){
-      if(!confirm(rotuloMes(novo) + ' já está cadastrado. Substituir o link?')) return;
-      mesesEstagios[i] = novo;
-    } else {
-      mesesEstagios.push(novo);
+    const abas = {};
+    for(const c of CARTEIRAS){
+      const v = ($('#est-mm-url-' + c).value || '').trim();
+      if(!v) continue;
+      const pr = parseSheetUrl(v);
+      if(!pr) return falha('O link de ' + CARTEIRA_LABEL[c] + ' não pôde ser lido. Cole a URL completa da aba.');
+      abas[c] = { id: pr.id, gid: pr.gid };
     }
-    saveLocal();          // grava no banco: a lista de meses e compartilhada
+    if(!Object.keys(abas).length) return falha('Informe o link de pelo menos uma carteira.');
+    erro.style.display = 'none';
+    const novo = { ano, mes, abas };
+    const i = mesesEstagios.findIndex(x => x.ano===ano && x.mes===mes);
+    if(i >= 0) mesesEstagios[i] = novo; else mesesEstagios.push(novo);
+    saveLocal();          // a lista de meses e compartilhada no banco
     estMMLista();
     renderBarraMeses();
     estFecharModalMes();
@@ -1217,28 +1264,50 @@ try{if(localStorage.getItem("mariua_darkmode")==="1")document.body.classList.add
     const parsed = parseSheetUrl(url);
     if(!parsed){ setStatus('err','Link inválido — cole o link normal de compartilhamento da aba (não o link de "Publicar na web").'); return; }
     mesAtivo = null;   // carga avulsa pelo link: nenhum botao de mes fica aceso
-    return carregarAba(parsed.id, parsed.gid, '');
+    return carregarAbas([{ carteira: null, ref: parsed }], '');
   }
 
-  async function carregarAba(id, gid, rotulo){
-    setStatus('loading', 'Carregando ' + (rotulo || 'planilha') + '…');
-    try{
-      const json = await fetchGvizJson(id, gid);
-      if(json && json.status === 'error'){
-        const msg = (json.errors && json.errors[0] && json.errors[0].detailed_message) || 'Erro ao ler a planilha.';
-        throw new Error(msg);
-      }
-      const matrix = gvizToMatrix(json);
-      if(!matrix.length) throw new Error('Planilha vazia');
-      rows = rowsFromCsv(matrix);
-      renderConfig();
-      renderBoard();
-      saveLocal();
-      setStatus('ok', rows.length + ' obras carregadas' + (rotulo ? ' — ' + rotulo : ''));
-    }catch(err){
-      console.error(err);
-      setStatus('err','Não foi possível carregar essa aba. Confirme que o compartilhamento está como "Qualquer pessoa com o link → Leitor" e que o link inclui o gid correto da aba.');
+  // Le uma aba e devolve as linhas ja carimbadas com a carteira de origem.
+  async function lerAba(ref, carteira, escopo){
+    const json = await fetchGvizJson(ref.id, ref.gid);
+    if(json && json.status === 'error'){
+      const msg = (json.errors && json.errors[0] && json.errors[0].detailed_message) || 'Erro ao ler a planilha.';
+      throw new Error(msg);
     }
+    const matrix = gvizToMatrix(json);
+    if(!matrix.length) throw new Error('Aba vazia');
+    return rowsFromCsv(matrix, carteira, escopo);
+  }
+
+  // Carrega todas as carteiras cadastradas no mes e junta num quadro so.
+  async function carregarAbas(refs, rotulo){
+    const alvos = refs.filter(x => x.ref);
+    if(!alvos.length){ setStatus('err','Nenhuma aba cadastrada para este mês.'); return; }
+    setStatus('loading', 'Carregando ' + (rotulo || 'planilha') + '…');
+    const escopo = rotulo || '';
+    const resultados = await Promise.all(alvos.map(async a => {
+      try{
+        return { carteira: a.carteira, linhas: await lerAba(a.ref, a.carteira, escopo) };
+      }catch(err){
+        // Uma carteira com problema nao derruba as outras.
+        console.error('estagios: falha na carteira', a.carteira || '(avulsa)', err);
+        return { carteira: a.carteira, linhas: null };
+      }
+    }));
+    const ok = resultados.filter(r => r.linhas && r.linhas.length);
+    if(!ok.length){
+      setStatus('err','Não foi possível carregar as abas deste mês. Confirme o compartilhamento como "Qualquer pessoa com o link → Leitor" e o gid de cada aba.');
+      return;
+    }
+    rows = ok.reduce((acc, r) => acc.concat(r.linhas), []);
+    renderConfig();
+    renderBoard();
+    saveLocal();
+    const detalhe = ok.map(r => (r.carteira ? CARTEIRA_LABEL[r.carteira] || r.carteira : 'aba') + ' ' + r.linhas.length).join(' · ');
+    const falhou = resultados.filter(r => !r.linhas).map(r => CARTEIRA_LABEL[r.carteira] || r.carteira);
+    setStatus(falhou.length ? 'err' : 'ok',
+      rows.length + ' obras' + (rotulo ? ' — ' + rotulo : '') + ' (' + detalhe + ')' +
+      (falhou.length ? ' · falhou: ' + falhou.join(', ') : ''));
   }
 
 
