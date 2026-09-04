@@ -4349,7 +4349,7 @@ function mapaCarregarMes(ano, mes) {
   window._mapaViewingSheets = true; // flag permanente — só reseta se usuário voltar ao banco
   const mt = document.getElementById('mapa-titulo');
   if (mt) { mt.textContent = '⏳ Carregando '+label+'...'; mt.style.color='#888'; }
-  if (!entry.gidJacobina && !entry.gidIrece && !entry.sheetJacobina && !entry.sheetIrece) {
+  if (!entry.gidJacobina && !entry.gidIrece && !entry.sheetJacobina && !entry.sheetIrece && !entry.urlSerrinha) {
     console.warn('[mapa] Entrada do mês sem GIDs/abas:', entry);
     return;
   }
@@ -4357,6 +4357,7 @@ function mapaCarregarMes(ano, mes) {
                : entry.sheetJacobina ? GSHEETS_SHEETBASE.JACOBINA + encodeURIComponent(entry.sheetJacobina) : null;
   const urlIrc = entry.gidIrece ? GSHEETS_BASE.IRECE + entry.gidIrece
                : entry.sheetIrece ? GSHEETS_SHEETBASE.IRECE + encodeURIComponent(entry.sheetIrece) : null;
+  const urlSer = entry.urlSerrinha || null;
 
   // CORRIGIDO: timeout de segurança — se o Sheets não responder em 15s, libera o banco local
   const _mesFlagTimeout = setTimeout(() => {
@@ -4373,24 +4374,29 @@ function mapaCarregarMes(ano, mes) {
       // CORRIGIDO: AbortController com timeout de 12s no fetch
       const ctrl = new AbortController();
       const fetchTimeout = setTimeout(() => ctrl.abort(), 12000);
-      let resJac, resIrc;
+      let resJac, resIrc, resSer;
       try {
-        [resJac, resIrc] = await Promise.all([
+        [resJac, resIrc, resSer] = await Promise.all([
           urlJac ? fetch(urlJac, { signal: ctrl.signal }) : Promise.resolve(null),
-          urlIrc ? fetch(urlIrc, { signal: ctrl.signal }) : Promise.resolve(null)
+          urlIrc ? fetch(urlIrc, { signal: ctrl.signal }) : Promise.resolve(null),
+          // Serrinha nao pode derrubar o mes: erro dela vira null, nao excecao.
+          urlSer ? fetch(urlSer, { signal: ctrl.signal }).catch(() => null) : Promise.resolve(null)
         ]);
       } finally {
         clearTimeout(fetchTimeout);
       }
       if (urlJac && (!resJac || !resJac.ok)) throw new Error('HTTP '+(resJac?resJac.status:'?')+' (Jacobina) — verifique se a planilha está pública');
       if (urlIrc && (!resIrc || !resIrc.ok)) throw new Error('HTTP '+(resIrc?resIrc.status:'?')+' (Irecê) — verifique se a planilha está pública');
-      const [textJac, textIrc] = await Promise.all([
+      const [textJac, textIrc, textSer] = await Promise.all([
         (resJac && resJac.ok) ? resJac.text() : Promise.resolve(''),
-        (resIrc && resIrc.ok) ? resIrc.text() : Promise.resolve('')
+        (resIrc && resIrc.ok) ? resIrc.text() : Promise.resolve(''),
+        (resSer && resSer.ok) ? resSer.text() : Promise.resolve('')
       ]);
       let dataJac = compParseCSVText(textJac, 'JACOBINA') || [];
       let dataIrc = compParseCSVText(textIrc, 'IRECÊ') || [];
-      if (!dataJac.length && !dataIrc.length) throw new Error('Nenhum dado reconhecido nas planilhas — verifique o compartilhamento (deve ser "Qualquer pessoa com o link")');
+      let dataSer = textSer ? (compParseCSVText(textSer, 'SERRINHA') || []) : [];
+      if (urlSer && !dataSer.length) console.warn('[mapaCarregarMes] Serrinha sem dados reconhecidos em', label);
+      if (!dataJac.length && !dataIrc.length && !dataSer.length) throw new Error('Nenhum dado reconhecido nas planilhas — verifique o compartilhamento (deve ser "Qualquer pessoa com o link")');
       clearTimeout(_mesFlagTimeout); // sucesso — cancela o timeout de segurança
       // Verifica o mês REAL declarado em cada aba (célula do topo, ex.: "JUN/26").
       // Se a aba ainda estiver em outro mês (ex.: Irecê de Junho com conteúdo de Maio),
@@ -4400,14 +4406,16 @@ function mapaCarregarMes(ano, mes) {
       const avisosMes = [];
       if ((entry.gidJacobina||entry.sheetJacobina) && mesJac && mesJac !== label) { avisosMes.push('Jacobina ainda em '+mesJac); dataJac = []; }
       if ((entry.gidIrece   ||entry.sheetIrece)    && mesIrc && mesIrc !== label) { avisosMes.push('Irecê ainda em '+mesIrc);    dataIrc = []; }
+      const mesSer = (dataSer && dataSer._mesPlanilha) || (textSer ? mapaMesDaPlanilha(textSer) : null);
+      if (entry.urlSerrinha && mesSer && mesSer !== label) { avisosMes.push('Serrinha ainda em '+mesSer); dataSer = []; }
       window._mapaAvisoMes = avisosMes.length
         ? ('⚠️ '+avisosMes.join(' · ')+' — exibindo só o que é de '+label)
         : '';
       // Substitui bancoDB temporariamente com dados deste mês
-      bancoDB = [...dataJac, ...dataIrc];
+      bancoDB = [...dataJac, ...dataIrc, ...dataSer];
       const pad = n => String(n).padStart(2,'0');
       const now = new Date();
-      bancoDBInfo = { count: bancoDB.length, updatedAt: label, utds: ['IRECÊ ('+dataIrc.length+')', 'JACOBINA ('+dataJac.length+')'] };
+      bancoDBInfo = { count: bancoDB.length, updatedAt: label, utds: ['IRECÊ ('+dataIrc.length+')', 'JACOBINA ('+dataJac.length+')'].concat(dataSer.length ? ['SERRINHA ('+dataSer.length+')'] : []) };
       // Reseta filtros de UTD/status mas mantém mês selecionado
       mapaFiltroAtivo='TODOS'; mapaUTDFiltro='TODAS'; mapaMunFiltro=''; mapaEncFiltro='';
       const ms = document.getElementById('mapa-mun-filter'); if (ms) ms.value='';
@@ -5020,11 +5028,10 @@ const mkUTD = (label, key, count, idSuffix) => {
 const isActive = mapaUTDFiltro===key;
 return `<button id="mapa-utd-btn-${idSuffix}" onclick="mapaSetUTD('${key}')" style="padding:8px 20px;border-radius:10px;border:2px solid ${isActive?'#0d7377':'#e2e8f0'};background:${isActive?'#0d7377':'#fff'};font-family:'Barlow',sans-serif;font-size:0.82rem;font-weight:800;cursor:pointer;color:${isActive?'#fff':'#555'};transition:all 0.15s;white-space:nowrap;">${label} <span style="opacity:0.75;font-size:0.72rem;">(${count})</span></button>`;
 };
-const nSer = withCoord.filter(d=>d.utd==='SERRINHA').length;
 utdBar.innerHTML = mkUTD('🗺️ Todas','TODAS',withCoord.length,'TODAS')
   + mkUTD('📍 Irecê','IRECÊ',withCoord.filter(d=>d.utd==='IRECÊ').length,'IRECE')
   + mkUTD('📍 Jacobina','JACOBINA',withCoord.filter(d=>d.utd==='JACOBINA').length,'JACOBINA')
-  + (nSer ? mkUTD('📍 Serrinha','SERRINHA',nSer,'SERRINHA') : '');
+  + mkUTD('📍 Serrinha','SERRINHA',withCoord.filter(d=>d.utd==='SERRINHA').length,'SERRINHA');
 }
 // --- Barra de meses baseada em GSHEETS_MESES (carrega aba da planilha por mês) ---
 const mesBar = document.getElementById('mapa-mes-bar');
