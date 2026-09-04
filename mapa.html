@@ -740,6 +740,13 @@ body.sm-collapsed .sm-side:hover{z-index:1300}
           <div id="mm-preview-irc" style="font-size:0.68rem;margin-top:4px;font-weight:700;"></div>
         </div>
 
+        <div style="margin-bottom:20px;">
+          <label style="display:block;font-size:0.68rem;font-weight:800;color:#666;letter-spacing:0.8px;text-transform:uppercase;margin-bottom:6px;">📍 Link da aba — Serrinha <span style="font-weight:700;color:#999;text-transform:none;letter-spacing:0;">(opcional)</span></label>
+          <input id="mm-url-ser" type="text" placeholder="Cole aqui o link do Google Sheets de Serrinha..." style="width:100%;padding:10px 14px;border:1.5px solid #d6bcfa;border-radius:9px;font-family:'Barlow',sans-serif;font-size:0.82rem;font-weight:600;color:#1a365d;outline:none;background:#fff;box-sizing:border-box;" oninput="mapaMMPreview()">
+          <div id="mm-preview-ser" style="font-size:0.68rem;margin-top:4px;font-weight:700;"></div>
+          <div style="font-size:0.66rem;color:#888;margin-top:4px;font-weight:600;line-height:1.5;">Serrinha ainda não tem planilha fixa no sistema, então aqui vale o link completo da aba — o ID da planilha é lido junto com o gid. Se o mês já existir, preencha só este campo para acrescentar Serrinha a ele.</div>
+        </div>
+
         <div id="mm-erro" style="display:none;background:#fde8e8;color:#c53030;font-size:0.78rem;font-weight:700;padding:10px 14px;border-radius:9px;margin-bottom:12px;border-left:3px solid #c53030;"></div>
 
         <button onclick="mapaMMSalvar()" style="width:100%;padding:12px;background:linear-gradient(135deg,#553c9a,#6b46c1);color:#fff;border:none;border-radius:10px;font-family:'Barlow',sans-serif;font-size:0.9rem;font-weight:800;cursor:pointer;transition:all 0.15s;letter-spacing:0.5px;box-shadow:0 4px 12px rgba(107,70,193,0.3);" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">💾 Salvar e adicionar mês</button>
@@ -782,9 +789,10 @@ let GSHEETS_MESES = [
   try {
     const extras = JSON.parse(localStorage.getItem('mariua_meses_extras') || '[]');
     extras.forEach(e => {
-      if (!GSHEETS_MESES.find(m => m.ano===e.ano && m.mes===e.mes)) {
-        GSHEETS_MESES.push(e);
-      }
+      const ja = GSHEETS_MESES.find(m => m.ano===e.ano && m.mes===e.mes);
+      // Mes fixo que ganhou Serrinha depois: completa em vez de ignorar.
+      if (ja) { if (e.urlSerrinha && !ja.urlSerrinha) ja.urlSerrinha = e.urlSerrinha; }
+      else GSHEETS_MESES.push(e);
     });
     GSHEETS_MESES.sort((a,b) => a.ano!==b.ano ? a.ano-b.ano : a.mes-b.mes);
   } catch(e) {}
@@ -830,11 +838,13 @@ async function mapaMMCarregarSupabase() {
     const extras = Array.isArray(data[0].value) ? data[0].value : [];
     // Reconstrói GSHEETS_MESES: mantém todos os já existentes + adiciona novos extras
     extras.forEach(e => {
-      if (e && e.ano && e.mes && !GSHEETS_MESES.find(m => m.ano===e.ano && m.mes===e.mes)) {
-        GSHEETS_MESES.push(e);
-      }
+      if (!e || !e.ano || !e.mes) return;
+      const ja = GSHEETS_MESES.find(m => m.ano===e.ano && m.mes===e.mes);
+      if (ja) { if (e.urlSerrinha && !ja.urlSerrinha) ja.urlSerrinha = e.urlSerrinha; }
+      else GSHEETS_MESES.push(e);
     });
     GSHEETS_MESES.sort((a,b) => a.ano!==b.ano ? a.ano-b.ano : a.mes-b.mes);
+    GSHEETS.SERRINHA = gsheetsGetURL('SERRINHA');
     console.log('[meses] Supabase:', extras.length, 'extra(s) carregado(s). Total:', GSHEETS_MESES.length);
     // Mescla com o cache local em vez de sobrescrever — assim meses adicionados localmente
     // (ex.: julho) não somem caso o registro do banco ainda não os tenha.
@@ -842,7 +852,10 @@ async function mapaMMCarregarSupabase() {
       const locais = JSON.parse(localStorage.getItem('mariua_meses_extras') || '[]');
       const merge = Array.isArray(extras) ? extras.slice() : [];
       (Array.isArray(locais) ? locais : []).forEach(e => {
-        if (e && e.ano && e.mes && !merge.find(m => m.ano===e.ano && m.mes===e.mes)) merge.push(e);
+        if (!e || !e.ano || !e.mes) return;
+        const ja = merge.find(m => m.ano===e.ano && m.mes===e.mes);
+        if (ja) { if (e.urlSerrinha && !ja.urlSerrinha) ja.urlSerrinha = e.urlSerrinha; }
+        else merge.push(e);
       });
       localStorage.setItem('mariua_meses_extras', JSON.stringify(merge));
     } catch(ex) {}
@@ -881,20 +894,22 @@ function gsheetsGetURL(utd) {
   const now = new Date();
   const ano = now.getFullYear();
   const mes = now.getMonth() + 1;
-  const entrada = GSHEETS_MESES.find(e => e.ano === ano && e.mes === mes);
+  let entrada = GSHEETS_MESES.find(e => e.ano === ano && e.mes === mes);
   if (!entrada) {
-    // fallback: pega o mais recente disponível
-    const recente = GSHEETS_MESES[GSHEETS_MESES.length - 1];
-    const gid = utd === 'JACOBINA' ? recente.gidJacobina : recente.gidIrece;
+    entrada = GSHEETS_MESES[GSHEETS_MESES.length - 1];
     console.warn('[GSHEETS] Mês ' + mes + '/' + ano + ' não cadastrado, usando fallback');
-    return GSHEETS_BASE[utd] + gid;
   }
+  if (!entrada) return null;
+  // Serrinha e opcional: se o mes nao tem link cadastrado, devolve null e a
+  // sincronizacao simplesmente ignora a cidade em vez de quebrar.
+  if (utd === 'SERRINHA') return entrada.urlSerrinha || null;
   const gid = utd === 'JACOBINA' ? entrada.gidJacobina : entrada.gidIrece;
   return GSHEETS_BASE[utd] + gid;
 }
 const GSHEETS = {
   JACOBINA: gsheetsGetURL('JACOBINA'),
-  IRECE:    gsheetsGetURL('IRECE')
+  IRECE:    gsheetsGetURL('IRECE'),
+  SERRINHA: gsheetsGetURL('SERRINHA')
 };
 // URLs do Sheets resolvidas estaticamente por gsheetsGetURL()
 function todayDate() { const d=new Date(); const p=n=>String(n).padStart(2,'0'); return p(d.getDate())+'/'+p(d.getMonth()+1)+'/'+d.getFullYear(); }
@@ -3652,10 +3667,13 @@ fb.innerHTML = `<span style="color:#276749;font-weight:800;">${count} obras</spa
 async function compSalvarBanco() {
 const irece = compBancoTemp['IRECÊ'], jacobina = compBancoTemp['JACOBINA'];
 if (!irece || !jacobina) return;
-const merged = [...irece, ...jacobina];
+// Nao ha cartao de CSV para Serrinha: preserva as obras dela que ja estao no banco,
+// senao salvar os dois CSVs apagaria Serrinha do mapa.
+const serrinhaAtual = (bancoDB || []).filter(o => o && o.utd === 'SERRINHA');
+const merged = [...irece, ...jacobina, ...serrinhaAtual];
 const now = new Date(), pad = n => String(n).padStart(2,'0');
 const updatedAt = pad(now.getDate())+'/'+pad(now.getMonth()+1)+'/'+now.getFullYear()+' às '+pad(now.getHours())+':'+pad(now.getMinutes());
-const info = { count: merged.length, updatedAt, utds: ['IRECÊ ('+irece.length+')', 'JACOBINA ('+jacobina.length+')'] };
+const info = { count: merged.length, updatedAt, utds: ['IRECÊ ('+irece.length+')', 'JACOBINA ('+jacobina.length+')'].concat(serrinhaAtual.length ? ['SERRINHA ('+serrinhaAtual.length+')'] : []) };
 try {
 setDbStatus('syncing', 'Salvando banco…');
 const mergedMin = compMinimizarDados(merged);
@@ -3732,7 +3750,14 @@ const dataJac = compParseCSVText(textJac, 'JACOBINA');
 const dataIrc = compParseCSVText(textIrc, 'IRECÊ');
 if (!dataJac || !dataJac.length) throw new Error('Planilha JACOBINA não retornou dados válidos');
 if (!dataIrc || !dataIrc.length) throw new Error('Planilha IRECÊ não retornou dados válidos');
-const dataAtual = [...dataJac, ...dataIrc];
+let dataSerC = [];
+if (GSHEETS.SERRINHA) {
+  try {
+    const resSerC = await fetch(GSHEETS.SERRINHA);
+    if (resSerC.ok) dataSerC = compParseCSVText(await resSerC.text(), 'SERRINHA') || [];
+  } catch(eSC) { console.warn('[compCompareComSheets] Serrinha falhou:', eSC.message); }
+}
+const dataAtual = [...dataJac, ...dataIrc, ...dataSerC];
 const now = new Date(), pad = n => String(n).padStart(2,'0');
 const horaAtual = pad(now.getDate())+'/'+pad(now.getMonth()+1)+'/'+now.getFullYear()+' '+pad(now.getHours())+':'+pad(now.getMinutes());
 if (fsEl) fsEl.innerHTML = '<span style="color:#2b6cb0;font-weight:800;">'+dataAtual.length+' obras</span><br><span style="color:#63b3ed;font-size:0.7rem;">buscado às '+horaAtual+'</span>';
@@ -4106,10 +4131,19 @@ const [textJac, textIrc] = await Promise.all([resJac.text(), resIrc.text()]);
 const dataJac = compParseCSVText(textJac, 'JACOBINA');
 const dataIrc = compParseCSVText(textIrc, 'IRECÊ');
 if (!dataJac || !dataJac.length || !dataIrc || !dataIrc.length) return;
-const merged = [...dataJac, ...dataIrc];
+// Serrinha e opcional: falha dela nao derruba a sincronizacao das outras duas.
+let dataSer = [];
+if (GSHEETS.SERRINHA) {
+  try {
+    const resSer = await fetch(GSHEETS.SERRINHA);
+    if (resSer.ok) dataSer = compParseCSVText(await resSer.text(), 'SERRINHA') || [];
+    else console.warn('[compAutoSincronizar] Serrinha HTTP', resSer.status);
+  } catch(eS) { console.warn('[compAutoSincronizar] Serrinha falhou:', eS.message); }
+}
+const merged = [...dataJac, ...dataIrc, ...dataSer];
 const now = new Date(), pad = n => String(n).padStart(2,'0');
 const updatedAt = pad(now.getDate())+'/'+pad(now.getMonth()+1)+'/'+now.getFullYear()+' às '+pad(now.getHours())+':'+pad(now.getMinutes());
-const info = { count: merged.length, updatedAt, utds: ['IRECÊ ('+dataIrc.length+')', 'JACOBINA ('+dataJac.length+')'] };
+const info = { count: merged.length, updatedAt, utds: ['IRECÊ ('+dataIrc.length+')', 'JACOBINA ('+dataJac.length+')'].concat(dataSer.length ? ['SERRINHA ('+dataSer.length+')'] : []) };
 const mergedMin = compMinimizarDados(merged);
 bancoDB = merged; bancoDBInfo = info;
 lsSet('obras_base', { data: mergedMin, info });
@@ -4529,6 +4563,20 @@ function mapaMMExtrairGid(url) {
   if (m2) return parseInt(url, 10);
   return null;
 }
+// Serrinha guarda a URL COMPLETA no proprio mes (id + gid), porque a planilha
+// dela e cadastrada a mao, sem ID fixo no codigo como Jacobina e Irece.
+function mapaMMExtrairId(url) {
+  if (!url) return null;
+  const m = String(url).match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
+  return m ? m[1] : null;
+}
+function mapaMMMontarUrlSerrinha(url) {
+  const id = mapaMMExtrairId(url);
+  const gid = mapaMMExtrairGid(url);
+  if (!id || gid == null) return null;
+  return 'https://docs.google.com/spreadsheets/d/' + id + '/gviz/tq?tqx=out:csv&gid=' + gid;
+}
+
 function mapaMMPreview() {
   const pJac = document.getElementById('mm-preview-jac');
   const pIrc = document.getElementById('mm-preview-irc');
@@ -4540,6 +4588,14 @@ function mapaMMPreview() {
   if (pIrc) pIrc.innerHTML = gIrc!=null
     ? `<span style="color:#38a169;">✔ GID identificado: <b>${gIrc}</b></span>`
     : (document.getElementById('mm-url-irc').value.trim() ? `<span style="color:#c53030;">Não foi possível extrair o GID. Cole a URL completa.</span>` : '');
+  const pSer = document.getElementById('mm-preview-ser');
+  const vSer = (document.getElementById('mm-url-ser') || {value:''}).value;
+  if (pSer) {
+    const uSer = mapaMMMontarUrlSerrinha(vSer);
+    pSer.innerHTML = uSer
+      ? `<span style="color:#38a169;">✔ Planilha e aba identificadas (gid <b>${mapaMMExtrairGid(vSer)}</b>)</span>`
+      : (vSer.trim() ? `<span style="color:#c53030;">Cole a URL completa da aba (precisa conter /spreadsheets/d/… e #gid=…).</span>` : '');
+  }
 }
 function mapaMMRenderLista() {
   const lista = document.getElementById('modal-meses-lista');
@@ -4566,7 +4622,7 @@ function mapaMMRenderLista() {
         <span style="font-size:0.85rem;font-weight:800;color:${isFixo?'#2d3748':'#553c9a'};">📅 ${MESES_NOME[e.mes]} ${e.ano}</span>
         ${isFixo ? '<span style="font-size:0.6rem;font-weight:800;background:#e2e8f0;color:#888;padding:2px 8px;border-radius:10px;text-transform:uppercase;letter-spacing:1px;">Padrão</span>' : '<span style="font-size:0.6rem;font-weight:800;background:#e9d8fd;color:#6b46c1;padding:2px 8px;border-radius:10px;text-transform:uppercase;letter-spacing:1px;">Adicionado</span>'}
       </div>
-      <div style="font-size:0.65rem;color:#888;font-weight:700;white-space:nowrap;">JAC: ${e.gidJacobina} · IRC: ${e.gidIrece}</div>
+      <div style="font-size:0.65rem;color:#888;font-weight:700;white-space:nowrap;">JAC: ${e.gidJacobina} · IRC: ${e.gidIrece}${e.urlSerrinha ? ' · <span style="color:#553c9a;">SER ✔</span>' : ''}</div>
       ${!isFixo ? `<button onclick="mapaMMRemover(${e.ano},${e.mes})" title="Remover" style="background:#fde8e8;color:#c53030;border:none;border-radius:7px;width:28px;height:28px;cursor:pointer;font-size:0.9rem;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">✕</button>` : ''}
     `;
     lista.appendChild(row);
@@ -4617,16 +4673,30 @@ function mapaMMSalvar() {
   const mes = parseInt(document.getElementById('mm-mes').value, 10);
   const gJac = mapaMMExtrairGid(document.getElementById('mm-url-jac').value);
   const gIrc = mapaMMExtrairGid(document.getElementById('mm-url-irc').value);
+  const vSer = (document.getElementById('mm-url-ser') || {value:''}).value;
+  const uSer = vSer.trim() ? mapaMMMontarUrlSerrinha(vSer) : null;
   if (isNaN(ano) || ano < 2024 || ano > 2035) {
     erro.textContent = 'Ano inválido. Use entre 2024 e 2035.'; erro.style.display='block'; return;
   }
-  if (!gJac) { erro.textContent = 'Não foi possível extrair o GID do link de Jacobina. Cole a URL completa da aba.'; erro.style.display='block'; return; }
-  if (!gIrc) { erro.textContent = 'Não foi possível extrair o GID do link de Irecê. Cole a URL completa da aba.'; erro.style.display='block'; return; }
-  if (GSHEETS_MESES.find(e => e.ano===ano && e.mes===mes)) {
-    erro.textContent = 'Este mês já está cadastrado!'; erro.style.display='block'; return;
+  if (vSer.trim() && !uSer) {
+    erro.textContent = 'O link de Serrinha não tem o formato esperado. Cole a URL completa da aba (com /spreadsheets/d/… e #gid=…).'; erro.style.display='block'; return;
+  }
+  const existente = GSHEETS_MESES.find(e => e.ano===ano && e.mes===mes);
+  // Mes ja cadastrado: aceita se o objetivo for so acrescentar Serrinha a ele.
+  if (existente && !(uSer && !existente.urlSerrinha)) {
+    erro.textContent = existente.urlSerrinha
+      ? 'Este mês já está cadastrado e já tem Serrinha.'
+      : 'Este mês já está cadastrado! Para acrescentar Serrinha a ele, preencha o campo de Serrinha.';
+    erro.style.display='block'; return;
+  }
+  if (!existente) {
+    if (!gJac) { erro.textContent = 'Não foi possível extrair o GID do link de Jacobina. Cole a URL completa da aba.'; erro.style.display='block'; return; }
+    if (!gIrc) { erro.textContent = 'Não foi possível extrair o GID do link de Irecê. Cole a URL completa da aba.'; erro.style.display='block'; return; }
   }
   erro.style.display = 'none';
-  const nova = { ano, mes, gidJacobina: gJac, gidIrece: gIrc };
+  const nova = existente
+    ? { ...existente, urlSerrinha: uSer }
+    : { ano, mes, gidJacobina: gJac, gidIrece: gIrc, ...(uSer ? { urlSerrinha: uSer } : {}) };
   const fixos = [{ano:2026,mes:1},{ano:2026,mes:2},{ano:2026,mes:3},{ano:2026,mes:4},{ano:2026,mes:5}];
   // Desabilita botão e mostra progresso
   const btn = document.querySelector('#modal-meses-overlay button[onclick="mapaMMSalvar()"]');
@@ -4634,7 +4704,8 @@ function mapaMMSalvar() {
   (async function() {
     const erroEl = document.getElementById('mm-erro');
     try {
-      const tempMeses = [...GSHEETS_MESES, nova].sort((a,b) => a.ano!==b.ano ? a.ano-b.ano : a.mes-b.mes);
+      const tempMeses = [...GSHEETS_MESES.filter(e => !(e.ano===nova.ano && e.mes===nova.mes)), nova]
+        .sort((a,b) => a.ano!==b.ano ? a.ano-b.ano : a.mes-b.mes);
       const extrasAtuais = tempMeses.filter(e => !fixos.some(f=>f.ano===e.ano&&f.mes===e.mes));
       // PATCH (atualiza se já existe) → POST (insere se não existe)
       let r = await fetch(SUPA_URL + '/rest/v1/turno_data?key=eq.meses_extras', {
@@ -4653,8 +4724,10 @@ function mapaMMSalvar() {
       }
       if (r.ok) {
         // Supabase confirmou — agora atualiza memória e cache local
-        GSHEETS_MESES.push(nova);
+        const iSub = GSHEETS_MESES.findIndex(e => e.ano===nova.ano && e.mes===nova.mes);
+        if (iSub >= 0) GSHEETS_MESES[iSub] = nova; else GSHEETS_MESES.push(nova);
         GSHEETS_MESES.sort((a,b) => a.ano!==b.ano ? a.ano-b.ano : a.mes-b.mes);
+        GSHEETS.SERRINHA = gsheetsGetURL('SERRINHA');
         try { localStorage.setItem('mariua_meses_extras', JSON.stringify(extrasAtuais)); } catch(ex) {}
         mapaMMNotificarOutros(); // sinaliza outros usuários imediatamente
         if (btn) { btn.disabled = false; btn.textContent = '✅ Salvo no banco!'; setTimeout(() => { btn.textContent = '💾 Salvar e adicionar mês'; }, 2500); }
@@ -4947,7 +5020,11 @@ const mkUTD = (label, key, count, idSuffix) => {
 const isActive = mapaUTDFiltro===key;
 return `<button id="mapa-utd-btn-${idSuffix}" onclick="mapaSetUTD('${key}')" style="padding:8px 20px;border-radius:10px;border:2px solid ${isActive?'#0d7377':'#e2e8f0'};background:${isActive?'#0d7377':'#fff'};font-family:'Barlow',sans-serif;font-size:0.82rem;font-weight:800;cursor:pointer;color:${isActive?'#fff':'#555'};transition:all 0.15s;white-space:nowrap;">${label} <span style="opacity:0.75;font-size:0.72rem;">(${count})</span></button>`;
 };
-utdBar.innerHTML = mkUTD('🗺️ Todas','TODAS',withCoord.length,'TODAS') + mkUTD('📍 Irecê','IRECÊ',withCoord.filter(d=>d.utd==='IRECÊ').length,'IRECE') + mkUTD('📍 Jacobina','JACOBINA',withCoord.filter(d=>d.utd==='JACOBINA').length,'JACOBINA');
+const nSer = withCoord.filter(d=>d.utd==='SERRINHA').length;
+utdBar.innerHTML = mkUTD('🗺️ Todas','TODAS',withCoord.length,'TODAS')
+  + mkUTD('📍 Irecê','IRECÊ',withCoord.filter(d=>d.utd==='IRECÊ').length,'IRECE')
+  + mkUTD('📍 Jacobina','JACOBINA',withCoord.filter(d=>d.utd==='JACOBINA').length,'JACOBINA')
+  + (nSer ? mkUTD('📍 Serrinha','SERRINHA',nSer,'SERRINHA') : '');
 }
 // --- Barra de meses baseada em GSHEETS_MESES (carrega aba da planilha por mês) ---
 const mesBar = document.getElementById('mapa-mes-bar');
