@@ -289,13 +289,13 @@ const PROG_TOTAIS_ENC = {"AMILTON COSTA": {"valor_previsto": 0.01, "valor_realiz
       </select>
     </div>
     <div>
-      <label class="_s1">QTD COLABORADORES</label>
+      <label class="_s1">QTD COLABORADORES <span id="pf-qtd-fonte" style="font-weight:600;color:#94a3b8;text-transform:none;letter-spacing:0;"></span></label>
       <input type="number" id="pf-qtd-colab" min="0" max="30" class="_s17" onfocus="this.style.borderColor='#7e3af2'" onblur="this.style.borderColor='#e0e8f0'">
     </div>
     <div>
       <label class="_s1">ALOJADOS</label>
       <select id="pf-alojados" class="_s6" onfocus="this.style.borderColor='#7e3af2'" onblur="this.style.borderColor='#e0e8f0'">
-        <option value="">-</option><option value="SIM">SIM</option><option value="NÃO">NÃO</option>
+        <option value="SIM" selected>SIM</option><option value="NÃO">NÃO</option>
       </select>
     </div>
   </div>
@@ -954,6 +954,57 @@ if (typeof progFillSelects === 'function') { try { progFillSelects(); } catch(e)
 const SUPA_URL = 'https://eqxejfoibebcbtsqymji.supabase.co';
 const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVxeGVqZm9pYmViY2J0c3F5bWppIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE4NjUzMTEsImV4cCI6MjA4NzQ0MTMxMX0.lwf7_EJ6UchEOpzhW3cVKztxDGy78gaQblRvgiEwWh8';
 const SUPA_HEADERS = { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY, 'Content-Type': 'application/json' };
+
+// ===== QTD COLABORADORES: vem do cadastro de equipes do banco =====
+// Chave funcionario_equipe, uma linha por funcionario: mat|equipe|funcao|tipo|encarregado.
+// A lista fixa PROG_EQUIPES fica como reserva, para equipe que o banco nao conhece.
+let PROG_COLAB_EQ = {};   // { nome da equipe: quantos funcionarios }
+let PROG_ENC_EQ  = {};    // { encarregado normalizado: nome da equipe }
+let PROG_COLAB_INFO = 'nao carregado';
+function progNorm(t){ return String(t||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/\s+/g,' ').trim(); }
+async function progCarregarColabBanco(){
+try{
+const r = await fetch(SUPA_URL+'/rest/v1/turno_data?key=eq.funcionario_equipe&select=value',{headers:SUPA_HEADERS});
+if(!r.ok) throw new Error('HTTP '+r.status);
+const arr = await r.json();
+const v = arr && arr[0] && arr[0].value;
+if(!v || !v.data){ PROG_COLAB_INFO = 'cadastro de equipes vazio no banco'; return; }
+const eqCount = {}, encEq = {};
+String(v.data).split('\n').forEach(l => {
+const p = l.split('|');
+if(p.length < 2) return;
+const equipe = (p[1]||'').trim();
+if(!equipe) return;
+eqCount[equipe] = (eqCount[equipe]||0) + 1;
+const enc = progNorm(p[4]);
+if(enc) encEq[enc] = equipe;
+});
+PROG_COLAB_EQ = eqCount; PROG_ENC_EQ = encEq;
+PROG_COLAB_INFO = Object.keys(eqCount).length + ' equipe(s) · atualizado ' + (v.updatedAt || '?');
+console.info('[prog] colaboradores do banco:', PROG_COLAB_INFO, eqCount);
+const sel = document.getElementById('pf-encarregado');
+if(sel && sel.value) progOnEncChange();   // ja tinha encarregado escolhido: corrige o numero
+}catch(e){ PROG_COLAB_INFO = 'falha ao ler o banco'; console.warn('[prog] colaboradores: ' + e.message); }
+}
+// Resolve a equipe do encarregado e devolve quantos colaboradores ela tem.
+function progQtdColab(enc){
+const fixa = PROG_EQUIPES[enc] || null;
+const n = progNorm(enc);
+let equipe = PROG_ENC_EQ[n] || '';
+if(!equipe){
+// nome do encarregado no banco pode ter sobrenome a mais ou a menos
+const k = Object.keys(PROG_ENC_EQ).find(x => x === n || x.indexOf(n) === 0 || n.indexOf(x) === 0);
+if(k) equipe = PROG_ENC_EQ[k];
+}
+if(!equipe && fixa && fixa.cod_equipe){
+// ultimo recurso: casar pelo codigo da equipe dentro do nome
+equipe = Object.keys(PROG_COLAB_EQ).find(e => progNorm(e).includes(String(fixa.cod_equipe))) || '';
+}
+if(equipe && PROG_COLAB_EQ[equipe]) return { qtd: PROG_COLAB_EQ[equipe], fonte: 'banco', equipe: equipe };
+if(fixa && fixa.qtd_colab) return { qtd: fixa.qtd_colab, fonte: 'fixo', equipe: fixa.cod_equipe || '' };
+return { qtd: '', fonte: '', equipe: '' };
+}
+progCarregarColabBanco();
 // AVISO DE SEGURANCA: SUPA_KEY e uma anon key exposta no front-end.
 // Acao necessaria: ativar Row Level Security (RLS) em TODAS as tabelas do Supabase
 // e revogar/regenerar a chave em: https://supabase.com/dashboard
@@ -3744,7 +3795,7 @@ setTimeout(() => t.remove(), 3500);
 function mapaProgOnShow() {
 const dateInput = document.getElementById('mapa-prog-date');
 if (dateInput && !dateInput.value) {
-dateInput.value = new Date().toISOString().split('T')[0];
+dateInput.value = progHoje();
 }
 mapaProgRender();
 }
@@ -3982,6 +4033,11 @@ if (selProg && typeof PROG_PROGRAMADORES !== 'undefined') {
   });
 }
 progFillEncarregados('');
+progFillAtividades();
+progEsconderCamposExecucao();
+progPreencherProgramador();
+progDataHoje();
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') progDataHoje(); });
 }
 function progFillEncarregados(supervisor) {
 const sel = document.getElementById('pf-encarregado');
@@ -3999,14 +4055,18 @@ progFillEncarregados(sup);
 }
 function progOnEncChange() {
 const enc = document.getElementById('pf-encarregado').value;
-if (!enc) return;
+const dica = document.getElementById('pf-qtd-fonte');
+if (!enc) { if(dica) dica.textContent = ''; return; }
 const eq = PROG_EQUIPES[enc];
-if (eq) {
+const info = progQtdColab(enc);
 const qtd = document.getElementById('pf-qtd-colab');
 const aloj = document.getElementById('pf-alojados');
-if (qtd && eq.qtd_colab) qtd.value = eq.qtd_colab;
-if (aloj && eq.alojados) aloj.value = eq.alojados;
-}
+if (qtd && info.qtd !== '') qtd.value = info.qtd;
+// Toda turma e alojada. O programador troca para NAO no caso excepcional,
+// e trocar de encarregado nao desfaz essa escolha.
+if (aloj && !aloj.value) aloj.value = 'SIM';
+if (dica) dica.textContent = info.fonte === 'banco' ? ('equipe ' + info.equipe + ' · do banco')
+: (info.fonte === 'fixo' ? 'cadastro fixo — equipe nao encontrada no banco' : '');
 }
 function progPepSearch(val) {
 const dd = document.getElementById('pf-pep-dd');
@@ -4037,20 +4097,69 @@ document.getElementById('pf-municipio').value = municipio;
 document.getElementById('pf-ar').value = ar;
 document.getElementById('pf-pep-dd').style.display = 'none';
 }
-function progOnTipoChange() {
-const tipo = document.getElementById('pf-tipo').value;
+// A programacao pede a atividade, nao o tipo de servico. Entao a lista traz
+// todas as atividades agrupadas por tipo, e o tipo e deduzido da escolha.
+// Data de hoje no fuso do aparelho. toISOString() usa UTC e, no horario da Bahia,
+// depois das 21h ele ja devolvia a data de amanha.
+function progHoje() {
+const d = new Date();
+return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+// A programacao e sempre do dia. Fora da edicao de um registro, o campo volta para hoje.
+function progDataHoje(forcar) {
+const df = document.getElementById('pf-data');
+if (!df) return;
+if (progEditIdx !== null && !forcar) return;   // editando registro antigo: respeita a data dele
+df.value = progHoje();
+}
+function progFillAtividades() {
 const selAtiv = document.getElementById('pf-atividade');
-selAtiv.innerHTML = '<option value="">Selecione a atividade...</option>';
-if (!tipo) return;
-const ativs = PROG_ATIVIDADES.filter(a => a.tipo===tipo);
-ativs.forEach(a => {
-selAtiv.innerHTML += `<option value="${a.cod}|${a.descricao}|${a.fatorK}">${a.descricao}</option>`;
+if (!selAtiv || typeof PROG_ATIVIDADES === 'undefined') return;
+const porTipo = {};
+PROG_ATIVIDADES.forEach(a => { (porTipo[a.tipo] = porTipo[a.tipo] || []).push(a); });
+let html = '<option value="">Selecione a atividade...</option>';
+Object.keys(porTipo).sort().forEach(t => {
+html += '<optgroup label="' + t + '">';
+porTipo[t].forEach(a => {
+html += `<option value="${a.cod}|${a.descricao}|${a.fatorK}">${a.descricao}</option>`;
 });
-document.getElementById('pf-vunit').value = '';
-progCalcValores();
+html += '</optgroup>';
+});
+selAtiv.innerHTML = html;
+}
+// Mantida com o nome antigo: a edicao de registro ainda chama isto.
+function progOnTipoChange() { progFillAtividades(); }
+// Esconde da tela o que a programacao nao preenche. Os campos continuam no DOM
+// (o dashboard e a lista leem esses valores), so nao aparecem no formulario.
+function progEsconderCamposExecucao() {
+['pf-programador','pf-tipo','pf-vunit','pf-qtd-prev','pf-qtd-real','pf-status','pf-ocorrencia','pf-vprev','pf-vreal']
+.forEach(id => {
+const el = document.getElementById(id);
+if (!el || !el.parentElement) return;
+// so esconde o bloco se nele nao houver campo que deve continuar visivel
+const visiveis = ['pf-data','pf-supervisor','pf-encarregado','pf-qtd-colab','pf-alojados','pf-pep-input','pf-nome-obra','pf-municipio','pf-ar','pf-atividade'];
+if (visiveis.some(v => el.parentElement.querySelector('#' + v))) { el.style.display = 'none'; return; }
+el.parentElement.style.display = 'none';
+});
+}
+// Quem programou vem do usuario logado, sem precisar escolher na lista.
+function progPreencherProgramador() {
+const sel = document.getElementById('pf-programador');
+const nome = (window.MARIUA_USER || '').trim();
+if (!sel || !nome) return;
+const achou = Array.from(sel.options).find(o => progNorm(o.value) === progNorm(nome));
+if (achou) { sel.value = achou.value; return; }
+sel.innerHTML += '<option value="' + nome + '">' + nome + '</option>';
+sel.value = nome;
 }
 function progOnAtivChange() {
 const sel = document.getElementById('pf-atividade').value;
+const selTipo = document.getElementById('pf-tipo');
+if (selTipo && typeof PROG_ATIVIDADES !== 'undefined') {
+const cod = sel.split('|')[0];
+const a = PROG_ATIVIDADES.find(x => x.cod === cod);
+selTipo.value = a ? a.tipo : '';     // tipo deduzido da atividade
+}
 if (!sel) { document.getElementById('pf-vunit').value = ''; return; }
 const fk = parseFloat(sel.split('|')[2]) || 0;
 document.getElementById('pf-vunit').value = fk > 0 ? 'R$ ' + fk.toLocaleString('pt-BR',{minimumFractionDigits:2}) : '-';
@@ -4076,8 +4185,8 @@ const enc     = document.getElementById('pf-encarregado').value;
 const pep     = document.getElementById('pf-pep-val').value || document.getElementById('pf-pep-input').value;
 const atSel   = document.getElementById('pf-atividade').value;
 const tipo    = document.getElementById('pf-tipo').value;
-if (!data || !sup || !enc || !pep || !atSel || !tipo) {
-progToast('❌ Preencha os campos obrigatórios: DATA, SUPERVISOR, ENCARREGADO, PEP OBRA, TIPO e ATIVIDADE.', 'error');
+if (!data || !sup || !enc || !pep || !atSel) {
+progToast('❌ Preencha os campos obrigatórios: DATA, SUPERVISOR, ENCARREGADO, PEP OBRA e ATIVIDADE.', 'error');
 return;
 }
 const atParts = atSel.split('|');
@@ -4128,10 +4237,14 @@ setTimeout(() => t.style.display = 'none', 3500);
 }
 function progFormClear() {
 progEditIdx = null;
-['pf-supervisor','pf-programador','pf-encarregado','pf-tipo','pf-atividade','pf-alojados'].forEach(id => {
+['pf-supervisor','pf-programador','pf-encarregado','pf-tipo','pf-atividade'].forEach(id => {
 const el = document.getElementById(id);
 if (el) el.value = '';
 });
+const alojEl = document.getElementById('pf-alojados');
+if (alojEl) alojEl.value = 'SIM';          // padrao da programacao
+const fonteEl = document.getElementById('pf-qtd-fonte');
+if (fonteEl) fonteEl.textContent = '';
 ['pf-qtd-colab','pf-qtd-prev','pf-qtd-real','pf-pep-input','pf-nome-obra','pf-municipio','pf-ar','pf-vunit','pf-vprev','pf-vreal','pf-status'].forEach(id => {
 const occEl = document.getElementById('pf-ocorrencia'); if(occEl) occEl.value = '';
 const el = document.getElementById(id);
@@ -4139,9 +4252,9 @@ if (el) el.value = '';
 });
 document.getElementById('pf-pep-val').value = '';
 const df = document.getElementById('pf-data');
-if (df) df.value = new Date().toISOString().split('T')[0];
-const selAtiv = document.getElementById('pf-atividade');
-if (selAtiv) selAtiv.innerHTML = '<option value="">Selecione o tipo primeiro...</option>';
+if (df) df.value = progHoje();
+progFillAtividades();
+progPreencherProgramador();
 }
 function progSwitchTab(tab) {
 ['form','list','dash','mapa'].forEach(t => {
@@ -4155,6 +4268,7 @@ btn.style.color = active ? '#fff' : 'rgba(255,255,255,0.5)';
 if (view) view.style.display = active ? 'block' : 'none';
 });
 setTimeout(() => {
+if (tab==='form') progDataHoje();
 if (tab==='list') progRenderList();
 if (tab==='dash') progRenderDash();
 if (tab==='mapa') progMapaInit();
@@ -4483,7 +4597,7 @@ progFillEncarregados(r.supervisor);
 set('pf-encarregado', r.encarregado);
 set('pf-programador', r.programador);
 set('pf-qtd-colab', r.qtd_colab);
-set('pf-alojados', r.alojados);
+set('pf-alojados', r.alojados || 'SIM');
 set('pf-pep-input', r.pep);
 set('pf-pep-val', r.pep);
 set('pf-nome-obra', r.nome_obra);
