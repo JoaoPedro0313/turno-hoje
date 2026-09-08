@@ -304,7 +304,7 @@ const PROG_TOTAIS_ENC = {"AMILTON COSTA": {"valor_previsto": 0.01, "valor_realiz
 
   <div class="_s26">
     <div style="grid-column:span 2;">
-      <label class="_s1">PEP OBRA *</label>
+      <label class="_s1">PEP OBRA * <span id="pf-obras-fonte" style="font-weight:600;color:#94a3b8;text-transform:none;letter-spacing:0;"></span></label>
       <div style="position:relative;">
         <input type="text" id="pf-pep-input" placeholder="Digite PEP ou nome da obra..." autocomplete="off"
           style="width:100%;padding:9px 12px;border:1.5px solid #e0e8f0;border-radius:9px;font-family:'Barlow',sans-serif;font-size:0.82rem;font-weight:700;color:#1a365d;outline:none;box-sizing:border-box;"
@@ -4037,6 +4037,7 @@ progFillAtividades();
 progEsconderCamposExecucao();
 progPreencherProgramador();
 progDataHoje();
+progCarregarObras();
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') progDataHoje(); });
 }
 function progFillEncarregados(supervisor) {
@@ -4073,10 +4074,10 @@ const dd = document.getElementById('pf-pep-dd');
 if (!dd) return;
 const q = val.trim().toUpperCase();
 if (!q || q.length < 2) { dd.style.display = 'none'; return; }
-const results = PROG_OBRAS.filter(o =>
-o.pep.toUpperCase().includes(q) ||
-o.titulo.toUpperCase().includes(q) ||
-o.municipio.toUpperCase().includes(q)
+const results = progListaObras().filter(o =>
+(o.pep||'').toUpperCase().includes(q) ||
+(o.titulo||'').toUpperCase().includes(q) ||
+(o.municipio||'').toUpperCase().includes(q)
 ).slice(0, 12);
 if (!results.length) { dd.style.display = 'none'; return; }
 dd.innerHTML = results.map(o => `
@@ -4085,7 +4086,7 @@ style="padding:8px 12px;cursor:pointer;border-bottom:1px solid #f0f4f8;transitio
 onmouseover="this.style.background='#f0f4f8'" onmouseout="this.style.background='#fff'">
 <div style="font-size:0.78rem;font-weight:800;color:#7e3af2;">${o.pep}</div>
 <div style="font-size:0.72rem;font-weight:600;color:#475569;margin-top:1px;">${o.titulo} · ${o.municipio}</div>
-<div style="font-size:0.65rem;color:#aaa;margin-top:1px;">${o.status}</div>
+<div style="font-size:0.65rem;color:#aaa;margin-top:1px;">${o.status || o.municipio || ''}</div>
 </div>`).join('');
 dd.style.display = 'block';
 }
@@ -4111,6 +4112,194 @@ const df = document.getElementById('pf-data');
 if (!df) return;
 if (progEditIdx !== null && !forcar) return;   // editando registro antigo: respeita a data dele
 df.value = progHoje();
+}
+// ===== OBRAS, MUNICIPIO E AR =====
+// Fonte principal: as planilhas mensais do Mapa — uma por carteira, com PEP,
+// titulo, municipio e AR COELBA na mesma linha. Se elas nao vierem, cai para as
+// abas cadastradas na tela de Estagios (que nao tem AR). A lista fixa PROG_OBRAS
+// e o ultimo recurso, e tambem completa o AR de quem ficou sem.
+let PROG_OBRAS_VIVAS = null;
+let PROG_OBRAS_FONTE = '';
+
+// Planilhas de obras do Mapa e os meses conhecidos. Meses novos chegam pela
+// chave meses_extras do banco, a mesma que o mapa.html usa.
+const PROG_MAPA_PLANILHA = {
+jacobina: '142gvn8pNgJGTGDkidCfuOWMHJ2OCKpJd_FQU8zeo0x8',
+irece:    '14ImbZb8-OCBp78jDtd0QFkSLrMG5vXA7tzrM-x6KQVo'
+};
+const PROG_MAPA_MESES = [
+{ano:2026,mes:1,gidJacobina:310661297,gidIrece:1816810936},
+{ano:2026,mes:2,gidJacobina:1111886256,gidIrece:420931092},
+{ano:2026,mes:3,gidJacobina:624598081,gidIrece:534264140},
+{ano:2026,mes:4,gidJacobina:257935593,gidIrece:1837597274},
+{ano:2026,mes:5,gidJacobina:1209313517,gidIrece:663282613},
+{ano:2026,mes:6,gidJacobina:557360701,gidIrece:1842405101}
+];
+
+// gviz por <script>: o endpoint do Google nao manda cabecalho de CORS.
+// responseHandler exclusivo por pedido, senao as carteiras carregadas em
+// paralelo disputam o mesmo callback e se perdem.
+function progGviz(id, gid){
+return new Promise((resolve, reject) => {
+const cb = 'progGvizCb_' + Date.now() + '_' + Math.floor(Math.random()*1e6);
+let pronto = false, timer = null;
+const sc = document.createElement('script');
+const limpar = () => { clearTimeout(timer); try{ delete window[cb]; }catch(e){ window[cb] = undefined; } if(sc.parentNode) sc.parentNode.removeChild(sc); };
+window[cb] = j => { if(!pronto){ pronto = true; limpar(); resolve(j); } };
+const falhar = m => { if(!pronto){ pronto = true; limpar(); reject(new Error(m)); } };
+sc.src = 'https://docs.google.com/spreadsheets/d/' + encodeURIComponent(id) + '/gviz/tq?gid=' +
+encodeURIComponent(gid) + '&headers=0&tqx=' + encodeURIComponent('out:json;responseHandler:' + cb) + '&_=' + Date.now();
+sc.onerror = () => falhar('nao carregou a aba');
+document.body.appendChild(sc);
+timer = setTimeout(() => falhar('tempo esgotado'), 15000);
+});
+}
+
+const PROG_COL_OBRA = {
+pep:       ['pep'],
+titulo:    ['titulo','nome da obra','obra','descricao'],
+municipio: ['municipio','cidade'],
+ar:        ['ar coelba','ar da coelba','responsavel coelba']
+};
+function progMatriz(json){
+const linhas = ((json && json.table) || {}).rows || [];
+return linhas.map(r => (r.c || []).map(c => {
+if(!c) return '';
+if(c.f !== undefined && c.f !== null) return String(c.f);
+if(c.v !== undefined && c.v !== null) return String(c.v);
+return '';
+})).filter(r => r.some(v => String(v).trim() !== ''));
+}
+// Planilha real tem titulo e resumo antes do cabecalho: procura nas 15
+// primeiras a linha que mais parece cabecalho.
+function progCabecalho(matriz){
+let melhor = 0, ponto = -1;
+for(let i = 0; i < Math.min(matriz.length, 15); i++){
+const celulas = matriz[i].map(c => progNorm(c).toLowerCase());
+let p = 0;
+Object.keys(PROG_COL_OBRA).forEach(k => {
+if(celulas.some(c => PROG_COL_OBRA[k].some(cand => c === cand || c.indexOf(cand) === 0))) p++;
+});
+if(p > ponto){ ponto = p; melhor = i; }
+}
+return ponto >= 2 ? melhor : 0;
+}
+function progObrasDaAba(json){
+const matriz = progMatriz(json);
+if(!matriz.length) return [];
+const iCab = progCabecalho(matriz);
+const cab = matriz[iCab].map(c => progNorm(c).toLowerCase());
+const idx = {};
+Object.keys(PROG_COL_OBRA).forEach(k => {
+const i = cab.findIndex(c => PROG_COL_OBRA[k].some(cand => c === cand || c.indexOf(cand) === 0));
+if(i >= 0) idx[k] = i;
+});
+// 'AR' sozinho e curto demais para casar solto: so vale como cabecalho inteiro,
+// senao pegaria "AREA", "ARQUIVO" e afins.
+if(idx.ar === undefined){ const i = cab.indexOf('ar'); if(i >= 0) idx.ar = i; }
+if(idx.pep === undefined) return [];
+const saida = [];
+matriz.slice(iCab + 1).forEach(r => {
+const pega = k => (idx[k] !== undefined ? String(r[idx[k]] || '').trim() : '');
+const pep = pega('pep'), titulo = pega('titulo');
+if(!pep || !titulo) return;                    // linha em branco ou de controle
+if(/NAO (ELIMINAR|EXCLUIR|APAGAR)|TOTAL GERAL/.test(progNorm(pep) + ' ' + progNorm(titulo))) return;
+saida.push({ pep, titulo, municipio: pega('municipio'), ar: pega('ar'), status: '' });
+});
+return saida;
+}
+
+function progRefDeUrl(url){
+const id  = String(url||'').match(/\/d\/([a-zA-Z0-9-_]+)/);
+const gid = String(url||'').match(/[?#&]gid=([0-9]+)/);
+return id ? { id:id[1], gid: gid ? gid[1] : '0' } : null;
+}
+async function progChave(chave){
+try{
+const r = await fetch(SUPA_URL + '/rest/v1/turno_data?select=value&key=eq.' + chave + '&limit=1', {headers:SUPA_HEADERS});
+if(!r.ok) throw new Error('HTTP ' + r.status);
+const j = await r.json();
+return (Array.isArray(j) && j.length) ? j[0].value : null;
+}catch(e){ console.warn('[prog] ' + chave + ': ' + e.message); return null; }
+}
+// Abas do mes mais recente das planilhas do Mapa.
+async function progRefsDoMapa(){
+let meses = PROG_MAPA_MESES.slice();
+const v = await progChave('meses_extras');
+const extras = Array.isArray(v) ? v : ((v && Array.isArray(v.data)) ? v.data : (v && Array.isArray(v.meses) ? v.meses : []));
+extras.forEach(e => {
+const ja = meses.find(m => m.ano === e.ano && m.mes === e.mes);
+if(ja) Object.assign(ja, e); else meses.push(e);
+});
+if(!meses.length) return null;
+meses.sort((a,b) => a.ano !== b.ano ? a.ano - b.ano : a.mes - b.mes);
+const m = meses[meses.length - 1];
+const refs = [];
+if(m.gidJacobina) refs.push({ id:PROG_MAPA_PLANILHA.jacobina, gid:String(m.gidJacobina) });
+if(m.gidIrece)    refs.push({ id:PROG_MAPA_PLANILHA.irece,    gid:String(m.gidIrece) });
+if(m.urlSerrinha){ const r2 = progRefDeUrl(m.urlSerrinha); if(r2) refs.push(r2); }
+if(!refs.length) return null;
+return { refs, rotulo: String(m.mes).padStart(2,'0') + '/' + m.ano, fonte:'mapa' };
+}
+// Abas do mes mais recente cadastradas na tela de Estagios.
+async function progRefsDosEstagios(){
+const v = await progChave('estagios_board');
+const meses = (v && Array.isArray(v.meses)) ? v.meses.slice() : [];
+if(!meses.length) return null;
+meses.sort((a,b) => a.ano !== b.ano ? a.ano - b.ano : a.mes - b.mes);
+const m = meses[meses.length - 1];
+const refs = (m.abas ? Object.keys(m.abas).map(c => m.abas[c]) : (m.id ? [{id:m.id, gid:m.gid}] : [])).filter(Boolean);
+if(!refs.length) return null;
+return { refs, rotulo: String(m.mes).padStart(2,'0') + '/' + m.ano, fonte:'estágios' };
+}
+async function progLerAbas(refs){
+const partes = await Promise.all(refs.map(async ref => {
+try{ return progObrasDaAba(await progGviz(ref.id, ref.gid)); }
+catch(e){ console.warn('[prog] obras: falhou uma aba — ' + e.message); return []; }
+}));
+const vistos = {}, lista = [];
+partes.forEach(p => p.forEach(o => { if(!vistos[o.pep]){ vistos[o.pep] = 1; lista.push(o); } }));
+return lista;
+}
+
+async function progCarregarObras(){
+let origem = null, lista = [];
+try{
+origem = await progRefsDoMapa();
+if(origem) lista = await progLerAbas(origem.refs);
+if(!lista.length){                                    // mapa nao respondeu
+const alt = await progRefsDosEstagios();
+if(alt){ origem = alt; lista = await progLerAbas(alt.refs); }
+}
+}catch(e){ console.warn('[prog] obras: ' + e.message); }
+
+if(!lista.length){
+PROG_OBRAS_FONTE = 'não consegui ler as planilhas — usando a base fixa';
+progMostrarFonteObras();
+return;
+}
+// AR que faltou na planilha vem da base fixa
+let daBase = 0;
+lista.forEach(o => {
+if(o.ar) return;
+const f = (typeof PROG_OBRAS !== 'undefined') ? PROG_OBRAS.find(x => x.pep === o.pep) : null;
+if(f && f.ar){ o.ar = f.ar; daBase++; }
+});
+lista.sort((a,b) => a.titulo.localeCompare(b.titulo));
+PROG_OBRAS_VIVAS = lista;
+const semAr = lista.filter(o => !o.ar).length;
+PROG_OBRAS_FONTE = lista.length + ' obras de ' + origem.rotulo + ' (' + origem.fonte + ')' +
+(daBase ? ' · ' + daBase + ' AR da base' : '') + (semAr ? ' · ' + semAr + ' sem AR' : '');
+console.info('[prog] obras: ' + PROG_OBRAS_FONTE);
+progMostrarFonteObras();
+}
+function progMostrarFonteObras(){
+const el = document.getElementById('pf-obras-fonte');
+if(el) el.textContent = PROG_OBRAS_FONTE;
+}
+// A busca usa a lista das planilhas quando ela existe.
+function progListaObras(){
+return (PROG_OBRAS_VIVAS && PROG_OBRAS_VIVAS.length) ? PROG_OBRAS_VIVAS : PROG_OBRAS;
 }
 function progFillAtividades() {
 const selAtiv = document.getElementById('pf-atividade');
