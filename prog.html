@@ -955,7 +955,53 @@ const SUPA_URL = 'https://eqxejfoibebcbtsqymji.supabase.co';
 const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVxeGVqZm9pYmViY2J0c3F5bWppIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE4NjUzMTEsImV4cCI6MjA4NzQ0MTMxMX0.lwf7_EJ6UchEOpzhW3cVKztxDGy78gaQblRvgiEwWh8';
 const SUPA_HEADERS = { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY, 'Content-Type': 'application/json' };
 
-// ===== QTD COLABORADORES: vem do cadastro de equipes do banco =====
+// ===== CADASTRO DE EQUIPES (tela Cadastro de Equipes) =====
+// Chave cadastro_equipes: gerente, supervisores e equipes. Quando existe, ele
+// manda nas listas de supervisor e encarregado. As constantes PROG_SUPERVISORES,
+// PROG_ENCARREGADOS e PROG_EQUIPES ficam como reserva — nao da para reatribui-las
+// (sao const), por isso tudo passa por estas tres funcoes.
+let PROG_CAD = null;
+let PROG_CAD_INFO = 'nao carregado';
+
+function progSupervisoresLista(){
+if(PROG_CAD && PROG_CAD.supervisores && PROG_CAD.supervisores.length)
+return PROG_CAD.supervisores.map(x => (x.nome||'').trim()).filter(Boolean);
+return (typeof PROG_SUPERVISORES !== 'undefined') ? PROG_SUPERVISORES : [];
+}
+function progEncarregadosMapa(){
+if(PROG_CAD && PROG_CAD.equipes && PROG_CAD.equipes.length){
+const m = {};
+PROG_CAD.equipes.forEach(q => {
+const nome = (q.encarregado||'').trim();
+if(nome) m[nome] = { matricula:q.matricula||'', supervisor:(q.supervisor||'').trim() };
+});
+return m;
+}
+return (typeof PROG_ENCARREGADOS !== 'undefined') ? PROG_ENCARREGADOS : {};
+}
+function progEquipeDe(enc){
+if(PROG_CAD && PROG_CAD.equipes){
+const q = PROG_CAD.equipes.find(x => progNorm(x.encarregado) === progNorm(enc));
+if(q) return { cod_equipe:q.cod_equipe||'', qtd_colab:q.qtd_colab||'', alojados:q.alojados||'SIM', doCadastro:true };
+}
+return (typeof PROG_EQUIPES !== 'undefined' && PROG_EQUIPES[enc]) ? PROG_EQUIPES[enc] : null;
+}
+async function progCarregarCadastroEquipes(){
+try{
+const v = await progChave('cadastro_equipes');
+if(!v || !((v.equipes && v.equipes.length) || (v.supervisores && v.supervisores.length))){
+PROG_CAD_INFO = 'cadastro de equipes vazio no banco';
+return;
+}
+PROG_CAD = v;
+PROG_CAD_INFO = (v.equipes||[]).length + ' equipe(s) · ' + (v.supervisores||[]).length + ' supervisor(es)' +
+(v.atualizado ? ' · atualizado ' + new Date(v.atualizado).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : '');
+console.info('[prog] cadastro de equipes: ' + PROG_CAD_INFO);
+progRemontarSelectsPessoas();
+}catch(e){ PROG_CAD_INFO = 'falha ao ler o cadastro'; console.warn('[prog] cadastro de equipes: ' + e.message); }
+}
+
+// ===== QTD COLABORADORES =====
 // Chave funcionario_equipe, uma linha por funcionario: mat|equipe|funcao|tipo|encarregado.
 // A lista fixa PROG_EQUIPES fica como reserva, para equipe que o banco nao conhece.
 let PROG_COLAB_EQ = {};   // { nome da equipe: quantos funcionarios }
@@ -988,7 +1034,7 @@ if(sel && sel.value) progOnEncChange();   // ja tinha encarregado escolhido: cor
 }
 // Resolve a equipe do encarregado e devolve quantos colaboradores ela tem.
 function progQtdColab(enc){
-const fixa = PROG_EQUIPES[enc] || null;
+const fixa = progEquipeDe(enc);
 const n = progNorm(enc);
 let equipe = PROG_ENC_EQ[n] || '';
 if(!equipe){
@@ -1000,7 +1046,12 @@ if(!equipe && fixa && fixa.cod_equipe){
 // ultimo recurso: casar pelo codigo da equipe dentro do nome
 equipe = Object.keys(PROG_COLAB_EQ).find(e => progNorm(e).includes(String(fixa.cod_equipe))) || '';
 }
+// 1) o que o Cadastro de Equipes diz
+if(fixa && fixa.doCadastro && fixa.qtd_colab !== '' && fixa.qtd_colab != null)
+return { qtd: fixa.qtd_colab, fonte: 'cadastro', equipe: fixa.cod_equipe || '' };
+// 2) contagem de funcionarios da equipe (chave funcionario_equipe)
 if(equipe && PROG_COLAB_EQ[equipe]) return { qtd: PROG_COLAB_EQ[equipe], fonte: 'banco', equipe: equipe };
+// 3) lista escrita dentro deste arquivo
 if(fixa && fixa.qtd_colab) return { qtd: fixa.qtd_colab, fonte: 'fixo', equipe: fixa.cod_equipe || '' };
 return { qtd: '', fonte: '', equipe: '' };
 }
@@ -3655,7 +3706,7 @@ return s ? `<span style="background:${cor}22;color:${cor};padding:2px 8px;border
 tbody.innerHTML = regs.map((r,i) => {
 const coord = mapaProgGetCoord(r);
 const hasCoord = !!coord;
-const encInfo = (PROG_ENCARREGADOS || {})[r.encarregado] || {};
+const encInfo = progEncarregadosMapa()[r.encarregado] || {};
 const sup = encInfo.supervisor || r.supervisor || '—';
 const gMapsLink = hasCoord
 ? `https://www.google.com/maps?q=${coord.lat},${coord.lon}`
@@ -3759,7 +3810,7 @@ const bounds = [];
 comCoord.forEach(r => {
 const coord = mapaProgGetCoord(r);
 if (!coord) return;
-const encInfo = (PROG_ENCARREGADOS || {})[r.encarregado] || {};
+const encInfo = progEncarregadosMapa()[r.encarregado] || {};
 const sup = encInfo.supervisor || r.supervisor || '—';
 const popup = `<div style="font-family:'Barlow',sans-serif;min-width:220px;max-width:280px;">
 <div style="background:#6b46c122;color:#6b46c1;padding:2px 10px;border-radius:4px;font-size:0.65rem;font-weight:800;display:inline-block;margin-bottom:6px;">📅 PROGRAMADA HOJE</div>
@@ -4014,17 +4065,33 @@ setTimeout(() => setDbStatus('local', 'Dados locais'), 2000);
 }
 if (typeof mapaProgRender==='function') mapaProgRender();
 }
-function progFillSelects() {
+// So os selects de gente: supervisor, filtro de supervisor e encarregado.
+// Preserva o que estava escolhido, para nao apagar o formulario em preenchimento.
+function progRemontarSelectsPessoas() {
 const selSup = document.getElementById('pf-supervisor');
 const filterSup = document.getElementById('prog-filter-sup');
-if (selSup && typeof PROG_SUPERVISORES !== 'undefined') {
+const selEnc = document.getElementById('pf-encarregado');
+const supSel = selSup ? selSup.value : '';
+const encSel = selEnc ? selEnc.value : '';
+const filtroSel = filterSup ? filterSup.value : '';
+if (selSup) {
   selSup.innerHTML = '<option value="">Selecione...</option>';
   if (filterSup) filterSup.innerHTML = '<option value="">Todos Supervisores</option>';
-  PROG_SUPERVISORES.forEach(s => {
+  progSupervisoresLista().forEach(s => {
     selSup.innerHTML += `<option value="${s}">${s}</option>`;
     if (filterSup) filterSup.innerHTML += `<option value="${s}">${s}</option>`;
   });
+  selSup.value = supSel;
+  if (filterSup) filterSup.value = filtroSel;
 }
+progFillEncarregados(supSel);
+if (selEnc && encSel) {
+  selEnc.value = encSel;
+  if (selEnc.value === encSel) progOnEncChange();   // so se o encarregado ainda existe
+}
+}
+function progFillSelects() {
+progRemontarSelectsPessoas();
 const selProg = document.getElementById('pf-programador');
 if (selProg && typeof PROG_PROGRAMADORES !== 'undefined') {
   selProg.innerHTML = '<option value="">Selecione...</option>';
@@ -4033,6 +4100,7 @@ if (selProg && typeof PROG_PROGRAMADORES !== 'undefined') {
   });
 }
 progFillEncarregados('');
+progCarregarCadastroEquipes();
 progFillAtividades();
 progEsconderCamposExecucao();
 progPreencherProgramador();
@@ -4044,8 +4112,9 @@ function progFillEncarregados(supervisor) {
 const sel = document.getElementById('pf-encarregado');
 if (!sel) return;
 sel.innerHTML = '<option value="">Selecione...</option>';
-Object.keys(PROG_ENCARREGADOS).forEach(enc => {
-if (!supervisor || PROG_ENCARREGADOS[enc].supervisor===supervisor) {
+const mapaEnc = progEncarregadosMapa();
+Object.keys(mapaEnc).sort().forEach(enc => {
+if (!supervisor || progNorm(mapaEnc[enc].supervisor) === progNorm(supervisor)) {
 sel.innerHTML += `<option value="${enc}">${enc}</option>`;
 }
 });
@@ -4058,7 +4127,7 @@ function progOnEncChange() {
 const enc = document.getElementById('pf-encarregado').value;
 const dica = document.getElementById('pf-qtd-fonte');
 if (!enc) { if(dica) dica.textContent = ''; return; }
-const eq = PROG_EQUIPES[enc];
+const eq = progEquipeDe(enc);
 const info = progQtdColab(enc);
 const qtd = document.getElementById('pf-qtd-colab');
 const aloj = document.getElementById('pf-alojados');
@@ -4066,8 +4135,11 @@ if (qtd && info.qtd !== '') qtd.value = info.qtd;
 // Toda turma e alojada. O programador troca para NAO no caso excepcional,
 // e trocar de encarregado nao desfaz essa escolha.
 if (aloj && !aloj.value) aloj.value = 'SIM';
-if (dica) dica.textContent = info.fonte === 'banco' ? ('equipe ' + info.equipe + ' · do banco')
-: (info.fonte === 'fixo' ? 'cadastro fixo — equipe nao encontrada no banco' : '');
+if (dica) dica.textContent =
+info.fonte === 'cadastro' ? ('equipe ' + info.equipe + ' · do Cadastro de Equipes')
+: info.fonte === 'banco' ? ('equipe ' + info.equipe + ' · contagem de funcionários')
+: info.fonte === 'fixo' ? 'lista fixa — não achei no cadastro'
+: '';
 }
 function progPepSearch(val) {
 const dd = document.getElementById('pf-pep-dd');
@@ -4586,7 +4658,7 @@ card('✅','Realizado',fmt(totalVR),'#fff','#0d7377');
 }
 const bounds = [];
 comCoord.forEach(({r, coord}) => {
-const encInfo = (PROG_ENCARREGADOS||{})[r.encarregado]||{};
+const encInfo = progEncarregadosMapa()[r.encarregado]||{};
 const sup = encInfo.supervisor || r.supervisor || '—';
 const cor = progMapaGetCor(r.status);
 const popup = `<div style="font-family:'Barlow',sans-serif;min-width:230px;max-width:290px;">
@@ -4861,8 +4933,8 @@ const rows = [];
 allEncs.forEach(enc => {
 const fromReg = enc_data[enc] || {vp:0, vr:0};
 const fromBase = PROG_TOTAIS_ENC[enc] || {valor_previsto:0, valor_realizado:0};
-const sup = fromReg.sup || (PROG_ENCARREGADOS[enc]?.supervisor) || '-';
-const eq = PROG_EQUIPES[enc];
+const sup = fromReg.sup || (progEncarregadosMapa()[enc]?.supervisor) || '-';
+const eq = progEquipeDe(enc);
 const vp = fromReg.vp + fromBase.valor_previsto;
 const vr = fromReg.vr + fromBase.valor_realizado;
 const efs = vp > 0 ? (vr/vp*100) : 0;
