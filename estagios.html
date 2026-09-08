@@ -768,7 +768,7 @@ try{if(localStorage.getItem("mariua_darkmode")==="1")document.body.classList.add
 
   const FIELD_CANDIDATES = {
     pep: ['pep'],
-    titulo: ['titulo'],
+    titulo: ['titulo','nome da obra','descricao'],
     municipio: ['municipio'],
     encarregado: ['encarregado'],
     utd: ['utd'],
@@ -791,6 +791,7 @@ try{if(localStorage.getItem("mariua_darkmode")==="1")document.body.classList.add
   }
 
   function get(r, key){
+    if(r && r['__' + key] !== undefined) return r['__' + key];
     return (fieldMap[key] && r[fieldMap[key]] !== undefined) ? r[fieldMap[key]] : '';
   }
 
@@ -811,21 +812,48 @@ try{if(localStorage.getItem("mariua_darkmode")==="1")document.body.classList.add
     return bestScore >= 2 ? bestIdx : 0;
   }
 
+  // Planilha real tem linha de controle ("NÃO ELIMINAR ESTA LINHA"), rodape de
+  // totais e linhas em branco no meio. Nada disso e obra.
+  const TEXTO_CONTROLE = /nao (eliminar|excluir|apagar|remover|deletar|mexer|alterar|modificar|preencher)|nao mexa|do not delete|total geral/;
+  let linhasIgnoradas = 0;
+  let semColunaTitulo = false;   // alguma aba veio sem coluna de titulo reconhecida
+
+  function ehObra(o){
+    const titulo = norm(get(o,'titulo'));
+    const pep    = norm(get(o,'pep'));
+    if(TEXTO_CONTROLE.test(titulo) || TEXTO_CONTROLE.test(pep)) return false;
+    // Se a aba nao tem coluna de titulo reconhecida, exigir titulo apagaria tudo.
+    // Nesse caso a linha vale pelo PEP, e o aviso na barra explica o que houve.
+    if(!o.__temColTitulo) return !!pep;
+    return !!titulo;
+  }
+
   function rowsFromCsv(matrix, carteira, escopo){
     const headerIdx = detectHeaderRowIndex(matrix);
     const head = matrix[headerIdx].map(normHeader);
     headers = head;
     buildFieldMap();
-    return matrix.slice(headerIdx + 1).map((r, idx) => {
+    const brutas = matrix.slice(headerIdx + 1).map((r, idx) => {
       const obj = {};
       head.forEach((h,i) => { if(h) obj[h] = (r[i] !== undefined ? r[i].trim() : ''); });
+      // Resolve os campos aqui, com o cabecalho desta aba, e guarda na linha.
+      Object.keys(FIELD_CANDIDATES).forEach(k => {
+        obj['__' + k] = (fieldMap[k] && obj[fieldMap[k]] !== undefined) ? obj[fieldMap[k]] : '';
+      });
       // A carteira vem da aba de origem — e o mesmo criterio que o mapa usa.
+      obj.__temColTitulo = !!fieldMap.titulo;
       if(carteira) obj.__carteira = carteira;
       // Com PEP a etiqueta acompanha a obra entre meses, que e o desejado.
       // Sem PEP, o indice sozinho colidiria entre abas — dai o prefixo.
       obj.__id = get(obj,'pep') || ('row-' + (escopo||'') + '-' + (carteira||'') + '-' + idx);
       return obj;
     });
+    if(!fieldMap.titulo) semColunaTitulo = true;
+    const obras = brutas.filter(ehObra);
+    const fora = brutas.length - obras.length;
+    linhasIgnoradas += fora;
+    if(fora) console.info('estagios: ' + fora + ' linha(s) ignorada(s) em ' + (carteira || 'aba avulsa') + ' (sem título ou linha de controle)');
+    return obras;
   }
 
   function renderConfig(){
@@ -1004,7 +1032,13 @@ try{if(localStorage.getItem("mariua_darkmode")==="1")document.body.classList.add
     bar.innerHTML = html;
     const fora = base.filter(r => !CIDADES_FIXAS.some(c => valorCarteira(r).includes(c.valor))).length;
     const av = $('#est-utd-aviso');
-    if(av) av.textContent = fora ? (fora + ' obra(s) fora das três carteiras — visíveis em "Todas"') : '';
+    if(av){
+      const partes = [];
+      if(fora) partes.push(fora + ' obra(s) fora das três carteiras — visíveis em "Todas"');
+      if(linhasIgnoradas) partes.push(linhasIgnoradas + ' linha(s) da planilha ignorada(s)');
+      if(semColunaTitulo) partes.push('sem coluna de título na planilha — cards ficam só com o PEP');
+      av.textContent = partes.join(' · ');
+    }
   }
 
   function renderBarraPendencias(){
@@ -1335,6 +1369,8 @@ try{if(localStorage.getItem("mariua_darkmode")==="1")document.body.classList.add
     const alvos = refs.filter(x => x.ref);
     if(!alvos.length){ setStatus('err','Nenhuma aba cadastrada para este mês.'); return; }
     setStatus('loading', 'Carregando ' + (rotulo || 'planilha') + '…');
+    linhasIgnoradas = 0;
+    semColunaTitulo = false;
     const escopo = rotulo || '';
     const resultados = await Promise.all(alvos.map(async a => {
       try{
