@@ -238,8 +238,11 @@ const PROG_ENCARREGADOS = {"DOUGLAS MELO": {"matricula": "27483", "supervisor": 
 if (typeof progFillSelects === 'function') { try { progFillSelects(); } catch(e) { console.warn('progFillSelects erro:', e); } }
 const PROG_EQUIPES = {"DOUGLAS MELO": {"cod_equipe": "2299", "qtd_colab": 6, "alojados": "SIM"}, "RODRIGO SILVA": {"cod_equipe": "2300", "qtd_colab": 6, "alojados": "SIM"}, "JAILTON SILVA": {"cod_equipe": "2301", "qtd_colab": 6, "alojados": "SIM"}, "GERALDO GOMES": {"cod_equipe": "2302", "qtd_colab": 6, "alojados": "SIM"}, "CLEBSON NETO": {"cod_equipe": "2303", "qtd_colab": 6, "alojados": "SIM"}, "CARLOS CRUZ": {"cod_equipe": "2349", "qtd_colab": 6, "alojados": "SIM"}, "JENILSON OLIVEIRA": {"cod_equipe": "2350", "qtd_colab": 6, "alojados": "SIM"}, "JOAO PEREIRA": {"cod_equipe": "2351", "qtd_colab": 1, "alojados": "NÃO"}, "EMERSON SILVA": {"cod_equipe": "2332", "qtd_colab": 6, "alojados": "SIM"}, "PATRICIO BARBOSA": {"cod_equipe": "2333", "qtd_colab": 5, "alojados": "SIM"}, "JULIO SANTOS": {"cod_equipe": "2339", "qtd_colab": 6, "alojados": "SIM"}, "VALMIR SILVA": {"cod_equipe": "2340", "qtd_colab": 2, "alojados": "NÃO"}, "CARLOS ANDRÉ": {"cod_equipe": "2363", "qtd_colab": 3, "alojados": "SIM"}, "OSIMAR SOUZA": {"cod_equipe": "2352", "qtd_colab": 1, "alojados": "NÃO"}, "DIOGO SANTOS": {"cod_equipe": "2304", "qtd_colab": 6, "alojados": "SIM"}, "LUCIANO SILVA": {"cod_equipe": "2305", "qtd_colab": 6, "alojados": "SIM"}, "FABIANO MORAES": {"cod_equipe": "2326", "qtd_colab": 6, "alojados": "SIM"}, "AMILTON COSTA": {"cod_equipe": "2330", "qtd_colab": 6, "alojados": "SIM"}, "JAIR DE JESUS": {"cod_equipe": "2368", "qtd_colab": 2, "alojados": "NÃO"}, "TIAGO SOUZA": {"cod_equipe": "2371", "qtd_colab": 1, "alojados": "NÃO"}, "CAIQUE": {"cod_equipe": "2541", "qtd_colab": 6, "alojados": "SIM"}, "RYAN": {"cod_equipe": "2541", "qtd_colab": 2, "alojados": "SIM"}};
 const PROG_PROGRAMADORES = [{"nome": "AQUILES SANTOS SOUZA", "matricula": "27705", "base": "BASE JACOBINA - BA", "gerencia": "GERENTE ALÉCIO OLIVEIRA"}, {"nome": "ABNER VICENTE FONSECA", "matricula": "28241", "base": "BASE JACOBINA - BA", "gerencia": "GERENTE ALÉCIO OLIVEIRA"}, {"nome": "JOÃO PEDRO SILVA DE ARAÚJO", "matricula": "27680", "base": "BASE JACOBINA - BA", "gerencia": "GERENTE ALÉCIO OLIVEIRA"}, {"nome": "JOSÉ CARLOS SILVA DOS SANTOS", "matricula": "27423", "base": "BASE JACOBINA - BA", "gerencia": "GERENTE ALÉCIO OLIVEIRA"}];
-const PROG_ATIVIDADES = [{"cod": "BA001", "servico": "SERVICOS_RUR-BA", "tipo": "RETROESCAVADEIRA", "descricao": "ABERTURA DE ACESSO", "fatorK": 0.01}, {"cod": "BA002", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "ATERRAMENTO  DE  CERCAS - SECCIONAMENTO  DE  CERCA", "fatorK": 84.272526}, {"cod": "BA003", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "ARRASTAMENTO  MANUAL( 9/400 POR KM)", "fatorK": 1369.448379819}, {"cod": "BA003", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "ACONPANHAMENTO DA RETRO - ESCAVAÇÃO", "fatorK": 0.01}, {"cod": "BA004", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA VIVA", "descricao": "ALTERAÇÃO DE ESTRUTURA", "fatorK": 1221.73}, {"cod": "BA005", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA VIVA", "descricao": "ADICIONAR +1 ESTRIBO", "fatorK": 1121.03}, {"cod": "BA006", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "CARREGAMENTO", "fatorK": 0.01}, {"cod": "BA007", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "CORREÇÃO  DE  PG", "fatorK": 0.01}, {"cod": "BA008", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "CAVA COM TRADO EM ROCHA", "fatorK": 978.88}, {"cod": "BA009", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "CAVA COM TRADO NORMAL", "fatorK": 0.01}, {"cod": "BA010", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "CAVA EM ROCHA COM EXPLOSIVO", "fatorK": 946.47}, {"cod": "BA011", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "CAVA MANUAL EM ROCHA", "fatorK": 978.88}, {"cod": "BA012", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "CAVA MANUAL NORMAL", "fatorK": 0.01}, {"cod": "BA013", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "DELIGAMENTO - ENERGIZAÇÃO", "fatorK": 0.01}, {"cod": "BA014", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "DEVOLUÇÃO E SAQUE DE MATERIAIS NA BASE", "fatorK": 0.01}, {"cod": "BA015", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "DESLIGAMENTO - ADF", "fatorK": 3.98}, {"cod": "BA016", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA VIVA", "descricao": "DESLIGAMENTO - IMPLANTAÇÃO DE POSTES", "fatorK": 1527.51}, {"cod": "BA017", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "DESCARREGAMENTO E DISTRUBUIÇÃO DE POSTES", "fatorK": 251.73}, {"cod": "BA018", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "DESLIGAMENTO - IMPLANTAÇÃO DE POSTES", "fatorK": 1527.51}, {"cod": "BA019", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "ESCAVAÇÃO PARA ESTAÍ", "fatorK": 0.01}, {"cod": "BA020", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "EQUIPE SACANDO MATERIAIS NA BASE", "fatorK": 0.01}, {"cod": "BA021", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "ESCAVAÇÃO - IMPLANTAÇÃO - LANÇAMENTO E ENERGIZAÇÃO", "fatorK": 1746.93}, {"cod": "BA022", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "FUNDAÇÃO  ESPECIAL", "fatorK": 1822.42}, {"cod": "BA023", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA VIVA", "descricao": "INTERCALAÇÃO DE POSTES - APOIO A DÍNAMO", "fatorK": 2039.12}, {"cod": "BA024", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA VIVA", "descricao": "INTERCALAÇÃO DE POSTES", "fatorK": 2039.12}, {"cod": "BA025", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA VIVA", "descricao": "INSTAÇÃO DE CHAVES", "fatorK": 44.89}, {"cod": "BA026", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA VIVA", "descricao": "INSTALAÇÃO DE RELIGADOR", "fatorK": 0.01}, {"cod": "BA027", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "IMPLANTAÇÃO DE POSTES", "fatorK": 1527.5}, {"cod": "BA028", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "INSTALAÇÃO DE ESTAÍ", "fatorK": 740.0}, {"cod": "BA029", "servico": "SERVICOS_RUR-BA", "tipo": "LIGAÇÃO DE CLIENTE", "descricao": "INSTALAÇÃO DE RAMAL DE LIGAÇÃO", "fatorK": 129.23}, {"cod": "BA030", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "IMPLANTAÇÃO DE POSTES COM LV", "fatorK": 1527.5}, {"cod": "BA031", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "INSTALAÇÃO DE TRAFOS", "fatorK": 872.31}, {"cod": "BA032", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "IMPLANTAÇÃO DE POSTES DE FIBRA", "fatorK": 1527.5}, {"cod": "BA033", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA VIVA", "descricao": "INSTALAÇÃO DE BANCADA COM N3", "fatorK": 2121.36}, {"cod": "BA034", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "INSTALAÇÃO DE TRAFOS TRIFASICO", "fatorK": 0.01}, {"cod": "BA035", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "INSTALAÇÃO MONOFASICO", "fatorK": 0.01}, {"cod": "BA036", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "INSTALAÇÃO DE TRAFOS BIFASICO", "fatorK": 0.01}, {"cod": "BA037", "servico": "SERVICOS_RUR-BA", "tipo": "LIGAÇÃO DE CLIENTE", "descricao": "INSTALAÇÃO DE KIT MEDIDOR", "fatorK": 227.76}, {"cod": "BA038", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "IMPLANTAÇÃO DE POSTES E ESCAVAÇÕES", "fatorK": 1527.5}, {"cod": "BA039", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "IMPLANTAÇÃO DE POSTES E INSTALAÇÃO DE TRAFOS", "fatorK": 2385.14}, {"cod": "BA040", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "INSTALAÇÃO DE TRAFOS E ENERGIZAÇÃO", "fatorK": 857.63}, {"cod": "BA041", "servico": "SERVICOS_RUR-BA", "tipo": "LIGAÇÃO DE CLIENTE", "descricao": "LIGAÇÃO DE CLIENTE", "fatorK": 646.5}, {"cod": "BA042", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "LOCAÇÃO E ESCAVAÇÃO", "fatorK": 0.01}, {"cod": "BA043", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "LOCAÇÃO", "fatorK": 0.01}, {"cod": "BA044", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "LANÇAMENTO DE CABO", "fatorK": 3.98}, {"cod": "BA045", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "LANÇAMENTO E TENSIONAMENTO DE CONDUTORES BT", "fatorK": 0.01}, {"cod": "BA046", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "LANÇAMENTO DE CONDUTORES XLPE(METRO - FASE)", "fatorK": 16.47}, {"cod": "BA047", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "LANÇAMENTO DE CABO E ENERGIZAÇÃO", "fatorK": 3.98}, {"cod": "BA048", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "MONTAR BANCADA DE TRAFOS", "fatorK": 2121.78}, {"cod": "BA049", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "MANUTENÇÃO DE EQUIPAMENTO", "fatorK": 0.01}, {"cod": "BA050", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "PINTURAS   DE  PG", "fatorK": 0.01}, {"cod": "BA051", "servico": "SERVICOS_RUR-BA", "tipo": "PODA", "descricao": "PODA RURAL - GALHOS FINOS", "fatorK": 45.59}, {"cod": "BA052", "servico": "SERVICOS_RUR-BA", "tipo": "PODA", "descricao": "PODA - CORTE DE ARVORE DAP+45", "fatorK": 164.8}, {"cod": "BA053", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA VIVA", "descricao": "REGULADOR - APOIO A DÍNAMO", "fatorK": 1024.36}, {"cod": "BA054", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA VIVA", "descricao": "RELOCAR ESTRUTURA", "fatorK": 0.01}, {"cod": "BA055", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA VIVA", "descricao": "RETIRAR ESTAÍ", "fatorK": 0.01}, {"cod": "BA056", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA VIVA", "descricao": "RELOCAR CRUZETAS", "fatorK": 0.01}, {"cod": "BA057", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "RETIRAR POSTES", "fatorK": 643.91}, {"cod": "BA058", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "RETIRAR CONDUTOR BT MULTIPLEXO", "fatorK": 4.92}, {"cod": "BA059", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "RETIRAR CONDUTOR BT NU", "fatorK": 0.66}, {"cod": "BA060", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "RETIRAR CABO AT NU", "fatorK": 0.66}, {"cod": "BA061", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA VIVA", "descricao": "REMOÇÃO DE CHAVES PROVISÓRIAS", "fatorK": 725.68}, {"cod": "BA062", "servico": "SERVICOS_RUR-BA", "tipo": "RETROESCAVADEIRA", "descricao": "RETRO CAVA COM ROMPEDOR", "fatorK": 1253.86}, {"cod": "BA063", "servico": "SERVICOS_RUR-BA", "tipo": "RETROESCAVADEIRA", "descricao": "RETRO CAVA EM ROCHA", "fatorK": 978.88}, {"cod": "BA064", "servico": "SERVICOS_RUR-BA", "tipo": "RETROESCAVADEIRA", "descricao": "RETRO CAVA NORMAL", "fatorK": 0.01}, {"cod": "BA065", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "SACAR MATERIAIS E IR PARA OBRA - INPLANTAÇÃO DE POSTES", "fatorK": 1779.22}, {"cod": "BA066", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA VIVA", "descricao": "TENSIONAMENTO DE CABO - LV", "fatorK": 0.01}, {"cod": "BA067", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "TRANSPORTE DE MATERIAIS", "fatorK": 0.01}, {"cod": "BA068", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "TRANSPORTE E DISTRIBUIÇÃO DE POSTES", "fatorK": 251.18}, {"cod": "BA069", "servico": "SERVICOS_RUR-BA", "tipo": "LIGAÇÃO DE CLIENTE", "descricao": "VISITA DE OBRA - ADF", "fatorK": 0.01}, {"cod": "BA066", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA VIVA", "descricao": "REMOÇÃO DE CHAVES PROVISÓRIAS", "fatorK": 351.25}, {"cod": "BA023", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA VIVA", "descricao": "INTERCALAÇÃO DE POSTES - APOIO A SIPEL BONFIM", "fatorK": 2121.54}, {"cod": "BA061", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA VIVA", "descricao": "REALIZAR MANUTENÇÃO", "fatorK": 0}, {"cod": "BA062", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA VIVA", "descricao": "SERVIÇO COM LV", "fatorK": 1527.51}, {"cod": "BA063", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA VIVA", "descricao": "REALIZAR MUDANÇA", "fatorK": 0}, {"cod": "BA064", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA VIVA", "descricao": "ENERGIZAÇÃO", "fatorK": 0}, {"cod": "BA065", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA VIVA", "descricao": "LOCAÇÃO E ESCAVAÇÃO", "fatorK": 0}, {"cod": "BA066", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA VIVA", "descricao": "SUBSTITUIR CONDUTOR", "fatorK": 0}, {"cod": "BA067", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "SACAR MATERIAIS E IR PARA OBRA / LANÇAMENTO DE CABO", "fatorK": 3.98}, {"cod": "BA068", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "DEVOLVER MATERIAIS", "fatorK": 1.0}, {"cod": "BA069", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "DESCARREGAMENTO E IMPLANTAÇÃO DE POSTES", "fatorK": 1527.51}, {"cod": "BA070", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "DESLIGAMENTO E ENERGIZAÇÃO", "fatorK": 1897.23}, {"cod": "BA071", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA VIVA", "descricao": "ADCIONAR 1° VÃO", "fatorK": 1916.55}, {"cod": "BA072", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA VIVA", "descricao": "SUBSTITUIR POSTES", "fatorK": 3681.12}, {"cod": "BA073", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "DESLIGAMENTO / ADF", "fatorK": 3.98}, {"cod": "BA074", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA VIVA", "descricao": "INSTALAÇÃO DE CHAVE PROVISÓRIA", "fatorK": 137.89}, {"cod": "BA075", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA VIVA", "descricao": "APOIO A BASE DE IRECÊ / INTERCALAÇÃO", "fatorK": 2124.23}, {"cod": "BA076", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA VIVA", "descricao": "EQUIPE OCIOSA POR FALTA DE MATERIAS", "fatorK": 0}, {"cod": "BA077", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA VIVA", "descricao": "APOIO A BASE DE IRECÊ / INTERCALAÇÃO", "fatorK": 0}, {"cod": "BA078", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "SACAR MATERIAL E IR PARA A OBRA / FUNDAÇÃO ESPECIAL", "fatorK": 1857.23}, {"cod": "BA079", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "DESLIGAMENTO / SUBSTITUIÇÃO DE CONDUTORES", "fatorK": 6.21}, {"cod": "BA080", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "DESLIGAENTO / RETIRAR POSTES", "fatorK": 223.14}, {"cod": "BA081", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "EQUIPE SEM FRENTE DE SERVIÇO POR FALTA DE VERBAS DE MATERIAIS", "fatorK": 0}, {"cod": "BA080", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "REALIZAR ENSAIO ELETRICO", "fatorK": 0}];
+let PROG_ATIVIDADES = [{"cod": "BA001", "servico": "SERVICOS_RUR-BA", "tipo": "RETROESCAVADEIRA", "descricao": "ABERTURA DE ACESSO", "fatorK": 0.01}, {"cod": "BA002", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "ATERRAMENTO  DE  CERCAS - SECCIONAMENTO  DE  CERCA", "fatorK": 84.272526}, {"cod": "BA003", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "ARRASTAMENTO  MANUAL( 9/400 POR KM)", "fatorK": 1369.448379819}, {"cod": "BA003", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "ACONPANHAMENTO DA RETRO - ESCAVAÇÃO", "fatorK": 0.01}, {"cod": "BA004", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA VIVA", "descricao": "ALTERAÇÃO DE ESTRUTURA", "fatorK": 1221.73}, {"cod": "BA005", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA VIVA", "descricao": "ADICIONAR +1 ESTRIBO", "fatorK": 1121.03}, {"cod": "BA006", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "CARREGAMENTO", "fatorK": 0.01}, {"cod": "BA007", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "CORREÇÃO  DE  PG", "fatorK": 0.01}, {"cod": "BA008", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "CAVA COM TRADO EM ROCHA", "fatorK": 978.88}, {"cod": "BA009", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "CAVA COM TRADO NORMAL", "fatorK": 0.01}, {"cod": "BA010", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "CAVA EM ROCHA COM EXPLOSIVO", "fatorK": 946.47}, {"cod": "BA011", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "CAVA MANUAL EM ROCHA", "fatorK": 978.88}, {"cod": "BA012", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "CAVA MANUAL NORMAL", "fatorK": 0.01}, {"cod": "BA013", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "DELIGAMENTO - ENERGIZAÇÃO", "fatorK": 0.01}, {"cod": "BA014", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "DEVOLUÇÃO E SAQUE DE MATERIAIS NA BASE", "fatorK": 0.01}, {"cod": "BA015", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "DESLIGAMENTO - ADF", "fatorK": 3.98}, {"cod": "BA016", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA VIVA", "descricao": "DESLIGAMENTO - IMPLANTAÇÃO DE POSTES", "fatorK": 1527.51}, {"cod": "BA017", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "DESCARREGAMENTO E DISTRUBUIÇÃO DE POSTES", "fatorK": 251.73}, {"cod": "BA018", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "DESLIGAMENTO - IMPLANTAÇÃO DE POSTES", "fatorK": 1527.51}, {"cod": "BA019", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "ESCAVAÇÃO PARA ESTAÍ", "fatorK": 0.01}, {"cod": "BA020", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "EQUIPE SACANDO MATERIAIS NA BASE", "fatorK": 0.01}, {"cod": "BA021", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "ESCAVAÇÃO - IMPLANTAÇÃO - LANÇAMENTO E ENERGIZAÇÃO", "fatorK": 1746.93}, {"cod": "BA022", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "FUNDAÇÃO  ESPECIAL", "fatorK": 1822.42}, {"cod": "BA023", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA VIVA", "descricao": "INTERCALAÇÃO DE POSTES - APOIO A DÍNAMO", "fatorK": 2039.12}, {"cod": "BA024", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA VIVA", "descricao": "INTERCALAÇÃO DE POSTES", "fatorK": 2039.12}, {"cod": "BA025", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA VIVA", "descricao": "INSTAÇÃO DE CHAVES", "fatorK": 44.89}, {"cod": "BA026", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA VIVA", "descricao": "INSTALAÇÃO DE RELIGADOR", "fatorK": 0.01}, {"cod": "BA027", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "IMPLANTAÇÃO DE POSTES", "fatorK": 1527.5}, {"cod": "BA028", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "INSTALAÇÃO DE ESTAÍ", "fatorK": 740.0}, {"cod": "BA029", "servico": "SERVICOS_RUR-BA", "tipo": "LIGAÇÃO DE CLIENTE", "descricao": "INSTALAÇÃO DE RAMAL DE LIGAÇÃO", "fatorK": 129.23}, {"cod": "BA030", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "IMPLANTAÇÃO DE POSTES COM LV", "fatorK": 1527.5}, {"cod": "BA031", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "INSTALAÇÃO DE TRAFOS", "fatorK": 872.31}, {"cod": "BA032", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "IMPLANTAÇÃO DE POSTES DE FIBRA", "fatorK": 1527.5}, {"cod": "BA033", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA VIVA", "descricao": "INSTALAÇÃO DE BANCADA COM N3", "fatorK": 2121.36}, {"cod": "BA034", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "INSTALAÇÃO DE TRAFOS TRIFASICO", "fatorK": 0.01}, {"cod": "BA035", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "INSTALAÇÃO MONOFASICO", "fatorK": 0.01}, {"cod": "BA036", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "INSTALAÇÃO DE TRAFOS BIFASICO", "fatorK": 0.01}, {"cod": "BA037", "servico": "SERVICOS_RUR-BA", "tipo": "LIGAÇÃO DE CLIENTE", "descricao": "INSTALAÇÃO DE KIT MEDIDOR", "fatorK": 227.76}, {"cod": "BA038", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "IMPLANTAÇÃO DE POSTES E ESCAVAÇÕES", "fatorK": 1527.5}, {"cod": "BA039", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "IMPLANTAÇÃO DE POSTES E INSTALAÇÃO DE TRAFOS", "fatorK": 2385.14}, {"cod": "BA040", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "INSTALAÇÃO DE TRAFOS E ENERGIZAÇÃO", "fatorK": 857.63}, {"cod": "BA041", "servico": "SERVICOS_RUR-BA", "tipo": "LIGAÇÃO DE CLIENTE", "descricao": "LIGAÇÃO DE CLIENTE", "fatorK": 646.5}, {"cod": "BA042", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "LOCAÇÃO E ESCAVAÇÃO", "fatorK": 0.01}, {"cod": "BA043", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "LOCAÇÃO", "fatorK": 0.01}, {"cod": "BA044", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "LANÇAMENTO DE CABO", "fatorK": 3.98}, {"cod": "BA045", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "LANÇAMENTO E TENSIONAMENTO DE CONDUTORES BT", "fatorK": 0.01}, {"cod": "BA046", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "LANÇAMENTO DE CONDUTORES XLPE(METRO - FASE)", "fatorK": 16.47}, {"cod": "BA047", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "LANÇAMENTO DE CABO E ENERGIZAÇÃO", "fatorK": 3.98}, {"cod": "BA048", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "MONTAR BANCADA DE TRAFOS", "fatorK": 2121.78}, {"cod": "BA049", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "MANUTENÇÃO DE EQUIPAMENTO", "fatorK": 0.01}, {"cod": "BA050", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "PINTURAS   DE  PG", "fatorK": 0.01}, {"cod": "BA051", "servico": "SERVICOS_RUR-BA", "tipo": "PODA", "descricao": "PODA RURAL - GALHOS FINOS", "fatorK": 45.59}, {"cod": "BA052", "servico": "SERVICOS_RUR-BA", "tipo": "PODA", "descricao": "PODA - CORTE DE ARVORE DAP+45", "fatorK": 164.8}, {"cod": "BA053", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA VIVA", "descricao": "REGULADOR - APOIO A DÍNAMO", "fatorK": 1024.36}, {"cod": "BA054", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA VIVA", "descricao": "RELOCAR ESTRUTURA", "fatorK": 0.01}, {"cod": "BA055", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA VIVA", "descricao": "RETIRAR ESTAÍ", "fatorK": 0.01}, {"cod": "BA056", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA VIVA", "descricao": "RELOCAR CRUZETAS", "fatorK": 0.01}, {"cod": "BA057", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "RETIRAR POSTES", "fatorK": 643.91}, {"cod": "BA058", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "RETIRAR CONDUTOR BT MULTIPLEXO", "fatorK": 4.92}, {"cod": "BA059", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "RETIRAR CONDUTOR BT NU", "fatorK": 0.66}, {"cod": "BA060", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "RETIRAR CABO AT NU", "fatorK": 0.66}, {"cod": "BA061", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA VIVA", "descricao": "REMOÇÃO DE CHAVES PROVISÓRIAS", "fatorK": 725.68}, {"cod": "BA062", "servico": "SERVICOS_RUR-BA", "tipo": "RETROESCAVADEIRA", "descricao": "RETRO CAVA COM ROMPEDOR", "fatorK": 1253.86}, {"cod": "BA063", "servico": "SERVICOS_RUR-BA", "tipo": "RETROESCAVADEIRA", "descricao": "RETRO CAVA EM ROCHA", "fatorK": 978.88}, {"cod": "BA064", "servico": "SERVICOS_RUR-BA", "tipo": "RETROESCAVADEIRA", "descricao": "RETRO CAVA NORMAL", "fatorK": 0.01}, {"cod": "BA065", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "SACAR MATERIAIS E IR PARA OBRA - INPLANTAÇÃO DE POSTES", "fatorK": 1779.22}, {"cod": "BA066", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA VIVA", "descricao": "TENSIONAMENTO DE CABO - LV", "fatorK": 0.01}, {"cod": "BA067", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "TRANSPORTE DE MATERIAIS", "fatorK": 0.01}, {"cod": "BA068", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "TRANSPORTE E DISTRIBUIÇÃO DE POSTES", "fatorK": 251.18}, {"cod": "BA069", "servico": "SERVICOS_RUR-BA", "tipo": "LIGAÇÃO DE CLIENTE", "descricao": "VISITA DE OBRA - ADF", "fatorK": 0.01}, {"cod": "BA066", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA VIVA", "descricao": "REMOÇÃO DE CHAVES PROVISÓRIAS", "fatorK": 351.25}, {"cod": "BA023", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA VIVA", "descricao": "INTERCALAÇÃO DE POSTES - APOIO A SIPEL BONFIM", "fatorK": 2121.54}, {"cod": "BA061", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA VIVA", "descricao": "REALIZAR MANUTENÇÃO", "fatorK": 0}, {"cod": "BA062", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA VIVA", "descricao": "SERVIÇO COM LV", "fatorK": 1527.51}, {"cod": "BA063", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA VIVA", "descricao": "REALIZAR MUDANÇA", "fatorK": 0}, {"cod": "BA064", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA VIVA", "descricao": "ENERGIZAÇÃO", "fatorK": 0}, {"cod": "BA065", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA VIVA", "descricao": "LOCAÇÃO E ESCAVAÇÃO", "fatorK": 0}, {"cod": "BA066", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA VIVA", "descricao": "SUBSTITUIR CONDUTOR", "fatorK": 0}, {"cod": "BA067", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "SACAR MATERIAIS E IR PARA OBRA / LANÇAMENTO DE CABO", "fatorK": 3.98}, {"cod": "BA068", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "DEVOLVER MATERIAIS", "fatorK": 1.0}, {"cod": "BA069", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "DESCARREGAMENTO E IMPLANTAÇÃO DE POSTES", "fatorK": 1527.51}, {"cod": "BA070", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "DESLIGAMENTO E ENERGIZAÇÃO", "fatorK": 1897.23}, {"cod": "BA071", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA VIVA", "descricao": "ADCIONAR 1° VÃO", "fatorK": 1916.55}, {"cod": "BA072", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA VIVA", "descricao": "SUBSTITUIR POSTES", "fatorK": 3681.12}, {"cod": "BA073", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "DESLIGAMENTO / ADF", "fatorK": 3.98}, {"cod": "BA074", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA VIVA", "descricao": "INSTALAÇÃO DE CHAVE PROVISÓRIA", "fatorK": 137.89}, {"cod": "BA075", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA VIVA", "descricao": "APOIO A BASE DE IRECÊ / INTERCALAÇÃO", "fatorK": 2124.23}, {"cod": "BA076", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA VIVA", "descricao": "EQUIPE OCIOSA POR FALTA DE MATERIAS", "fatorK": 0}, {"cod": "BA077", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA VIVA", "descricao": "APOIO A BASE DE IRECÊ / INTERCALAÇÃO", "fatorK": 0}, {"cod": "BA078", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "SACAR MATERIAL E IR PARA A OBRA / FUNDAÇÃO ESPECIAL", "fatorK": 1857.23}, {"cod": "BA079", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "DESLIGAMENTO / SUBSTITUIÇÃO DE CONDUTORES", "fatorK": 6.21}, {"cod": "BA080", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "DESLIGAENTO / RETIRAR POSTES", "fatorK": 223.14}, {"cod": "BA081", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "EQUIPE SEM FRENTE DE SERVIÇO POR FALTA DE VERBAS DE MATERIAIS", "fatorK": 0}, {"cod": "BA080", "servico": "SERVICOS_RUR-BA", "tipo": "LINHA MORTA", "descricao": "REALIZAR ENSAIO ELETRICO", "fatorK": 0}];
 const PROG_TOTAIS_ENC = {"AMILTON COSTA": {"valor_previsto": 0.01, "valor_realizado": 0.01}, "CARLOS ANDRÉ": {"valor_previsto": 1221.73, "valor_realizado": 1221.73}, "CARLOS CRUZ": {"valor_previsto": 5337.66, "valor_realizado": 5337.66}, "DIOGO SANTOS": {"valor_previsto": 3716.5, "valor_realizado": 3915.5}, "DOUGLAS MELO": {"valor_previsto": 3781.0, "valor_realizado": 4378.0}, "EMERSON SILVA": {"valor_previsto": 5084.86, "valor_realizado": 6863.54}, "FABIANO MORAES": {"valor_previsto": 7637.5, "valor_realizado": 9165.0}, "GERALDO GOMES": {"valor_previsto": 0.01, "valor_realizado": 0.01}, "JAILTON SILVA": {"valor_previsto": 6110.0, "valor_realizado": 7637.5}, "JOAO PEREIRA": {"valor_previsto": 3915.54, "valor_realizado": 5873.3}, "JULIO SANTOS": {"valor_previsto": 4582.5, "valor_realizado": 4582.5}, "LUCIANO SILVA": {"valor_previsto": 6110.0, "valor_realizado": 1527.5}, "PATRICIO BARBOSA": {"valor_previsto": 2039.12, "valor_realizado": 2039.12}, "RODRIGO SILVA": {"valor_previsto": 6110.0, "valor_realizado": 6110.0}, "TIAGO SOUZA": {"valor_previsto": 4894.42, "valor_realizado": 4894.41}, "VALMIR SILVA": {"valor_previsto": 3625.6000000000004, "valor_realizado": 5603.200000000001}};
+// Copia intocada da lista de fabrica: o que o usuario adiciona ou retira e
+// aplicado sobre ela, entao nunca se perde a lista original.
+const PROG_ATIVIDADES_BASE = PROG_ATIVIDADES.slice();
 </script>
 
 <div style="background:linear-gradient(135deg,#1a1a2e 0%,#16213e 50%,#0f3460 100%);border-radius:16px;padding:18px 22px;margin-bottom:18px;box-shadow:0 4px 20px rgba(0,0,0,0.35);">
@@ -338,7 +341,10 @@ const PROG_TOTAIS_ENC = {"AMILTON COSTA": {"valor_previsto": 0.01, "valor_realiz
       </select>
     </div>
     <div style="grid-column:span 2;">
-      <label class="_s1">ATIVIDADE *</label>
+      <label class="_s1">ATIVIDADE *
+        <button type="button" onclick="progAtivAbrir()" title="Adicionar ou retirar atividades da lista"
+          style="margin-left:6px;padding:2px 9px;background:rgba(126,58,242,0.1);border:1px solid rgba(126,58,242,0.35);border-radius:20px;font-family:'Barlow',sans-serif;font-size:0.62rem;font-weight:800;color:#7e3af2;cursor:pointer;letter-spacing:0.3px;vertical-align:middle;">&#9881; GERENCIAR</button>
+      </label>
       <select id="pf-atividade" onchange="progOnAtivChange()" class="_s6" onfocus="this.style.borderColor='#7e3af2'" onblur="this.style.borderColor='#e0e8f0'">
         <option value="">Selecione o tipo primeiro...</option>
       </select>
@@ -386,6 +392,68 @@ const PROG_TOTAIS_ENC = {"AMILTON COSTA": {"valor_previsto": 0.01, "valor_realiz
   </div>
 
   <div id="prog-toast" style="display:none;margin-top:12px;padding:10px 16px;border-radius:10px;font-size:0.8rem;font-weight:700;text-align:center;"></div>
+
+<!-- ===== GERENCIADOR DE ATIVIDADES ===== -->
+<div id="prog-ativ-modal" style="display:none;position:fixed;inset:0;z-index:9000;background:rgba(15,23,42,0.55);backdrop-filter:blur(2px);align-items:flex-start;justify-content:center;padding:24px 12px;overflow-y:auto;">
+  <div style="background:#fff;border-radius:16px;width:100%;max-width:680px;box-shadow:0 20px 60px rgba(0,0,0,0.35);overflow:hidden;font-family:'Barlow',sans-serif;">
+
+    <div style="background:linear-gradient(135deg,#1a1a2e 0%,#16213e 60%,#0f3460 100%);padding:16px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px;">
+      <div>
+        <div style="font-size:0.95rem;font-weight:900;color:#fff;letter-spacing:0.5px;">&#9889; Atividades</div>
+        <div id="prog-ativ-contagem" style="font-size:0.68rem;font-weight:600;color:rgba(255,255,255,0.6);margin-top:2px;"></div>
+      </div>
+      <button type="button" onclick="progAtivFechar()" style="background:rgba(255,255,255,0.12);border:none;border-radius:9px;color:#fff;font-size:1rem;font-weight:800;width:32px;height:32px;cursor:pointer;line-height:1;">&times;</button>
+    </div>
+
+    <div style="padding:16px 20px;border-bottom:1px solid #e8ecef;background:#f8fafc;">
+      <div style="font-size:0.7rem;font-weight:900;color:#7e3af2;letter-spacing:1px;margin-bottom:10px;">ADICIONAR ATIVIDADE</div>
+      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;">
+        <div style="grid-column:span 2;">
+          <label class="_s1">DESCRIÇÃO *</label>
+          <input type="text" id="pa-desc" placeholder="Ex.: SUBSTITUIÇÃO DE CRUZETA" autocomplete="off"
+            onkeydown="if(event.key==='Enter'){event.preventDefault();progAtivAdicionar();}"
+            style="width:100%;padding:9px 12px;border:1.5px solid #e0e8f0;border-radius:9px;font-family:'Barlow',sans-serif;font-size:0.82rem;font-weight:700;color:#1a365d;outline:none;box-sizing:border-box;text-transform:uppercase;"
+            onfocus="this.style.borderColor='#7e3af2'" onblur="this.style.borderColor='#e0e8f0'">
+        </div>
+        <div>
+          <label class="_s1">TIPO DO SERVIÇO *</label>
+          <select id="pa-tipo" onchange="progAtivTipoChange()" class="_s6" onfocus="this.style.borderColor='#7e3af2'" onblur="this.style.borderColor='#e0e8f0'"></select>
+          <input type="text" id="pa-tipo-novo" placeholder="Nome do novo tipo" autocomplete="off"
+            style="display:none;width:100%;margin-top:6px;padding:9px 12px;border:1.5px solid #e0e8f0;border-radius:9px;font-family:'Barlow',sans-serif;font-size:0.82rem;font-weight:700;color:#1a365d;outline:none;box-sizing:border-box;text-transform:uppercase;"
+            onfocus="this.style.borderColor='#7e3af2'" onblur="this.style.borderColor='#e0e8f0'">
+        </div>
+        <div>
+          <label class="_s1">VALOR UNITÁRIO (FATOR K)</label>
+          <input type="text" id="pa-fk" inputmode="decimal" placeholder="0,00" autocomplete="off"
+            oninput="this.value=this.value.replace(/[^0-9.,]/g,'')"
+            onkeydown="if(event.key==='Enter'){event.preventDefault();progAtivAdicionar();}"
+            style="width:100%;padding:9px 12px;border:1.5px solid #e0e8f0;border-radius:9px;font-family:'Barlow',sans-serif;font-size:0.82rem;font-weight:700;color:#1a365d;outline:none;box-sizing:border-box;"
+            onfocus="this.style.borderColor='#7e3af2'" onblur="this.style.borderColor='#e0e8f0'">
+        </div>
+        <div style="grid-column:span 2;display:flex;justify-content:flex-end;">
+          <button type="button" onclick="progAtivAdicionar()" style="padding:9px 22px;background:linear-gradient(135deg,#7e3af2,#9f7aea);border:none;border-radius:10px;font-family:'Barlow',sans-serif;font-size:0.78rem;font-weight:800;color:#fff;cursor:pointer;letter-spacing:0.5px;box-shadow:0 4px 12px rgba(126,58,242,0.3);">&#43; ADICIONAR</button>
+        </div>
+      </div>
+    </div>
+
+    <div style="padding:12px 20px 0;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+      <input type="text" id="pa-busca" placeholder="&#128269; Buscar atividade..." oninput="progAtivRenderLista()"
+        style="flex:1;min-width:180px;padding:8px 12px;border:1.5px solid #e0e8f0;border-radius:9px;font-family:'Barlow',sans-serif;font-size:0.78rem;font-weight:600;outline:none;box-sizing:border-box;"
+        onfocus="this.style.borderColor='#7e3af2'" onblur="this.style.borderColor='#e0e8f0'">
+      <button type="button" id="pa-btn-ocultas" onclick="progAtivToggleOcultas()" style="padding:8px 14px;background:#f0f4f8;border:1.5px solid #e0e8f0;border-radius:9px;font-family:'Barlow',sans-serif;font-size:0.7rem;font-weight:800;color:#64748b;cursor:pointer;"></button>
+    </div>
+
+    <div id="pa-lista" style="max-height:44vh;overflow-y:auto;padding:10px 20px 4px;"></div>
+
+    <div id="prog-ativ-toast" style="display:none;margin:0 20px;padding:9px 14px;border-radius:9px;font-size:0.76rem;font-weight:700;text-align:center;"></div>
+
+    <div style="padding:14px 20px;border-top:1px solid #e8ecef;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
+      <button type="button" onclick="progAtivRestaurarTudo()" style="padding:9px 16px;background:#fff5f5;border:1.5px solid #fed7d7;border-radius:10px;font-family:'Barlow',sans-serif;font-size:0.72rem;font-weight:800;color:#c53030;cursor:pointer;">&#8634; VOLTAR À LISTA ORIGINAL</button>
+      <button type="button" onclick="progAtivFechar()" style="padding:10px 26px;background:linear-gradient(135deg,#7e3af2,#9f7aea);border:none;border-radius:10px;font-family:'Barlow',sans-serif;font-size:0.78rem;font-weight:800;color:#fff;cursor:pointer;letter-spacing:0.5px;">CONCLUÍDO</button>
+    </div>
+
+  </div>
+</div>
 </div>
 </div>
 
@@ -4101,6 +4169,7 @@ if (selProg && typeof PROG_PROGRAMADORES !== 'undefined') {
 }
 progFillEncarregados('');
 progCarregarCadastroEquipes();
+try { progAtivLerLocal(); } catch(e) {}   // atividades adicionadas/retiradas
 progFillAtividades();
 progEsconderCamposExecucao();
 progPreencherProgramador();
@@ -4376,18 +4445,340 @@ return (PROG_OBRAS_VIVAS && PROG_OBRAS_VIVAS.length) ? PROG_OBRAS_VIVAS : PROG_O
 function progFillAtividades() {
 const selAtiv = document.getElementById('pf-atividade');
 if (!selAtiv || typeof PROG_ATIVIDADES === 'undefined') return;
+const escolhido = selAtiv.value;                 // nao perde o que estava marcado
 const porTipo = {};
 PROG_ATIVIDADES.forEach(a => { (porTipo[a.tipo] = porTipo[a.tipo] || []).push(a); });
 let html = '<option value="">Selecione a atividade...</option>';
 Object.keys(porTipo).sort().forEach(t => {
-html += '<optgroup label="' + t + '">';
+html += '<optgroup label="' + progAtivEsc(t) + '">';
 porTipo[t].forEach(a => {
-html += `<option value="${a.cod}|${a.descricao}|${a.fatorK}">${a.descricao}</option>`;
+const v = progAtivEsc(a.cod + '|' + a.descricao + '|' + a.fatorK);
+html += '<option value="' + v + '">' + progAtivEsc(a.descricao) + '</option>';
 });
 html += '</optgroup>';
 });
 selAtiv.innerHTML = html;
+if (escolhido && Array.from(selAtiv.options).some(o => o.value === escolhido)) selAtiv.value = escolhido;
+progFillTiposServico();
 }
+// O tipo do servico sai da propria lista de atividades, senao um tipo novo
+// criado pelo usuario nao teria opcao correspondente aqui.
+function progFillTiposServico() {
+const sel = document.getElementById('pf-tipo');
+if (!sel || typeof PROG_ATIVIDADES === 'undefined') return;
+const escolhido = sel.value;
+const tipos = Array.from(new Set(PROG_ATIVIDADES.map(a => a.tipo).filter(Boolean))).sort();
+sel.innerHTML = '<option value="">Selecione...</option>' +
+tipos.map(t => '<option value="' + progAtivEsc(t) + '">' + progAtivEsc(t) + '</option>').join('');
+if (escolhido && tipos.indexOf(escolhido) >= 0) sel.value = escolhido;
+}
+// ===== GERENCIADOR DE ATIVIDADES: ADICIONAR E RETIRAR =====
+// A lista de fabrica (PROG_ATIVIDADES_BASE) nunca e alterada. O que o usuario
+// cria fica em PROG_ATIV_EXTRAS e o que ele retira entra em PROG_ATIV_OCULTAS
+// (guarda so a chave, para poder voltar depois). PROG_ATIVIDADES e o resultado
+// das duas listas e e o que aparece no formulario.
+// Salva no localStorage e na chave prog_atividades do Supabase, para valer nos
+// outros aparelhos tambem.
+const PROG_ATIV_CHAVE = 'prog_atividades';
+let PROG_ATIV_EXTRAS = [];
+let PROG_ATIV_OCULTAS = [];
+let PROG_ATIV_NA_TELA = [];   // o que a lista do gerenciador mostra agora
+let progAtivVerOcultas = false;
+
+function progAtivEsc(t){
+return String(t == null ? '' : t)
+.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+.replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+// Identidade de uma atividade: codigo + descricao, sem acento e sem caixa.
+function progAtivChave(a){ return progNorm(a.cod) + '@' + progNorm(a.descricao); }
+// Numero digitado no padrao brasileiro: 1.500,50 e 1500.50 dao no mesmo.
+function progAtivNum(txt){
+let t = String(txt == null ? '' : txt).trim().replace(/\s/g,'');
+if(!t) return 0;
+if(t.indexOf(',') >= 0) t = t.replace(/\./g,'').replace(',','.');
+const n = parseFloat(t);
+return (isFinite(n) && n > 0) ? n : 0;
+}
+
+// Refaz PROG_ATIVIDADES a partir da base + extras - ocultas.
+function progAtivRecompor(){
+const fora = {};
+PROG_ATIV_OCULTAS.forEach(k => { fora[k] = true; });
+const base = PROG_ATIVIDADES_BASE.filter(a => !fora[progAtivChave(a)]);
+PROG_ATIVIDADES = base.concat(PROG_ATIV_EXTRAS);
+}
+
+// Codigo novo que nao colide com nenhum ja existente.
+function progAtivNovoCod(){
+const usados = {};
+PROG_ATIVIDADES_BASE.concat(PROG_ATIV_EXTRAS).forEach(a => { usados[progNorm(a.cod)] = true; });
+for(let i = 1; i < 10000; i++){
+const c = 'PA' + String(i).padStart(3,'0');
+if(!usados[c]) return c;
+}
+return 'PA' + Date.now();
+}
+
+function progAtivLerLocal(){
+const v = lsGet(PROG_ATIV_CHAVE);
+if(v && typeof v === 'object'){
+PROG_ATIV_EXTRAS  = Array.isArray(v.extras)  ? v.extras  : [];
+PROG_ATIV_OCULTAS = Array.isArray(v.ocultas) ? v.ocultas : [];
+}
+progAtivRecompor();
+}
+
+async function progAtivSalvar(){
+const payload = { extras: PROG_ATIV_EXTRAS, ocultas: PROG_ATIV_OCULTAS };
+lsSet(PROG_ATIV_CHAVE, payload);
+try{
+if (typeof setDbStatus === 'function') setDbStatus('syncing','Salvando atividades...');
+const res = await fetch(SUPA_URL + '/rest/v1/turno_data', {
+method: 'POST',
+headers: { ...SUPA_HEADERS, 'Prefer': 'resolution=merge-duplicates,return=minimal' },
+body: JSON.stringify({ key: PROG_ATIV_CHAVE, value: payload, updated_at: new Date().toISOString() })
+});
+if(!res.ok) throw new Error('HTTP ' + res.status);
+if (typeof setDbStatus === 'function'){
+setDbStatus('online','Atividades salvas ✓');
+setTimeout(() => setDbStatus('online','Banco online ✓'), 2000);
+}
+return true;
+}catch(e){
+console.warn('[progAtiv] Supabase falhou, salvo só localmente: ' + e.message);
+if (typeof setDbStatus === 'function'){
+setDbStatus('local','Salvo local');
+setTimeout(() => setDbStatus('local','Dados locais'), 2000);
+}
+return false;
+}
+}
+
+// Busca no banco na abertura da tela. Se o banco nao responder, fica o local.
+async function progAtivCarregar(){
+progAtivLerLocal();
+progFillAtividades();
+const v = await progChave(PROG_ATIV_CHAVE);
+if(v && typeof v === 'object'){
+PROG_ATIV_EXTRAS  = Array.isArray(v.extras)  ? v.extras  : [];
+PROG_ATIV_OCULTAS = Array.isArray(v.ocultas) ? v.ocultas : [];
+lsSet(PROG_ATIV_CHAVE, { extras: PROG_ATIV_EXTRAS, ocultas: PROG_ATIV_OCULTAS });
+progAtivRecompor();
+progFillAtividades();
+}
+console.info('[progAtiv] ' + PROG_ATIVIDADES.length + ' atividades · ' +
+PROG_ATIV_EXTRAS.length + ' adicionadas · ' + PROG_ATIV_OCULTAS.length + ' retiradas');
+}
+
+function progAtivAbrir(){
+const m = document.getElementById('prog-ativ-modal');
+if(!m) return;
+m.style.display = 'flex';
+progAtivFillTipos();
+progAtivVerOcultas = false;
+progAtivRenderLista();
+const d = document.getElementById('pa-desc');
+if(d) setTimeout(() => d.focus(), 60);
+}
+function progAtivFechar(){
+const m = document.getElementById('prog-ativ-modal');
+if(m) m.style.display = 'none';
+}
+function progAtivToast(msg, tipo){
+const t = document.getElementById('prog-ativ-toast');
+if(!t) return;
+t.style.display = 'block';
+t.style.background = tipo === 'success' ? '#f0fff4' : '#fff5f5';
+t.style.color      = tipo === 'success' ? '#276749' : '#c53030';
+t.style.border      = '1px solid ' + (tipo === 'success' ? '#c6f6d5' : '#fed7d7');
+t.textContent = msg;
+clearTimeout(t._tm);
+t._tm = setTimeout(() => { t.style.display = 'none'; }, 3200);
+}
+// Tipos do select do gerenciador: os que existem, mais a opcao de criar um novo.
+function progAtivFillTipos(){
+const sel = document.getElementById('pa-tipo');
+if(!sel) return;
+const antes = sel.value;
+const tipos = Array.from(new Set(
+PROG_ATIVIDADES_BASE.concat(PROG_ATIV_EXTRAS).map(a => a.tipo).filter(Boolean)
+)).sort();
+sel.innerHTML = '<option value="">Selecione...</option>' +
+tipos.map(t => '<option value="' + progAtivEsc(t) + '">' + progAtivEsc(t) + '</option>').join('') +
+'<option value="__novo__">+ Criar novo tipo...</option>';
+if(antes) sel.value = antes;
+progAtivTipoChange();
+}
+function progAtivTipoChange(){
+const sel = document.getElementById('pa-tipo');
+const novo = document.getElementById('pa-tipo-novo');
+if(!sel || !novo) return;
+const criar = sel.value === '__novo__';
+novo.style.display = criar ? 'block' : 'none';
+if(criar) novo.focus();
+}
+function progAtivToggleOcultas(){
+progAtivVerOcultas = !progAtivVerOcultas;
+progAtivRenderLista();
+}
+
+async function progAtivAdicionar(){
+const dEl = document.getElementById('pa-desc');
+const tEl = document.getElementById('pa-tipo');
+const nEl = document.getElementById('pa-tipo-novo');
+const fEl = document.getElementById('pa-fk');
+if(!dEl || !tEl) return;
+// A barra vertical separa os campos no value do select, entao nao pode entrar.
+const desc = String(dEl.value || '').replace(/\|/g,'/').replace(/\s+/g,' ').trim().toUpperCase();
+let tipo = tEl.value === '__novo__'
+? String((nEl && nEl.value) || '').replace(/\s+/g,' ').trim().toUpperCase()
+: tEl.value;
+const fk = progAtivNum((fEl && fEl.value) || '0');
+if(!desc){ progAtivToast('Escreva a descrição da atividade.','error'); dEl.focus(); return; }
+if(!tipo){ progAtivToast('Escolha o tipo do serviço.','error'); tEl.focus(); return; }
+const ja = PROG_ATIVIDADES.find(a => progNorm(a.descricao) === progNorm(desc) && progNorm(a.tipo) === progNorm(tipo));
+if(ja){ progAtivToast('Essa atividade já está na lista.','error'); return; }
+const nova = { cod: progAtivNovoCod(), servico: 'SERVICOS_RUR-BA', tipo, descricao: desc, fatorK: fk, criadoPor: (window.MARIUA_USER || '').trim(), criadoEm: new Date().toISOString() };
+PROG_ATIV_EXTRAS.push(nova);
+progAtivRecompor();
+progFillAtividades();
+progAtivFillTipos();
+progAtivRenderLista();
+dEl.value = '';
+if(fEl) fEl.value = '';
+if(nEl){ nEl.value = ''; }
+tEl.value = tipo;
+progAtivTipoChange();
+dEl.focus();
+progAtivToast('Atividade adicionada: ' + nova.descricao,'success');
+await progAtivSalvar();
+}
+
+// Retirar: se foi o usuario que criou, sai da lista de extras. Se e da lista de
+// fabrica, vai para as retiradas e pode voltar depois.
+// Os botoes da lista mandam a posicao na tela, nao o texto: assim uma descricao
+// com apostrofo nao quebra o onclick.
+function progAtivRetirarIdx(i){
+const a = PROG_ATIV_NA_TELA[i];
+if(a) progAtivRetirar(progAtivChave(a));
+}
+function progAtivDevolverIdx(i){
+const a = PROG_ATIV_NA_TELA[i];
+if(a) progAtivDevolver(progAtivChave(a));
+}
+async function progAtivRetirar(chave){
+const iEx = PROG_ATIV_EXTRAS.findIndex(a => progAtivChave(a) === chave);
+let nome = '';
+if(iEx >= 0){
+nome = PROG_ATIV_EXTRAS[iEx].descricao;
+if(!confirm('Retirar "' + nome + '" da lista?')) return;
+PROG_ATIV_EXTRAS.splice(iEx,1);
+}else{
+const a = PROG_ATIVIDADES_BASE.find(x => progAtivChave(x) === chave);
+if(!a) return;
+nome = a.descricao;
+if(!confirm('Retirar "' + nome + '" da lista? Ela pode voltar depois em "retiradas".')) return;
+if(PROG_ATIV_OCULTAS.indexOf(chave) < 0) PROG_ATIV_OCULTAS.push(chave);
+}
+progAtivRecompor();
+progFillAtividades();
+progAtivFillTipos();
+progAtivRenderLista();
+progAtivToast('Atividade retirada: ' + nome,'success');
+await progAtivSalvar();
+}
+
+async function progAtivDevolver(chave){
+PROG_ATIV_OCULTAS = PROG_ATIV_OCULTAS.filter(k => k !== chave);
+progAtivRecompor();
+progFillAtividades();
+progAtivFillTipos();
+progAtivRenderLista();
+progAtivToast('Atividade de volta na lista.','success');
+await progAtivSalvar();
+}
+
+async function progAtivRestaurarTudo(){
+if(!PROG_ATIV_EXTRAS.length && !PROG_ATIV_OCULTAS.length){
+progAtivToast('A lista já é a original.','success');
+return;
+}
+if(!confirm('Voltar à lista original? Isso apaga as ' + PROG_ATIV_EXTRAS.length +
+' atividade(s) adicionada(s) e devolve as ' + PROG_ATIV_OCULTAS.length + ' retirada(s).')) return;
+PROG_ATIV_EXTRAS = [];
+PROG_ATIV_OCULTAS = [];
+progAtivRecompor();
+progFillAtividades();
+progAtivFillTipos();
+progAtivRenderLista();
+progAtivToast('Lista original restaurada.','success');
+await progAtivSalvar();
+}
+
+function progAtivRenderLista(){
+const box = document.getElementById('pa-lista');
+if(!box) return;
+const busca = progNorm((document.getElementById('pa-busca') || {}).value || '');
+const cont = document.getElementById('prog-ativ-contagem');
+if(cont) cont.textContent = PROG_ATIVIDADES.length + ' na lista · ' +
+PROG_ATIV_EXTRAS.length + ' adicionada(s) · ' + PROG_ATIV_OCULTAS.length + ' retirada(s)';
+const btnOc = document.getElementById('pa-btn-ocultas');
+if(btnOc){
+btnOc.textContent = (progAtivVerOcultas ? '\u2190 NA LISTA' : 'RETIRADAS (' + PROG_ATIV_OCULTAS.length + ')');
+btnOc.style.background   = progAtivVerOcultas ? 'rgba(126,58,242,0.12)' : '#f0f4f8';
+btnOc.style.borderColor  = progAtivVerOcultas ? 'rgba(126,58,242,0.4)'  : '#e0e8f0';
+btnOc.style.color        = progAtivVerOcultas ? '#7e3af2' : '#64748b';
+}
+
+const extras = {};
+PROG_ATIV_EXTRAS.forEach(a => { extras[progAtivChave(a)] = true; });
+
+let itens;
+if(progAtivVerOcultas){
+const fora = {};
+PROG_ATIV_OCULTAS.forEach(k => { fora[k] = true; });
+itens = PROG_ATIVIDADES_BASE.filter(a => fora[progAtivChave(a)]);
+}else{
+itens = PROG_ATIVIDADES.slice();
+}
+if(busca) itens = itens.filter(a => (progNorm(a.descricao) + ' ' + progNorm(a.tipo) + ' ' + progNorm(a.cod)).indexOf(busca) >= 0);
+
+if(!itens.length){
+box.innerHTML = '<div style="padding:26px 8px;text-align:center;color:#94a3b8;font-size:0.78rem;font-weight:700;">' +
+(progAtivVerOcultas ? 'Nenhuma atividade retirada.' : (busca ? 'Nada encontrado para essa busca.' : 'Nenhuma atividade na lista.')) +
+'</div>';
+return;
+}
+
+itens.sort((a,b) => a.tipo === b.tipo ? String(a.descricao).localeCompare(String(b.descricao)) : String(a.tipo).localeCompare(String(b.tipo)));
+
+PROG_ATIV_NA_TELA = [];
+let html = '', tipoAtual = null;
+itens.forEach(a => {
+if(a.tipo !== tipoAtual){
+tipoAtual = a.tipo;
+html += '<div style="font-size:0.64rem;font-weight:900;color:#7e3af2;letter-spacing:1px;margin:12px 0 6px;">' + progAtivEsc(tipoAtual) + '</div>';
+}
+const chave = progAtivChave(a);
+const meu = !!extras[chave];
+const fk = Number(a.fatorK) || 0;
+const idx = PROG_ATIV_NA_TELA.push(a) - 1;
+const acao = progAtivVerOcultas
+? '<button type="button" onclick="progAtivDevolverIdx(' + idx + ')" title="Devolver à lista" style="flex-shrink:0;padding:5px 11px;background:rgba(13,115,119,0.1);border:1px solid rgba(13,115,119,0.35);border-radius:8px;font-family:\'Barlow\',sans-serif;font-size:0.65rem;font-weight:800;color:#0d7377;cursor:pointer;">\u21ba DEVOLVER</button>'
+: '<button type="button" onclick="progAtivRetirarIdx(' + idx + ')" title="Retirar da lista" style="flex-shrink:0;padding:5px 11px;background:#fff5f5;border:1px solid #fed7d7;border-radius:8px;font-family:\'Barlow\',sans-serif;font-size:0.65rem;font-weight:800;color:#c53030;cursor:pointer;">&#128465; RETIRAR</button>';
+html += '<div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid #e8ecef;border-radius:10px;margin-bottom:6px;background:' + (meu ? 'rgba(126,58,242,0.04)' : '#fff') + ';">' +
+'<div style="flex:1;min-width:0;">' +
+'<div style="font-size:0.78rem;font-weight:800;color:#1a365d;line-height:1.25;">' + progAtivEsc(a.descricao) +
+(meu ? ' <span style="font-size:0.58rem;font-weight:900;color:#7e3af2;background:rgba(126,58,242,0.12);padding:1px 6px;border-radius:20px;vertical-align:middle;">NOVA</span>' : '') +
+'</div>' +
+'<div style="font-size:0.66rem;font-weight:600;color:#94a3b8;margin-top:2px;">' + progAtivEsc(a.cod) +
+' · Fator K ' + (fk > 0 ? 'R$ ' + fk.toLocaleString('pt-BR',{minimumFractionDigits:2}) : '—') + '</div>' +
+'</div>' + acao + '</div>';
+});
+box.innerHTML = html;
+}
+
 // Mantida com o nome antigo: a edicao de registro ainda chama isto.
 function progOnTipoChange() { progFillAtividades(); }
 // Esconde da tela o que a programacao nao preenche. Os campos continuam no DOM
@@ -5022,6 +5413,17 @@ async function progLoadFromSupabase() {
   }
   return false;
 }
+// Esc fecha o gerenciador; clique no fundo escuro tambem.
+document.addEventListener('keydown', e => {
+if(e.key === 'Escape'){
+const m = document.getElementById('prog-ativ-modal');
+if(m && m.style.display === 'flex') progAtivFechar();
+}
+});
+document.addEventListener('click', e => {
+const m = document.getElementById('prog-ativ-modal');
+if(m && m.style.display === 'flex' && e.target === m) progAtivFechar();
+});
 async function progInit() {
   // 0) Preenche selects de supervisor/programador/encarregado
   // (chamado aqui E no DOMContentLoaded para garantir que as constantes estejam disponíveis)
@@ -5034,6 +5436,8 @@ async function progInit() {
   try { progRenderStats(); } catch(e) {}
   try { progRenderList(); } catch(e) {}
   try { progRenderDash(); } catch(e) {}
+  // 1b) Atividades adicionadas/retiradas pelo usuário (local e depois banco)
+  try { await progAtivCarregar(); } catch(e) {}
   // 2) Busca do Supabase para garantir dados mais recentes
   const fromDB = await progLoadFromSupabase();
   if (fromDB) {
