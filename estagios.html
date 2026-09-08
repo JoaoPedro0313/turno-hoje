@@ -105,7 +105,9 @@ input[type="text"]:focus,input[type="url"]:focus{border-color:#14a085;background
 .card-utd{font-size:0.6rem;font-weight:800;color:#0d7377;background:#f0fafa;border:1px solid #d6efec;border-radius:5px;padding:1px 7px;letter-spacing:0.5px;white-space:nowrap}
 .card-title{font-size:0.82rem;font-weight:700;color:#1a365d;line-height:1.35;margin-bottom:7px}
 .card-meta{display:flex;flex-wrap:wrap;gap:4px 10px;font-size:0.68rem;font-weight:700;color:#718096}
-.card-meta span{display:flex;align-items:center;gap:4px}
+.card-meta span{display:flex;align-items:center}
+.card-meta span + span{padding-left:10px;border-left:1px solid #e2e8f0}
+body.dark .card-meta span + span{border-left-color:#22303f !important}
 .card-tags{display:flex;flex-wrap:wrap;gap:5px;margin-top:9px}
 .tag-chip{font-size:0.6rem;font-weight:800;padding:3px 9px;border-radius:20px;text-transform:uppercase;letter-spacing:0.5px;border:1.5px solid var(--chip-color,#e2e8f0);color:var(--chip-color,#a0aec0);background:#fff;white-space:nowrap;transition:all 0.12s}
 .tag-chip.active{background:var(--chip-color);border-color:var(--chip-color);color:#fff}
@@ -240,9 +242,17 @@ body.dark input[type="url"],body.dark input[type="file"]{background:#243044 !imp
 body.dark .col-editor{background:#141f2e !important;border-color:#243044 !important}
 body.dark .col-editor input[type=text]{color:#e2e8f0 !important;background:transparent !important}
 body.dark .config-sub{border-top-color:#243044 !important}
-.graf-card{background:#fff;border-radius:14px;box-shadow:0 2px 14px rgba(0,0,0,0.08);padding:14px 20px;margin-bottom:10px}
+.filtros{background:#fff;border-radius:14px;box-shadow:0 2px 10px rgba(0,0,0,0.06);padding:6px 20px;margin-bottom:10px}
+.filtro-linha{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:9px 0}
+.filtro-rot{font-size:0.8rem;font-weight:700;color:#7b8794;min-width:76px;white-space:nowrap}
+.filtro-bar{display:flex;gap:6px;flex-wrap:wrap;flex:1}
+.filtro-aviso{font-size:0.7rem;color:#a8b1bb;font-weight:600;white-space:nowrap}
+.btn-mes{padding:5px 14px;border-radius:8px;border:1px dashed #c4b5fd;background:#faf5ff;font-family:'Barlow',sans-serif;font-size:0.78rem;font-weight:700;cursor:pointer;color:#6b46c1;white-space:nowrap}
+body.dark .filtros{background:#101a28 !important}
+body.dark .filtro-rot{color:#8fa0b4 !important}
+.graf-card{background:#fff;border-radius:14px;box-shadow:0 2px 10px rgba(0,0,0,0.06);padding:14px 20px;margin-bottom:10px}
 .graf-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;cursor:pointer;user-select:none}
-.graf-titulo{font-size:0.68rem;font-weight:800;color:#e5484d;letter-spacing:1.5px;text-transform:uppercase;white-space:nowrap}
+.graf-titulo{font-size:0.82rem;font-weight:700;color:#4a5568;white-space:nowrap}
 .graf-sub{font-size:0.66rem;color:#aaa;font-weight:700}
 .graf-corpo{margin-top:12px;display:flex;flex-direction:column;gap:8px}
 .graf-corpo.oculto{display:none}
@@ -367,7 +377,7 @@ try{if(localStorage.getItem("mariua_darkmode")==="1")document.body.classList.add
 
 <div class="page-hdr">
   <div>
-    <h2>🪜 Estágios de Obras</h2>
+    <h2>Estágios de Obras</h2>
     <p>Acompanhe cada obra por etapa, arrastando os cards entre as colunas conforme o andamento.</p>
   </div>
   <div class="head-stats">
@@ -378,35 +388,37 @@ try{if(localStorage.getItem("mariua_darkmode")==="1")document.body.classList.add
 </div>
 
 <div class="container">
-  <div style="background:#fff;border-radius:14px;box-shadow:0 2px 14px rgba(0,0,0,0.08);padding:14px 20px;margin-bottom:10px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-    <span style="font-size:0.68rem;font-weight:800;color:#888;letter-spacing:1.5px;text-transform:uppercase;white-space:nowrap;">🏗️ UTD:</span>
-    <div id="est-utd-bar" style="display:flex;gap:8px;flex-wrap:wrap;"></div>
-    <span id="est-utd-aviso" style="font-size:0.66rem;color:#aaa;font-weight:700;margin-left:auto;white-space:nowrap;"></span>
-  </div>
-  <div style="background:#fff;border-radius:14px;box-shadow:0 2px 14px rgba(0,0,0,0.08);padding:12px 20px;margin-bottom:10px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-    <span style="font-size:0.68rem;font-weight:800;color:#e5484d;letter-spacing:1.5px;text-transform:uppercase;white-space:nowrap;">🏷️ PENDÊNCIA:</span>
-    <div id="est-pend-bar" style="display:flex;gap:6px;flex-wrap:wrap;flex:1;"></div>
+  <div class="filtros">
+    <div class="filtro-linha" id="est-mes-wrapper" style="display:none;">
+      <span class="filtro-rot">Mês</span>
+      <div id="est-mes-bar" class="filtro-bar"></div>
+      <span id="est-mes-info" class="filtro-aviso"></span>
+      <button type="button" class="btn-mes" onclick="estAbrirModalMes()">Novo mês</button>
+    </div>
+    <div class="filtro-linha">
+      <span class="filtro-rot">Carteira</span>
+      <div id="est-utd-bar" class="filtro-bar"></div>
+      <span id="est-utd-aviso" class="filtro-aviso"></span>
+    </div>
+    <div class="filtro-linha">
+      <span class="filtro-rot">Pendência</span>
+      <div id="est-pend-bar" class="filtro-bar"></div>
+    </div>
   </div>
   <div class="graf-card">
     <div class="graf-head" id="grafToggle">
-      <span class="graf-titulo">📊 Pendências mais comuns</span>
+      <span class="graf-titulo">Pendências mais comuns</span>
       <span class="graf-sub" id="grafResumo"></span>
       <span class="graf-sub" id="grafSeta">▾</span>
     </div>
     <div class="graf-corpo" id="grafCorpo"></div>
-  </div>
-  <div id="est-mes-wrapper" style="display:none;background:#fff;border-radius:14px;box-shadow:0 2px 14px rgba(0,0,0,0.08);padding:12px 20px;margin-bottom:10px;align-items:center;gap:10px;flex-wrap:wrap;">
-    <span style="font-size:0.68rem;font-weight:800;color:#6b46c1;letter-spacing:1.5px;text-transform:uppercase;white-space:nowrap;">📅 MÊS:</span>
-    <div id="est-mes-bar" style="display:flex;gap:6px;flex-wrap:wrap;flex:1;"></div>
-    <span id="est-mes-info" style="font-size:0.66rem;color:#aaa;font-weight:700;white-space:nowrap;"></span>
-    <button type="button" onclick="estAbrirModalMes()" title="Cadastrar a aba de um mês" style="padding:5px 14px;border-radius:20px;border:2px dashed #c4b5fd;background:#faf5ff;font-family:'Barlow',sans-serif;font-size:0.75rem;font-weight:800;cursor:pointer;color:#6b46c1;white-space:nowrap;">+ Novo mês</button>
   </div>
 </div>
 
 <div id="est-mm-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:200;align-items:center;justify-content:center;padding:16px;" onclick="if(event.target===this)estFecharModalMes()">
   <div style="background:#fff;border-radius:16px;max-width:520px;width:100%;max-height:88vh;overflow:auto;padding:20px 22px;box-shadow:0 12px 40px rgba(0,0,0,0.3);">
     <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:14px;">
-      <b style="font-size:0.8rem;color:#7c3aed;letter-spacing:2px;text-transform:uppercase;font-weight:800;line-height:1.3;">✚ Adicionar novo mês</b>
+      <b style="font-size:0.8rem;color:#7c3aed;letter-spacing:2px;text-transform:uppercase;font-weight:800;line-height:1.3;">Adicionar novo mês</b>
       <button type="button" onclick="estFecharModalMes()" aria-label="Fechar" style="background:none;border:none;font-size:1.3rem;cursor:pointer;color:#b9a8d4;line-height:1;padding:0 2px;">×</button>
     </div>
 
@@ -431,26 +443,26 @@ try{if(localStorage.getItem("mariua_darkmode")==="1")document.body.classList.add
       <div style="background:#fff;border:1.5px solid #e9d8fd;border-radius:12px;padding:12px 14px;margin-bottom:16px;">
         <div style="font-size:0.76rem;font-weight:800;color:#7c3aed;margin-bottom:6px;">Como pegar o link da aba?</div>
         <div style="font-size:0.72rem;color:#555;line-height:1.75;">
-          Abra a planilha → clique na <b>aba do mês</b> → copie a URL do navegador.<br>
+          Abra a planilha, clique na aba do mês e copie a URL do navegador.<br>
           O link tem o formato: <code style="background:#f3e8ff;color:#553c9a;border-radius:5px;padding:1px 6px;font-size:0.7rem;">...spreadsheets/d/ID/edit#gid=NÚMERO</code><br>
           Cole o link completo abaixo — o sistema extrai o <b>gid</b> automaticamente.
         </div>
       </div>
 
       <div style="margin-bottom:14px;">
-        <label for="est-mm-url-jacobina" style="display:block;font-size:0.68rem;font-weight:800;color:#3b2a5a;letter-spacing:1.1px;text-transform:uppercase;margin-bottom:6px;">📍 Link da aba — Jacobina</label>
+        <label for="est-mm-url-jacobina" style="display:block;font-size:0.68rem;font-weight:800;color:#3b2a5a;margin-bottom:6px;">Link da aba — Jacobina</label>
         <input id="est-mm-url-jacobina" type="text" placeholder="Cole aqui o link do Google Sheets de Jacobina..." oninput="estMMPreview()" style="width:100%;padding:12px 14px;border:1.5px solid #ded3f5;border-radius:10px;background:#fff;font-family:'Barlow',sans-serif;font-size:0.8rem;font-weight:600;color:#3b2a5a;box-sizing:border-box;">
         <div id="est-mm-preview-jacobina" style="font-size:0.68rem;margin-top:5px;font-weight:700;"></div>
       </div>
 
       <div style="margin-bottom:14px;">
-        <label for="est-mm-url-irece" style="display:block;font-size:0.68rem;font-weight:800;color:#3b2a5a;letter-spacing:1.1px;text-transform:uppercase;margin-bottom:6px;">📍 Link da aba — Irecê</label>
+        <label for="est-mm-url-irece" style="display:block;font-size:0.68rem;font-weight:800;color:#3b2a5a;margin-bottom:6px;">Link da aba — Irecê</label>
         <input id="est-mm-url-irece" type="text" placeholder="Cole aqui o link do Google Sheets de Irecê..." oninput="estMMPreview()" style="width:100%;padding:12px 14px;border:1.5px solid #ded3f5;border-radius:10px;background:#fff;font-family:'Barlow',sans-serif;font-size:0.8rem;font-weight:600;color:#3b2a5a;box-sizing:border-box;">
         <div id="est-mm-preview-irece" style="font-size:0.68rem;margin-top:5px;font-weight:700;"></div>
       </div>
 
       <div style="margin-bottom:8px;">
-        <label for="est-mm-url-serrinha" style="display:block;font-size:0.68rem;font-weight:800;color:#3b2a5a;letter-spacing:1.1px;text-transform:uppercase;margin-bottom:6px;">📍 Link da aba — Serrinha <span style="color:#9b9bab;font-weight:700;text-transform:none;letter-spacing:0.3px;">(opcional)</span></label>
+        <label for="est-mm-url-serrinha" style="display:block;font-size:0.68rem;font-weight:800;color:#3b2a5a;margin-bottom:6px;">Link da aba — Serrinha <span style="color:#9b9bab;font-weight:700;text-transform:none;letter-spacing:0.3px;">(opcional)</span></label>
         <input id="est-mm-url-serrinha" type="text" placeholder="Cole aqui o link do Google Sheets de Serrinha..." oninput="estMMPreview()" style="width:100%;padding:12px 14px;border:1.5px solid #ded3f5;border-radius:10px;background:#fff;font-family:'Barlow',sans-serif;font-size:0.8rem;font-weight:600;color:#3b2a5a;box-sizing:border-box;">
         <div id="est-mm-preview-serrinha" style="font-size:0.68rem;margin-top:5px;font-weight:700;"></div>
       </div>
@@ -461,7 +473,7 @@ try{if(localStorage.getItem("mariua_darkmode")==="1")document.body.classList.add
 
       <div id="est-mm-erro" style="display:none;background:#fde8e8;color:#c53030;font-size:0.78rem;font-weight:700;padding:10px 14px;border-radius:9px;margin-bottom:12px;border-left:3px solid #c53030;"></div>
 
-      <button type="button" onclick="estMMSalvar()" style="width:100%;padding:14px;background:linear-gradient(135deg,#7040d0,#5b2fb5);color:#fff;border:none;border-radius:12px;font-family:'Barlow',sans-serif;font-size:0.95rem;font-weight:800;cursor:pointer;letter-spacing:0.5px;box-shadow:0 4px 14px rgba(91,47,181,0.28);">💾 Salvar e adicionar mês</button>
+      <button type="button" onclick="estMMSalvar()" style="width:100%;padding:14px;background:linear-gradient(135deg,#7040d0,#5b2fb5);color:#fff;border:none;border-radius:12px;font-family:'Barlow',sans-serif;font-size:0.95rem;font-weight:800;cursor:pointer;letter-spacing:0.5px;box-shadow:0 4px 14px rgba(91,47,181,0.28);">Salvar e adicionar mês</button>
     </div>
     <div style="margin-top:18px;padding-top:14px;border-top:1px dashed #e2e8f0;">
       <div style="font-size:0.66rem;font-weight:800;color:#888;letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;">Meses cadastrados</div>
@@ -474,7 +486,7 @@ try{if(localStorage.getItem("mariua_darkmode")==="1")document.body.classList.add
   <div class="board" id="board"></div>
   <div class="board-empty" id="boardEmpty">
     <b>Nenhuma obra carregada</b>
-    Escolha um mês na barra 📅 acima para montar o quadro. Para cadastrar as abas de um mês, use "+ Novo mês".
+    Escolha um mês na barra acima para montar o quadro. Para cadastrar as abas de um mês, use "Novo mês".
   </div>
 </div>
 
@@ -982,10 +994,10 @@ try{if(localStorage.getItem("mariua_darkmode")==="1")document.body.classList.add
     // A contagem ignora o proprio filtro de carteira, mas respeita mes, pendencia
     // e busca — o numero no botao e o que voce vera ao clicar nele.
     const base = linhasFiltradas({ ignorarCidade: true });
-    let html = botaoFiltro({ rotulo:'🗺️ Todas', valor:'', contagem:base.length,
+    let html = botaoFiltro({ rotulo:'Todas', valor:'', contagem:base.length,
                              ativo:filtroCidade === '', setter:'estSetCidade' });
     CIDADES_FIXAS.forEach(c => {
-      html += botaoFiltro({ rotulo:'📍 ' + c.label, valor:c.valor,
+      html += botaoFiltro({ rotulo:c.label, valor:c.valor,
         contagem: base.filter(r => valorCarteira(r).includes(c.valor)).length,
         ativo: filtroCidade === c.valor, setter:'estSetCidade' });
     });
@@ -1000,7 +1012,7 @@ try{if(localStorage.getItem("mariua_darkmode")==="1")document.body.classList.add
     if(!bar) return;
     const base = linhasFiltradas({ ignorarPend: true });
     const comTag = base.filter(r => getTags(r.__id).length).length;
-    let html = botaoFiltro({ rotulo:'🏷️ Todas', valor:'', contagem:base.length,
+    let html = botaoFiltro({ rotulo:'Todas', valor:'', contagem:base.length,
                              ativo:filtroPend === '', setter:'estSetPend', raio:'20px', cor:'#e5484d' });
     html += botaoFiltro({ rotulo:'Com pendência', valor:'__com', contagem:comTag,
                           ativo:filtroPend === '__com', setter:'estSetPend', raio:'20px', cor:'#e5484d' });
@@ -1027,7 +1039,7 @@ try{if(localStorage.getItem("mariua_darkmode")==="1")document.body.classList.add
     const ordenados = mesesEstagios.slice().sort((a,b) => a.ano!==b.ano ? a.ano-b.ano : a.mes-b.mes);
     bar.innerHTML = ordenados.length
       ? ordenados.map(e => botaoFiltro({
-          rotulo: '📅 ' + rotuloMes(e),
+          rotulo: rotuloMes(e),
           valor: e.ano + '-' + e.mes,
           contagem: null,
           ativo: !!mesAtivo && mesAtivo.ano === e.ano && mesAtivo.mes === e.mes,
@@ -1093,7 +1105,7 @@ try{if(localStorage.getItem("mariua_darkmode")==="1")document.body.classList.add
       const v = inp.value.trim();
       const pr = v ? parseSheetUrl(v) : null;
       el.innerHTML = pr
-        ? '<span style="color:#38a169;">✔ aba identificada (gid <b>' + escHtml(pr.gid) + '</b>)</span>'
+        ? '<span style="color:#38a169;">aba identificada (gid <b>' + escHtml(pr.gid) + '</b>)</span>'
         : (v ? '<span style="color:#c53030;">Link inválido — cole a URL completa da aba.</span>' : '');
     });
   };
@@ -1106,7 +1118,7 @@ try{if(localStorage.getItem("mariua_darkmode")==="1")document.body.classList.add
         ? CARTEIRAS.filter(c => e.abas[c]).map(c => CARTEIRA_LABEL[c]).join(' · ')
         : 'aba única (formato antigo)';
       return '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 12px;border-radius:9px;background:#f8fafc;border:1.5px solid #e8ecef;margin-bottom:6px;">' +
-        '<span style="font-size:0.8rem;font-weight:800;color:#2d3748;">📅 ' + rotuloMes(e) + '</span>' +
+        '<span style="font-size:0.8rem;font-weight:800;color:#2d3748;">' + rotuloMes(e) + '</span>' +
         '<span style="font-size:0.65rem;color:#888;font-weight:700;text-align:right;flex:1;">' + escHtml(tem || 'nenhuma carteira') + '</span>' +
         '<button type="button" onclick="estMMRemover(' + e.ano + ',' + e.mes + ')" title="Remover" style="background:#fde8e8;color:#c53030;border:none;border-radius:7px;width:26px;height:26px;cursor:pointer;font-weight:800;">×</button>' +
       '</div>';
@@ -1244,8 +1256,8 @@ try{if(localStorage.getItem("mariua_darkmode")==="1")document.body.classList.add
           </div>
           <p class="card-title">${titulo}</p>
           <div class="card-meta">
-            ${municipio ? `<span>📍 ${municipio}</span>` : ''}
-            ${encarregado ? `<span>👷 ${encarregado}</span>` : ''}
+            ${municipio ? `<span>${municipio}</span>` : ''}
+            ${encarregado ? `<span>${encarregado}</span>` : ''}
           </div>
         `;
 
