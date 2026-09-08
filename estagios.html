@@ -59,7 +59,6 @@ button{font-family:'Barlow',sans-serif}
 .field-label{font-size:0.62rem;font-weight:800;color:#aaa;letter-spacing:1.5px;text-transform:uppercase;white-space:nowrap}
 input[type="text"],input[type="url"],input[type="file"],select{background:#fafbfc;border:1.5px solid #e2e8f0;color:#2d3748;border-radius:9px;padding:8px 12px;font-size:0.82rem;font-weight:600;font-family:'Barlow',sans-serif;outline:none;transition:all 0.15s}
 input[type="text"]:focus,input[type="url"]:focus{border-color:#14a085;background:#fff;box-shadow:0 0 0 3px rgba(20,160,133,0.1)}
-#sheetUrl{flex:1;min-width:240px}
 .btn{background:#fff;border:1.5px solid #e2e8f0;color:#666;padding:8px 14px;border-radius:9px;font-size:0.78rem;font-weight:800;letter-spacing:0.3px;cursor:pointer;white-space:nowrap;transition:all 0.15s}
 .btn:hover{border-color:#14a085;color:#0d7377}
 .btn-primary{background:linear-gradient(135deg,#0d7377,#14a085);border:none;color:#fff;box-shadow:0 4px 12px rgba(13,115,119,0.25)}
@@ -379,41 +378,6 @@ try{if(localStorage.getItem("mariua_darkmode")==="1")document.body.classList.add
 </div>
 
 <div class="container">
-  <div class="section">
-    <div class="section-header">
-      <div class="section-label"><div class="icon-teal">↻</div> FONTE DE DADOS</div>
-      <span class="status-line"><span class="status-dot" id="statusDot"></span><span id="statusText">Aguardando planilha…</span></span>
-    </div>
-    <div class="toolbar">
-      <div class="toolbar-row">
-        <span class="field-label">📄 Planilha</span>
-        <input id="sheetUrl" type="url" placeholder="Cole aqui o link de compartilhamento da aba do Google Sheets (ex: .../edit?gid=123...)">
-        <button class="btn btn-primary" id="btnLoad">↻ Carregar obras</button>
-        <button class="btn" id="btnReload" title="Recarregar da mesma planilha">🔄</button>
-      </div>
-      <div class="toolbar-row">
-        <span class="field-label">🔎 Buscar</span>
-        <input id="search" type="text" placeholder="PEP, título, município, encarregado…" style="min-width:220px;">
-        <button class="btn btn-sm" id="btnExport">⬇️ Exportar CSV</button>
-        <span class="config-toggle" id="configToggle" style="margin-left:auto;">⚙️ Personalizar colunas e pendências <span id="configArrow">▸</span></span>
-      </div>
-      <div class="config-body" id="configBody">
-        <div class="field-label" style="letter-spacing:0.3px;text-transform:none;font-weight:600;color:#888;">Renomeie ou recolora as etapas — a ordem aqui define a ordem das colunas no quadro.</div>
-        <div class="config-grid" id="configGrid"></div>
-        <div class="config-sub">
-          <div class="field-label" style="letter-spacing:0.3px;text-transform:none;font-weight:600;color:#888;">Tipos de pendência — aparecem como etiquetas clicáveis nos cards da coluna PENDÊNCIAS IDENTIFICADAS.</div>
-          <div class="config-grid" id="pendGrid"></div>
-          <div class="config-actions">
-            <button class="btn btn-sm" id="btnAddPend" type="button">+ Adicionar pendência</button>
-            <button class="btn btn-sm" id="btnResetPend" type="button" title="Voltar aos quatro tipos originais">↺ Restaurar padrão</button>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<div class="container">
   <div style="background:#fff;border-radius:14px;box-shadow:0 2px 14px rgba(0,0,0,0.08);padding:14px 20px;margin-bottom:10px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
     <span style="font-size:0.68rem;font-weight:800;color:#888;letter-spacing:1.5px;text-transform:uppercase;white-space:nowrap;">🏗️ UTD:</span>
     <div id="est-utd-bar" style="display:flex;gap:8px;flex-wrap:wrap;"></div>
@@ -510,7 +474,7 @@ try{if(localStorage.getItem("mariua_darkmode")==="1")document.body.classList.add
   <div class="board" id="board"></div>
   <div class="board-empty" id="boardEmpty">
     <b>Nenhuma obra carregada</b>
-    Cole o link da planilha do Google Sheets acima e clique em "Carregar obras" para montar o quadro.
+    Escolha um mês na barra 📅 acima para montar o quadro. Para cadastrar as abas de um mês, use "+ Novo mês".
   </div>
 </div>
 
@@ -545,6 +509,9 @@ try{if(localStorage.getItem("mariua_darkmode")==="1")document.body.classList.add
   ];
 
   let rows = [];          // parsed sheet rows (objects keyed by header)
+  // O campo de link foi removido da tela. O valor continua guardado (cache e banco)
+  // para nao apagar o que ja estava salvo e para o fallback de carga avulsa.
+  let sheetUrlAvulso = '';
   let headers = [];
   let columns = [];       // [{key, label, color}] — fixed pipeline stages, customizable
   let overrides = {};     // { rowId: columnKey }  (drag changes, local only)
@@ -579,15 +546,17 @@ try{if(localStorage.getItem("mariua_darkmode")==="1")document.body.classList.add
   }
   window.dbBadgeClick = function(){ setDbStatus('syncing','Reconectando...'); dbCarregar(false); };
 
+  // O card de fonte de dados saiu da tela: estes elementos podem nao existir.
   function setStatus(type, text){
-    statusDot.className = 'status-dot' + (type ? ' ' + type : '');
-    statusText.textContent = text;
+    if(statusDot) statusDot.className = 'status-dot' + (type ? ' ' + type : '');
+    if(statusText) statusText.textContent = text;
   }
+  function termoBusca(){ const el = $('#search'); return el ? el.value.trim() : ''; }
 
   function loadLocal(){
     try{
       const saved = JSON.parse(localStorage.getItem(LS_KEY) || '{}');
-      if(saved.sheetUrl) $('#sheetUrl').value = saved.sheetUrl;
+      if(saved.sheetUrl) sheetUrlAvulso = saved.sheetUrl;
       columns = (saved.columns && saved.columns.length) ? saved.columns : DEFAULT_COLUMNS.map(c => ({...c}));
       if(saved.overrides) overrides = saved.overrides;
       if(saved.pendencyTags) pendencyTags = saved.pendencyTags;
@@ -606,7 +575,7 @@ try{if(localStorage.getItem("mariua_darkmode")==="1")document.body.classList.add
   function salvarCacheLocal(){
     try{
       localStorage.setItem(LS_KEY, JSON.stringify({
-        sheetUrl: $('#sheetUrl').value,
+        sheetUrl: sheetUrlAvulso,
         columns, overrides, pendencyTags, pendencyTypes,
         meses: mesesEstagios, mesAtivo
       }));
@@ -623,7 +592,7 @@ try{if(localStorage.getItem("mariua_darkmode")==="1")document.body.classList.add
   // Monta o pacote que vai para o banco — o quadro inteiro, compartilhado.
   function pacoteAtual(){
     return {
-      sheetUrl: $('#sheetUrl').value,
+      sheetUrl: sheetUrlAvulso,
       columns, overrides, pendencyTags, pendencyTypes,
       meses: mesesEstagios,
       atualizado: new Date().toISOString(),
@@ -633,7 +602,7 @@ try{if(localStorage.getItem("mariua_darkmode")==="1")document.body.classList.add
 
   function aplicarPacote(v){
     if(!v) return;
-    if(v.sheetUrl && !$('#sheetUrl').value) $('#sheetUrl').value = v.sheetUrl;
+    if(v.sheetUrl && !sheetUrlAvulso) sheetUrlAvulso = v.sheetUrl;
     if(Array.isArray(v.columns) && v.columns.length) columns = v.columns;
     if(v.overrides) overrides = v.overrides;
     if(v.pendencyTags) pendencyTags = v.pendencyTags;
@@ -718,43 +687,53 @@ try{if(localStorage.getItem("mariua_darkmode")==="1")document.body.classList.add
   // fetch()-ing the CSV/export endpoints directly fails in the browser because Google
   // doesn't send Access-Control-Allow-Origin on them. Loading gviz/tq as a <script> tag
   // sidesteps that entirely: the script just calls a function we define ourselves.
+  // Rede de seguranca: se o gviz ignorar o responseHandler e cair no callback
+  // padrao, so entregamos a resposta quando ha um unico pedido no ar — assim
+  // nunca entra dado de uma carteira no lugar de outra.
+  const gvizPendentes = [];
+  window.google = window.google || {};
+  window.google.visualization = window.google.visualization || {};
+  window.google.visualization.Query = window.google.visualization.Query || {};
+  window.google.visualization.Query.setResponse = function(json){
+    if(gvizPendentes.length === 1) gvizPendentes[0](json);
+  };
+
   function fetchGvizJson(id, gid){
     return new Promise((resolve, reject) => {
-      const cbName = '__gviz_cb_' + Date.now() + '_' + Math.floor(Math.random()*1e6);
-      let settled = false;
+      const cbName = 'gvizcb_' + Date.now() + '_' + Math.floor(Math.random()*1e6);
+      let settled = false, timer = null;
       const script = document.createElement('script');
+      const receber = json => { if(!settled){ settled = true; limpar(); resolve(json); } };
 
-      function cleanup(){
-        delete window[cbName];
-        window.google.visualization.Query.setResponse = function(){};
+      function limpar(){
+        clearTimeout(timer);
+        const i = gvizPendentes.indexOf(receber);
+        if(i !== -1) gvizPendentes.splice(i,1);
+        try{ delete window[cbName]; }catch(e){ window[cbName] = undefined; }
         if(script.parentNode) script.parentNode.removeChild(script);
       }
-      window[cbName] = function(json){
+      function falhar(msg){
         if(settled) return;
         settled = true;
-        cleanup();
-        resolve(json);
-      };
-      window.google = window.google || {};
-      window.google.visualization = window.google.visualization || {};
-      window.google.visualization.Query = window.google.visualization.Query || {};
-      window.google.visualization.Query.setResponse = function(json){ window[cbName](json); };
+        limpar();
+        reject(new Error(msg));
+      }
 
-      script.src = `https://docs.google.com/spreadsheets/d/${id}/gviz/tq?gid=${gid}&tqx=out:json&headers=0&_=${Date.now()}`;
-      script.onerror = () => {
-        if(settled) return;
-        settled = true;
-        cleanup();
-        reject(new Error('Não foi possível carregar o script da planilha.'));
-      };
+      window[cbName] = receber;
+      gvizPendentes.push(receber);
+
+      // responseHandler faz o gviz chamar esta funcao, exclusiva deste pedido.
+      // Sem ele, as carteiras carregadas em paralelo disputavam o mesmo
+      // google.visualization.Query.setResponse e duas das tres se perdiam.
+      const tqx = encodeURIComponent('out:json;responseHandler:' + cbName);
+      script.src = 'https://docs.google.com/spreadsheets/d/' + encodeURIComponent(id) +
+        '/gviz/tq?gid=' + encodeURIComponent(gid) + '&headers=0&tqx=' + tqx + '&_=' + Date.now();
+      script.onerror = () => falhar('Não foi possível carregar o script da planilha.');
       document.body.appendChild(script);
 
-      setTimeout(() => {
-        if(settled) return;
-        settled = true;
-        cleanup();
-        reject(new Error('Tempo esgotado ao carregar a planilha.'));
-      }, 15000);
+      timer = setTimeout(() => falhar(
+        'Tempo esgotado. Confirme se a planilha está compartilhada como "Qualquer pessoa com o link → Leitor".'
+      ), 15000);
     });
   }
 
@@ -839,6 +818,7 @@ try{if(localStorage.getItem("mariua_darkmode")==="1")document.body.classList.add
 
   function renderConfig(){
     const grid = $('#configGrid');
+    if(!grid) return;
     grid.innerHTML = '';
     columns.forEach((col) => {
       const wrap = document.createElement('div');
@@ -907,6 +887,7 @@ try{if(localStorage.getItem("mariua_darkmode")==="1")document.body.classList.add
 
   function renderPendConfig(){
     const grid = $('#pendGrid');
+    if(!grid) return;
     grid.innerHTML = '';
     pendencyTypes.forEach(pt => {
       const wrap = document.createElement('div');
@@ -965,7 +946,7 @@ try{if(localStorage.getItem("mariua_darkmode")==="1")document.body.classList.add
 
   function linhasFiltradas(opts){
     const o = opts || {};
-    const q = $('#search').value.trim();
+    const q = termoBusca();
     return rows.filter(r =>
       matchesSearch(r,q) &&
       (o.ignorarCidade ? true : passaCidade(r, filtroCidade)) &&
@@ -1169,6 +1150,44 @@ try{if(localStorage.getItem("mariua_darkmode")==="1")document.body.classList.add
     estCarregarMes(ano + '-' + mes);
   };
 
+  // Barras horizontais com a contagem de cada tipo de pendencia.
+  // Respeita busca, carteira e mes — mas ignora o filtro de pendencia, senao
+  // o grafico mostraria apenas a fatia que ja esta selecionada.
+  function renderGraficoPendencias(){
+    const corpo = $('#grafCorpo');
+    if(!corpo) return;
+    const escAttr = t => escHtml(t).replace(/"/g,'&quot;');
+    const base = linhasFiltradas({ ignorarPend: true });
+    const contagens = pendencyTypes
+      .map(pt => ({ pt, total: base.filter(r => getTags(r.__id).includes(pt.key)).length }))
+      .sort((a,b) => b.total - a.total);
+    const comTag = base.filter(r => getTags(r.__id).length).length;
+
+    const resumo = $('#grafResumo');
+    if(resumo) resumo.textContent = base.length ? (comTag + ' de ' + base.length + ' obra(s) com pendência') : '';
+
+    if(!base.length || !contagens.some(c => c.total)){
+      corpo.innerHTML = '<div class="graf-vazio">' +
+        (base.length ? 'Nenhuma pendência marcada nas obras deste filtro.' : 'Sem obras carregadas.') +
+        '</div>';
+      return;
+    }
+
+    const maior = Math.max.apply(null, contagens.map(c => c.total)) || 1;
+    corpo.innerHTML = contagens.map(c => {
+      const largura = Math.round((c.total / maior) * 100);
+      const fatia = base.length ? Math.round((c.total / base.length) * 100) : 0;
+      const ativo = filtroPend === c.pt.key;
+      return '<div class="graf-linha" onclick="estSetPend(\'' + escJs(ativo ? '' : c.pt.key) + '\')"' +
+        ' title="' + escAttr(ativo ? 'Clique para limpar o filtro' : 'Filtrar por ' + c.pt.label) + '">' +
+        '<span class="graf-rot"' + (ativo ? ' style="color:' + escAttr(c.pt.color) + ';"' : '') + '>' + escHtml(c.pt.label) + '</span>' +
+        '<span class="graf-trilho"><span class="graf-barra" style="width:' + largura + '%;background:' +
+          escAttr(c.pt.color) + ';opacity:' + (ativo || !filtroPend ? '1' : '0.45') + ';"></span></span>' +
+        '<span class="graf-val">' + c.total + ' · ' + fatia + '%</span>' +
+      '</div>';
+    }).join('');
+  }
+
   function renderBarras(){ renderBarraCidades(); renderBarraMeses(); renderBarraPendencias(); renderGraficoPendencias(); }
 
   function renderBoard(){
@@ -1279,8 +1298,8 @@ try{if(localStorage.getItem("mariua_darkmode")==="1")document.body.classList.add
   }
 
   async function loadSheet(){
-    const url = $('#sheetUrl').value.trim();
-    if(!url){ setStatus('err','Cole o link da planilha primeiro.'); return; }
+    const url = (sheetUrlAvulso || '').trim();
+    if(!url){ setStatus('err','Nenhum mês cadastrado. Use "+ Novo mês" para informar as abas.'); return; }
     const parsed = parseSheetUrl(url);
     if(!parsed){ setStatus('err','Link inválido — cole o link normal de compartilhamento da aba (não o link de "Publicar na web").'); return; }
     mesAtivo = null;   // carga avulsa pelo link: nenhum botao de mes fica aceso
@@ -1351,12 +1370,11 @@ try{if(localStorage.getItem("mariua_darkmode")==="1")document.body.classList.add
   }
 
   // ---------- wiring ----------
-  $('#btnLoad').addEventListener('click', loadSheet);
-  $('#btnReload').addEventListener('click', loadSheet);
-  $('#btnExport').addEventListener('click', exportCsv);
-  $('#search').addEventListener('input', renderBoard);
-  $('#btnAddPend').addEventListener('click', addPendencyType);
-  $('#btnResetPend').addEventListener('click', () => {
+  const ligar = (sel, ev, fn) => { const el = $(sel); if(el) el.addEventListener(ev, fn); };
+  ligar('#btnExport', 'click', exportCsv);
+  ligar('#search', 'input', renderBoard);
+  ligar('#btnAddPend', 'click', addPendencyType);
+  ligar('#btnResetPend', 'click', () => {
     if(!confirm('Restaurar os quatro tipos originais? Pendências criadas por você serão removidas.')) return;
     pendencyTypes = DEFAULT_PENDENCY_TYPES.map(p => ({...p}));
     const validas = new Set(pendencyTypes.map(p => p.key));
@@ -1366,15 +1384,17 @@ try{if(localStorage.getItem("mariua_darkmode")==="1")document.body.classList.add
     });
     saveLocal(); renderPendConfig(); renderBoard();
   });
-  $('#grafToggle').addEventListener('click', () => {
+  ligar('#grafToggle', 'click', () => {
     const c = $('#grafCorpo');
     const oculto = c.classList.toggle('oculto');
     $('#grafSeta').textContent = oculto ? '▸' : '▾';
   });
-  $('#configToggle').addEventListener('click', () => {
+  ligar('#configToggle', 'click', () => {
     const body = $('#configBody');
+    if(!body) return;
     const open = body.classList.toggle('open');
-    $('#configArrow').textContent = open ? '▾' : '▸';
+    const seta = $('#configArrow');
+    if(seta) seta.textContent = open ? '▾' : '▸';
   });
 
   loadLocal();
@@ -1388,7 +1408,7 @@ try{if(localStorage.getItem("mariua_darkmode")==="1")document.body.classList.add
     const escolhido = (mesAtivo && disponiveis.find(e => e.ano===mesAtivo.ano && e.mes===mesAtivo.mes))
       || disponiveis[disponiveis.length - 1];
     if(escolhido) estCarregarMes(escolhido.ano + '-' + escolhido.mes);
-    else if($('#sheetUrl').value) loadSheet();
+    else if(sheetUrlAvulso) loadSheet();
   });
 
   // Traz o que os outros usuarios mudaram. Pausa se a aba esta em segundo plano
