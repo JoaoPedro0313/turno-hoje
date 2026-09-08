@@ -49,6 +49,7 @@
       {
         id: 'gestao', icone: 'adjustments', texto: 'Gestão',
         itens: [
+          { href: 'equipes.html',    icone: 'users',         texto: 'Cadastro de Equipes' },
           { href: 'permissoes.html', icone: 'lock',          texto: 'Telas x Usuários' },
           { href: 'projeçao.html',   icone: 'device-mobile', texto: 'PDA' },
           { href: 'admin.html',      icone: 'settings',      texto: 'Admin' }
