@@ -313,7 +313,7 @@ const PROG_ATIVIDADES_BASE = PROG_ATIVIDADES.slice();
           style="width:100%;padding:9px 12px;border:1.5px solid #e0e8f0;border-radius:9px;font-family:'Barlow',sans-serif;font-size:0.82rem;font-weight:700;color:#1a365d;outline:none;box-sizing:border-box;"
           oninput="progPepSearch(this.value)" onfocus="this.style.borderColor='#7e3af2';progPepSearch(this.value)" onblur="setTimeout(()=>document.getElementById('pf-pep-dd').style.display='none',200)">
         <input type="hidden" id="pf-pep-val">
-        <div id="pf-pep-dd" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:1.5px solid #7e3af2;border-radius:9px;max-height:200px;overflow-y:auto;z-index:50;box-shadow:0 8px 24px rgba(0,0,0,0.15);margin-top:3px;"></div>
+        <div id="pf-pep-dd" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:1.5px solid #7e3af2;border-radius:9px;max-height:300px;overflow-y:auto;z-index:50;box-shadow:0 8px 24px rgba(0,0,0,0.15);margin-top:3px;"></div>
       </div>
     </div>
     <div style="grid-column:span 2;">
@@ -470,6 +470,8 @@ const PROG_ATIVIDADES_BASE = PROG_ATIVIDADES.slice();
       <option value="">Todos Tipos</option>
       <option>LINHA MORTA</option><option>LINHA VIVA</option><option>RETROESCAVADEIRA</option><option>LIGAÇÃO DE CLIENTE</option><option>PODA</option>
     </select>
+    <input type="date" id="prog-cli-data" title="Dia da programação que vai para o cliente" style="padding:8px 10px;border:1.5px solid #e0e8f0;border-radius:9px;font-family:'Barlow',sans-serif;font-size:0.78rem;font-weight:700;color:#1a365d;background:#fff;outline:none;" onfocus="this.style.borderColor='#7e3af2'" onblur="this.style.borderColor='#e0e8f0'">
+    <button onclick="progLayoutCliente()" title="Folha A4 com a logo da Mariuá para mandar ao cliente" style="padding:9px 16px;background:linear-gradient(135deg,#1a365d,#2b6cb0);border:none;border-radius:9px;font-family:'Barlow',sans-serif;font-size:0.75rem;font-weight:800;color:#fff;cursor:pointer;letter-spacing:0.5px;">📤 CLIENTE</button>
     <button onclick="progExportCSV()" style="padding:9px 16px;background:#276749;border:none;border-radius:9px;font-family:'Barlow',sans-serif;font-size:0.75rem;font-weight:800;color:#fff;cursor:pointer;letter-spacing:0.5px;">⬇️ CSV</button>
     <span id="prog-list-count" style="font-size:0.72rem;font-weight:800;color:#888;white-space:nowrap;"></span>
   </div>
@@ -4215,20 +4217,30 @@ const dd = document.getElementById('pf-pep-dd');
 if (!dd) return;
 const q = val.trim().toUpperCase();
 if (!q || q.length < 2) { dd.style.display = 'none'; return; }
-const results = progListaObras().filter(o =>
+const achados = progListaObras().filter(o =>
 (o.pep||'').toUpperCase().includes(q) ||
 (o.titulo||'').toUpperCase().includes(q) ||
-(o.municipio||'').toUpperCase().includes(q)
-).slice(0, 12);
-if (!results.length) { dd.style.display = 'none'; return; }
+(o.municipio||'').toUpperCase().includes(q) ||
+(o.ar||'').toUpperCase().includes(q)
+);
+if (!achados.length) { dd.style.display = 'none'; return; }
+// Antes cortava em 12 sem avisar: buscar por municipio parecia nao trazer a
+// carteira toda. Agora mostra 50 com rolagem e diz quantas ficaram de fora.
+const results = achados.slice(0, 50);
+const asp = v => String(v||'').replace(/'/g,"\\'").replace(/"/g,'&quot;');
 dd.innerHTML = results.map(o => `
-<div onclick="progSelectPep('${o.pep.replace(/'/g,"\\'")}','${o.titulo.replace(/'/g,"\\'").replace(/"/g,'&quot;')}','${o.municipio.replace(/'/g,"\\'")}','${o.ar.replace(/'/g,"\\'").replace(/"/g,'&quot;')}')"
+<div onclick="progSelectPep('${asp(o.pep)}','${asp(o.titulo)}','${asp(o.municipio)}','${asp(o.ar)}')"
 style="padding:8px 12px;cursor:pointer;border-bottom:1px solid #f0f4f8;transition:background 0.1s;"
 onmouseover="this.style.background='#f0f4f8'" onmouseout="this.style.background='#fff'">
 <div style="font-size:0.78rem;font-weight:800;color:#7e3af2;">${o.pep}</div>
-<div style="font-size:0.72rem;font-weight:600;color:#475569;margin-top:1px;">${o.titulo} · ${o.municipio}</div>
+<div style="font-size:0.72rem;font-weight:600;color:#475569;margin-top:1px;">${o.titulo || '(sem título na planilha)'}${o.municipio ? ' · ' + o.municipio : ''}</div>
 <div style="font-size:0.65rem;color:#aaa;margin-top:1px;">${o.status || o.municipio || ''}</div>
-</div>`).join('');
+</div>`).join('') +
+(achados.length > results.length
+? '<div style="padding:7px 12px;font-size:0.66rem;font-weight:700;color:#94a3b8;background:#f8fafc;">' +
+achados.length + ' obras encontradas — mostrando as ' + results.length + ' primeiras. Refine a busca.</div>'
+: '<div style="padding:7px 12px;font-size:0.66rem;font-weight:700;color:#94a3b8;background:#f8fafc;">' +
+achados.length + (achados.length === 1 ? ' obra encontrada' : ' obras encontradas') + '</div>');
 dd.style.display = 'block';
 }
 function progSelectPep(pep, titulo, municipio, ar) {
@@ -4343,7 +4355,9 @@ const saida = [];
 matriz.slice(iCab + 1).forEach(r => {
 const pega = k => (idx[k] !== undefined ? String(r[idx[k]] || '').trim() : '');
 const pep = pega('pep'), titulo = pega('titulo');
-if(!pep || !titulo) return;                    // linha em branco ou de controle
+// Exige o PEP (com numero, para nao entrar rodape nem subtotal). O titulo
+// pode faltar: obra recem-aberta costuma vir so com o PEP e antes era jogada fora.
+if(!/\d{4}/.test(pep)) return;
 if(/NAO (ELIMINAR|EXCLUIR|APAGAR)|TOTAL GERAL/.test(progNorm(pep) + ' ' + progNorm(titulo))) return;
 saida.push({ pep, titulo, municipio: pega('municipio'), ar: pega('ar'), status: '' });
 });
@@ -4373,33 +4387,55 @@ const ja = meses.find(m => m.ano === e.ano && m.mes === e.mes);
 if(ja) Object.assign(ja, e); else meses.push(e);
 });
 if(!meses.length) return null;
-meses.sort((a,b) => a.ano !== b.ano ? a.ano - b.ano : a.mes - b.mes);
-const m = meses[meses.length - 1];
+// A carteira nao cabe num mes so: obra aberta em janeiro e tocada em junho
+// aparece na aba de janeiro. Le todas as abas conhecidas, do mes mais novo
+// para o mais velho, para que o dado recente ganhe no desempate.
+meses.sort((a,b) => a.ano !== b.ano ? b.ano - a.ano : b.mes - a.mes);
 const refs = [];
-if(m.gidJacobina) refs.push({ id:PROG_MAPA_PLANILHA.jacobina, gid:String(m.gidJacobina) });
-if(m.gidIrece)    refs.push({ id:PROG_MAPA_PLANILHA.irece,    gid:String(m.gidIrece) });
-if(m.urlSerrinha){ const r2 = progRefDeUrl(m.urlSerrinha); if(r2) refs.push(r2); }
+meses.forEach(m => {
+const rot = String(m.mes).padStart(2,'0') + '/' + m.ano;
+if(m.gidJacobina) refs.push({ id:PROG_MAPA_PLANILHA.jacobina, gid:String(m.gidJacobina), rotulo:rot });
+if(m.gidIrece)    refs.push({ id:PROG_MAPA_PLANILHA.irece,    gid:String(m.gidIrece),    rotulo:rot });
+if(m.urlSerrinha){ const r2 = progRefDeUrl(m.urlSerrinha); if(r2){ r2.rotulo = rot; refs.push(r2); } }
+});
 if(!refs.length) return null;
-return { refs, rotulo: String(m.mes).padStart(2,'0') + '/' + m.ano, fonte:'mapa' };
+const novo = String(meses[0].mes).padStart(2,'0') + '/' + meses[0].ano;
+const velho = String(meses[meses.length-1].mes).padStart(2,'0') + '/' + meses[meses.length-1].ano;
+return { refs, rotulo: meses.length > 1 ? (velho + ' a ' + novo) : novo, fonte:'mapa' };
 }
 // Abas do mes mais recente cadastradas na tela de Estagios.
 async function progRefsDosEstagios(){
 const v = await progChave('estagios_board');
 const meses = (v && Array.isArray(v.meses)) ? v.meses.slice() : [];
 if(!meses.length) return null;
-meses.sort((a,b) => a.ano !== b.ano ? a.ano - b.ano : a.mes - b.mes);
-const m = meses[meses.length - 1];
-const refs = (m.abas ? Object.keys(m.abas).map(c => m.abas[c]) : (m.id ? [{id:m.id, gid:m.gid}] : [])).filter(Boolean);
+meses.sort((a,b) => a.ano !== b.ano ? b.ano - a.ano : b.mes - a.mes);
+const refs = [];
+meses.forEach(m => {
+const rot = String(m.mes).padStart(2,'0') + '/' + m.ano;
+const doMes = (m.abas ? Object.keys(m.abas).map(c => m.abas[c]) : (m.id ? [{id:m.id, gid:m.gid}] : [])).filter(Boolean);
+doMes.forEach(r => refs.push({ id:r.id, gid:r.gid, rotulo:rot }));
+});
 if(!refs.length) return null;
-return { refs, rotulo: String(m.mes).padStart(2,'0') + '/' + m.ano, fonte:'estágios' };
+const novo = String(meses[0].mes).padStart(2,'0') + '/' + meses[0].ano;
+const velho = String(meses[meses.length-1].mes).padStart(2,'0') + '/' + meses[meses.length-1].ano;
+return { refs, rotulo: meses.length > 1 ? (velho + ' a ' + novo) : novo, fonte:'estágios' };
 }
+let PROG_ABAS_FALHAS = 0;
 async function progLerAbas(refs){
+PROG_ABAS_FALHAS = 0;
 const partes = await Promise.all(refs.map(async ref => {
 try{ return progObrasDaAba(await progGviz(ref.id, ref.gid)); }
-catch(e){ console.warn('[prog] obras: falhou uma aba — ' + e.message); return []; }
+catch(e){ PROG_ABAS_FALHAS++; console.warn('[prog] obras: falhou a aba ' + (ref.rotulo||ref.gid) + ' — ' + e.message); return []; }
 }));
-const vistos = {}, lista = [];
-partes.forEach(p => p.forEach(o => { if(!vistos[o.pep]){ vistos[o.pep] = 1; lista.push(o); } }));
+// Mesmo PEP em duas abas: fica o registro da aba mais nova (as refs vem
+// ordenadas do mes mais novo para o mais velho) e os campos vazios dele
+// sao preenchidos pelo que a aba antiga tinha.
+const porPep = {}, lista = [];
+partes.forEach(p => p.forEach(o => {
+const ja = porPep[o.pep];
+if(!ja){ porPep[o.pep] = o; lista.push(o); return; }
+['titulo','municipio','ar'].forEach(c => { if(!ja[c] && o[c]) ja[c] = o[c]; });
+}));
 return lista;
 }
 
@@ -4419,18 +4455,34 @@ PROG_OBRAS_FONTE = 'não consegui ler as planilhas — usando a base fixa';
 progMostrarFonteObras();
 return;
 }
-// AR que faltou na planilha vem da base fixa
-let daBase = 0;
-lista.forEach(o => {
-if(o.ar) return;
-const f = (typeof PROG_OBRAS !== 'undefined') ? PROG_OBRAS.find(x => x.pep === o.pep) : null;
-if(f && f.ar){ o.ar = f.ar; daBase++; }
+const daPlanilha = lista.length;
+const porPep = {};
+lista.forEach(o => porPep[o.pep] = o);
+// A base fixa deixa de ser plano B e passa a completar a planilha: preenche
+// o que ficou em branco na linha e acrescenta a obra que a planilha nao traz.
+let campoDaBase = 0, novaDaBase = 0;
+if(typeof PROG_OBRAS !== 'undefined'){
+PROG_OBRAS.forEach(f => {
+const o = porPep[f.pep];
+if(o){
+let mexeu = false;
+['titulo','municipio','ar'].forEach(c => { if(!o[c] && f[c]){ o[c] = f[c]; mexeu = true; } });
+if(mexeu) campoDaBase++;
+return;
+}
+porPep[f.pep] = { pep:f.pep, titulo:f.titulo||'', municipio:f.municipio||'', ar:f.ar||'', status:f.status||'' };
+lista.push(porPep[f.pep]);
+novaDaBase++;
 });
-lista.sort((a,b) => a.titulo.localeCompare(b.titulo));
+}
+lista.sort((a,b) => (a.titulo||a.pep).localeCompare(b.titulo||b.pep));
 PROG_OBRAS_VIVAS = lista;
 const semAr = lista.filter(o => !o.ar).length;
-PROG_OBRAS_FONTE = lista.length + ' obras de ' + origem.rotulo + ' (' + origem.fonte + ')' +
-(daBase ? ' · ' + daBase + ' AR da base' : '') + (semAr ? ' · ' + semAr + ' sem AR' : '');
+PROG_OBRAS_FONTE = lista.length + ' obras · ' + daPlanilha + ' de ' + origem.rotulo + ' (' + origem.fonte + ')' +
+(novaDaBase ? ' · ' + novaDaBase + ' só na base' : '') +
+(campoDaBase ? ' · ' + campoDaBase + ' completadas' : '') +
+(semAr ? ' · ' + semAr + ' sem AR' : '') +
+(PROG_ABAS_FALHAS ? ' · ' + PROG_ABAS_FALHAS + ' aba(s) não abriram' : '');
 console.info('[prog] obras: ' + PROG_OBRAS_FONTE);
 progMostrarFonteObras();
 }
@@ -5185,6 +5237,9 @@ function progRenderList() {
 const tbody = document.getElementById('prog-tbody');
 const empty = document.getElementById('prog-empty');
 const count = document.getElementById('prog-list-count');
+// O envio ao cliente e sempre do dia; so muda quando alguem escolhe outra data.
+const cliData = document.getElementById('prog-cli-data');
+if (cliData && !cliData.value && typeof progHoje === 'function') cliData.value = progHoje();
 if (!tbody) return;
 const search = (document.getElementById('prog-search')?.value || '').toLowerCase();
 const filterSup = document.getElementById('prog-filter-sup')?.value || '';
@@ -5405,6 +5460,203 @@ a.href = url; a.download = 'programacao_diaria_' + new Date().toISOString().slic
 a.click();
 URL.revokeObjectURL(url);
 }
+
+// ===== LAYOUT DA PROGRAMACAO PARA O CLIENTE =====
+// Folha A4 com a marca da Mariua para enviar todo dia. Nao leva fator K nem
+// valor de contrato: o cliente recebe equipe, obra, municipio, AR e atividade.
+function progLogoMariua(){
+const img = document.querySelector('.top-bar-logo');
+return (img && img.src) ? img.src : '';
+}
+function progDataBR(iso){
+const p = String(iso||'').split('-');
+return p.length === 3 ? (p[2] + '/' + p[1] + '/' + p[0]) : String(iso||'');
+}
+function progDiaSemana(iso){
+const p = String(iso||'').split('-');
+if(p.length !== 3) return '';
+const d = new Date(+p[0], +p[1]-1, +p[2]);
+return ['DOMINGO','SEGUNDA-FEIRA','TERÇA-FEIRA','QUARTA-FEIRA','QUINTA-FEIRA','SEXTA-FEIRA','SÁBADO'][d.getDay()] || '';
+}
+// Uma equipe por bloco: no campo quem responde pela turma e o encarregado.
+function progAgrupaPorEquipe(regs){
+const mapa = {};
+regs.forEach(r => {
+const k = r.encarregado || 'SEM ENCARREGADO';
+if(!mapa[k]) mapa[k] = { encarregado:k, colab:0, alojados:'', supervisor:'', itens:[] };
+const g = mapa[k];
+g.colab = Math.max(g.colab, parseInt(r.qtd_colab)||0);
+if(!g.alojados && r.alojados) g.alojados = r.alojados;
+if(!g.supervisor && r.supervisor) g.supervisor = r.supervisor;
+g.itens.push(r);
+});
+return Object.keys(mapa).sort().map(k => mapa[k]);
+}
+// Versao enxuta para colar no WhatsApp, que nao entende tabela.
+function progTextoWhats(dia, grupos){
+const l = [];
+l.push('*MARIUÁ CONSTRUÇÃO E ENERGIA*');
+l.push('*PROGRAMAÇÃO DIÁRIA — ' + progDataBR(dia) + '*');
+l.push('');
+grupos.forEach(g => {
+l.push('*EQUIPE ' + g.encarregado + '*' + (g.colab ? ' · ' + g.colab + ' colaboradores' : ''));
+g.itens.forEach(r => {
+l.push('• ' + (r.pep||'') + ' — ' + (r.nome_obra||''));
+l.push('   ' + [r.municipio, r.ar_coelba ? 'AR: ' + r.ar_coelba : ''].filter(Boolean).join(' · '));
+l.push('   ' + [r.atividade, r.tipo, (r.qtd_previsto ? 'prev.: ' + r.qtd_previsto : '')].filter(Boolean).join(' · '));
+});
+l.push('');
+});
+const sup = [...new Set(grupos.map(g => g.supervisor).filter(Boolean))].join(' / ');
+if(sup) l.push('Supervisão: ' + sup);
+l.push('_Documento gerado em ' + new Date().toLocaleString('pt-BR') + '_');
+return l.join('\n');
+}
+function progLayoutCliente(){
+const campo = document.getElementById('prog-cli-data');
+const dia = (campo && campo.value) ? campo.value : (typeof progHoje === 'function' ? progHoje() : '');
+const regs = (progRegistros||[]).filter(r => r.data === dia);
+if(!regs.length){
+if(typeof progToast === 'function') progToast('❌ Nenhum registro programado em ' + progDataBR(dia) + '.', 'error');
+else alert('Nenhum registro programado em ' + progDataBR(dia) + '.');
+return;
+}
+// A planilha que o cliente ja conhece agrupa por supervisor e, dentro dele,
+// por encarregado — na ordem em que foram lancados, nao em ordem alfabetica.
+// Mantem esse habito de leitura.
+const posSup = {}, posEnc = {};
+regs.forEach((r,i) => {
+const s = r.supervisor||'', e = s + '||' + (r.encarregado||'');
+if(posSup[s] === undefined) posSup[s] = i;
+if(posEnc[e] === undefined) posEnc[e] = i;
+});
+const ordem = regs.map((r,i) => ({r,i})).sort((a,b) =>
+posSup[a.r.supervisor||''] - posSup[b.r.supervisor||''] ||
+posEnc[(a.r.supervisor||'') + '||' + (a.r.encarregado||'')] - posEnc[(b.r.supervisor||'') + '||' + (b.r.encarregado||'')] ||
+a.i - b.i
+).map(x => x.r);
+const grupos = progAgrupaPorEquipe(ordem);
+const equipes = new Set(ordem.map(r => r.encarregado).filter(Boolean)).size;
+const obras = new Set(ordem.map(r => r.pep).filter(Boolean)).size;
+const municipios = new Set(ordem.map(r => r.municipio).filter(Boolean)).size;
+const colab = grupos.reduce((s,g) => s + g.colab, 0);
+const logo = progLogoMariua();
+
+// Linha em branco no lugar do valor faltando, como na planilha de origem.
+const cel = v => (v === 0 || v) ? esc(v) : '';
+let supAnt = null;
+const linhas = ordem.map(r => {
+const troca = supAnt !== null && r.supervisor !== supAnt;
+supAnt = r.supervisor;
+return '<tr' + (troca ? ' class="sep"' : '') + '>' +
+'<td class="nw">' + progDataBR(r.data) + '</td>' +
+'<td class="nw">' + cel(r.supervisor) + '</td>' +
+'<td class="nw">' + cel(r.encarregado) + '</td>' +
+'<td>' + cel(r.qtd_colab) + '</td>' +
+'<td>' + cel(r.alojados) + '</td>' +
+'<td class="obra">' + cel(r.nome_obra) + '</td>' +
+'<td class="nw">' + cel(r.municipio) + '</td>' +
+'<td class="nw pep">' + cel(r.pep) + '</td>' +
+'<td>' + cel(r.ar_coelba) + '</td>' +
+'<td class="ativ">' + cel(r.atividade) + '</td>' +
+'</tr>';
+}).join('');
+
+const txt = progTextoWhats(dia, grupos);
+const doc = '<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8">' +
+'<title>Programação ' + progDataBR(dia) + ' — Mariuá</title>' +
+'<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;600;700;800&display=swap" rel="stylesheet">' +
+'<style>' +
+'@page{size:A4 landscape;margin:6mm}' +
+'*{box-sizing:border-box;margin:0;padding:0}' +
+'body{font-family:Barlow,Arial,sans-serif;background:#eef2f7;color:#111;padding:14px}' +
+'.folha{max-width:1500px;margin:0 auto;background:#fff;box-shadow:0 6px 22px rgba(0,0,0,.12)}' +
+'.cab{display:flex;align-items:center;gap:16px;padding:12px 16px;border-bottom:3px solid #2f9c96}' +
+'.cab img{height:40px;flex-shrink:0;margin-right:14px}' +
+'.cab .tt{flex:1}' +
+'.cab h1{font-size:1.02rem;font-weight:800;color:#1a365d;letter-spacing:.5px}' +
+'.cab h2{font-size:.7rem;font-weight:600;color:#64748b;letter-spacing:.3px;margin-top:1px}' +
+'.cab .dt{text-align:right;line-height:1.15}' +
+'.cab .dt b{display:block;font-size:1.05rem;font-weight:800;color:#1a365d}' +
+'.cab .dt span{font-size:.6rem;font-weight:700;color:#64748b;letter-spacing:.5px}' +
+'.resumo{display:flex;gap:16px;flex-wrap:wrap;padding:7px 16px;background:#f1f5f9;border-bottom:1px solid #cbd5e1;font-size:.63rem;font-weight:700;color:#475569}' +
+'.resumo b{color:#2f9c96;font-weight:800}' +
+'.resumo span{margin-right:20px}' +
+'.wrap{padding:10px 12px 14px;overflow-x:auto}' +
+'table{width:100%;border-collapse:collapse;font-size:.6rem;table-layout:fixed}' +
+'th{background:#2f9c96;color:#fff;font-weight:800;font-size:.58rem;letter-spacing:.3px;padding:5px 3px;text-align:center;border:1px solid #1f6f6b}' +
+'td{border:1px solid #64748b;padding:3px 4px;text-align:center;font-weight:600;vertical-align:middle;word-wrap:break-word}' +
+'tr.sep td{border-top:2px solid #1a365d}' +
+'td.nw{white-space:nowrap}' +
+'td.obra,td.ativ{font-weight:700}' +
+'td.pep{font-weight:800}' +
+'thead{display:table-header-group}' +
+'tr{page-break-inside:avoid}' +
+'.rod{display:flex;justify-content:space-between;gap:14px;padding:0 16px 12px;font-size:.6rem;font-weight:700;color:#64748b}' +
+'.rod .ass{text-align:center;min-width:200px}' +
+'.rod .ass i{display:block;border-top:1px solid #94a3b8;margin-bottom:3px;height:22px}' +
+'.marca{background:#1a365d;color:#fff;text-align:center;padding:6px;font-size:.58rem;font-weight:700;letter-spacing:.5px}' +
+'.barra{max-width:1500px;margin:0 auto 10px;display:flex;gap:8px;flex-wrap:wrap}' +
+'.barra button{padding:9px 16px;border:none;border-radius:8px;font-family:Barlow,Arial,sans-serif;font-size:.74rem;font-weight:800;color:#fff;cursor:pointer;letter-spacing:.4px}' +
+'#bt-imp{background:#2b6cb0}#bt-zap{background:#276749}#bt-txt{background:#7e3af2}' +
+'#area-txt{max-width:1500px;margin:0 auto 10px;display:none}' +
+'#area-txt textarea{width:100%;height:200px;padding:12px;border:1.5px solid #cbd5e1;border-radius:8px;font-family:monospace;font-size:.72rem;resize:vertical}' +
+'@media print{body{background:#fff;padding:0}.folha{box-shadow:none;max-width:none}.barra,#area-txt{display:none!important}}' +
+'</style></head><body>' +
+'<div class="barra">' +
+'<button id="bt-imp">🖨️ Imprimir / salvar PDF</button>' +
+'<button id="bt-zap">💬 Copiar texto do WhatsApp</button>' +
+'<button id="bt-txt">📝 Ver texto</button>' +
+'</div><div id="area-txt"><textarea id="txt" readonly></textarea></div>' +
+'<div class="folha">' +
+'<div class="cab">' +
+(logo ? '<img src="' + logo + '" alt="Mariuá">' : '') +
+'<div class="tt"><h1>PROGRAMAÇÃO DIÁRIA DE SERVIÇOS</h1><h2>Mariuá Construção e Energia · Obras BA</h2></div>' +
+'<div class="dt"><b>' + progDataBR(dia) + '</b><span>' + progDiaSemana(dia) + '</span></div>' +
+'</div>' +
+'<div class="resumo">' +
+'<span>EQUIPES <b>' + equipes + '</b></span>' +
+'<span>SERVIÇOS <b>' + ordem.length + '</b></span>' +
+'<span>OBRAS <b>' + obras + '</b></span>' +
+'<span>MUNICÍPIOS <b>' + municipios + '</b></span>' +
+'<span>COLABORADORES <b>' + colab + '</b></span>' +
+'</div>' +
+'<div class="wrap"><table>' +
+'<colgroup>' +
+'<col style="width:6.5%"><col style="width:7.5%"><col style="width:9%"><col style="width:4.5%"><col style="width:4.5%">' +
+'<col style="width:20%"><col style="width:8%"><col style="width:6.5%"><col style="width:15%"><col style="width:18%">' +
+'</colgroup>' +
+'<thead><tr>' +
+'<th>DATA</th><th>SUPERVISOR</th><th>ENCARREGADO</th><th>QTD COLAB.</th><th>ALOJADOS</th>' +
+'<th>NOME DA OBRA</th><th>MUNICÍPIO</th><th>PEP OBRA</th><th>AR COELBA</th><th>ATIVIDADES</th>' +
+'</tr></thead><tbody>' + linhas + '</tbody></table></div>' +
+'<div class="rod">' +
+'<div>Emitido em ' + new Date().toLocaleString('pt-BR') + '</div>' +
+'<div class="ass"><i></i>Supervisor responsável</div>' +
+'</div>' +
+'<div class="marca">MARIUÁ CONSTRUÇÃO E ENERGIA · PROGRAMAÇÃO SUJEITA A ALTERAÇÃO POR CONDIÇÃO DE CAMPO OU CLIMA</div>' +
+'</div>' +
+'<script>' +
+'var T=' + JSON.stringify(txt) + ';' +
+'document.getElementById("txt").value=T;' +
+'document.getElementById("bt-imp").onclick=function(){window.print();};' +
+'document.getElementById("bt-txt").onclick=function(){var a=document.getElementById("area-txt");a.style.display=a.style.display==="block"?"none":"block";};' +
+'document.getElementById("bt-zap").onclick=function(){var b=this;function ok(){b.textContent="✅ Copiado!";setTimeout(function(){b.textContent="💬 Copiar texto do WhatsApp";},1800);}' +
+'if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(T).then(ok).catch(fb);}else{fb();}' +
+'function fb(){var t=document.getElementById("txt");document.getElementById("area-txt").style.display="block";t.select();try{document.execCommand("copy");ok();}catch(e){b.textContent="Selecione e copie acima";}}};' +
+'<\/script></body></html>';
+
+const w = window.open('', '_blank');
+if(!w){
+if(typeof progToast === 'function') progToast('❌ O navegador bloqueou a janela. Libere o pop-up e tente de novo.', 'error');
+return;
+}
+w.document.open();
+w.document.write(doc);
+w.document.close();
+}
+window.progLayoutCliente = progLayoutCliente;
+
 async function progLoadFromSupabase() {
   // Delega para dbLoadProgDiaria (função central de carregamento)
   if (typeof dbLoadProgDiaria === 'function') {
