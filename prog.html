@@ -304,6 +304,14 @@ const PROG_ATIVIDADES_BASE = PROG_ATIVIDADES.slice();
       <input type="number" id="pf-qtd-colab" min="0" max="30" class="_s17" onfocus="this.style.borderColor='#7e3af2'" onblur="this.style.borderColor='#e0e8f0'">
     </div>
     <div>
+      <label class="_s1">TURNO</label>
+      <select id="pf-turno" class="_s6" onfocus="this.style.borderColor='#7e3af2'" onblur="this.style.borderColor='#e0e8f0'">
+        <option value="DIA INTEIRO">DIA INTEIRO</option>
+        <option value="MANHÃ">MANHÃ</option>
+        <option value="TARDE">TARDE</option>
+      </select>
+    </div>
+    <div>
       <label class="_s1">ALOJADOS</label>
       <select id="pf-alojados" class="_s6" onfocus="this.style.borderColor='#7e3af2'" onblur="this.style.borderColor='#e0e8f0'">
         <option value="SIM" selected>SIM</option><option value="NÃO">NÃO</option>
@@ -499,6 +507,7 @@ const PROG_ATIVIDADES_BASE = PROG_ATIVIDADES.slice();
             <th class="_s11">SUPERVISOR</th>
             <th class="_s11">ENCARREGADO</th>
             <th class="_s12">COLAB.</th>
+            <th class="_s12">TURNO</th>
             <th class="_s12">ALOJ.</th>
             <th class="_s11">PEP OBRA</th>
             <th style="padding:10px 12px;text-align:left;font-weight:800;white-space:nowrap;min-width:180px;">NOME DA OBRA</th>
@@ -5375,6 +5384,7 @@ const prev = parseFloat(document.getElementById('pf-qtd-prev').value) || 0;
 const real = parseFloat(document.getElementById('pf-qtd-real').value) || 0;
 const qtd_colab = parseInt(document.getElementById('pf-qtd-colab').value) || 0;
 const alojados = document.getElementById('pf-alojados').value;
+const turno = (document.getElementById('pf-turno') || {}).value || 'DIA INTEIRO';
 const nomeObra = document.getElementById('pf-nome-obra').value;
 const municipio = document.getElementById('pf-municipio').value;
 const ar = document.getElementById('pf-ar').value;
@@ -5384,7 +5394,7 @@ const status = prev > 0 ? ((real / prev) * 100) : 0;
 const reg = {
 id: progEditIdx!==null ? progRegistros[progEditIdx].id : Date.now().toString(36),
 data, supervisor: sup, programador: prog, encarregado: enc,
-qtd_colab, alojados, pep, nome_obra: nomeObra, municipio, ar_coelba: ar,
+qtd_colab, alojados, turno, pep, nome_obra: nomeObra, municipio, ar_coelba: ar,
 atividade_cod: atParts[0], atividade: atParts[1], tipo, fator_k: fk,
 status: document.getElementById('pf-ocorrencia').value || '',
 qtd_previsto: prev, qtd_realizado: real, status_pct: status,
@@ -5427,6 +5437,8 @@ PROG_ENC_FILTRO = '';
 if (typeof progPessoaRender === 'function') progPessoaRender();
 const alojEl = document.getElementById('pf-alojados');
 if (alojEl) alojEl.value = 'SIM';          // padrao da programacao
+const turnoEl = document.getElementById('pf-turno');
+if (turnoEl) turnoEl.value = 'DIA INTEIRO';
 const fonteEl = document.getElementById('pf-qtd-fonte');
 if (fonteEl) fonteEl.textContent = '';
 ['pf-qtd-colab','pf-qtd-prev','pf-qtd-real','pf-pep-input','pf-nome-obra','pf-municipio','pf-ar','pf-vunit','pf-vprev','pf-vreal','pf-status'].forEach(id => {
@@ -5753,6 +5765,7 @@ tbody.innerHTML = filtered.map((r,i) => `
 <td style="padding:9px 12px;white-space:nowrap;font-weight:700;font-size:0.72rem;color:#1a365d;">${r.supervisor||'-'}</td>
 <td style="padding:9px 12px;white-space:nowrap;font-weight:800;color:#7e3af2;">${r.encarregado||'-'}</td>
 <td class="_s23">${r.qtd_colab||'-'}</td>
+<td style="padding:9px 6px;text-align:center;white-space:nowrap;"><span style="background:${progTurnoCor(r.turno).bg};color:${progTurnoCor(r.turno).cor};font-size:0.6rem;font-weight:800;padding:2px 7px;border-radius:10px;">${progTurnoCurto(r.turno)}</span></td>
 <td style="padding:9px 8px;text-align:center;font-size:0.7rem;font-weight:700;color:${r.alojados==='SIM'?'#276749':'#888'};">${r.alojados||'-'}</td>
 <td style="padding:9px 12px;white-space:nowrap;font-weight:700;color:#7e3af2;font-size:0.72rem;">${r.pep||'-'}</td>
 <td style="padding:9px 12px;font-size:0.72rem;font-weight:600;color:#475569;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${r.nome_obra||''}">${r.nome_obra||'-'}</td>
@@ -5766,6 +5779,7 @@ tbody.innerHTML = filtered.map((r,i) => `
 <td style="padding:9px 10px;text-align:right;font-weight:700;color:#276749;white-space:nowrap;">${fmtR(r.valor_realizado)}</td>
 <td style="padding:9px 8px;text-align:center;white-space:nowrap;">
 <button onclick="progEditReg(${progRegistros.indexOf(r)})" style="background:none;border:none;cursor:pointer;font-size:0.9rem;padding:2px 5px;" title="Editar">✏️</button>
+<button onclick="progApoioAbrir(${progRegistros.indexOf(r)})" style="background:none;border:none;cursor:pointer;font-size:0.9rem;padding:2px 5px;" title="Copiar para outra equipe de apoio">👥</button>
 <button onclick="progDeleteReg(${progRegistros.indexOf(r)})" style="background:none;border:none;cursor:pointer;font-size:0.9rem;padding:2px 5px;" title="Excluir">🗑️</button>
 </td>
 </tr>`).join('');
@@ -5786,6 +5800,7 @@ if (typeof progPessoaRender === 'function') progPessoaRender();
 set('pf-programador', r.programador);
 set('pf-qtd-colab', r.qtd_colab);
 set('pf-alojados', r.alojados || 'SIM');
+set('pf-turno', r.turno || 'DIA INTEIRO');
 set('pf-pep-input', r.pep);
 set('pf-pep-val', r.pep);
 set('pf-nome-obra', r.nome_obra);
@@ -5932,7 +5947,7 @@ s.onload = cb;
 s.onerror = function(){ if(erro) erro(); };
 document.head.appendChild(s);
 }
-const PROG_EXP_COLS = ['DATA','SUPERVISOR','PROGRAMADOR','ENCARREGADO','QTD_COLAB','ALOJADOS','PEP_OBRA','NOME_OBRA','MUNICIPIO','AR_COELBA','ATIVIDADE','TIPO','QTD_PREVISTO','QTD_REALIZADO','STATUS_%','VALOR_UNITARIO','VALOR_PREVISTO','VALOR_REALIZADO'];
+const PROG_EXP_COLS = ['DATA','TURNO','SUPERVISOR','PROGRAMADOR','ENCARREGADO','QTD_COLAB','ALOJADOS','PEP_OBRA','NOME_OBRA','MUNICIPIO','AR_COELBA','ATIVIDADE','TIPO','QTD_PREVISTO','QTD_REALIZADO','STATUS_%','VALOR_UNITARIO','VALOR_PREVISTO','VALOR_REALIZADO'];
 // Ordena por data e equipe, para o arquivo sair na mesma leitura da tela.
 function progExpOrdenado(){
 return progRegistros.slice().sort((a,b) =>
@@ -5972,6 +5987,7 @@ try{
 const nOuVazio = v => (v === null || v === undefined || v === '') ? '' : (isFinite(Number(v)) ? Number(v) : String(v));
 const linhas = ordem.map(r => ({
 'DATA': progExpDataBR(r.data),
+'TURNO': progTurnoCurto(r.turno),
 'SUPERVISOR': r.supervisor || '',
 'PROGRAMADOR': r.programador || '',
 'ENCARREGADO': r.encarregado || '',
@@ -6021,7 +6037,7 @@ const n = Number(v);
 return isFinite(n) ? n.toFixed(2).replace('.', ',') : String(v);
 };
 const rows = ordem.map(r => [
-progExpDataBR(r.data), r.supervisor, r.programador, r.encarregado,
+progExpDataBR(r.data), progTurnoCurto(r.turno), r.supervisor, r.programador, r.encarregado,
 (r.qtd_colab === null || r.qtd_colab === undefined) ? '' : r.qtd_colab, r.alojados,
 r.pep, r.nome_obra, r.municipio, r.ar_coelba, r.atividade, r.tipo,
 num(r.qtd_previsto), num(r.qtd_realizado), num(r.status_pct),
@@ -6079,7 +6095,7 @@ l.push('*EQUIPE ' + g.encarregado + '*' + (g.colab ? ' · ' + g.colab + ' colabo
 g.itens.forEach(r => {
 l.push('• ' + (r.pep||'') + ' — ' + (r.nome_obra||''));
 l.push('   ' + [r.municipio, r.ar_coelba ? 'AR: ' + r.ar_coelba : ''].filter(Boolean).join(' · '));
-l.push('   ' + [r.atividade, r.tipo, (r.qtd_previsto ? 'prev.: ' + r.qtd_previsto : '')].filter(Boolean).join(' · '));
+l.push('   ' + [r.atividade, progTurnoCurto(r.turno), (r.qtd_previsto ? 'prev.: ' + r.qtd_previsto : '')].filter(Boolean).join(' · '));
 });
 l.push('');
 });
@@ -6126,6 +6142,7 @@ const troca = supAnt !== null && r.supervisor !== supAnt;
 supAnt = r.supervisor;
 return '<tr' + (troca ? ' class="sep"' : '') + '>' +
 '<td class="nw">' + progDataBR(r.data) + '</td>' +
+'<td class="nw">' + esc(progTurnoCurto(r.turno)) + '</td>' +
 '<td>' + cel(progLayoutNome(r.supervisor)) + '</td>' +
 '<td>' + cel(progLayoutNome(r.encarregado)) + '</td>' +
 '<td>' + cel(r.qtd_colab) + '</td>' +
@@ -6201,11 +6218,11 @@ const doc = '<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8">' +
 '</div>' +
 '<div class="wrap"><table>' +
 '<colgroup>' +
-'<col style="width:6%"><col style="width:10%"><col style="width:11%"><col style="width:4%"><col style="width:4.5%">' +
-'<col style="width:18%"><col style="width:7.5%"><col style="width:6.5%"><col style="width:14%"><col style="width:18.5%">' +
+'<col style="width:5.5%"><col style="width:5%"><col style="width:9.5%"><col style="width:10.5%"><col style="width:4%"><col style="width:4%">' +
+'<col style="width:17%"><col style="width:7%"><col style="width:6.5%"><col style="width:13%"><col style="width:18%">' +
 '</colgroup>' +
 '<thead><tr>' +
-'<th>DATA</th><th>SUPERVISOR</th><th>ENCARREGADO</th><th>QTD COLAB.</th><th>ALOJADOS</th>' +
+'<th>DATA</th><th>TURNO</th><th>SUPERVISOR</th><th>ENCARREGADO</th><th>QTD COLAB.</th><th>ALOJADOS</th>' +
 '<th>NOME DA OBRA</th><th>MUNICÍPIO</th><th>PEP OBRA</th><th>AR COELBA</th><th>ATIVIDADES</th>' +
 '</tr></thead><tbody>' + linhas + '</tbody></table></div>' +
 '<div class="rod">' +
@@ -6873,6 +6890,207 @@ progMesMsg('❌ Não salvou: ' + err.message + '. Confira a conexão com o banco
 window.progMesAbrir  = progMesAbrir;
 window.progMesFechar = progMesFechar;
 window.progMesSalvar = progMesSalvar;
+</script>
+
+<div id="prog-apoio-modal" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,.55);z-index:9100;align-items:center;justify-content:center;padding:16px;">
+  <div style="background:#fff;border-radius:14px;max-width:540px;width:100%;max-height:92vh;overflow-y:auto;box-shadow:0 18px 50px rgba(0,0,0,.3);font-family:'Barlow',sans-serif;">
+    <div style="background:linear-gradient(135deg,#7e3af2,#9f7aea);color:#fff;padding:14px 18px;border-radius:14px 14px 0 0;">
+      <div style="font-size:0.92rem;font-weight:900;letter-spacing:.4px;">👥 EQUIPE DE APOIO</div>
+      <div style="font-size:0.68rem;font-weight:600;opacity:.92;margin-top:2px;">Copia esta obra para outra turma no mesmo dia. Escolha a equipe e o turno dela.</div>
+    </div>
+    <div style="padding:16px 18px;">
+      <div id="pa2-resumo" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:11px 13px;font-size:0.72rem;font-weight:700;color:#475569;line-height:1.5;margin-bottom:14px;"></div>
+
+      <label style="font-size:.66rem;font-weight:900;color:#64748b;letter-spacing:.5px;">ENCARREGADO DE APOIO</label>
+      <div id="pa2-enc-box" style="position:relative;margin-bottom:12px;">
+        <input type="text" id="pa2-enc-busca" autocomplete="off" placeholder="Digite o nome ou a matrícula..."
+          oninput="progApoioBuscar()" onfocus="progApoioBuscar()" onkeydown="progApoioTecla(event)"
+          style="width:100%;padding:9px 11px;border:1.5px solid #e0e8f0;border-radius:9px;font-family:'Barlow',sans-serif;font-size:.8rem;font-weight:700;color:#1a365d;outline:none;box-sizing:border-box;">
+        <div id="pa2-enc-dd" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:1.5px solid #7e3af2;border-radius:9px;max-height:220px;overflow-y:auto;z-index:60;box-shadow:0 8px 24px rgba(0,0,0,0.15);margin-top:3px;"></div>
+        <input type="hidden" id="pa2-enc">
+      </div>
+
+      <div style="display:flex;gap:10px;">
+        <div style="flex:1;">
+          <label style="font-size:.66rem;font-weight:900;color:#64748b;letter-spacing:.5px;">TURNO DO APOIO</label>
+          <select id="pa2-turno" style="width:100%;padding:9px 11px;border:1.5px solid #e0e8f0;border-radius:9px;font-family:'Barlow',sans-serif;font-size:.8rem;font-weight:700;color:#1a365d;">
+            <option value="DIA INTEIRO">DIA INTEIRO</option>
+            <option value="MANHÃ">MANHÃ</option>
+            <option value="TARDE">TARDE</option>
+          </select>
+        </div>
+        <div style="width:130px;">
+          <label style="font-size:.66rem;font-weight:900;color:#64748b;letter-spacing:.5px;">COLAB.</label>
+          <input type="number" id="pa2-colab" min="0" max="30" style="width:100%;padding:9px 11px;border:1.5px solid #e0e8f0;border-radius:9px;font-family:'Barlow',sans-serif;font-size:.8rem;font-weight:700;color:#1a365d;box-sizing:border-box;">
+        </div>
+      </div>
+
+      <label style="display:flex;align-items:center;gap:8px;margin-top:12px;font-size:0.72rem;font-weight:700;color:#475569;cursor:pointer;">
+        <input type="checkbox" id="pa2-zerar" checked style="width:16px;height:16px;accent-color:#7e3af2;">
+        Zerar as quantidades previsto e realizado da cópia
+      </label>
+      <div style="font-size:0.65rem;color:#94a3b8;font-weight:600;margin-top:5px;line-height:1.4;">
+        Deixe marcado se o apoio vai executar a mesma atividade sem meta própria — assim a quantidade não é contada duas vezes na medição.
+      </div>
+
+      <div id="pa2-msg" style="font-size:0.72rem;font-weight:800;margin-top:11px;"></div>
+      <div style="display:flex;gap:8px;margin-top:14px;">
+        <button onclick="progApoioSalvar()" style="flex:1;padding:10px;background:linear-gradient(135deg,#7e3af2,#9f7aea);border:none;border-radius:9px;font-family:'Barlow',sans-serif;font-size:.78rem;font-weight:800;color:#fff;cursor:pointer;letter-spacing:.4px;">CRIAR A CÓPIA</button>
+        <button onclick="progApoioFechar()" style="padding:10px 16px;background:#e2e8f0;border:none;border-radius:9px;font-family:'Barlow',sans-serif;font-size:.78rem;font-weight:800;color:#475569;cursor:pointer;">FECHAR</button>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+// ===== TURNO =====
+// Antes o turno era escrito na mao dentro da atividade ("IMPLANTAÇÃO (MANHÃ)").
+// Virou campo proprio: entra na lista, no relatorio do cliente e na planilha.
+function progTurnoCurto(t){
+const v = progNorm(t || 'DIA INTEIRO');
+if(v.indexOf('MANH') === 0) return 'MANHÃ';
+if(v.indexOf('TARDE') === 0) return 'TARDE';
+return 'DIA';
+}
+function progTurnoCor(t){
+const c = progTurnoCurto(t);
+if(c === 'MANHÃ') return { cor:'#b7791f', bg:'rgba(183,121,31,0.12)' };
+if(c === 'TARDE') return { cor:'#2b6cb0', bg:'rgba(43,108,176,0.12)' };
+return { cor:'#475569', bg:'#edf2f7' };
+}
+
+// ===== COPIAR PARA EQUIPE DE APOIO =====
+// Duas turmas na mesma obra no mesmo dia era um relançamento inteiro a mao.
+// Aqui a obra, a atividade e o AR vao iguais; muda a equipe e o turno.
+let PROG_APOIO_IDX = null;
+let PROG_APOIO_ACHADAS = [];
+
+function progApoioMsg(t, cor){
+const el = document.getElementById('pa2-msg');
+if(el){ el.textContent = t || ''; el.style.color = cor || '#64748b'; }
+}
+function progApoioAbrir(idx){
+const r = progRegistros[idx];
+if(!r) return;
+PROG_APOIO_IDX = idx;
+const m = document.getElementById('prog-apoio-modal');
+if(!m) return;
+document.getElementById('pa2-resumo').innerHTML =
+'<b>' + esc(r.data ? r.data.split('-').reverse().join('/') : '') + '</b> · ' + esc(r.pep || '') +
+'<br>' + esc(r.nome_obra || '') + (r.municipio ? ' · ' + esc(r.municipio) : '') +
+'<br>' + esc(r.atividade || '') +
+'<br><span style="color:#94a3b8;">Equipe atual: ' + esc(r.encarregado || '') + ' · ' + esc(progTurnoCurto(r.turno)) + '</span>';
+document.getElementById('pa2-enc').value = '';
+document.getElementById('pa2-enc-busca').value = '';
+document.getElementById('pa2-colab').value = '';
+// Se a turma original ficou de manha, o apoio quase sempre e de tarde.
+const t = progTurnoCurto(r.turno);
+document.getElementById('pa2-turno').value = t === 'MANHÃ' ? 'TARDE' : (t === 'TARDE' ? 'MANHÃ' : 'DIA INTEIRO');
+document.getElementById('pa2-zerar').checked = true;
+progApoioMsg('');
+m.style.display = 'flex';
+setTimeout(function(){ document.getElementById('pa2-enc-busca').focus(); }, 60);
+}
+function progApoioFechar(){
+const m = document.getElementById('prog-apoio-modal');
+if(m) m.style.display = 'none';
+PROG_APOIO_IDX = null;
+}
+function progApoioBuscar(){
+const dd = document.getElementById('pa2-enc-dd');
+const busca = document.getElementById('pa2-enc-busca');
+if(!dd || !busca) return;
+const escolhido = document.getElementById('pa2-enc').value;
+let txt = busca.value;
+if(escolhido && progNorm(txt).indexOf(progNorm(escolhido)) === 0) txt = '';
+const q = progNorm(txt);
+const mapa = progEncarregadosMapa();
+const atual = PROG_APOIO_IDX !== null ? (progRegistros[PROG_APOIO_IDX] || {}).encarregado : '';
+let itens = Object.keys(mapa).sort()
+// a turma que ja esta na obra nao aparece: copiar para ela seria duplicata
+.filter(n => progNorm(n) !== progNorm(atual))
+.map(n => ({ nome:n, matricula:mapa[n].matricula || '', supervisor:mapa[n].supervisor || '' }));
+if(q) itens = itens.filter(i => progNorm(i.nome).includes(q) || progNorm(i.matricula).includes(q) || progNorm(i.supervisor).includes(q));
+PROG_APOIO_ACHADAS = itens.slice(0, 50);
+if(!PROG_APOIO_ACHADAS.length){
+dd.innerHTML = '<div style="padding:10px 12px;font-size:0.7rem;font-weight:700;color:#94a3b8;">Ninguém com esse nome.</div>';
+dd.style.display = 'block';
+return;
+}
+dd.innerHTML = PROG_APOIO_ACHADAS.map((i,ix) =>
+'<div onclick="progApoioEscolher(' + ix + ')" style="padding:7px 12px;cursor:pointer;border-bottom:1px solid #f0f4f8;"' +
+' onmouseover="this.style.background=\'#f0f4f8\'" onmouseout="this.style.background=\'#fff\'">' +
+'<div style="font-size:0.76rem;font-weight:800;color:#1a365d;">' + esc(i.nome) + '</div>' +
+'<div style="font-size:0.64rem;font-weight:600;color:#94a3b8;margin-top:1px;">' +
+esc([i.matricula, i.supervisor].filter(Boolean).join(' · ')) + '</div></div>').join('');
+dd.style.display = 'block';
+}
+function progApoioEscolher(ix){
+const i = PROG_APOIO_ACHADAS[ix];
+if(!i) return;
+document.getElementById('pa2-enc').value = i.nome;
+document.getElementById('pa2-enc-busca').value = i.nome + (i.matricula ? ' · ' + i.matricula : '');
+document.getElementById('pa2-enc-dd').style.display = 'none';
+// numero de colaboradores da turma escolhida, quando o cadastro souber
+const info = (typeof progQtdColab === 'function') ? progQtdColab(i.nome) : { qtd:'' };
+const c = document.getElementById('pa2-colab');
+if(c && info && info.qtd !== '' && !c.value) c.value = info.qtd;
+progApoioMsg('');
+}
+function progApoioTecla(ev){
+if(ev.key === 'Enter'){ ev.preventDefault(); if(PROG_APOIO_ACHADAS.length) progApoioEscolher(0); return; }
+if(ev.key === 'Escape'){ document.getElementById('pa2-enc-dd').style.display = 'none'; }
+}
+async function progApoioSalvar(){
+const r = progRegistros[PROG_APOIO_IDX];
+if(!r){ progApoioFechar(); return; }
+const enc = document.getElementById('pa2-enc').value;
+if(!enc){ progApoioMsg('❌ Escolha o encarregado de apoio.', '#c53030'); return; }
+const turno = document.getElementById('pa2-turno').value;
+// Mesma obra + mesma equipe + mesmo dia + mesmo turno já existe: seria duplicata.
+const igual = progRegistros.find(x => x.data === r.data && x.pep === r.pep &&
+progNorm(x.encarregado) === progNorm(enc) && progTurnoCurto(x.turno) === progTurnoCurto(turno));
+if(igual){ progApoioMsg('❌ Essa equipe já está nesta obra neste dia e turno.', '#c53030'); return; }
+
+const mapa = progEncarregadosMapa();
+const sup = (mapa[enc] && mapa[enc].supervisor) ? mapa[enc].supervisor : r.supervisor;
+const zerar = document.getElementById('pa2-zerar').checked;
+const prev = zerar ? 0 : (parseFloat(r.qtd_previsto) || 0);
+const real = zerar ? 0 : (parseFloat(r.qtd_realizado) || 0);
+const fk = parseFloat(r.fator_k) || 0;
+const colab = parseInt(document.getElementById('pa2-colab').value) || 0;
+
+const novo = Object.assign({}, r, {
+id: Date.now().toString(36) + 'a',
+encarregado: enc,
+supervisor: sup,
+turno: turno,
+qtd_colab: colab,
+qtd_previsto: prev,
+qtd_realizado: real,
+status_pct: prev > 0 ? (real / prev) * 100 : 0,
+valor_previsto: fk * prev,
+valor_realizado: fk * real,
+apoio_de: r.encarregado || '',      // fica registrado de quem esta dando apoio
+criado_em: new Date().toISOString()
+});
+progRegistros.push(novo);
+progSaveToStorage();
+progRenderList();
+progApoioMsg('✅ Cópia criada para ' + enc + ' (' + progTurnoCurto(turno) + ').', '#276749');
+if(typeof progToast === 'function') progToast('✅ ' + enc + ' entrou na obra ' + (r.pep || '') + ' como apoio.', 'success');
+setTimeout(progApoioFechar, 1200);
+}
+document.addEventListener('click', function(ev){
+const box = document.getElementById('pa2-enc-box');
+const dd = document.getElementById('pa2-enc-dd');
+if(box && dd && !box.contains(ev.target)) dd.style.display = 'none';
+});
+window.progApoioAbrir = progApoioAbrir;
+window.progApoioFechar = progApoioFechar;
+window.progApoioBuscar = progApoioBuscar;
+window.progApoioEscolher = progApoioEscolher;
+window.progApoioTecla = progApoioTecla;
+window.progApoioSalvar = progApoioSalvar;
 </script>
 
 </body>
