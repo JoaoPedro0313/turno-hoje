@@ -412,7 +412,7 @@ const PROG_ATIVIDADES_BASE = PROG_ATIVIDADES.slice();
     </div>
 
     <div style="padding:16px 20px;border-bottom:1px solid #e8ecef;background:#f8fafc;">
-      <div style="font-size:0.7rem;font-weight:900;color:#7e3af2;letter-spacing:1px;margin-bottom:10px;">ADICIONAR ATIVIDADE</div>
+      <div id="pa-titulo-form" style="font-size:0.7rem;font-weight:900;color:#7e3af2;letter-spacing:1px;margin-bottom:10px;">ADICIONAR ATIVIDADE</div>
       <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;">
         <div style="grid-column:span 2;">
           <label class="_s1">DESCRIÇÃO *</label>
@@ -436,8 +436,9 @@ const PROG_ATIVIDADES_BASE = PROG_ATIVIDADES.slice();
             style="width:100%;padding:9px 12px;border:1.5px solid #e0e8f0;border-radius:9px;font-family:'Barlow',sans-serif;font-size:0.82rem;font-weight:700;color:#1a365d;outline:none;box-sizing:border-box;"
             onfocus="this.style.borderColor='#7e3af2'" onblur="this.style.borderColor='#e0e8f0'">
         </div>
-        <div style="grid-column:span 2;display:flex;justify-content:flex-end;">
-          <button type="button" onclick="progAtivAdicionar()" style="padding:9px 22px;background:linear-gradient(135deg,#7e3af2,#9f7aea);border:none;border-radius:10px;font-family:'Barlow',sans-serif;font-size:0.78rem;font-weight:800;color:#fff;cursor:pointer;letter-spacing:0.5px;box-shadow:0 4px 12px rgba(126,58,242,0.3);">&#43; ADICIONAR</button>
+        <div style="grid-column:span 2;display:flex;justify-content:flex-end;gap:8px;">
+          <button type="button" id="pa-btn-cancelar" onclick="progAtivEditCancelar()" style="display:none;padding:9px 18px;background:#f0f4f8;border:none;border-radius:10px;font-family:'Barlow',sans-serif;font-size:0.78rem;font-weight:800;color:#64748b;cursor:pointer;letter-spacing:0.5px;">CANCELAR</button>
+          <button type="button" id="pa-btn-add" onclick="progAtivAdicionar()" style="padding:9px 22px;background:linear-gradient(135deg,#7e3af2,#9f7aea);border:none;border-radius:10px;font-family:'Barlow',sans-serif;font-size:0.78rem;font-weight:800;color:#fff;cursor:pointer;letter-spacing:0.5px;box-shadow:0 4px 12px rgba(126,58,242,0.3);">&#43; ADICIONAR</button>
         </div>
       </div>
     </div>
@@ -4803,6 +4804,7 @@ const PROG_ATIV_CHAVE = 'prog_atividades';
 let PROG_ATIV_EXTRAS = [];
 let PROG_ATIV_OCULTAS = [];
 let PROG_ATIV_NA_TELA = [];   // o que a lista do gerenciador mostra agora
+let PROG_ATIV_EDIT = null;    // atividade em edicao: {chave, cod, editadaDe}
 let progAtivVerOcultas = false;
 
 function progAtivEsc(t){
@@ -4896,6 +4898,7 @@ const m = document.getElementById('prog-ativ-modal');
 if(!m) return;
 m.style.display = 'flex';
 progAtivFillTipos();
+progAtivEditCancelar(false);        // nunca abre no meio de uma edicao
 progAtivVerOcultas = false;
 progAtivRenderLista();
 const d = document.getElementById('pa-desc');
@@ -4957,10 +4960,35 @@ let tipo = tEl.value === '__novo__'
 const fk = progAtivNum((fEl && fEl.value) || '0');
 if(!desc){ progAtivToast('Escreva a descrição da atividade.','error'); dEl.focus(); return; }
 if(!tipo){ progAtivToast('Escolha o tipo do serviço.','error'); tEl.focus(); return; }
-const ja = PROG_ATIVIDADES.find(a => progNorm(a.descricao) === progNorm(desc) && progNorm(a.tipo) === progNorm(tipo));
+// ao editar, a propria atividade nao conta como duplicada
+const ja = PROG_ATIVIDADES.find(a => progNorm(a.descricao) === progNorm(desc) && progNorm(a.tipo) === progNorm(tipo)
+&& !(PROG_ATIV_EDIT && progAtivChave(a) === PROG_ATIV_EDIT.chave));
 if(ja){ progAtivToast('Essa atividade já está na lista.','error'); return; }
-const nova = { cod: progAtivNovoCod(), servico: 'SERVICOS_RUR-BA', tipo, descricao: desc, fatorK: fk, criadoPor: (window.MARIUA_USER || '').trim(), criadoEm: new Date().toISOString() };
+let nova;
+if(PROG_ATIV_EDIT){
+// A lista de fabrica nunca e alterada. Editar item de fabrica = esconder o
+// original e guardar a versao corrigida nos extras, mantendo o MESMO codigo
+// para que registro antigo continue apontando para a atividade certa.
+const orig = PROG_ATIV_EDIT;
+const iEx = PROG_ATIV_EXTRAS.findIndex(x => progAtivChave(x) === orig.chave);
+nova = {
+cod: orig.cod, servico: 'SERVICOS_RUR-BA', tipo, descricao: desc, fatorK: fk,
+editadaDe: orig.editadaDe || orig.chave,
+criadoPor: (window.MARIUA_USER || '').trim(), criadoEm: new Date().toISOString()
+};
+if(iEx >= 0){
+nova.criadoEm = PROG_ATIV_EXTRAS[iEx].criadoEm || nova.criadoEm;
+if(!PROG_ATIV_EXTRAS[iEx].editadaDe) delete nova.editadaDe;   // extra puro segue extra
+PROG_ATIV_EXTRAS[iEx] = nova;
+}else{
+if(PROG_ATIV_OCULTAS.indexOf(orig.chave) < 0) PROG_ATIV_OCULTAS.push(orig.chave);
 PROG_ATIV_EXTRAS.push(nova);
+}
+progAtivEditCancelar(true);
+}else{
+nova = { cod: progAtivNovoCod(), servico: 'SERVICOS_RUR-BA', tipo, descricao: desc, fatorK: fk, criadoPor: (window.MARIUA_USER || '').trim(), criadoEm: new Date().toISOString() };
+PROG_ATIV_EXTRAS.push(nova);
+}
 progAtivRecompor();
 progFillAtividades();
 progAtivFillTipos();
@@ -4971,9 +4999,59 @@ if(nEl){ nEl.value = ''; }
 tEl.value = tipo;
 progAtivTipoChange();
 dEl.focus();
-progAtivToast('Atividade adicionada: ' + nova.descricao,'success');
+progAtivToast('Atividade salva: ' + nova.descricao,'success');
 await progAtivSalvar();
 }
+
+// ===== EDITAR ATIVIDADE EXISTENTE =====
+// Reaproveita o formulario de cima: ele vira "salvar alteracao" enquanto
+// PROG_ATIV_EDIT estiver preenchido.
+function progAtivEditarIdx(i){
+const a = PROG_ATIV_NA_TELA[i];
+if(!a) return;
+PROG_ATIV_EDIT = { chave: progAtivChave(a), cod: a.cod, editadaDe: a.editadaDe || '' };
+const dEl = document.getElementById('pa-desc');
+const tEl = document.getElementById('pa-tipo');
+const fEl = document.getElementById('pa-fk');
+if(dEl) dEl.value = a.descricao || '';
+if(tEl){
+progAtivFillTipos();
+const tem = Array.from(tEl.options).some(o => o.value === a.tipo);
+if(!tem && a.tipo) tEl.innerHTML = '<option value="' + progAtivEsc(a.tipo) + '">' + progAtivEsc(a.tipo) + '</option>' + tEl.innerHTML;
+tEl.value = a.tipo || '';
+progAtivTipoChange();
+}
+const fk = Number(a.fatorK) || 0;
+if(fEl) fEl.value = fk > 0 ? fk.toLocaleString('pt-BR',{minimumFractionDigits:2}) : '';
+progAtivModoEdicao(true, a);
+if(dEl){ dEl.focus(); dEl.select(); }
+const m = document.getElementById('prog-ativ-modal');
+if(m) m.scrollTop = 0;
+}
+function progAtivEditCancelar(silencioso){
+PROG_ATIV_EDIT = null;
+const dEl = document.getElementById('pa-desc');
+const fEl = document.getElementById('pa-fk');
+if(!silencioso){
+if(dEl) dEl.value = '';
+if(fEl) fEl.value = '';
+}
+progAtivModoEdicao(false);
+if(!silencioso) progAtivRenderLista();
+}
+// Troca os rotulos para o usuario saber que esta alterando, nao criando.
+function progAtivModoEdicao(ligado, a){
+const tit = document.getElementById('pa-titulo-form');
+const bt  = document.getElementById('pa-btn-add');
+const bc  = document.getElementById('pa-btn-cancelar');
+if(tit) tit.textContent = ligado ? ('EDITANDO: ' + ((a && a.cod) || '')) : 'ADICIONAR ATIVIDADE';
+if(tit) tit.style.color = ligado ? '#2b6cb0' : '#7e3af2';
+if(bt)  bt.innerHTML = ligado ? '&#128190; SALVAR ALTERAÇÃO' : '&#43; ADICIONAR';
+if(bt)  bt.style.background = ligado ? 'linear-gradient(135deg,#2b6cb0,#4299e1)' : 'linear-gradient(135deg,#7e3af2,#9f7aea)';
+if(bc)  bc.style.display = ligado ? 'inline-block' : 'none';
+}
+window.progAtivEditarIdx = progAtivEditarIdx;
+window.progAtivEditCancelar = progAtivEditCancelar;
 
 // Retirar: se foi o usuario que criou, sai da lista de extras. Se e da lista de
 // fabrica, vai para as retiradas e pode voltar depois.
@@ -5084,17 +5162,18 @@ const chave = progAtivChave(a);
 const meu = !!extras[chave];
 const fk = Number(a.fatorK) || 0;
 const idx = PROG_ATIV_NA_TELA.push(a) - 1;
+const btnEditar = '<button type="button" onclick="progAtivEditarIdx(' + idx + ')" title="Editar descrição, tipo e fator K" style="flex-shrink:0;padding:5px 11px;background:rgba(43,108,176,0.1);border:1px solid rgba(43,108,176,0.35);border-radius:8px;font-family:\'Barlow\',sans-serif;font-size:0.65rem;font-weight:800;color:#2b6cb0;cursor:pointer;">&#9998; EDITAR</button>';
 const acao = progAtivVerOcultas
 ? '<button type="button" onclick="progAtivDevolverIdx(' + idx + ')" title="Devolver à lista" style="flex-shrink:0;padding:5px 11px;background:rgba(13,115,119,0.1);border:1px solid rgba(13,115,119,0.35);border-radius:8px;font-family:\'Barlow\',sans-serif;font-size:0.65rem;font-weight:800;color:#0d7377;cursor:pointer;">\u21ba DEVOLVER</button>'
 : '<button type="button" onclick="progAtivRetirarIdx(' + idx + ')" title="Retirar da lista" style="flex-shrink:0;padding:5px 11px;background:#fff5f5;border:1px solid #fed7d7;border-radius:8px;font-family:\'Barlow\',sans-serif;font-size:0.65rem;font-weight:800;color:#c53030;cursor:pointer;">&#128465; RETIRAR</button>';
 html += '<div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid #e8ecef;border-radius:10px;margin-bottom:6px;background:' + (meu ? 'rgba(126,58,242,0.04)' : '#fff') + ';">' +
 '<div style="flex:1;min-width:0;">' +
 '<div style="font-size:0.78rem;font-weight:800;color:#1a365d;line-height:1.25;">' + progAtivEsc(a.descricao) +
-(meu ? ' <span style="font-size:0.58rem;font-weight:900;color:#7e3af2;background:rgba(126,58,242,0.12);padding:1px 6px;border-radius:20px;vertical-align:middle;">NOVA</span>' : '') +
+(meu ? ' <span style="font-size:0.58rem;font-weight:900;color:' + (a.editadaDe ? '#2b6cb0' : '#7e3af2') + ';background:' + (a.editadaDe ? 'rgba(43,108,176,0.12)' : 'rgba(126,58,242,0.12)') + ';padding:1px 6px;border-radius:20px;vertical-align:middle;">' + (a.editadaDe ? 'EDITADA' : 'NOVA') + '</span>' : '') +
 '</div>' +
 '<div style="font-size:0.66rem;font-weight:600;color:#94a3b8;margin-top:2px;">' + progAtivEsc(a.cod) +
 ' · Fator K ' + (fk > 0 ? 'R$ ' + fk.toLocaleString('pt-BR',{minimumFractionDigits:2}) : '—') + '</div>' +
-'</div>' + acao + '</div>';
+'</div>' + (progAtivVerOcultas ? '' : btnEditar) + acao + '</div>';
 });
 box.innerHTML = html;
 }
@@ -5722,6 +5801,11 @@ function progLogoMariua(){
 const img = document.querySelector('.top-bar-logo');
 return (img && img.src) ? img.src : '';
 }
+// O cadastro guarda "ZAIQUE SILVA LIMA - 27547". A matricula e controle
+// interno: no relatorio do cliente ela so rouba largura da coluna.
+function progLayoutNome(v){
+return String(v||'').replace(/\s*-\s*U?\d{3,}\s*$/i, '').trim();
+}
 function progDataBR(iso){
 const p = String(iso||'').split('-');
 return p.length === 3 ? (p[2] + '/' + p[1] + '/' + p[0]) : String(iso||'');
@@ -5804,12 +5888,12 @@ const troca = supAnt !== null && r.supervisor !== supAnt;
 supAnt = r.supervisor;
 return '<tr' + (troca ? ' class="sep"' : '') + '>' +
 '<td class="nw">' + progDataBR(r.data) + '</td>' +
-'<td class="nw">' + cel(r.supervisor) + '</td>' +
-'<td class="nw">' + cel(r.encarregado) + '</td>' +
+'<td>' + cel(progLayoutNome(r.supervisor)) + '</td>' +
+'<td>' + cel(progLayoutNome(r.encarregado)) + '</td>' +
 '<td>' + cel(r.qtd_colab) + '</td>' +
 '<td>' + cel(r.alojados) + '</td>' +
 '<td class="obra">' + cel(r.nome_obra) + '</td>' +
-'<td class="nw">' + cel(r.municipio) + '</td>' +
+'<td>' + cel(r.municipio) + '</td>' +
 '<td class="nw pep">' + cel(r.pep) + '</td>' +
 '<td>' + cel(r.ar_coelba) + '</td>' +
 '<td class="ativ">' + cel(r.atividade) + '</td>' +
@@ -5839,7 +5923,7 @@ const doc = '<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8">' +
 '.wrap{padding:10px 12px 14px;overflow-x:auto}' +
 'table{width:100%;border-collapse:collapse;font-size:.6rem;table-layout:fixed}' +
 'th{background:#2f9c96;color:#fff;font-weight:800;font-size:.58rem;letter-spacing:.3px;padding:5px 3px;text-align:center;border:1px solid #1f6f6b}' +
-'td{border:1px solid #64748b;padding:3px 4px;text-align:center;font-weight:600;vertical-align:middle;word-wrap:break-word}' +
+'td{border:1px solid #64748b;padding:3px 4px;text-align:center;font-weight:600;vertical-align:middle;word-wrap:break-word;overflow-wrap:anywhere;overflow:hidden}' +
 'tr.sep td{border-top:2px solid #1a365d}' +
 'td.nw{white-space:nowrap}' +
 'td.obra,td.ativ{font-weight:700}' +
@@ -5877,8 +5961,8 @@ const doc = '<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8">' +
 '</div>' +
 '<div class="wrap"><table>' +
 '<colgroup>' +
-'<col style="width:6.5%"><col style="width:7.5%"><col style="width:9%"><col style="width:4.5%"><col style="width:4.5%">' +
-'<col style="width:20%"><col style="width:8%"><col style="width:6.5%"><col style="width:15%"><col style="width:18%">' +
+'<col style="width:6%"><col style="width:10%"><col style="width:11%"><col style="width:4%"><col style="width:4.5%">' +
+'<col style="width:18%"><col style="width:7.5%"><col style="width:6.5%"><col style="width:14%"><col style="width:18.5%">' +
 '</colgroup>' +
 '<thead><tr>' +
 '<th>DATA</th><th>SUPERVISOR</th><th>ENCARREGADO</th><th>QTD COLAB.</th><th>ALOJADOS</th>' +
