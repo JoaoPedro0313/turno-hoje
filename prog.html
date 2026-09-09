@@ -307,7 +307,7 @@ const PROG_ATIVIDADES_BASE = PROG_ATIVIDADES.slice();
 
   <div class="_s26">
     <div style="grid-column:span 2;">
-      <label class="_s1">PEP OBRA * <span id="pf-obras-fonte" style="font-weight:600;color:#94a3b8;text-transform:none;letter-spacing:0;"></span></label>
+      <label class="_s1">PEP OBRA * <span id="pf-obras-fonte" style="font-weight:600;color:#94a3b8;text-transform:none;letter-spacing:0;"></span> <button type="button" onclick="progMesAbrir()" title="Cadastrar o mês novo da carteira do Mapa" style="background:none;border:none;padding:0 2px;font-family:'Barlow',sans-serif;font-size:0.66rem;font-weight:800;color:#7e3af2;cursor:pointer;text-transform:none;letter-spacing:0;text-decoration:underline;">＋ mês da carteira</button></label>
       <div style="position:relative;">
         <input type="text" id="pf-pep-input" placeholder="Digite PEP ou nome da obra..." autocomplete="off"
           style="width:100%;padding:9px 12px;border:1.5px solid #e0e8f0;border-radius:9px;font-family:'Barlow',sans-serif;font-size:0.82rem;font-weight:700;color:#1a365d;outline:none;box-sizing:border-box;"
@@ -4401,7 +4401,7 @@ if(m.urlSerrinha){ const r2 = progRefDeUrl(m.urlSerrinha); if(r2){ r2.rotulo = r
 if(!refs.length) return null;
 const novo = String(meses[0].mes).padStart(2,'0') + '/' + meses[0].ano;
 const velho = String(meses[meses.length-1].mes).padStart(2,'0') + '/' + meses[meses.length-1].ano;
-return { refs, rotulo: meses.length > 1 ? (velho + ' a ' + novo) : novo, fonte:'mapa' };
+return { refs, rotulo: meses.length > 1 ? (velho + ' a ' + novo) : novo, fonte:'mapa', ultimoAno:meses[0].ano, ultimoMes:meses[0].mes };
 }
 // Abas do mes mais recente cadastradas na tela de Estagios.
 async function progRefsDosEstagios(){
@@ -4418,15 +4418,27 @@ doMes.forEach(r => refs.push({ id:r.id, gid:r.gid, rotulo:rot }));
 if(!refs.length) return null;
 const novo = String(meses[0].mes).padStart(2,'0') + '/' + meses[0].ano;
 const velho = String(meses[meses.length-1].mes).padStart(2,'0') + '/' + meses[meses.length-1].ano;
-return { refs, rotulo: meses.length > 1 ? (velho + ' a ' + novo) : novo, fonte:'estágios' };
+return { refs, rotulo: meses.length > 1 ? (velho + ' a ' + novo) : novo, fonte:'estágios', ultimoAno:meses[0].ano, ultimoMes:meses[0].mes };
 }
 let PROG_ABAS_FALHAS = 0;
+// Guarda quanto veio de cada aba. Serve para conferir contra a planilha: se a
+// aba tem 120 obras e aqui chegaram 120, nenhum filtro atrapalhou a leitura.
+let PROG_ABAS_DETALHE = '';
 async function progLerAbas(refs){
 PROG_ABAS_FALHAS = 0;
+const detalhe = [];
 const partes = await Promise.all(refs.map(async ref => {
-try{ return progObrasDaAba(await progGviz(ref.id, ref.gid)); }
-catch(e){ PROG_ABAS_FALHAS++; console.warn('[prog] obras: falhou a aba ' + (ref.rotulo||ref.gid) + ' — ' + e.message); return []; }
+try{
+const json = await progGviz(ref.id, ref.gid);
+const brutas = ((json && json.table) || {}).rows || [];
+const obras = progObrasDaAba(json);
+detalhe.push((ref.rotulo || ('gid ' + ref.gid)) + ': ' + obras.length + ' obras de ' + brutas.length + ' linhas');
+return obras;
+}
+catch(e){ PROG_ABAS_FALHAS++; detalhe.push((ref.rotulo || ('gid ' + ref.gid)) + ': NÃO ABRIU'); console.warn('[prog] obras: falhou a aba ' + (ref.rotulo||ref.gid) + ' — ' + e.message); return []; }
 }));
+PROG_ABAS_DETALHE = detalhe.join('\n');
+console.info('[prog] leitura por aba:\n' + PROG_ABAS_DETALHE);
 // Mesmo PEP em duas abas: fica o registro da aba mais nova (as refs vem
 // ordenadas do mes mais novo para o mais velho) e os campos vazios dele
 // sao preenchidos pelo que a aba antiga tinha.
@@ -4478,7 +4490,16 @@ novaDaBase++;
 lista.sort((a,b) => (a.titulo||a.pep).localeCompare(b.titulo||b.pep));
 PROG_OBRAS_VIVAS = lista;
 const semAr = lista.filter(o => !o.ar).length;
-PROG_OBRAS_FONTE = lista.length + ' obras · ' + daPlanilha + ' de ' + origem.rotulo + ' (' + origem.fonte + ')' +
+// Aviso que faltava: se a aba mais nova conhecida for de um mes ja passado, as
+// obras abertas depois disso nao existem em lugar nenhum que o sistema leia.
+let atraso = '';
+if(origem.ultimoAno){
+const h = new Date(), hAno = h.getFullYear(), hMes = h.getMonth() + 1;
+const meses = (hAno - origem.ultimoAno) * 12 + (hMes - origem.ultimoMes);
+if(meses > 0) atraso = ' · ⚠️ a aba mais nova é de ' + String(origem.ultimoMes).padStart(2,'0') + '/' + origem.ultimoAno +
+' — faltam ' + meses + (meses === 1 ? ' mês' : ' meses') + '. Clique em "＋ mês da carteira"';
+}
+PROG_OBRAS_FONTE = lista.length + ' obras · ' + daPlanilha + ' de ' + origem.rotulo + ' (' + origem.fonte + ')' + atraso +
 (novaDaBase ? ' · ' + novaDaBase + ' só na base' : '') +
 (campoDaBase ? ' · ' + campoDaBase + ' completadas' : '') +
 (semAr ? ' · ' + semAr + ' sem AR' : '') +
@@ -4488,7 +4509,12 @@ progMostrarFonteObras();
 }
 function progMostrarFonteObras(){
 const el = document.getElementById('pf-obras-fonte');
-if(el) el.textContent = PROG_OBRAS_FONTE;
+if(!el) return;
+el.textContent = PROG_OBRAS_FONTE;
+el.style.cursor = PROG_ABAS_DETALHE ? 'help' : '';
+el.title = PROG_ABAS_DETALHE
+? ('Linhas lidas em cada aba — compare com a planilha:\n' + PROG_ABAS_DETALHE)
+: '';
 }
 // A busca usa a lista das planilhas quando ela existe.
 function progListaObras(){
@@ -6160,5 +6186,121 @@ window.postoFiltro   = postoFiltro;
 </script>
 <script src="identidade.js?v=3"></script>
 <script>window.addEventListener("load",function(){var _t=window.smToggle;if(typeof _t==="function"){window.smToggle=function(){_t();try{localStorage.setItem("mariua_menu",document.body.classList.contains("sm-collapsed")?"recolhido":"aberto");}catch(e){}};}});</script>
+<div id="prog-mes-modal" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,.55);z-index:900;align-items:center;justify-content:center;padding:16px;">
+  <div style="background:#fff;border-radius:14px;max-width:520px;width:100%;max-height:92vh;overflow-y:auto;box-shadow:0 18px 50px rgba(0,0,0,.3);">
+    <div style="background:linear-gradient(135deg,#1a365d,#2b6cb0);color:#fff;padding:14px 18px;border-radius:14px 14px 0 0;">
+      <div style="font-size:.92rem;font-weight:800;letter-spacing:.4px;">MÊS NOVO DA CARTEIRA</div>
+      <div style="font-size:.68rem;font-weight:600;opacity:.9;margin-top:2px;">Cole o endereço da aba do mês. O sistema guarda no banco e todas as telas passam a ler.</div>
+    </div>
+    <div style="padding:16px 18px;">
+      <div style="display:flex;gap:10px;margin-bottom:12px;">
+        <div style="flex:1;"><label style="font-size:.66rem;font-weight:800;color:#64748b;letter-spacing:.4px;">MÊS</label>
+          <select id="pm-mes" style="width:100%;padding:8px 9px;border:1.5px solid #e2e8f0;border-radius:8px;font-family:'Barlow',sans-serif;font-size:.8rem;font-weight:700;color:#1a365d;"></select></div>
+        <div style="flex:1;"><label style="font-size:.66rem;font-weight:800;color:#64748b;letter-spacing:.4px;">ANO</label>
+          <input id="pm-ano" type="number" min="2024" max="2099" style="width:100%;padding:8px 9px;border:1.5px solid #e2e8f0;border-radius:8px;font-family:'Barlow',sans-serif;font-size:.8rem;font-weight:700;color:#1a365d;"></div>
+      </div>
+      <label style="font-size:.66rem;font-weight:800;color:#64748b;letter-spacing:.4px;">ABA DE JACOBINA</label>
+      <input id="pm-jac" type="text" placeholder="https://docs.google.com/spreadsheets/d/.../edit#gid=123456" style="width:100%;padding:8px 9px;margin-bottom:10px;border:1.5px solid #e2e8f0;border-radius:8px;font-family:'Barlow',sans-serif;font-size:.74rem;box-sizing:border-box;">
+      <label style="font-size:.66rem;font-weight:800;color:#64748b;letter-spacing:.4px;">ABA DE IRECÊ</label>
+      <input id="pm-irc" type="text" placeholder="cole aqui o endereço da aba do mesmo mês" style="width:100%;padding:8px 9px;margin-bottom:10px;border:1.5px solid #e2e8f0;border-radius:8px;font-family:'Barlow',sans-serif;font-size:.74rem;box-sizing:border-box;">
+      <label style="font-size:.66rem;font-weight:800;color:#64748b;letter-spacing:.4px;">ABA DE SERRINHA <span style="font-weight:600;text-transform:none;">(opcional)</span></label>
+      <input id="pm-ser" type="text" placeholder="deixe vazio se não usa" style="width:100%;padding:8px 9px;border:1.5px solid #e2e8f0;border-radius:8px;font-family:'Barlow',sans-serif;font-size:.74rem;box-sizing:border-box;">
+      <div style="font-size:.66rem;color:#94a3b8;margin-top:8px;line-height:1.4;">Para pegar o endereço: abra a planilha do Mapa, clique na aba do mês e copie a barra de endereço do navegador. O trecho <b>#gid=</b> no fim é o que identifica a aba.</div>
+      <div id="pm-msg" style="font-size:.7rem;font-weight:700;margin-top:10px;"></div>
+      <div id="pm-lista" style="font-size:.68rem;color:#64748b;font-weight:700;margin-top:10px;"></div>
+      <div style="display:flex;gap:8px;margin-top:14px;">
+        <button onclick="progMesSalvar()" style="flex:1;padding:10px;background:#276749;border:none;border-radius:9px;font-family:'Barlow',sans-serif;font-size:.78rem;font-weight:800;color:#fff;cursor:pointer;letter-spacing:.4px;">SALVAR E RECARREGAR</button>
+        <button onclick="progMesFechar()" style="padding:10px 16px;background:#e2e8f0;border:none;border-radius:9px;font-family:'Barlow',sans-serif;font-size:.78rem;font-weight:800;color:#475569;cursor:pointer;">FECHAR</button>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+// ===== MESES NOVOS DA CARTEIRA =====
+// A lista PROG_MAPA_MESES e fixa no codigo e envelhece: quando o Mapa abre a aba
+// de um mes novo, ninguem avisa o sistema e as obras novas simplesmente nao
+// aparecem. Aqui o proprio programador cadastra o mes, direto na tela.
+var PROG_MES_NOMES = ['JANEIRO','FEVEREIRO','MARÇO','ABRIL','MAIO','JUNHO','JULHO','AGOSTO','SETEMBRO','OUTUBRO','NOVEMBRO','DEZEMBRO'];
+function progMesMsg(t, cor){ var el = document.getElementById('pm-msg'); if(el){ el.textContent = t || ''; el.style.color = cor || '#64748b'; } }
+async function progMesAbrir(){
+var m = document.getElementById('prog-mes-modal');
+if(!m) return;
+var hoje = new Date();
+var sel = document.getElementById('pm-mes');
+if(sel && !sel.options.length){
+for(var i = 0; i < 12; i++){ sel.innerHTML += '<option value="' + (i+1) + '">' + PROG_MES_NOMES[i] + '</option>'; }
+}
+if(sel) sel.value = String(hoje.getMonth() + 1);
+document.getElementById('pm-ano').value = hoje.getFullYear();
+progMesMsg('');
+m.style.display = 'flex';
+progMesListar();
+}
+function progMesFechar(){ var m = document.getElementById('prog-mes-modal'); if(m) m.style.display = 'none'; }
+// Mostra o que ja esta cadastrado, para nao duplicar nem ficar no escuro.
+async function progMesListar(){
+var el = document.getElementById('pm-lista');
+if(el) el.textContent = 'Conferindo os meses já cadastrados...';
+var meses = (typeof PROG_MAPA_MESES !== 'undefined') ? PROG_MAPA_MESES.slice() : [];
+try{
+var v = await progChave('meses_extras');
+var extras = Array.isArray(v) ? v : ((v && Array.isArray(v.data)) ? v.data : ((v && Array.isArray(v.meses)) ? v.meses : []));
+extras.forEach(function(e){
+var ja = meses.find(function(m){ return m.ano === e.ano && m.mes === e.mes; });
+if(ja) Object.assign(ja, e); else meses.push(e);
+});
+}catch(err){}
+meses.sort(function(a,b){ return a.ano !== b.ano ? a.ano - b.ano : a.mes - b.mes; });
+if(el) el.textContent = meses.length
+? ('Já cadastrados: ' + meses.map(function(m){ return String(m.mes).padStart(2,'0') + '/' + m.ano; }).join(' · '))
+: 'Nenhum mês cadastrado ainda.';
+}
+async function progMesSalvar(){
+var ano = parseInt(document.getElementById('pm-ano').value) || 0;
+var mes = parseInt(document.getElementById('pm-mes').value) || 0;
+if(ano < 2024 || mes < 1 || mes > 12){ progMesMsg('❌ Confira o mês e o ano.', '#c53030'); return; }
+var rJac = progRefDeUrl(document.getElementById('pm-jac').value);
+var rIrc = progRefDeUrl(document.getElementById('pm-irc').value);
+var serTxt = document.getElementById('pm-ser').value.trim();
+var rSer = serTxt ? progRefDeUrl(serTxt) : null;
+if(!rJac && !rIrc && !rSer){ progMesMsg('❌ Cole ao menos um endereço de aba. Preciso do trecho /d/... e do #gid=...', '#c53030'); return; }
+// URL sem #gid= aponta para a primeira aba da planilha, nao para o mes: recusa.
+if(rJac && rJac.gid === '0' && document.getElementById('pm-jac').value.indexOf('gid=') < 0){
+progMesMsg('❌ O endereço de Jacobina está sem #gid=. Clique na aba do mês antes de copiar.', '#c53030'); return;
+}
+if(rIrc && rIrc.gid === '0' && document.getElementById('pm-irc').value.indexOf('gid=') < 0){
+progMesMsg('❌ O endereço de Irecê está sem #gid=. Clique na aba do mês antes de copiar.', '#c53030'); return;
+}
+var novo = { ano: ano, mes: mes };
+if(rJac) novo.gidJacobina = rJac.gid;
+if(rIrc) novo.gidIrece = rIrc.gid;
+if(rSer) novo.urlSerrinha = serTxt;
+progMesMsg('⏳ Salvando no banco...', '#2b6cb0');
+try{
+var v = await progChave('meses_extras');
+var extras = Array.isArray(v) ? v : ((v && Array.isArray(v.data)) ? v.data : ((v && Array.isArray(v.meses)) ? v.meses : []));
+var i = extras.findIndex(function(e){ return e.ano === ano && e.mes === mes; });
+if(i >= 0) extras[i] = Object.assign({}, extras[i], novo); else extras.push(novo);
+var res = await fetch(SUPA_URL + '/rest/v1/turno_data', {
+method: 'POST',
+headers: Object.assign({}, SUPA_HEADERS, { 'Prefer': 'resolution=merge-duplicates' }),
+body: JSON.stringify({ key: 'meses_extras', value: extras, updated_at: new Date().toISOString() })
+});
+if(!res.ok) throw new Error('HTTP ' + res.status);
+progMesMsg('✅ ' + String(mes).padStart(2,'0') + '/' + ano + ' cadastrado. Recarregando as obras...', '#276749');
+await progCarregarObras();
+progMesListar();
+setTimeout(function(){
+progMesMsg('✅ Pronto: ' + (PROG_OBRAS_FONTE || 'obras recarregadas'), '#276749');
+}, 300);
+}catch(err){
+progMesMsg('❌ Não salvou: ' + err.message + '. Confira a conexão com o banco.', '#c53030');
+}
+}
+window.progMesAbrir  = progMesAbrir;
+window.progMesFechar = progMesFechar;
+window.progMesSalvar = progMesSalvar;
+</script>
+
 </body>
 </html>
