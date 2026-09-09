@@ -275,9 +275,13 @@ const PROG_ATIVIDADES_BASE = PROG_ATIVIDADES.slice();
     </div>
     <div>
       <label class="_s1">SUPERVISOR *</label>
-      <select id="pf-supervisor" onchange="progOnSupChange()" class="_s6" onfocus="this.style.borderColor='#7e3af2'" onblur="this.style.borderColor='#e0e8f0'">
-        <option value="">Selecione...</option>
-      </select>
+      <div id="pf-sup-box" style="position:relative;">
+        <input type="text" id="pf-sup-busca" autocomplete="off" placeholder="Digite ou escolha..." class="_s6"
+          oninput="progPessoaBuscar('sup')" onfocus="progPessoaBuscar('sup')" onkeydown="progPessoaTecla(event,'sup')"
+          onblur="this.style.borderColor='#e0e8f0'">
+        <div id="pf-sup-dd" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:1.5px solid #7e3af2;border-radius:9px;max-height:250px;overflow-y:auto;z-index:60;box-shadow:0 8px 24px rgba(0,0,0,0.15);margin-top:3px;"></div>
+        <input type="hidden" id="pf-supervisor">
+      </div>
     </div>
     <div>
       <label class="_s1">PROGRAMADOR(A) *</label>
@@ -287,9 +291,13 @@ const PROG_ATIVIDADES_BASE = PROG_ATIVIDADES.slice();
     </div>
     <div>
       <label class="_s1">ENCARREGADO *</label>
-      <select id="pf-encarregado" onchange="progOnEncChange()" class="_s6" onfocus="this.style.borderColor='#7e3af2'" onblur="this.style.borderColor='#e0e8f0'">
-        <option value="">Selecione...</option>
-      </select>
+      <div id="pf-enc-box" style="position:relative;">
+        <input type="text" id="pf-enc-busca" autocomplete="off" placeholder="Digite o nome ou a matrícula..." class="_s6"
+          oninput="progPessoaBuscar('enc')" onfocus="progPessoaBuscar('enc')" onkeydown="progPessoaTecla(event,'enc')"
+          onblur="this.style.borderColor='#e0e8f0'">
+        <div id="pf-enc-dd" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:1.5px solid #7e3af2;border-radius:9px;max-height:250px;overflow-y:auto;z-index:60;box-shadow:0 8px 24px rgba(0,0,0,0.15);margin-top:3px;"></div>
+        <input type="hidden" id="pf-encarregado">
+      </div>
     </div>
     <div>
       <label class="_s1">QTD COLABORADORES <span id="pf-qtd-fonte" style="font-weight:600;color:#94a3b8;text-transform:none;letter-spacing:0;"></span></label>
@@ -479,7 +487,7 @@ const PROG_ATIVIDADES_BASE = PROG_ATIVIDADES.slice();
     </select>
     <input type="date" id="prog-cli-data" title="Dia da programação que vai para o cliente" style="padding:8px 10px;border:1.5px solid #e0e8f0;border-radius:9px;font-family:'Barlow',sans-serif;font-size:0.78rem;font-weight:700;color:#1a365d;background:#fff;outline:none;" onfocus="this.style.borderColor='#7e3af2'" onblur="this.style.borderColor='#e0e8f0'">
     <button onclick="progLayoutCliente()" title="Folha A4 com a logo da Mariuá para mandar ao cliente" style="padding:9px 16px;background:linear-gradient(135deg,#1a365d,#2b6cb0);border:none;border-radius:9px;font-family:'Barlow',sans-serif;font-size:0.75rem;font-weight:800;color:#fff;cursor:pointer;letter-spacing:0.5px;">📤 CLIENTE</button>
-    <button onclick="progExportCSV()" style="padding:9px 16px;background:#276749;border:none;border-radius:9px;font-family:'Barlow',sans-serif;font-size:0.75rem;font-weight:800;color:#fff;cursor:pointer;letter-spacing:0.5px;">⬇️ CSV</button>
+    <button onclick="progExportCSV()" style="padding:9px 16px;background:#276749;border:none;border-radius:9px;font-family:'Barlow',sans-serif;font-size:0.75rem;font-weight:800;color:#fff;cursor:pointer;letter-spacing:0.5px;">⬇️ EXCEL</button>
     <span id="prog-list-count" style="font-size:0.72rem;font-weight:800;color:#888;white-space:nowrap;"></span>
   </div>
   <div style="background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,0.1);">
@@ -4145,27 +4153,20 @@ if (typeof mapaProgRender==='function') mapaProgRender();
 // So os selects de gente: supervisor, filtro de supervisor e encarregado.
 // Preserva o que estava escolhido, para nao apagar o formulario em preenchimento.
 function progRemontarSelectsPessoas() {
-const selSup = document.getElementById('pf-supervisor');
+// Supervisor e encarregado viraram campo de busca: aqui so o filtro da lista
+// continua sendo um <select> de verdade.
 const filterSup = document.getElementById('prog-filter-sup');
-const selEnc = document.getElementById('pf-encarregado');
-const supSel = selSup ? selSup.value : '';
-const encSel = selEnc ? selEnc.value : '';
-const filtroSel = filterSup ? filterSup.value : '';
-if (selSup) {
-  selSup.innerHTML = '<option value="">Selecione...</option>';
-  if (filterSup) filterSup.innerHTML = '<option value="">Todos Supervisores</option>';
-  progSupervisoresLista().forEach(s => {
-    selSup.innerHTML += `<option value="${s}">${s}</option>`;
-    if (filterSup) filterSup.innerHTML += `<option value="${s}">${s}</option>`;
-  });
-  selSup.value = supSel;
-  if (filterSup) filterSup.value = filtroSel;
+if (filterSup) {
+const filtroSel = filterSup.value;
+filterSup.innerHTML = '<option value="">Todos Supervisores</option>';
+progSupervisoresLista().forEach(sup => {
+filterSup.innerHTML += `<option value="${sup}">${sup}</option>`;
+});
+filterSup.value = filtroSel;
 }
-progFillEncarregados(supSel);
-if (selEnc && encSel) {
-  selEnc.value = encSel;
-  if (selEnc.value === encSel) progOnEncChange();   // so se o encarregado ainda existe
-}
+progPessoaRender();
+const enc = (document.getElementById('pf-encarregado') || {}).value;
+if (enc) progOnEncChange();
 }
 function progFillSelects() {
 progRemontarSelectsPessoas();
@@ -4186,21 +4187,158 @@ progDataHoje();
 progCarregarObras();
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') progDataHoje(); });
 }
+let PROG_ENC_FILTRO = '';
+// Antes montava os <option>. Agora so guarda por qual supervisor a busca de
+// encarregado deve filtrar.
 function progFillEncarregados(supervisor) {
-const sel = document.getElementById('pf-encarregado');
-if (!sel) return;
-sel.innerHTML = '<option value="">Selecione...</option>';
-const mapaEnc = progEncarregadosMapa();
-Object.keys(mapaEnc).sort().forEach(enc => {
-if (!supervisor || progNorm(mapaEnc[enc].supervisor) === progNorm(supervisor)) {
-sel.innerHTML += `<option value="${enc}">${enc}</option>`;
-}
-});
+PROG_ENC_FILTRO = supervisor || '';
 }
 function progOnSupChange() {
-const sup = document.getElementById('pf-supervisor').value;
+const sup = (document.getElementById('pf-supervisor') || {}).value || '';
 progFillEncarregados(sup);
+// Encarregado que nao pertence ao supervisor escolhido sai do campo, senao
+// ficaria uma dupla que nao existe.
+const encEl = document.getElementById('pf-encarregado');
+if (sup && encEl && encEl.value) {
+const m = progEncarregadosMapa()[encEl.value];
+if (m && progNorm(m.supervisor) !== progNorm(sup)) { encEl.value = ''; }
 }
+progPessoaRender();
+}
+// ===== SUPERVISOR E ENCARREGADO: CAMPO DE BUSCA =====
+// Eram dois <select>. Com dezenas de turmas, achar o encarregado na lista
+// suspensa e lento no celular. Agora digita parte do nome ou a matricula.
+// Os ids pf-supervisor e pf-encarregado continuam existindo como hidden, com
+// o mesmo .value de antes, entao salvar, editar e exportar nao mudaram.
+let PROG_PESSOA_ACHADAS = { sup: [], enc: [] };
+
+function progPessoaEl(qual, o){
+return document.getElementById('pf-' + (qual === 'sup' ? 'sup' : 'enc') + '-' + o);
+}
+function progPessoaValor(qual){
+const el = document.getElementById(qual === 'sup' ? 'pf-supervisor' : 'pf-encarregado');
+return el ? (el.value || '') : '';
+}
+// Mostra no campo visivel o que esta guardado no hidden.
+function progPessoaRender(){
+['sup','enc'].forEach(qual => {
+const busca = progPessoaEl(qual, 'busca');
+if(!busca) return;
+const v = progPessoaValor(qual);
+if(document.activeElement === busca) return;   // nao atropela quem esta digitando
+if(qual === 'enc' && v){
+const m = progEncarregadosMapa()[v];
+busca.value = v + (m && m.matricula ? ' · ' + m.matricula : '');
+}else{
+busca.value = v;
+}
+busca.style.color = v ? '#1a365d' : '';
+busca.style.fontWeight = v ? '800' : '';
+});
+}
+function progPessoaBuscar(qual){
+const dd = progPessoaEl(qual, 'dd');
+const busca = progPessoaEl(qual, 'busca');
+if(!dd || !busca) return;
+// Texto igual ao que ja esta escolhido conta como campo vazio: abre a lista
+// inteira em vez de mostrar so a propria escolha.
+const escolhido = progPessoaValor(qual);
+let txt = busca.value;
+if(escolhido && progNorm(txt).indexOf(progNorm(escolhido)) === 0) txt = '';
+const q = progNorm(txt);
+
+let itens;
+if(qual === 'sup'){
+itens = progSupervisoresLista().map(nome => ({ nome, sub: '' }));
+}else{
+const mapa = progEncarregadosMapa();
+itens = Object.keys(mapa).sort().map(nome => ({
+nome,
+sub: [mapa[nome].matricula, mapa[nome].supervisor].filter(Boolean).join(' · '),
+supervisor: mapa[nome].supervisor || '',
+matricula: mapa[nome].matricula || ''
+}));
+// Supervisor escolhido primeiro: a turma dele em cima, o resto embaixo.
+if(PROG_ENC_FILTRO){
+const dele = itens.filter(i => progNorm(i.supervisor) === progNorm(PROG_ENC_FILTRO));
+const outros = itens.filter(i => progNorm(i.supervisor) !== progNorm(PROG_ENC_FILTRO));
+itens = dele.concat(outros.map(i => Object.assign({}, i, { fora: true })));
+}
+}
+if(q) itens = itens.filter(i => progNorm(i.nome).includes(q) || progNorm(i.sub).includes(q));
+PROG_PESSOA_ACHADAS[qual] = itens.slice(0, 60);
+
+if(!PROG_PESSOA_ACHADAS[qual].length){
+dd.innerHTML = '<div style="padding:10px 12px;font-size:0.7rem;font-weight:700;color:#94a3b8;">Ninguém com "' +
+progAtivEsc(busca.value) + '". Confira em ⚙ no cadastro de equipes.</div>';
+dd.style.display = 'block';
+return;
+}
+let sepPosto = false;
+dd.innerHTML = PROG_PESSOA_ACHADAS[qual].map((i,ix) => {
+let cab = '';
+if(i.fora && !sepPosto){
+sepPosto = true;
+cab = '<div style="padding:5px 12px;background:#fff7ed;font-size:0.6rem;font-weight:900;color:#b7791f;letter-spacing:0.4px;">DE OUTRO SUPERVISOR</div>';
+}
+return cab + '<div onclick="progPessoaEscolher(\'' + qual + '\',' + ix + ')" style="padding:7px 12px;cursor:pointer;border-bottom:1px solid #f0f4f8;"' +
+' onmouseover="this.style.background=\'#f0f4f8\'" onmouseout="this.style.background=\'#fff\'">' +
+'<div style="font-size:0.76rem;font-weight:800;color:#1a365d;">' + progAtivEsc(i.nome) + '</div>' +
+(i.sub ? '<div style="font-size:0.64rem;font-weight:600;color:#94a3b8;margin-top:1px;">' + progAtivEsc(i.sub) + '</div>' : '') +
+'</div>';
+}).join('');
+dd.style.display = 'block';
+}
+function progPessoaEscolher(qual, ix){
+const i = PROG_PESSOA_ACHADAS[qual][ix];
+if(!i) return;
+const dd = progPessoaEl(qual, 'dd');
+if(dd) dd.style.display = 'none';
+if(qual === 'sup'){
+const el = document.getElementById('pf-supervisor');
+if(el) el.value = i.nome;
+progOnSupChange();
+}else{
+const el = document.getElementById('pf-encarregado');
+if(el) el.value = i.nome;
+// O que o usuario pediu: escolher a turma ja diz de quem ela e. O
+// encarregado manda no supervisor, e nao o contrario, porque a dupla vem
+// do cadastro de equipes.
+const supEl = document.getElementById('pf-supervisor');
+if(supEl && i.supervisor){
+supEl.value = i.supervisor;
+PROG_ENC_FILTRO = i.supervisor;
+}
+progOnEncChange();
+}
+progPessoaRender();
+}
+function progPessoaTecla(ev, qual){
+if(ev.key === 'Enter'){
+ev.preventDefault();
+if(PROG_PESSOA_ACHADAS[qual] && PROG_PESSOA_ACHADAS[qual].length) progPessoaEscolher(qual, 0);
+return;
+}
+if(ev.key === 'Escape'){
+const dd = progPessoaEl(qual, 'dd');
+if(dd) dd.style.display = 'none';
+progPessoaRender();
+}
+}
+// Fechar clicando fora: se nada foi escolhido, o texto digitado nao fica no
+// campo dando a impressao de que valeu.
+document.addEventListener('click', function(ev){
+['sup','enc'].forEach(qual => {
+const box = document.getElementById('pf-' + qual + '-box');
+const dd = progPessoaEl(qual, 'dd');
+if(box && dd && !box.contains(ev.target)){ dd.style.display = 'none'; progPessoaRender(); }
+});
+});
+window.progPessoaBuscar = progPessoaBuscar;
+window.progPessoaEscolher = progPessoaEscolher;
+window.progPessoaTecla = progPessoaTecla;
+window.progPessoaRender = progPessoaRender;
+
 function progOnEncChange() {
 const enc = document.getElementById('pf-encarregado').value;
 const dica = document.getElementById('pf-qtd-fonte');
@@ -5284,6 +5422,9 @@ const el = document.getElementById(id);
 if (el) el.value = '';
 });
 if (typeof progAtivPickLimpar === 'function') progAtivPickLimpar();
+PROG_ENC_FILTRO = '';
+['pf-sup-busca','pf-enc-busca'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+if (typeof progPessoaRender === 'function') progPessoaRender();
 const alojEl = document.getElementById('pf-alojados');
 if (alojEl) alojEl.value = 'SIM';          // padrao da programacao
 const fonteEl = document.getElementById('pf-qtd-fonte');
@@ -5641,6 +5782,7 @@ const occ = document.getElementById('pf-ocorrencia'); if(occ) occ.value = r.stat
 set('pf-supervisor', r.supervisor);
 progFillEncarregados(r.supervisor);
 set('pf-encarregado', r.encarregado);
+if (typeof progPessoaRender === 'function') progPessoaRender();
 set('pf-programador', r.programador);
 set('pf-qtd-colab', r.qtd_colab);
 set('pf-alojados', r.alojados || 'SIM');
@@ -5778,20 +5920,116 @@ el.innerHTML = sorted.map(([atv, info]) => `
 </div>
 </div>`).join('');
 }
-function progExportCSV() {
-const headers = ['DATA','SUPERVISOR','PROGRAMADOR','ENCARREGADO','QTD_COLAB','ALOJADOS','PEP_OBRA','NOME_OBRA','MUNICIPIO','AR_COELBA','ATIVIDADE','TIPO','QTD_PREVISTO','QTD_REALIZADO','STATUS_%','VALOR_UNITARIO','VALOR_PREVISTO','VALOR_REALIZADO'];
-const rows = progRegistros.map(r => [
-r.data, r.supervisor, r.programador, r.encarregado, r.qtd_colab, r.alojados,
-r.pep, r.nome_obra, r.municipio, r.ar_coelba, r.atividade, r.tipo,
-r.qtd_previsto, r.qtd_realizado, r.status_pct?.toFixed(2), r.valor_unitario, r.valor_previsto, r.valor_realizado
-].map(v => '"' + String(v||'').replace(/"/g,'""') + '"').join(','));
-const csv = [headers.join(','), ...rows].join('\n');
-const blob = new Blob(['\uFEFF' + csv], {type:'text/csv;charset=utf-8'});
+// ===== EXPORTAR: XLSX DE VERDADE, COM QUEDA PARA CSV =====
+// CSV depende do idioma de quem abre: no Excel em portugues o separador e ponto
+// e virgula, no ingles e virgula, e quem errar ve tudo grudado na coluna A.
+// Planilha .xlsx nao tem esse problema — a coluna e coluna em qualquer maquina.
+function progComSheetJS(cb, erro){
+if (window.XLSX) { cb(); return; }
+const s = document.createElement('script');
+s.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+s.onload = cb;
+s.onerror = function(){ if(erro) erro(); };
+document.head.appendChild(s);
+}
+const PROG_EXP_COLS = ['DATA','SUPERVISOR','PROGRAMADOR','ENCARREGADO','QTD_COLAB','ALOJADOS','PEP_OBRA','NOME_OBRA','MUNICIPIO','AR_COELBA','ATIVIDADE','TIPO','QTD_PREVISTO','QTD_REALIZADO','STATUS_%','VALOR_UNITARIO','VALOR_PREVISTO','VALOR_REALIZADO'];
+// Ordena por data e equipe, para o arquivo sair na mesma leitura da tela.
+function progExpOrdenado(){
+return progRegistros.slice().sort((a,b) =>
+String(a.data||'').localeCompare(String(b.data||'')) ||
+String(a.supervisor||'').localeCompare(String(b.supervisor||'')) ||
+String(a.encarregado||'').localeCompare(String(b.encarregado||''))
+);
+}
+function progExpNome(ordem, ext){
+const dias = ordem.map(r => r.data).filter(Boolean).sort();
+const faixa = (dias.length && dias[0] !== dias[dias.length-1])
+? (dias[0] + '_a_' + dias[dias.length-1])
+: (dias[0] || new Date().toISOString().slice(0,10));
+return 'programacao_' + faixa + '.' + ext;
+}
+function progExpDataBR(iso){
+const p = String(iso||'').split('-');
+return p.length === 3 ? (p[2] + '/' + p[1] + '/' + p[0]) : String(iso||'');
+}
+function progExpBaixar(blob, nome){
 const url = URL.createObjectURL(blob);
 const a = document.createElement('a');
-a.href = url; a.download = 'programacao_diaria_' + new Date().toISOString().slice(0,10) + '.csv';
+a.href = url; a.download = nome;
 a.click();
-URL.revokeObjectURL(url);
+setTimeout(() => URL.revokeObjectURL(url), 1500);
+}
+function progExportCSV() {
+if(!progRegistros || !progRegistros.length){
+progToast('❌ Não há registros para exportar.', 'error');
+return;
+}
+const ordem = progExpOrdenado();
+progToast('⏳ Montando a planilha...', 'success');
+progComSheetJS(function(){
+try{
+// numero vai como numero: da para somar e filtrar na planilha
+const nOuVazio = v => (v === null || v === undefined || v === '') ? '' : (isFinite(Number(v)) ? Number(v) : String(v));
+const linhas = ordem.map(r => ({
+'DATA': progExpDataBR(r.data),
+'SUPERVISOR': r.supervisor || '',
+'PROGRAMADOR': r.programador || '',
+'ENCARREGADO': r.encarregado || '',
+'QTD_COLAB': nOuVazio(r.qtd_colab),
+'ALOJADOS': r.alojados || '',
+'PEP_OBRA': r.pep || '',
+'NOME_OBRA': r.nome_obra || '',
+'MUNICIPIO': r.municipio || '',
+'AR_COELBA': r.ar_coelba || '',
+'ATIVIDADE': r.atividade || '',
+'TIPO': r.tipo || '',
+'QTD_PREVISTO': nOuVazio(r.qtd_previsto),
+'QTD_REALIZADO': nOuVazio(r.qtd_realizado),
+'STATUS_%': nOuVazio(r.status_pct),
+'VALOR_UNITARIO': nOuVazio(r.valor_unitario),
+'VALOR_PREVISTO': nOuVazio(r.valor_previsto),
+'VALOR_REALIZADO': nOuVazio(r.valor_realizado)
+}));
+const ws = XLSX.utils.json_to_sheet(linhas, { header: PROG_EXP_COLS });
+// largura por coluna: sem isso tudo nasce com 8 caracteres e fica ilegivel
+ws['!cols'] = PROG_EXP_COLS.map(c => {
+let max = c.length;
+linhas.forEach(l => { const t = String(l[c] == null ? '' : l[c]); if(t.length > max) max = t.length; });
+return { wch: Math.min(Math.max(max + 2, 9), 46) };
+});
+ws['!autofilter'] = { ref: XLSX.utils.encode_range({ s:{r:0,c:0}, e:{r:linhas.length, c:PROG_EXP_COLS.length-1} }) };
+const wb = XLSX.utils.book_new();
+XLSX.utils.book_append_sheet(wb, ws, 'PROGRAMAÇÃO');
+const buf = XLSX.write(wb, { bookType:'xlsx', type:'array' });
+progExpBaixar(new Blob([buf], { type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), progExpNome(ordem, 'xlsx'));
+progToast('✅ ' + ordem.length + ' registro(s) em planilha Excel.', 'success');
+}catch(e){
+console.warn('[prog] xlsx falhou: ' + e.message);
+progExportCSVSimples(ordem, 'A planilha falhou');
+}
+}, function(){
+progExportCSVSimples(ordem, 'Sem internet para montar o .xlsx');
+});
+}
+// Plano B: CSV com ponto e virgula e a linha sep=, que faz o Excel obedecer
+// o separador em qualquer idioma em vez de adivinhar pelo sistema.
+function progExportCSVSimples(ordem, motivo){
+const SEP = ';';
+const num = v => {
+if(v === null || v === undefined || v === '') return '';
+const n = Number(v);
+return isFinite(n) ? n.toFixed(2).replace('.', ',') : String(v);
+};
+const rows = ordem.map(r => [
+progExpDataBR(r.data), r.supervisor, r.programador, r.encarregado,
+(r.qtd_colab === null || r.qtd_colab === undefined) ? '' : r.qtd_colab, r.alojados,
+r.pep, r.nome_obra, r.municipio, r.ar_coelba, r.atividade, r.tipo,
+num(r.qtd_previsto), num(r.qtd_realizado), num(r.status_pct),
+num(r.valor_unitario), num(r.valor_previsto), num(r.valor_realizado)
+].map(v => '"' + String(v === null || v === undefined ? '' : v).replace(/"/g,'""') + '"').join(SEP));
+const csv = ['sep=' + SEP, PROG_EXP_COLS.join(SEP), ...rows].join('\r\n');
+progExpBaixar(new Blob(['\uFEFF' + csv], { type:'text/csv;charset=utf-8' }), progExpNome(ordem, 'csv'));
+progToast('⚠️ ' + motivo + ' — baixei em CSV, que abre em colunas do mesmo jeito.', 'error');
 }
 
 // ===== LAYOUT DA PROGRAMACAO PARA O CLIENTE =====
@@ -5936,13 +6174,15 @@ const doc = '<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8">' +
 '.marca{background:#1a365d;color:#fff;text-align:center;padding:6px;font-size:.58rem;font-weight:700;letter-spacing:.5px}' +
 '.barra{max-width:1500px;margin:0 auto 10px;display:flex;gap:8px;flex-wrap:wrap}' +
 '.barra button{padding:9px 16px;border:none;border-radius:8px;font-family:Barlow,Arial,sans-serif;font-size:.74rem;font-weight:800;color:#fff;cursor:pointer;letter-spacing:.4px}' +
-'#bt-imp{background:#2b6cb0}#bt-zap{background:#276749}#bt-txt{background:#7e3af2}' +
+'#bt-imp{background:#2b6cb0}#bt-img{background:#b7791f}#bt-zap{background:#276749}#bt-txt{background:#7e3af2}' +
+'.barra button:disabled{opacity:.6;cursor:wait}' +
 '#area-txt{max-width:1500px;margin:0 auto 10px;display:none}' +
 '#area-txt textarea{width:100%;height:200px;padding:12px;border:1.5px solid #cbd5e1;border-radius:8px;font-family:monospace;font-size:.72rem;resize:vertical}' +
 '@media print{body{background:#fff;padding:0}.folha{box-shadow:none;max-width:none}.barra,#area-txt{display:none!important}}' +
 '</style></head><body>' +
 '<div class="barra">' +
 '<button id="bt-imp">🖨️ Imprimir / salvar PDF</button>' +
+'<button id="bt-img">🖼️ Salvar como imagem</button>' +
 '<button id="bt-zap">💬 Copiar texto do WhatsApp</button>' +
 '<button id="bt-txt">📝 Ver texto</button>' +
 '</div><div id="area-txt"><textarea id="txt" readonly></textarea></div>' +
@@ -5979,6 +6219,27 @@ const doc = '<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8">' +
 'document.getElementById("txt").value=T;' +
 'document.getElementById("bt-imp").onclick=function(){window.print();};' +
 'document.getElementById("bt-txt").onclick=function(){var a=document.getElementById("area-txt");a.style.display=a.style.display==="block"?"none":"block";};' +
+// Foto da folha: no WhatsApp a imagem chega inteira, sem depender de o
+// cliente abrir anexo. Usa a mesma biblioteca que o resto do sistema.
+'var NOME=' + JSON.stringify('programacao_' + progDataBR(dia).replace(/\//g,'-')) + ';' +
+'function comCanvas(cb,err){if(window.html2canvas){cb();return;}' +
+'var s=document.createElement("script");s.src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js";' +
+'s.onload=cb;s.onerror=err;document.head.appendChild(s);}' +
+'document.getElementById("bt-img").onclick=function(){var b=this,txt=b.textContent;' +
+'b.disabled=true;b.textContent="⏳ Gerando imagem...";' +
+'function fim(m){b.disabled=false;b.textContent=m||txt;if(m)setTimeout(function(){b.textContent=txt;},2600);}' +
+'comCanvas(function(){' +
+'html2canvas(document.querySelector(".folha"),{scale:2,backgroundColor:"#ffffff",useCORS:true,windowWidth:1500})' +
+'.then(function(cv){cv.toBlob(function(bl){' +
+'if(!bl){fim("❌ Não gerou");return;}' +
+'var f=new File([bl],NOME+".png",{type:"image/png"});' +
+// no celular abre direto o compartilhar (WhatsApp); no computador baixa o arquivo
+'if(navigator.canShare&&navigator.canShare({files:[f]})){' +
+'navigator.share({files:[f],title:NOME}).then(function(){fim();}).catch(function(){fim();});return;}' +
+'var u=URL.createObjectURL(bl);var a=document.createElement("a");a.href=u;a.download=NOME+".png";a.click();' +
+'setTimeout(function(){URL.revokeObjectURL(u);},1500);fim("✅ Imagem salva!");' +
+'},"image/png");}).catch(function(e){fim("❌ "+e.message);});' +
+'},function(){fim("❌ Sem internet para gerar a imagem");});};' +
 'document.getElementById("bt-zap").onclick=function(){var b=this;function ok(){b.textContent="✅ Copiado!";setTimeout(function(){b.textContent="💬 Copiar texto do WhatsApp";},1800);}' +
 'if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(T).then(ok).catch(fb);}else{fb();}' +
 'function fb(){var t=document.getElementById("txt");document.getElementById("area-txt").style.display="block";t.select();try{document.execCommand("copy");ok();}catch(e){b.textContent="Selecione e copie acima";}}};' +
