@@ -6071,6 +6071,50 @@ const d = new Date(+p[0], +p[1]-1, +p[2]);
 return ['DOMINGO','SEGUNDA-FEIRA','TERÇA-FEIRA','QUARTA-FEIRA','QUINTA-FEIRA','SEXTA-FEIRA','SÁBADO'][d.getDay()] || '';
 }
 // Uma equipe por bloco: no campo quem responde pela turma e o encarregado.
+// SIGLA DO TIPO DE SERVICO: LM, LV, LC, RETRO, PODA.
+// Fonte principal e o campo TIPO DO SERVICO do cadastro. Se ele vier vazio
+// (registro antigo, importacao), tenta deduzir pelo texto da atividade.
+const PROG_SIGLAS = ['LM','LV','LC','RETRO','PODA'];
+const PROG_SIGLA_NOME = {LM:'LINHA MORTA', LV:'LINHA VIVA', LC:'LIGAÇÃO DE CLIENTE', RETRO:'RETROESCAVADEIRA', PODA:'PODA'};
+function progSiglaServico(r){
+const t = progNorm(r && r.tipo);
+if(t){
+if(t.indexOf('RETRO') >= 0 || t.indexOf('ESCAVADEIRA') >= 0) return 'RETRO';
+if(t.indexOf('LIGACAO') >= 0) return 'LC';
+if(t.indexOf('PODA') >= 0) return 'PODA';
+if(t.indexOf('VIVA') >= 0) return 'LV';
+if(t.indexOf('MORTA') >= 0) return 'LM';
+}
+const a = progNorm(r && r.atividade);
+if(!a) return '';
+if(/RETRO|ESCAVADEIRA/.test(a)) return 'RETRO';
+if(/LIGACAO DE CLIENTE/.test(a)) return 'LC';
+if(/PODA/.test(a)) return 'PODA';
+if(/LINHA VIVA|\bLV\b/.test(a)) return 'LV';
+if(/LINHA MORTA|DESLIGAMENTO/.test(a)) return 'LM';
+return '';
+}
+// Conta TURMAS (encarregados) por tipo. Cada turma entra uma unica vez, no
+// tipo que predomina nos servicos dela no dia — empate fica com o primeiro
+// servico lancado. Assim LM+LV+LC+RETRO+... sempre fecha com o total de EQUIPES.
+function progTurmasPorTipo(regs){
+const porTurma = {};
+(regs||[]).forEach((r,i) => {
+const k = r.encarregado || 'SEM ENCARREGADO';
+if(!porTurma[k]) porTurma[k] = {};
+const s = progSiglaServico(r) || 'OUTROS';
+if(!porTurma[k][s]) porTurma[k][s] = {n:0, pos:i};
+porTurma[k][s].n++;
+});
+const conta = {};
+Object.keys(porTurma).forEach(k => {
+const votos = porTurma[k];
+const vencedor = Object.keys(votos).sort((a,b) =>
+votos[b].n - votos[a].n || votos[a].pos - votos[b].pos)[0];
+conta[vencedor] = (conta[vencedor]||0) + 1;
+});
+return conta;
+}
 function progAgrupaPorEquipe(regs){
 const mapa = {};
 regs.forEach(r => {
@@ -6132,7 +6176,18 @@ const equipes = new Set(ordem.map(r => r.encarregado).filter(Boolean)).size;
 const obras = new Set(ordem.map(r => r.pep).filter(Boolean)).size;
 const municipios = new Set(ordem.map(r => r.municipio).filter(Boolean)).size;
 const colab = grupos.reduce((s,g) => s + g.colab, 0);
+const contaTipo = progTurmasPorTipo(ordem);
+// mostra PODA e OUTROS somente quando existem, para nao poluir a faixa
+const tiposFaixa = PROG_SIGLAS.concat('OUTROS')
+.filter(s => (s === 'LM' || s === 'LV' || s === 'LC' || s === 'RETRO') || contaTipo[s])
+.map(s => '<i class="t-' + s.toLowerCase() + '" title="' + (PROG_SIGLA_NOME[s] || 'SEM TIPO DEFINIDO') + '">' +
+s + ' <b>' + (contaTipo[s] || 0) + '</b></i>').join('');
 const logo = progLogoMariua();
+// PROGRAMADOR do rodape: sai de quem lancou os registros do dia. Se o campo
+// estiver vazio (lancamento antigo), cai para o usuario logado no sistema.
+const progsDia = [...new Set(ordem.map(r => progLayoutNome(r.programador)).filter(Boolean))];
+const programador = progsDia.length ? progsDia.join(' / ')
+: progLayoutNome((window.MARIUA_USER || '')).trim();
 
 // Linha em branco no lugar do valor faltando, como na planilha de origem.
 const cel = v => (v === 0 || v) ? esc(v) : '';
@@ -6175,6 +6230,11 @@ const doc = '<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8">' +
 '.resumo{display:flex;gap:16px;flex-wrap:wrap;padding:7px 16px;background:#f1f5f9;border-bottom:1px solid #cbd5e1;font-size:.63rem;font-weight:700;color:#475569}' +
 '.resumo b{color:#2f9c96;font-weight:800}' +
 '.resumo span{margin-right:20px}' +
+'.resumo .tipos{display:inline-flex;align-items:center;gap:5px;padding-left:14px;border-left:1.5px solid #cbd5e1}' +
+'.resumo .tipos i{font-style:normal;background:#fff;border:1px solid currentColor;border-radius:4px;padding:1px 7px;letter-spacing:.2px}' +
+'.resumo .tipos i b{color:inherit;margin-left:1px}' +
+'.resumo .t-lm{color:#2b6cb0}.resumo .t-lv{color:#c53030}.resumo .t-lc{color:#2f855a}' +
+'.resumo .t-retro{color:#b7791f}.resumo .t-poda{color:#6b21a8}.resumo .t-outros{color:#64748b}' +
 '.wrap{padding:10px 12px 14px;overflow-x:auto}' +
 'table{width:100%;border-collapse:collapse;font-size:.6rem;table-layout:fixed}' +
 'th{background:#2f9c96;color:#fff;font-weight:800;font-size:.58rem;letter-spacing:.3px;padding:5px 3px;text-align:center;border:1px solid #1f6f6b}' +
@@ -6188,6 +6248,7 @@ const doc = '<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8">' +
 '.rod{display:flex;justify-content:space-between;gap:14px;padding:0 16px 12px;font-size:.6rem;font-weight:700;color:#64748b}' +
 '.rod .ass{text-align:center;min-width:200px}' +
 '.rod .ass i{display:block;border-top:1px solid #94a3b8;margin-bottom:3px;height:22px}' +
+'.rod .ass .nm{display:block;height:22px;line-height:22px;border-bottom:1px solid #94a3b8;margin-bottom:3px;font-size:.66rem;font-weight:800;color:#1a365d;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}' +
 '.marca{background:#1a365d;color:#fff;text-align:center;padding:6px;font-size:.58rem;font-weight:700;letter-spacing:.5px}' +
 '.barra{max-width:1500px;margin:0 auto 10px;display:flex;gap:8px;flex-wrap:wrap}' +
 '.barra button{padding:9px 16px;border:none;border-radius:8px;font-family:Barlow,Arial,sans-serif;font-size:.74rem;font-weight:800;color:#fff;cursor:pointer;letter-spacing:.4px}' +
@@ -6214,6 +6275,8 @@ const doc = '<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8">' +
 '.folha.cap .cab .dt span{font-size:.82rem}' +
 '.folha.cap .resumo{font-size:.86rem;padding:10px 18px}' +
 '.folha.cap .rod{font-size:.82rem;padding:0 18px 14px}' +
+'.folha.cap .rod .ass .nm{font-size:.88rem;height:26px;line-height:26px}' +
+'.folha.cap .rod .ass i{height:26px}' +
 '.folha.cap .marca{font-size:.8rem;padding:9px}' +
 '</style></head><body>' +
 '<div class="barra">' +
@@ -6230,6 +6293,7 @@ const doc = '<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8">' +
 '</div>' +
 '<div class="resumo">' +
 '<span>EQUIPES <b>' + equipes + '</b></span>' +
+'<span class="tipos">' + tiposFaixa + '</span>' +
 '<span>SERVIÇOS <b>' + ordem.length + '</b></span>' +
 '<span>OBRAS <b>' + obras + '</b></span>' +
 '<span>MUNICÍPIOS <b>' + municipios + '</b></span>' +
@@ -6246,7 +6310,7 @@ const doc = '<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8">' +
 '</tr></thead><tbody>' + linhas + '</tbody></table></div>' +
 '<div class="rod">' +
 '<div>Emitido em ' + new Date().toLocaleString('pt-BR') + '</div>' +
-'<div class="ass"><i></i>Supervisor responsável</div>' +
+'<div class="ass"><b class="nm">' + esc(programador || '') + '</b>Programador</div>' +
 '</div>' +
 '<div class="marca">MARIUÁ CONSTRUÇÃO E ENERGIA · PROGRAMAÇÃO SUJEITA A ALTERAÇÃO POR CONDIÇÃO DE CAMPO OU CLIMA</div>' +
 '</div>' +
