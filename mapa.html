@@ -4332,6 +4332,129 @@ mapaFitFeito = true;
 mapaFiltrar();
 }
 // Carrega dados de um mês específico diretamente das abas do Google Sheets
+// ===== COPIA DO MES NO BANCO =====
+// O mapa lia a planilha ao vivo e, se o Google nao respondesse, ficava sem nada
+// ou mostrando o mes anterior. Cada mes lido com sucesso passa a ser gravado no
+// banco; quando a planilha cai, o mapa abre essa copia e diz de quando ela e.
+// ===== CATALOGO COMPARTILHADO COM A PROGRAMACAO =====
+// A copia do mes (mapa_mes_AAAA_MM) e pesada: tem todas as colunas e serve ao
+// mapa. A programacao nao precisa disso — precisa saber que a obra existe. Ao
+// ler um mes, o mapa alimenta a chave leve obras_catalogo, a mesma que a busca
+// de PEP usa. Quem abre o mapa alimenta a programacao sem fazer nada.
+const MAPA_CAT_KEY = 'obras_catalogo';
+function mapaCatCampo(o, nomes) {
+for (let i = 0; i < nomes.length; i++) {
+const v = o[nomes[i]];
+if (v !== undefined && String(v).trim() !== '') return String(v).trim();
+}
+return '';
+}
+async function mapaCatalogoAlimentar(dataJac, dataIrc, dataSer, label) {
+try {
+const linhas = [].concat(
+Array.prototype.slice.call(dataJac || []),
+Array.prototype.slice.call(dataIrc || []),
+Array.prototype.slice.call(dataSer || [])
+);
+if (!linhas.length) return;
+// le o catalogo atual
+let atual = [];
+try {
+const res = await fetch(SUPA_URL + '/rest/v1/turno_data?select=value&key=eq.' + MAPA_CAT_KEY + '&limit=1', {
+headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY }
+});
+if (res.ok) {
+const d = await res.json();
+const v = (Array.isArray(d) && d.length) ? d[0].value : null;
+atual = Array.isArray(v) ? v : ((v && Array.isArray(v.data)) ? v.data : []);
+}
+} catch(e) {}
+const porPep = {};
+atual.forEach(o => { if (o && o.pep) porPep[o.pep] = o; });
+
+let novas = 0, mexidas = 0;
+linhas.forEach(l => {
+const pep = mapaCatCampo(l, ['PEP OBRA', 'PEP']);
+if (!/\d{4}/.test(pep)) return;
+const reg = {
+titulo:    mapaCatCampo(l, ['TÍTULO', 'TITULO', 'TITULO DA OBRA', 'NOME DA OBRA']),
+municipio: mapaCatCampo(l, ['MUNICÍPIO', 'MUNICIPIO', 'CIDADE']),
+ar:        mapaCatCampo(l, ['AR COELBA', 'AR', 'SUPERVISOR']),
+status:    mapaCatCampo(l, ['STATUS DA OBRA', 'STATUS'])
+};
+const ja = porPep[pep];
+if (!ja) {
+porPep[pep] = { pep: pep, titulo: reg.titulo, municipio: reg.municipio, ar: reg.ar, status: reg.status, visto: label || '', desde: label || '' };
+novas++;
+return;
+}
+let mexeu = false;
+// campo vazio na planilha nao apaga o que o catalogo ja sabia
+['titulo','municipio','ar','status'].forEach(c => {
+if (reg[c] && reg[c] !== ja[c]) { ja[c] = reg[c]; mexeu = true; }
+});
+if (label) ja.visto = label;
+if (!ja.desde) ja.desde = label || '';
+if (mexeu) mexidas++;
+});
+if (!novas && !mexidas) { console.log('[mapa] catálogo já estava em dia'); return; }
+const lista = Object.keys(porPep).map(p => porPep[p]);
+const res2 = await fetch(SUPA_URL + '/rest/v1/turno_data', {
+method: 'POST',
+headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY, 'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates' },
+body: JSON.stringify({ key: MAPA_CAT_KEY, value: { data: lista }, updated_at: new Date().toISOString() })
+});
+if (!res2.ok) throw new Error('HTTP ' + res2.status);
+console.log('[mapa] catálogo da programação: +' + novas + ' nova(s), ' + mexidas + ' atualizada(s) — total ' + lista.length);
+} catch(e) {
+console.warn('[mapa] não alimentou o catálogo: ' + e.message);
+}
+}
+function mapaMesChave(ano, mes) { return 'mapa_mes_' + ano + '_' + String(mes).padStart(2,'0'); }
+async function mapaMesSalvarCopia(ano, mes, label, dataJac, dataIrc, dataSer) {
+try {
+const corpo = {
+label: label,
+salvo_em: new Date().toISOString(),
+jac: dataJac ? Array.prototype.slice.call(dataJac) : [],
+irc: dataIrc ? Array.prototype.slice.call(dataIrc) : [],
+ser: dataSer ? Array.prototype.slice.call(dataSer) : []
+};
+const res = await fetch(SUPA_URL + '/rest/v1/turno_data', {
+method: 'POST',
+headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY, 'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates' },
+body: JSON.stringify({ key: mapaMesChave(ano, mes), value: corpo, updated_at: corpo.salvo_em })
+});
+if (!res.ok) throw new Error('HTTP ' + res.status);
+console.log('[mapa] cópia de ' + label + ' salva no banco (' + (corpo.jac.length + corpo.irc.length + corpo.ser.length) + ' obras)');
+return true;
+} catch(e) {
+console.warn('[mapa] não salvou a cópia de ' + label + ': ' + e.message);
+return false;
+}
+}
+async function mapaMesLerCopia(ano, mes) {
+try {
+const res = await fetch(SUPA_URL + '/rest/v1/turno_data?select=value&key=eq.' + mapaMesChave(ano, mes) + '&limit=1', {
+headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY }
+});
+if (!res.ok) throw new Error('HTTP ' + res.status);
+const d = await res.json();
+const v = (Array.isArray(d) && d.length) ? d[0].value : null;
+if (!v || (!(v.jac||[]).length && !(v.irc||[]).length && !(v.ser||[]).length)) return null;
+return v;
+} catch(e) {
+console.warn('[mapa] não leu a cópia do mês: ' + e.message);
+return null;
+}
+}
+function mapaMesQuando(iso) {
+try {
+const d = new Date(iso);
+const p = n => String(n).padStart(2,'0');
+return p(d.getDate()) + '/' + p(d.getMonth()+1) + ' às ' + p(d.getHours()) + ':' + p(d.getMinutes());
+} catch(e) { return '?'; }
+}
 function mapaCarregarMes(ano, mes) {
   const entry = GSHEETS_MESES.find(e => e.ano===ano && e.mes===mes);
   if (!entry) return;
@@ -4423,6 +4546,10 @@ function mapaCarregarMes(ano, mes) {
       // CORRIGIDO: sinaliza que esta é a chamada interna (não deve ser bloqueada pela flag)
       window._mapaCarregarMesInterno = true;
       mapaCarregarDoBanco();
+      // guarda a cópia deste mês sem travar a tela
+      mapaMesSalvarCopia(ano, mes, label, dataJac, dataIrc, dataSer);
+      // e alimenta o catálogo leve que a programação usa na busca de PEP
+      mapaCatalogoAlimentar(dataJac, dataIrc, dataSer, label);
       // Se alguma aba estava em outro mês, mostra o aviso no título (após o render)
       if (window._mapaAvisoMes) {
         setTimeout(function(){
@@ -4439,6 +4566,22 @@ function mapaCarregarMes(ano, mes) {
         : '❌ Erro ao carregar '+label+': '+e.message;
       if (mt) { mt.textContent = msgErr; mt.style.color='#c53030'; }
       console.error('[mapaCarregarMes]', e);
+      // Primeiro tenta a cópia deste mês guardada no banco: e o dado certo do
+      // mes pedido, nao o mes que por acaso estava na tela.
+      const copia = await mapaMesLerCopia(ano, mes);
+      if (copia) {
+        bancoDB = [].concat(copia.jac||[], copia.irc||[], copia.ser||[]);
+        bancoDBInfo = { count: bancoDB.length, updatedAt: label + ' (cópia do banco)',
+          utds: ['IRECÊ ('+(copia.irc||[]).length+')', 'JACOBINA ('+(copia.jac||[]).length+')'].concat((copia.ser||[]).length ? ['SERRINHA ('+copia.ser.length+')'] : []) };
+        mapaFiltroAtivo='TODOS'; mapaUTDFiltro='TODAS'; mapaMunFiltro=''; mapaEncFiltro='';
+        window._mapaCarregarMesInterno = true;
+        mapaCarregarDoBanco();
+        const aviso = '⚠️ A planilha não respondeu — mostrando a cópia de ' + label + ' salva em ' + mapaMesQuando(copia.salvo_em);
+        window._mapaAvisoMes = aviso;
+        setTimeout(function(){ const t = document.getElementById('mapa-titulo'); if (t) { t.textContent = aviso; t.style.color = '#b7791f'; } }, 60);
+        console.warn('[mapaCarregarMes] usando a cópia do banco de ' + label);
+        return;
+      }
       // CORRIGIDO: fallback para o banco local se disponível (sem ficar vazio)
       if (bancoDB && bancoDB.length) {
         setTimeout(() => { try { window._mapaCarregarMesInterno = true; mapaCarregarDoBanco(); } catch(e2) {} }, 500);

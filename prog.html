@@ -4451,7 +4451,89 @@ if(!ja){ porPep[o.pep] = o; lista.push(o); return; }
 return lista;
 }
 
+// ===== CATALOGO DE OBRAS NO BANCO =====
+// A carteira do Mapa e uma foto do mes: aba nova aparece, aba antiga fica para
+// tras e obra que saiu da carteira desaparece da busca. Entao tudo que a
+// carteira mostra vai para a chave obras_catalogo e fica la. A partir da
+// segunda leitura o sistema ja anda sem a planilha.
+const PROG_CAT_KEY = 'obras_catalogo';
+let PROG_CAT = {};            // pep -> registro
+let PROG_CAT_NOVAS = 0, PROG_CAT_MEXIDAS = 0, PROG_CAT_ESTADO = '';
+
+function progCatNormaliza(v){
+const arr = Array.isArray(v) ? v : ((v && Array.isArray(v.data)) ? v.data : []);
+const m = {};
+arr.forEach(o => { if(o && o.pep) m[o.pep] = {
+pep: o.pep, titulo: o.titulo || '', municipio: o.municipio || '',
+ar: o.ar || '', status: o.status || '', visto: o.visto || '', desde: o.desde || ''
+}; });
+return m;
+}
+async function progCatLer(){
+// localStorage primeiro para a busca funcionar antes do banco responder
+try{ const l = lsGet(PROG_CAT_KEY); if(l){ PROG_CAT = progCatNormaliza(l); } }catch(e){}
+try{
+const v = await progChave(PROG_CAT_KEY);
+if(v){
+const doBanco = progCatNormaliza(v);
+// o banco manda, mas nao apaga o que so existe aqui ainda nao sincronizado
+Object.keys(doBanco).forEach(p => {
+const meu = PROG_CAT[p];
+if(!meu){ PROG_CAT[p] = doBanco[p]; return; }
+['titulo','municipio','ar','status','visto','desde'].forEach(c => { if(!meu[c] && doBanco[p][c]) meu[c] = doBanco[p][c]; });
+});
+}
+}catch(e){ console.warn('[prog] catálogo: ' + e.message); }
+return PROG_CAT;
+}
+async function progCatSalvar(){
+const lista = Object.keys(PROG_CAT).map(p => PROG_CAT[p]);
+try{ lsSet(PROG_CAT_KEY, { data: lista }); }catch(e){}
+try{
+const res = await fetch(SUPA_URL + '/rest/v1/turno_data', {
+method: 'POST',
+headers: Object.assign({}, SUPA_HEADERS, { 'Prefer': 'resolution=merge-duplicates' }),
+body: JSON.stringify({ key: PROG_CAT_KEY, value: { data: lista }, updated_at: new Date().toISOString() })
+});
+if(!res.ok) throw new Error('HTTP ' + res.status);
+PROG_CAT_ESTADO = 'banco';
+return true;
+}catch(e){
+PROG_CAT_ESTADO = 'só local';
+console.warn('[prog] catálogo não salvou no banco: ' + e.message);
+return false;
+}
+}
+// Junta o que a carteira trouxe. Campo em branco na planilha nao apaga o que
+// o catalogo ja sabia — obra nao perde o AR porque a aba do mes veio incompleta.
+function progCatMesclar(lista, rotulo){
+PROG_CAT_NOVAS = 0; PROG_CAT_MEXIDAS = 0;
+lista.forEach(o => {
+const ja = PROG_CAT[o.pep];
+if(!ja){
+PROG_CAT[o.pep] = {
+pep: o.pep, titulo: o.titulo || '', municipio: o.municipio || '',
+ar: o.ar || '', status: o.status || '', visto: rotulo || '', desde: rotulo || ''
+};
+PROG_CAT_NOVAS++;
+return;
+}
+let mexeu = false;
+['titulo','municipio','ar','status'].forEach(c => {
+if(o[c] && o[c] !== ja[c]){ ja[c] = o[c]; mexeu = true; }
+});
+if(rotulo && ja.visto !== rotulo){ ja.visto = rotulo; }
+if(mexeu) PROG_CAT_MEXIDAS++;
+});
+return PROG_CAT_NOVAS + PROG_CAT_MEXIDAS;
+}
+
 async function progCarregarObras(){
+// zera o placar da rodada, senao a leitura sem planilha repete o numero da anterior
+PROG_CAT_NOVAS = 0; PROG_CAT_MEXIDAS = 0; PROG_CAT_ESTADO = '';
+await progCatLer();
+const noCat = Object.keys(PROG_CAT).length;
+
 let origem = null, lista = [];
 try{
 origem = await progRefsDoMapa();
@@ -4462,17 +4544,29 @@ if(alt){ origem = alt; lista = await progLerAbas(alt.refs); }
 }
 }catch(e){ console.warn('[prog] obras: ' + e.message); }
 
-if(!lista.length){
-PROG_OBRAS_FONTE = 'não consegui ler as planilhas — usando a base fixa';
+const daPlanilha = lista.length;
+// Planilha fora do ar deixou de ser problema: se o catalogo tem obra, a
+// programacao segue com ele. So cai na base fixa quando nao ha nem catalogo.
+if(!daPlanilha && !noCat){
+PROG_OBRAS_FONTE = 'não consegui ler as planilhas e o catálogo está vazio — usando a base fixa';
 progMostrarFonteObras();
 return;
 }
-const daPlanilha = lista.length;
+
+let salvou = 0;
+if(daPlanilha){
+salvou = progCatMesclar(lista, origem ? origem.rotulo : '');
+if(salvou) await progCatSalvar();
+else PROG_CAT_ESTADO = 'sem novidade';
+}
+
+// A lista da busca sai do catalogo, completada pela base fixa do codigo.
 const porPep = {};
-lista.forEach(o => porPep[o.pep] = o);
-// A base fixa deixa de ser plano B e passa a completar a planilha: preenche
-// o que ficou em branco na linha e acrescenta a obra que a planilha nao traz.
-let campoDaBase = 0, novaDaBase = 0;
+Object.keys(PROG_CAT).forEach(p => {
+const c = PROG_CAT[p];
+porPep[p] = { pep:c.pep, titulo:c.titulo, municipio:c.municipio, ar:c.ar, status:c.status };
+});
+let novaDaBase = 0, campoDaBase = 0;
 if(typeof PROG_OBRAS !== 'undefined'){
 PROG_OBRAS.forEach(f => {
 const o = porPep[f.pep];
@@ -4483,24 +4577,29 @@ if(mexeu) campoDaBase++;
 return;
 }
 porPep[f.pep] = { pep:f.pep, titulo:f.titulo||'', municipio:f.municipio||'', ar:f.ar||'', status:f.status||'' };
-lista.push(porPep[f.pep]);
 novaDaBase++;
 });
 }
-lista.sort((a,b) => (a.titulo||a.pep).localeCompare(b.titulo||b.pep));
-PROG_OBRAS_VIVAS = lista;
-const semAr = lista.filter(o => !o.ar).length;
+const final = Object.keys(porPep).map(p => porPep[p]);
+final.sort((a,b) => (a.titulo||a.pep).localeCompare(b.titulo||b.pep));
+PROG_OBRAS_VIVAS = final;
+
+const semAr = final.filter(o => !o.ar).length;
 // Aviso que faltava: se a aba mais nova conhecida for de um mes ja passado, as
 // obras abertas depois disso nao existem em lugar nenhum que o sistema leia.
 let atraso = '';
-if(origem.ultimoAno){
+if(origem && origem.ultimoAno){
 const h = new Date(), hAno = h.getFullYear(), hMes = h.getMonth() + 1;
-const meses = (hAno - origem.ultimoAno) * 12 + (hMes - origem.ultimoMes);
-if(meses > 0) atraso = ' · ⚠️ a aba mais nova é de ' + String(origem.ultimoMes).padStart(2,'0') + '/' + origem.ultimoAno +
-' — faltam ' + meses + (meses === 1 ? ' mês' : ' meses') + '. Clique em "＋ mês da carteira"';
+const dif = (hAno - origem.ultimoAno) * 12 + (hMes - origem.ultimoMes);
+if(dif > 0) atraso = ' · ⚠️ a aba mais nova é de ' + String(origem.ultimoMes).padStart(2,'0') + '/' + origem.ultimoAno +
+' — faltam ' + dif + (dif === 1 ? ' mês' : ' meses') + '. Clique em "＋ mês da carteira"';
 }
-PROG_OBRAS_FONTE = lista.length + ' obras · ' + daPlanilha + ' de ' + origem.rotulo + ' (' + origem.fonte + ')' + atraso +
-(novaDaBase ? ' · ' + novaDaBase + ' só na base' : '') +
+PROG_OBRAS_FONTE = final.length + ' obras · catálogo do banco' +
+(daPlanilha ? ' · ' + daPlanilha + ' lidas de ' + origem.rotulo : ' · planilha não respondeu') + atraso +
+(PROG_CAT_NOVAS ? ' · ' + PROG_CAT_NOVAS + ' nova(s) salva(s)' : '') +
+(PROG_CAT_MEXIDAS ? ' · ' + PROG_CAT_MEXIDAS + ' atualizada(s)' : '') +
+(salvou ? ' (' + PROG_CAT_ESTADO + ')' : '') +
+(novaDaBase ? ' · ' + novaDaBase + ' só na base fixa' : '') +
 (campoDaBase ? ' · ' + campoDaBase + ' completadas' : '') +
 (semAr ? ' · ' + semAr + ' sem AR' : '') +
 (PROG_ABAS_FALHAS ? ' · ' + PROG_ABAS_FALHAS + ' aba(s) não abriram' : '');
