@@ -345,9 +345,15 @@ const PROG_ATIVIDADES_BASE = PROG_ATIVIDADES.slice();
         <button type="button" onclick="progAtivAbrir()" title="Adicionar ou retirar atividades da lista"
           style="margin-left:6px;padding:2px 9px;background:rgba(126,58,242,0.1);border:1px solid rgba(126,58,242,0.35);border-radius:20px;font-family:'Barlow',sans-serif;font-size:0.62rem;font-weight:800;color:#7e3af2;cursor:pointer;letter-spacing:0.3px;vertical-align:middle;">&#9881; GERENCIAR</button>
       </label>
-      <select id="pf-atividade" onchange="progOnAtivChange()" class="_s6" onfocus="this.style.borderColor='#7e3af2'" onblur="this.style.borderColor='#e0e8f0'">
-        <option value="">Selecione o tipo primeiro...</option>
-      </select>
+      <div id="pf-ativ-box" style="position:relative;">
+        <div id="pf-ativ-chips" style="display:none;flex-wrap:wrap;gap:5px;margin-bottom:5px;"></div>
+        <input type="text" id="pf-ativ-busca" autocomplete="off" placeholder="Digite para buscar e clique para adicionar..."
+          oninput="progAtivPickFiltrar()" onfocus="progAtivPickFiltrar()" onkeydown="progAtivPickTecla(event)"
+          class="_s6" onblur="this.style.borderColor='#e0e8f0'">
+        <div id="pf-ativ-dd" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:1.5px solid #7e3af2;border-radius:9px;max-height:290px;overflow-y:auto;z-index:60;box-shadow:0 8px 24px rgba(0,0,0,0.15);margin-top:3px;"></div>
+        <input type="hidden" id="pf-atividade">
+      </div>
+      <div id="pf-ativ-detalhe" style="display:none;font-size:0.64rem;font-weight:700;color:#64748b;margin-top:4px;line-height:1.4;"></div>
     </div>
     <div>
       <label class="_s1">VALOR UNITÁRIO (Fator K)</label>
@@ -4620,24 +4626,161 @@ function progListaObras(){
 return (PROG_OBRAS_VIVAS && PROG_OBRAS_VIVAS.length) ? PROG_OBRAS_VIVAS : PROG_OBRAS;
 }
 function progFillAtividades() {
-const selAtiv = document.getElementById('pf-atividade');
-if (!selAtiv || typeof PROG_ATIVIDADES === 'undefined') return;
-const escolhido = selAtiv.value;                 // nao perde o que estava marcado
-const porTipo = {};
-PROG_ATIVIDADES.forEach(a => { (porTipo[a.tipo] = porTipo[a.tipo] || []).push(a); });
-let html = '<option value="">Selecione a atividade...</option>';
-Object.keys(porTipo).sort().forEach(t => {
-html += '<optgroup label="' + progAtivEsc(t) + '">';
-porTipo[t].forEach(a => {
-const v = progAtivEsc(a.cod + '|' + a.descricao + '|' + a.fatorK);
-html += '<option value="' + v + '">' + progAtivEsc(a.descricao) + '</option>';
-});
-html += '</optgroup>';
-});
-selAtiv.innerHTML = html;
-if (escolhido && Array.from(selAtiv.options).some(o => o.value === escolhido)) selAtiv.value = escolhido;
+// A lista da atividade agora e um campo de busca com varias escolhas: nao tem
+// <option> para montar. Só redesenha o que estiver escolhido e o tipo.
+if (typeof PROG_ATIVIDADES === 'undefined') return;
+if (typeof progAtivPickRender === 'function') progAtivPickRender();
+const dd = document.getElementById('pf-ativ-dd');
+if (dd && dd.style.display === 'block' && typeof progAtivPickFiltrar === 'function') progAtivPickFiltrar();
 progFillTiposServico();
 }
+// ===== ATIVIDADE: VARIAS DE UMA VEZ, COM BUSCA =====
+// Era um <select> de escolha unica com mais de 90 itens, e a equipe costuma
+// fazer duas ou tres coisas na mesma obra no mesmo dia ("locar e escavar").
+// Agora digita para achar e vai somando. O campo pf-atividade continua
+// existindo como hidden no formato cod|descricao|fatorK, entao quem salva,
+// edita e calcula nao mudou: os codigos vao juntos com "+" e as descricoes
+// com " + ".
+let PROG_ATIV_SEL = [];      // atividades escolhidas, na ordem
+let PROG_ATIV_ACHADAS = [];  // resultado da busca atual
+
+function progAtivPickChave(a){ return progNorm(a.cod) + '|' + progNorm(a.descricao); }
+function progAtivPickTem(a){ return PROG_ATIV_SEL.some(s => progAtivPickChave(s) === progAtivPickChave(a)); }
+
+// Junta a escolha no formato que o resto do sistema ja entende.
+function progAtivPickAplicar(){
+const hid = document.getElementById('pf-atividade');
+if(!hid) return;
+if(!PROG_ATIV_SEL.length){ hid.value = ''; }
+else{
+const cods = PROG_ATIV_SEL.map(a => a.cod).join('+');
+const desc = PROG_ATIV_SEL.map(a => a.descricao).join(' + ');
+// Fator K somado: a equipe executa os dois servicos sobre a mesma unidade
+// (4 postes escavados e implantados = 4 x (escavacao + implantacao)).
+const fk = PROG_ATIV_SEL.reduce((s,a) => s + (parseFloat(a.fatorK) || 0), 0);
+hid.value = cods + '|' + desc + '|' + fk;
+}
+// tipo do servico: o da primeira escolhida
+const selTipo = document.getElementById('pf-tipo');
+if(selTipo) selTipo.value = PROG_ATIV_SEL.length ? (PROG_ATIV_SEL[0].tipo || '') : '';
+progAtivPickRender();
+progAtivPickValor();
+}
+// Mostra o valor unitario e, quando ha mais de uma, de onde ele saiu.
+function progAtivPickValor(){
+const vu = document.getElementById('pf-vunit');
+const fk = PROG_ATIV_SEL.reduce((s,a) => s + (parseFloat(a.fatorK) || 0), 0);
+if(vu) vu.value = fk > 0 ? 'R$ ' + fk.toLocaleString('pt-BR',{minimumFractionDigits:2}) : (PROG_ATIV_SEL.length ? '-' : '');
+const det = document.getElementById('pf-ativ-detalhe');
+if(det){
+det.innerHTML = (PROG_ATIV_SEL.length > 1)
+? 'Fator K somado: ' + PROG_ATIV_SEL.map(a => (parseFloat(a.fatorK)||0).toLocaleString('pt-BR',{minimumFractionDigits:2}) + ' <span style="color:#94a3b8;">(' + progAtivEsc(a.descricao) + ')</span>').join(' + ')
+: '';
+det.style.display = (PROG_ATIV_SEL.length > 1) ? 'block' : 'none';
+}
+if(typeof progCalcValores === 'function') progCalcValores();
+}
+function progAtivPickRender(){
+const box = document.getElementById('pf-ativ-chips');
+const busca = document.getElementById('pf-ativ-busca');
+if(!box) return;
+if(!PROG_ATIV_SEL.length){
+box.style.display = 'none'; box.innerHTML = '';
+if(busca) busca.placeholder = 'Digite para buscar e clique para adicionar...';
+return;
+}
+box.style.display = 'flex';
+box.innerHTML = PROG_ATIV_SEL.map((a,i) =>
+'<span style="display:inline-flex;align-items:center;gap:5px;background:rgba(126,58,242,0.1);border:1px solid rgba(126,58,242,0.35);border-radius:20px;padding:3px 5px 3px 10px;font-size:0.68rem;font-weight:800;color:#5b21b6;max-width:100%;">' +
+'<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + (i+1) + '. ' + progAtivEsc(a.descricao) + '</span>' +
+'<button type="button" onclick="progAtivPickDel(' + i + ')" title="Retirar esta atividade" style="border:none;background:#7e3af2;color:#fff;width:16px;height:16px;border-radius:50%;font-size:0.62rem;font-weight:900;cursor:pointer;line-height:1;flex-shrink:0;">×</button></span>'
+).join('');
+if(busca) busca.placeholder = PROG_ATIV_SEL.length + (PROG_ATIV_SEL.length === 1 ? ' atividade escolhida' : ' atividades escolhidas') + ' — digite para somar outra...';
+}
+function progAtivPickFiltrar(){
+const dd = document.getElementById('pf-ativ-dd');
+const q = progNorm(document.getElementById('pf-ativ-busca').value);
+if(!dd || typeof PROG_ATIVIDADES === 'undefined') return;
+const lista = PROG_ATIVIDADES.filter(a => !progAtivPickTem(a) &&
+(!q || progNorm(a.descricao).includes(q) || progNorm(a.tipo).includes(q) || progNorm(a.cod).includes(q)));
+lista.sort((a,b) => (a.tipo||'').localeCompare(b.tipo||'') || (a.descricao||'').localeCompare(b.descricao||''));
+PROG_ATIV_ACHADAS = lista.slice(0, 60);
+if(!PROG_ATIV_ACHADAS.length){
+dd.innerHTML = '<div style="padding:10px 12px;font-size:0.7rem;font-weight:700;color:#94a3b8;">' +
+(q ? 'Nada com "' + progAtivEsc(document.getElementById('pf-ativ-busca').value) + '". Use ⚙ GERENCIAR para cadastrar.' : 'Todas as atividades já foram escolhidas.') + '</div>';
+dd.style.display = 'block';
+return;
+}
+let tipoAnt = null, html = '';
+PROG_ATIV_ACHADAS.forEach((a,i) => {
+if(a.tipo !== tipoAnt){
+tipoAnt = a.tipo;
+html += '<div style="padding:5px 12px;background:#f1f5f9;font-size:0.6rem;font-weight:900;color:#64748b;letter-spacing:0.5px;position:sticky;top:0;">' + progAtivEsc(a.tipo || 'SEM TIPO') + '</div>';
+}
+const fk = parseFloat(a.fatorK) || 0;
+html += '<div onclick="progAtivPickAdd(' + i + ')" style="padding:7px 12px;cursor:pointer;border-bottom:1px solid #f0f4f8;display:flex;justify-content:space-between;gap:10px;align-items:center;"' +
+' onmouseover="this.style.background=\'#f0f4f8\'" onmouseout="this.style.background=\'#fff\'">' +
+'<span style="font-size:0.72rem;font-weight:700;color:#334155;">' + progAtivEsc(a.descricao) + '</span>' +
+'<span style="font-size:0.62rem;font-weight:800;color:#94a3b8;white-space:nowrap;">' + (fk > 0 ? fk.toLocaleString('pt-BR',{minimumFractionDigits:2}) : '—') + '</span></div>';
+});
+dd.innerHTML = html;
+dd.style.display = 'block';
+}
+function progAtivPickAdd(i){
+const a = PROG_ATIV_ACHADAS[i];
+if(!a) return;
+PROG_ATIV_SEL.push({ cod:a.cod, descricao:a.descricao, fatorK:a.fatorK, tipo:a.tipo });
+const busca = document.getElementById('pf-ativ-busca');
+if(busca){ busca.value = ''; busca.focus(); }
+progAtivPickAplicar();
+progAtivPickFiltrar();
+}
+function progAtivPickDel(i){
+PROG_ATIV_SEL.splice(i, 1);
+progAtivPickAplicar();
+}
+function progAtivPickLimpar(){
+PROG_ATIV_SEL = [];
+const busca = document.getElementById('pf-ativ-busca');
+if(busca) busca.value = '';
+const dd = document.getElementById('pf-ativ-dd');
+if(dd) dd.style.display = 'none';
+progAtivPickAplicar();
+}
+// Enter escolhe a primeira da lista; Backspace no campo vazio tira a ultima.
+function progAtivPickTecla(ev){
+if(ev.key === 'Enter'){ ev.preventDefault(); if(PROG_ATIV_ACHADAS.length) progAtivPickAdd(0); return; }
+if(ev.key === 'Escape'){ const dd = document.getElementById('pf-ativ-dd'); if(dd) dd.style.display = 'none'; return; }
+if(ev.key === 'Backspace' && !ev.target.value && PROG_ATIV_SEL.length){ progAtivPickDel(PROG_ATIV_SEL.length - 1); }
+}
+// Recompoe a escolha ao editar um registro salvo.
+function progAtivPickRestaurar(cods, descricoes){
+PROG_ATIV_SEL = [];
+const lista = (cods || '').split('+').map(c => c.trim()).filter(Boolean);
+const descs = (descricoes || '').split(' + ').map(d => d.trim());
+lista.forEach((c,i) => {
+let a = null;
+if(typeof PROG_ATIVIDADES !== 'undefined'){
+a = PROG_ATIVIDADES.find(x => x.cod === c && (!descs[i] || progNorm(x.descricao) === progNorm(descs[i])))
+ || PROG_ATIVIDADES.find(x => x.cod === c);
+}
+// atividade que saiu da lista nao pode sumir do registro antigo
+PROG_ATIV_SEL.push(a ? { cod:a.cod, descricao:a.descricao, fatorK:a.fatorK, tipo:a.tipo }
+: { cod:c, descricao:descs[i] || c, fatorK:0, tipo:'' });
+});
+progAtivPickAplicar();
+}
+document.addEventListener('click', function(ev){
+const box = document.getElementById('pf-ativ-box');
+const dd = document.getElementById('pf-ativ-dd');
+if(box && dd && !box.contains(ev.target)) dd.style.display = 'none';
+});
+window.progAtivPickFiltrar = progAtivPickFiltrar;
+window.progAtivPickAdd = progAtivPickAdd;
+window.progAtivPickDel = progAtivPickDel;
+window.progAtivPickTecla = progAtivPickTecla;
+window.progAtivPickLimpar = progAtivPickLimpar;
+
 // O tipo do servico sai da propria lista de atividades, senao um tipo novo
 // criado pelo usuario nao teria opcao correspondente aqui.
 function progFillTiposServico() {
@@ -4982,17 +5125,8 @@ sel.innerHTML += '<option value="' + nome + '">' + nome + '</option>';
 sel.value = nome;
 }
 function progOnAtivChange() {
-const sel = document.getElementById('pf-atividade').value;
-const selTipo = document.getElementById('pf-tipo');
-if (selTipo && typeof PROG_ATIVIDADES !== 'undefined') {
-const cod = sel.split('|')[0];
-const a = PROG_ATIVIDADES.find(x => x.cod === cod);
-selTipo.value = a ? a.tipo : '';     // tipo deduzido da atividade
-}
-if (!sel) { document.getElementById('pf-vunit').value = ''; return; }
-const fk = parseFloat(sel.split('|')[2]) || 0;
-document.getElementById('pf-vunit').value = fk > 0 ? 'R$ ' + fk.toLocaleString('pt-BR',{minimumFractionDigits:2}) : '-';
-progCalcValores();
+// mantida para quem chamava de fora; a escolha vive em PROG_ATIV_SEL
+if (typeof progAtivPickValor === 'function') progAtivPickValor();
 }
 function progCalcValores() {
 const sel = document.getElementById('pf-atividade').value;
@@ -5070,6 +5204,7 @@ progEditIdx = null;
 const el = document.getElementById(id);
 if (el) el.value = '';
 });
+if (typeof progAtivPickLimpar === 'function') progAtivPickLimpar();
 const alojEl = document.getElementById('pf-alojados');
 if (alojEl) alojEl.value = 'SIM';          // padrao da programacao
 const fonteEl = document.getElementById('pf-qtd-fonte');
@@ -5438,13 +5573,7 @@ set('pf-ar', r.ar_coelba);
 set('pf-tipo', r.tipo);
 progOnTipoChange();
 setTimeout(() => {
-const selAtiv = document.getElementById('pf-atividade');
-if (selAtiv) {
-for (let opt of selAtiv.options) {
-if (opt.value.startsWith(r.atividade_cod + '|')) { selAtiv.value = opt.value; break; }
-}
-progOnAtivChange();
-}
+if (typeof progAtivPickRestaurar === 'function') progAtivPickRestaurar(r.atividade_cod, r.atividade);
 set('pf-qtd-prev', r.qtd_previsto);
 set('pf-qtd-real', r.qtd_realizado);
 progCalcValores();
