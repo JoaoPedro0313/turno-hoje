@@ -6196,6 +6196,25 @@ const doc = '<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8">' +
 '#area-txt{max-width:1500px;margin:0 auto 10px;display:none}' +
 '#area-txt textarea{width:100%;height:200px;padding:12px;border:1.5px solid #cbd5e1;border-radius:8px;font-family:monospace;font-size:.72rem;resize:vertical}' +
 '@media print{body{background:#fff;padding:0}.folha{box-shadow:none;max-width:none}.barra,#area-txt{display:none!important}}' +
+// QUALIDADE: mantem cores/fundos ao imprimir ou salvar em PDF
+'html,body{-webkit-print-color-adjust:exact;print-color-adjust:exact}' +
+// QUALIDADE DA IMAGEM: classe aplicada so no momento do print (html2canvas).
+// Largura fixa + fontes ~35% maiores => texto grande em relacao a largura,
+// o que sobrevive a compressao do WhatsApp e a leitura no celular.
+'.folha.cap{width:1560px!important;max-width:none!important;box-shadow:none}' +
+'.folha.cap .wrap{overflow:visible;padding:12px 14px 16px}' +
+'.folha.cap table{font-size:.82rem}' +
+'.folha.cap th{font-size:.76rem;padding:8px 4px}' +
+'.folha.cap td{padding:6px 5px}' +
+'.folha.cap .cab{padding:16px 18px}' +
+'.folha.cap .cab img{height:56px}' +
+'.folha.cap .cab h1{font-size:1.4rem}' +
+'.folha.cap .cab h2{font-size:.92rem}' +
+'.folha.cap .cab .dt b{font-size:1.45rem}' +
+'.folha.cap .cab .dt span{font-size:.82rem}' +
+'.folha.cap .resumo{font-size:.86rem;padding:10px 18px}' +
+'.folha.cap .rod{font-size:.82rem;padding:0 18px 14px}' +
+'.folha.cap .marca{font-size:.8rem;padding:9px}' +
 '</style></head><body>' +
 '<div class="barra">' +
 '<button id="bt-imp">🖨️ Imprimir / salvar PDF</button>' +
@@ -6244,9 +6263,15 @@ const doc = '<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8">' +
 's.onload=cb;s.onerror=err;document.head.appendChild(s);}' +
 'document.getElementById("bt-img").onclick=function(){var b=this,txt=b.textContent;' +
 'b.disabled=true;b.textContent="⏳ Gerando imagem...";' +
-'function fim(m){b.disabled=false;b.textContent=m||txt;if(m)setTimeout(function(){b.textContent=txt;},2600);}' +
+'function fim(m){var e=document.querySelector(".folha");if(e)e.classList.remove("cap");' +
+'b.disabled=false;b.textContent=m||txt;if(m)setTimeout(function(){b.textContent=txt;},2600);}' +
 'comCanvas(function(){' +
-'html2canvas(document.querySelector(".folha"),{scale:2,backgroundColor:"#ffffff",useCORS:true,windowWidth:1500})' +
+'var el=document.querySelector(".folha");el.classList.add("cap");' +
+'var W=Math.round(el.getBoundingClientRect().width)||1560;' +
+'var H=Math.ceil(Math.max(el.scrollHeight,el.getBoundingClientRect().height));' +
+// escala calculada para sair ~3800px de largura (nitidez alta sem arquivo gigante)
+'var SC=Math.max(2,Math.min(4,3800/W));' +
+'html2canvas(el,{scale:SC,backgroundColor:"#ffffff",useCORS:true,width:W,height:H,windowWidth:W+40,windowHeight:H+80,scrollX:0,scrollY:0,imageTimeout:0})' +
 '.then(function(cv){cv.toBlob(function(bl){' +
 'if(!bl){fim("❌ Não gerou");return;}' +
 'var f=new File([bl],NOME+".png",{type:"image/png"});' +
