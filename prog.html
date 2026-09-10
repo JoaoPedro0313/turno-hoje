@@ -323,7 +323,10 @@ const PROG_ATIVIDADES_BASE = PROG_ATIVIDADES.slice();
 
   <div class="_s26">
     <div style="grid-column:span 2;">
-      <label class="_s1">PEP OBRA * <span id="pf-obras-fonte" style="font-weight:600;color:#94a3b8;text-transform:none;letter-spacing:0;"></span> <button type="button" onclick="progMesAbrir()" title="Cadastrar o mês novo da carteira do Mapa" style="background:none;border:none;padding:0 2px;font-family:'Barlow',sans-serif;font-size:0.66rem;font-weight:800;color:#7e3af2;cursor:pointer;text-transform:none;letter-spacing:0;text-decoration:underline;">＋ mês da carteira</button></label>
+      <label class="_s1">PEP OBRA * <span id="pf-obras-fonte" style="font-weight:600;color:#94a3b8;text-transform:none;letter-spacing:0;"></span> <button type="button" onclick="progMesAbrir()" title="Cadastrar o mês novo da carteira do Mapa" style="background:none;border:none;padding:0 2px;font-family:'Barlow',sans-serif;font-size:0.66rem;font-weight:800;color:#7e3af2;cursor:pointer;text-transform:none;letter-spacing:0;text-decoration:underline;">＋ mês da carteira</button>
+        <span id="pf-sem-obra-tag" title="A atividade escolhida está marcada como 'não exige obra' no gerenciador de atividades" style="display:none;margin-left:8px;padding:1px 8px;border:1.5px solid #c0e8e5;border-radius:20px;background:#f0fafa;font-size:0.64rem;font-weight:900;color:#0d7377;text-transform:uppercase;letter-spacing:0.3px;vertical-align:middle;">✓ sem obra — PEP opcional</span>
+        <input type="checkbox" id="pf-sem-obra" onchange="progSemObraToggle(true)" style="display:none;">
+      </label>
       <div style="position:relative;">
         <input type="text" id="pf-pep-input" placeholder="Digite PEP ou nome da obra..." autocomplete="off"
           style="width:100%;padding:9px 12px;border:1.5px solid #e0e8f0;border-radius:9px;font-family:'Barlow',sans-serif;font-size:0.82rem;font-weight:700;color:#1a365d;outline:none;box-sizing:border-box;"
@@ -452,6 +455,11 @@ const PROG_ATIVIDADES_BASE = PROG_ATIVIDADES.slice();
             style="width:100%;padding:9px 12px;border:1.5px solid #e0e8f0;border-radius:9px;font-family:'Barlow',sans-serif;font-size:0.82rem;font-weight:700;color:#1a365d;outline:none;box-sizing:border-box;"
             onfocus="this.style.borderColor='#7e3af2'" onblur="this.style.borderColor='#e0e8f0'">
         </div>
+        <div style="grid-column:span 2;">
+          <label for="pa-sem-obra" title="Atividade interna: manutenção, mudança, devolução de materiais, equipe ociosa... Ao escolher esta atividade na programação, o PEP OBRA deixa de ser obrigatório." style="display:inline-flex;align-items:center;gap:7px;padding:6px 12px;border:1.5px solid #e9d8fd;border-radius:9px;background:#f8f5ff;font-family:'Barlow',sans-serif;font-size:0.7rem;font-weight:800;color:#7e3af2;letter-spacing:0.3px;cursor:pointer;">
+            <input type="checkbox" id="pa-sem-obra" style="accent-color:#7e3af2;cursor:pointer;margin:0;width:15px;height:15px;"> NÃO EXIGE OBRA (SEM PEP)
+          </label>
+        </div>
         <div style="grid-column:span 2;display:flex;justify-content:flex-end;gap:8px;">
           <button type="button" id="pa-btn-cancelar" onclick="progAtivEditCancelar()" style="display:none;padding:9px 18px;background:#f0f4f8;border:none;border-radius:10px;font-family:'Barlow',sans-serif;font-size:0.78rem;font-weight:800;color:#64748b;cursor:pointer;letter-spacing:0.5px;">CANCELAR</button>
           <button type="button" id="pa-btn-add" onclick="progAtivAdicionar()" style="padding:9px 22px;background:linear-gradient(135deg,#7e3af2,#9f7aea);border:none;border-radius:10px;font-family:'Barlow',sans-serif;font-size:0.78rem;font-weight:800;color:#fff;cursor:pointer;letter-spacing:0.5px;box-shadow:0 4px 12px rgba(126,58,242,0.3);">&#43; ADICIONAR</button>
@@ -496,6 +504,7 @@ const PROG_ATIVIDADES_BASE = PROG_ATIVIDADES.slice();
     <input type="date" id="prog-cli-data" title="Dia da programação que vai para o cliente" style="padding:8px 10px;border:1.5px solid #e0e8f0;border-radius:9px;font-family:'Barlow',sans-serif;font-size:0.78rem;font-weight:700;color:#1a365d;background:#fff;outline:none;" onfocus="this.style.borderColor='#7e3af2'" onblur="this.style.borderColor='#e0e8f0'">
     <button onclick="progLayoutCliente()" title="Folha A4 com a logo da Mariuá para mandar ao cliente" style="padding:9px 16px;background:linear-gradient(135deg,#1a365d,#2b6cb0);border:none;border-radius:9px;font-family:'Barlow',sans-serif;font-size:0.75rem;font-weight:800;color:#fff;cursor:pointer;letter-spacing:0.5px;">📤 CLIENTE</button>
     <button onclick="progExportCSV()" style="padding:9px 16px;background:#276749;border:none;border-radius:9px;font-family:'Barlow',sans-serif;font-size:0.75rem;font-weight:800;color:#fff;cursor:pointer;letter-spacing:0.5px;">⬇️ EXCEL</button>
+    <button onclick="progExportCSVBotao()" title="Baixar em CSV (abre no Excel, Google Planilhas e qualquer sistema)" style="padding:9px 16px;background:#fff;border:1.5px solid #c6dfd0;border-radius:9px;font-family:'Barlow',sans-serif;font-size:0.75rem;font-weight:800;color:#276749;cursor:pointer;letter-spacing:0.5px;white-space:nowrap;">📄 CSV</button>
     <button type="button" id="prog-btn-filtros" onclick="progToggleFiltros()" style="padding:9px 16px;background:#fff;border:1.5px solid #e0e8f0;border-radius:9px;font-family:'Barlow',sans-serif;font-size:0.75rem;font-weight:800;color:#64748b;cursor:pointer;letter-spacing:0.5px;white-space:nowrap;">🔎 FILTROS</button>
     <span id="prog-list-count" style="font-size:0.72rem;font-weight:800;color:#888;white-space:nowrap;"></span>
 
@@ -4471,6 +4480,59 @@ if (primeiro) { primeiro.click(); return; }
 progPepResolve();
 if (dd) dd.style.display = 'none';
 }
+// ===== SEM OBRA: A MARCA VEM DA ATIVIDADE =====
+// Quem manda e a caixinha "NAO EXIGE OBRA" do gerenciador de atividades.
+// Escolhendo uma atividade marcada assim, o PEP deixa de ser obrigatorio e o
+// municipio fica livre para digitar. Se ainda assim alguem quiser informar um
+// PEP, o campo continua funcionando e o que for digitado vale.
+const PROG_SEM_OBRA_PEP = 'SEM OBRA';
+// Palavras usadas so nas atividades de fabrica, que ainda nao passaram pelo
+// gerenciador. Marcando ou desmarcando la, a marca explicita ganha destas.
+const PROG_ATIV_SEM_OBRA = ['MANUTENCAO DE EQUIPAMENTO','REALIZAR MANUTENCAO','MUDANCA','REALIZAR MUDANCA',
+'DEVOLVER MATERIAIS','DEVOLUCAO E SAQUE DE MATERIAIS NA BASE','EQUIPE SACANDO MATERIAIS NA BASE',
+'TRANSPORTE DE MATERIAIS','EQUIPE OCIOSA','SEM FRENTE DE SERVICO','FALTA DE MATERIAS','FALTA DE VERBAS'];
+function progAtivPareceSemObra(a){
+const d = progNorm((a && a.descricao) || '');
+return PROG_ATIV_SEM_OBRA.some(k => d.indexOf(k) >= 0);
+}
+function progAtivSemObra(a){
+if (!a) return false;
+if (a.semObra === true)  return true;
+if (a.semObra === false) return false;
+return progAtivPareceSemObra(a);
+}
+function progSemObraAtiva(){
+const c = document.getElementById('pf-sem-obra');
+return !!(c && c.checked);
+}
+function progSemObraToggle(){
+const on   = progSemObraAtiva();
+const tag  = document.getElementById('pf-sem-obra-tag');
+const inp  = document.getElementById('pf-pep-input');
+const nome = document.getElementById('pf-nome-obra');
+const mun  = document.getElementById('pf-municipio');
+if (tag) tag.style.display = on ? 'inline-block' : 'none';
+if (on) {
+if (inp) inp.placeholder = 'Opcional — atividade sem obra';
+if (nome && !nome.value) nome.value = 'ATIVIDADE SEM OBRA';
+// municipio passa a ser digitavel: e a unica referencia de local que sobra
+if (mun) { mun.readOnly = false; mun.placeholder = 'Digite o município'; mun.style.background = '#fff'; mun.style.borderColor = '#e0e8f0'; }
+} else {
+if (inp) inp.placeholder = 'Digite PEP ou nome da obra...';
+if (nome && nome.value === 'ATIVIDADE SEM OBRA') nome.value = '';
+if (mun) { mun.readOnly = true; mun.placeholder = ''; mun.style.background = '#f8fafc'; mun.style.borderColor = '#e8ecef'; }
+}
+}
+// Chamado a cada mudanca de atividade: so libera quando TODAS as escolhidas
+// estao marcadas como sem obra no gerenciador.
+function progSemObraSugerir(){
+const c = document.getElementById('pf-sem-obra');
+if (!c) return;
+const sel = (typeof PROG_ATIV_SEL !== 'undefined') ? PROG_ATIV_SEL : [];
+const livre = sel.length > 0 && sel.every(progAtivSemObra);
+if (c.checked !== livre) { c.checked = livre; }
+progSemObraToggle();
+}
 function progPepSearch(val) {
 const dd = document.getElementById('pf-pep-dd');
 if (!dd) return;
@@ -4921,6 +4983,7 @@ const selTipo = document.getElementById('pf-tipo');
 if(selTipo) selTipo.value = PROG_ATIV_SEL.length ? (PROG_ATIV_SEL[0].tipo || '') : '';
 progAtivPickRender();
 progAtivPickValor();
+if (typeof progSemObraSugerir === 'function') progSemObraSugerir();
 }
 // Mostra o valor unitario e, quando ha mais de uma, de onde ele saiu.
 function progAtivPickValor(){
@@ -5213,6 +5276,8 @@ let tipo = tEl.value === '__novo__'
 ? String((nEl && nEl.value) || '').replace(/\s+/g,' ').trim().toUpperCase()
 : tEl.value;
 const fk = progAtivNum((fEl && fEl.value) || '0');
+const soEl = document.getElementById('pa-sem-obra');
+const semObra = !!(soEl && soEl.checked);
 if(!desc){ progAtivToast('Escreva a descrição da atividade.','error'); dEl.focus(); return; }
 if(!tipo){ progAtivToast('Escolha o tipo do serviço.','error'); tEl.focus(); return; }
 // ao editar, a propria atividade nao conta como duplicada
@@ -5227,7 +5292,7 @@ if(PROG_ATIV_EDIT){
 const orig = PROG_ATIV_EDIT;
 const iEx = PROG_ATIV_EXTRAS.findIndex(x => progAtivChave(x) === orig.chave);
 nova = {
-cod: orig.cod, servico: 'SERVICOS_RUR-BA', tipo, descricao: desc, fatorK: fk,
+cod: orig.cod, servico: 'SERVICOS_RUR-BA', tipo, descricao: desc, fatorK: fk, semObra: semObra,
 editadaDe: orig.editadaDe || orig.chave,
 criadoPor: (window.MARIUA_USER || '').trim(), criadoEm: new Date().toISOString()
 };
@@ -5241,7 +5306,7 @@ PROG_ATIV_EXTRAS.push(nova);
 }
 progAtivEditCancelar(true);
 }else{
-nova = { cod: progAtivNovoCod(), servico: 'SERVICOS_RUR-BA', tipo, descricao: desc, fatorK: fk, criadoPor: (window.MARIUA_USER || '').trim(), criadoEm: new Date().toISOString() };
+nova = { cod: progAtivNovoCod(), servico: 'SERVICOS_RUR-BA', tipo, descricao: desc, fatorK: fk, semObra: semObra, criadoPor: (window.MARIUA_USER || '').trim(), criadoEm: new Date().toISOString() };
 PROG_ATIV_EXTRAS.push(nova);
 }
 progAtivRecompor();
@@ -5250,6 +5315,7 @@ progAtivFillTipos();
 progAtivRenderLista();
 dEl.value = '';
 if(fEl) fEl.value = '';
+if(soEl) soEl.checked = false;
 if(nEl){ nEl.value = ''; }
 tEl.value = tipo;
 progAtivTipoChange();
@@ -5278,6 +5344,8 @@ progAtivTipoChange();
 }
 const fk = Number(a.fatorK) || 0;
 if(fEl) fEl.value = fk > 0 ? fk.toLocaleString('pt-BR',{minimumFractionDigits:2}) : '';
+const soEl = document.getElementById('pa-sem-obra');
+if(soEl) soEl.checked = (a.semObra === true) || (a.semObra === undefined && progAtivPareceSemObra(a));
 progAtivModoEdicao(true, a);
 if(dEl){ dEl.focus(); dEl.select(); }
 const m = document.getElementById('prog-ativ-modal');
@@ -5290,6 +5358,8 @@ const fEl = document.getElementById('pa-fk');
 if(!silencioso){
 if(dEl) dEl.value = '';
 if(fEl) fEl.value = '';
+const soEl = document.getElementById('pa-sem-obra');
+if(soEl) soEl.checked = false;
 }
 progAtivModoEdicao(false);
 if(!silencioso) progAtivRenderLista();
@@ -5425,6 +5495,7 @@ html += '<div style="display:flex;align-items:center;gap:10px;padding:8px 10px;b
 '<div style="flex:1;min-width:0;">' +
 '<div style="font-size:0.78rem;font-weight:800;color:#1a365d;line-height:1.25;">' + progAtivEsc(a.descricao) +
 (meu ? ' <span style="font-size:0.58rem;font-weight:900;color:' + (a.editadaDe ? '#2b6cb0' : '#7e3af2') + ';background:' + (a.editadaDe ? 'rgba(43,108,176,0.12)' : 'rgba(126,58,242,0.12)') + ';padding:1px 6px;border-radius:20px;vertical-align:middle;">' + (a.editadaDe ? 'EDITADA' : 'NOVA') + '</span>' : '') +
+(progAtivSemObra(a) ? ' <span style="font-size:0.58rem;font-weight:900;color:#0d7377;background:rgba(13,115,119,0.12);padding:1px 6px;border-radius:20px;vertical-align:middle;">SEM OBRA</span>' : '') +
 '</div>' +
 '<div style="font-size:0.66rem;font-weight:600;color:#94a3b8;margin-top:2px;">' + progAtivEsc(a.cod) +
 ' · Fator K ' + (fk > 0 ? 'R$ ' + fk.toLocaleString('pt-BR',{minimumFractionDigits:2}) : '—') + '</div>' +
@@ -5479,9 +5550,13 @@ const data    = document.getElementById('pf-data').value;
 const sup     = document.getElementById('pf-supervisor').value;
 const prog    = document.getElementById('pf-programador').value;
 const enc     = document.getElementById('pf-encarregado').value;
-const pep     = (typeof progPepResolve === 'function' ? progPepResolve() : '')
+// Atividade marcada como "nao exige obra": vale SEM OBRA quando ninguem
+// digitou um PEP. Se digitou, o PEP informado ganha.
+const semObra = (typeof progSemObraAtiva === 'function') && progSemObraAtiva();
+const pepDig  = (typeof progPepResolve === 'function' ? progPepResolve() : '')
 || document.getElementById('pf-pep-val').value
 || document.getElementById('pf-pep-input').value.trim();
+const pep     = pepDig || (semObra ? PROG_SEM_OBRA_PEP : '');
 const atSel   = document.getElementById('pf-atividade').value;
 const tipo    = document.getElementById('pf-tipo').value;
 if (!data || !sup || !enc || !pep || !atSel) {
@@ -5563,6 +5638,9 @@ const el = document.getElementById(id);
 if (el) el.value = '';
 });
 document.getElementById('pf-pep-val').value = '';
+const semObraEl = document.getElementById('pf-sem-obra');
+if (semObraEl) semObraEl.checked = false;
+if (typeof progSemObraToggle === 'function') progSemObraToggle();
 const df = document.getElementById('pf-data');
 if (df) df.value = progHoje();
 progFillAtividades();
@@ -5894,6 +5972,47 @@ if (el) el.value = '';
 });
 progRenderList();
 }
+// Le os filtros da tela uma vez so. A lista e as exportacoes usam isto,
+// assim o arquivo baixado sai igualzinho ao que esta na tela.
+function progFiltrosAtuais(){
+const g = id => document.getElementById(id)?.value || '';
+const f = {
+search: g('prog-search').toLowerCase(),
+sup: g('prog-filter-sup'), tipo: g('prog-filter-tipo'),
+enc: g('prog-filter-enc'), mun: g('prog-filter-mun'), pep: g('prog-filter-pep'),
+ativ: g('prog-filter-ativ'), turno: g('prog-filter-turno'), aloj: g('prog-filter-aloj'),
+status: g('prog-filter-status'), de: g('prog-filter-de'), ate: g('prog-filter-ate')
+};
+f.ativos = [f.sup,f.tipo,f.enc,f.mun,f.pep,f.ativ,f.turno,f.aloj,f.status,f.de,f.ate].filter(Boolean).length;
+return f;
+}
+function progFiltrarRegistros(f){
+f = f || progFiltrosAtuais();
+return (progRegistros || []).filter(r => {
+if (f.sup && r.supervisor!==f.sup) return false;
+if (f.tipo && r.tipo!==f.tipo) return false;
+if (f.enc && (r.encarregado||'').trim()!==f.enc) return false;
+if (f.mun && (r.municipio||'').trim()!==f.mun) return false;
+if (f.pep && (r.pep||'').trim()!==f.pep) return false;
+if (f.ativ && (r.atividade||'').trim()!==f.ativ) return false;
+if (f.turno && (r.turno||'')!==f.turno) return false;
+if (f.aloj && (r.alojados||'')!==f.aloj) return false;
+if (f.de && (!r.data || r.data < f.de)) return false;
+if (f.ate && (!r.data || r.data > f.ate)) return false;
+if (f.status) {
+const pct = Number(r.status_pct) || 0;
+if (f.status==='100'     && pct < 100) return false;
+if (f.status==='parcial' && (pct < 50 || pct >= 100)) return false;
+if (f.status==='baixo'   && (pct <= 0 || pct >= 50)) return false;
+if (f.status==='zero'    && pct > 0) return false;
+}
+if (f.search) {
+const hay = [r.encarregado,r.pep,r.nome_obra,r.municipio,r.atividade,r.supervisor].join(' ').toLowerCase();
+if (!hay.includes(f.search)) return false;
+}
+return true;
+});
+}
 function progRenderList() {
 const tbody = document.getElementById('prog-tbody');
 const empty = document.getElementById('prog-empty');
@@ -5903,19 +6022,8 @@ progPopularFiltros();
 const cliData = document.getElementById('prog-cli-data');
 if (cliData && !cliData.value && typeof progHoje === 'function') cliData.value = progHoje();
 if (!tbody) return;
-const search = (document.getElementById('prog-search')?.value || '').toLowerCase();
-const filterSup = document.getElementById('prog-filter-sup')?.value || '';
-const filterTipo = document.getElementById('prog-filter-tipo')?.value || '';
-const fEnc    = document.getElementById('prog-filter-enc')?.value || '';
-const fMun    = document.getElementById('prog-filter-mun')?.value || '';
-const fPep    = document.getElementById('prog-filter-pep')?.value || '';
-const fAtiv   = document.getElementById('prog-filter-ativ')?.value || '';
-const fTurno  = document.getElementById('prog-filter-turno')?.value || '';
-const fAloj   = document.getElementById('prog-filter-aloj')?.value || '';
-const fStatus = document.getElementById('prog-filter-status')?.value || '';
-const fDe     = document.getElementById('prog-filter-de')?.value || '';
-const fAte    = document.getElementById('prog-filter-ate')?.value || '';
-const ativos = [filterSup,filterTipo,fEnc,fMun,fPep,fAtiv,fTurno,fAloj,fStatus,fDe,fAte].filter(Boolean).length;
+const f = progFiltrosAtuais();
+const search = f.search, ativos = f.ativos;
 const btnF = document.getElementById('prog-btn-filtros');
 if (btnF) {
 btnF.textContent = ativos ? `🔎 FILTROS (${ativos})` : '🔎 FILTROS';
@@ -5923,30 +6031,7 @@ btnF.style.background = ativos ? '#f8f5ff' : '#fff';
 btnF.style.borderColor = ativos ? '#c9a9fb' : '#e0e8f0';
 btnF.style.color = ativos ? '#7e3af2' : '#64748b';
 }
-let filtered = progRegistros.filter(r => {
-if (filterSup && r.supervisor!==filterSup) return false;
-if (filterTipo && r.tipo!==filterTipo) return false;
-if (fEnc && (r.encarregado||'').trim()!==fEnc) return false;
-if (fMun && (r.municipio||'').trim()!==fMun) return false;
-if (fPep && (r.pep||'').trim()!==fPep) return false;
-if (fAtiv && (r.atividade||'').trim()!==fAtiv) return false;
-if (fTurno && (r.turno||'')!==fTurno) return false;
-if (fAloj && (r.alojados||'')!==fAloj) return false;
-if (fDe && (!r.data || r.data < fDe)) return false;
-if (fAte && (!r.data || r.data > fAte)) return false;
-if (fStatus) {
-const pct = Number(r.status_pct) || 0;
-if (fStatus==='100'     && pct < 100) return false;
-if (fStatus==='parcial' && (pct < 50 || pct >= 100)) return false;
-if (fStatus==='baixo'   && (pct <= 0 || pct >= 50)) return false;
-if (fStatus==='zero'    && pct > 0) return false;
-}
-if (search) {
-const hay = [r.encarregado,r.pep,r.nome_obra,r.municipio,r.atividade,r.supervisor].join(' ').toLowerCase();
-if (!hay.includes(search)) return false;
-}
-return true;
-}).sort((a,b) => b.data.localeCompare(a.data));
+let filtered = progFiltrarRegistros(f).sort((a,b) => String(b.data||'').localeCompare(String(a.data||'')));
 if (count) count.textContent = (ativos || search)
 ? filtered.length + ' de ' + progRegistros.length + ' registro(s)'
 : filtered.length + ' registro(s)';
@@ -6007,9 +6092,12 @@ set('pf-alojados', r.alojados || 'SIM');
 set('pf-turno', r.turno || 'DIA INTEIRO');
 set('pf-pep-input', r.pep);
 set('pf-pep-val', r.pep);
+const semObraEd = document.getElementById('pf-sem-obra');
+if (semObraEd) semObraEd.checked = !r.pep || progPepNorm(r.pep) === progPepNorm(PROG_SEM_OBRA_PEP);
 set('pf-nome-obra', r.nome_obra);
 set('pf-municipio', r.municipio);
 set('pf-ar', r.ar_coelba);
+if (typeof progSemObraToggle === 'function') progSemObraToggle();
 set('pf-tipo', r.tipo);
 progOnTipoChange();
 setTimeout(() => {
@@ -6153,8 +6241,10 @@ document.head.appendChild(s);
 }
 const PROG_EXP_COLS = ['DATA','TURNO','SUPERVISOR','PROGRAMADOR','ENCARREGADO','QTD_COLAB','ALOJADOS','PEP_OBRA','NOME_OBRA','MUNICIPIO','AR_COELBA','ATIVIDADE','TIPO','QTD_PREVISTO','QTD_REALIZADO','STATUS_%','VALOR_UNITARIO','VALOR_PREVISTO','VALOR_REALIZADO'];
 // Ordena por data e equipe, para o arquivo sair na mesma leitura da tela.
+// Leva o que os filtros da lista deixaram passar: o arquivo sai igual a tela.
 function progExpOrdenado(){
-return progRegistros.slice().sort((a,b) =>
+const base = (typeof progFiltrarRegistros === 'function') ? progFiltrarRegistros() : progRegistros;
+return base.slice().sort((a,b) =>
 String(a.data||'').localeCompare(String(b.data||'')) ||
 String(a.supervisor||'').localeCompare(String(b.supervisor||'')) ||
 String(a.encarregado||'').localeCompare(String(b.encarregado||''))
@@ -6184,6 +6274,10 @@ progToast('❌ Não há registros para exportar.', 'error');
 return;
 }
 const ordem = progExpOrdenado();
+if(!ordem.length){
+progToast('❌ Nenhum registro no filtro atual. Limpe os filtros e tente de novo.', 'error');
+return;
+}
 progToast('⏳ Montando a planilha...', 'success');
 progComSheetJS(function(){
 try{
@@ -6231,9 +6325,23 @@ progExportCSVSimples(ordem, 'A planilha falhou');
 progExportCSVSimples(ordem, 'Sem internet para montar o .xlsx');
 });
 }
-// Plano B: CSV com ponto e virgula e a linha sep=, que faz o Excel obedecer
+// Botao CSV: baixa direto, sem depender da biblioteca do .xlsx (serve offline).
+function progExportCSVBotao(){
+if(!progRegistros || !progRegistros.length){
+progToast('❌ Não há registros para exportar.', 'error');
+return;
+}
+const ordem = progExpOrdenado();
+if(!ordem.length){
+progToast('❌ Nenhum registro no filtro atual. Limpe os filtros e tente de novo.', 'error');
+return;
+}
+progExportCSVArquivo(ordem);
+progToast('✅ ' + ordem.length + ' registro(s) baixados em CSV.', 'success');
+}
+// CSV com ponto e virgula e a linha sep=, que faz o Excel obedecer
 // o separador em qualquer idioma em vez de adivinhar pelo sistema.
-function progExportCSVSimples(ordem, motivo){
+function progExportCSVArquivo(ordem){
 const SEP = ';';
 const num = v => {
 if(v === null || v === undefined || v === '') return '';
@@ -6249,6 +6357,10 @@ num(r.valor_unitario), num(r.valor_previsto), num(r.valor_realizado)
 ].map(v => '"' + String(v === null || v === undefined ? '' : v).replace(/"/g,'""') + '"').join(SEP));
 const csv = ['sep=' + SEP, PROG_EXP_COLS.join(SEP), ...rows].join('\r\n');
 progExpBaixar(new Blob(['\uFEFF' + csv], { type:'text/csv;charset=utf-8' }), progExpNome(ordem, 'csv'));
+}
+// Plano B do botao EXCEL: quando o .xlsx nao da, cai no mesmo CSV avisando.
+function progExportCSVSimples(ordem, motivo){
+progExportCSVArquivo(ordem);
 progToast('⚠️ ' + motivo + ' — baixei em CSV, que abre em colunas do mesmo jeito.', 'error');
 }
 
