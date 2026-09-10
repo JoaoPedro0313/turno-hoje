@@ -150,7 +150,7 @@ body.sm-collapsed .sm-side:hover .sm-group-head{justify-content:flex-start;paddi
 
     <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:12px;">
       <div>
-        <div style="font-size:.78rem;font-weight:800;color:#0d7377;text-transform:uppercase;letter-spacing:.5px;">2 · Constantes do arquivo <span style="background:#eef4f4;color:#0d7377;border:1px solid #cfe3e2;border-radius:6px;padding:2px 7px;font-size:.62rem;margin-left:6px;">v7 · 10/09</span></div>
+        <div style="font-size:.78rem;font-weight:800;color:#0d7377;text-transform:uppercase;letter-spacing:.5px;">2 · Constantes do arquivo <span style="background:#eef4f4;color:#0d7377;border:1px solid #cfe3e2;border-radius:6px;padding:2px 7px;font-size:.62rem;margin-left:6px;">v8 · 10/09</span></div>
         <div style="font-size:.7rem;color:#94a3b8;font-weight:700;margin-top:3px;">Base <span id="co-const-base" style="color:#0d7377;">—</span> <span id="co-const-count"></span></div>
       </div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
@@ -168,12 +168,13 @@ body.sm-collapsed .sm-side:hover .sm-group-head{justify-content:flex-start;paddi
       <div id="co-estado-btns" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
       <label style="display:inline-flex;align-items:center;gap:6px;margin-left:auto;font-size:.71rem;font-weight:700;color:#64748b;cursor:pointer;"><input type="checkbox" id="co-so-preenchidas" onchange="coPopularConstantes()" style="width:15px;height:15px;accent-color:#0d7377;cursor:pointer;"> Mostrar só preenchidas</label>
       <label style="display:inline-flex;align-items:center;gap:6px;font-size:.71rem;font-weight:700;color:#64748b;cursor:pointer;"><input type="checkbox" id="co-auto-baixar" checked style="width:15px;height:15px;accent-color:#0d7377;cursor:pointer;"> Baixar CSV ao salvar</label>
+      <label style="display:inline-flex;align-items:center;gap:6px;font-size:.71rem;font-weight:700;color:#64748b;cursor:pointer;" title="Marcado: cada obra sai com o status que está na carteira. Desmarcado: todas saem com o STATUS* do card 2."><input type="checkbox" id="co-status-planilha" onchange="coStatusPlanilhaMudou()" style="width:15px;height:15px;accent-color:#0d7377;cursor:pointer;"> Manter status da carteira</label>
     </div>
 
     <div id="co-const-grupos"></div>
 
     <div style="font-size:.67rem;color:#94a3b8;margin-top:12px;padding-top:10px;border-top:1px solid #eef2f7;">
-      Cada base guarda o seu próprio conjunto: ao trocar de base no card 1, estes campos mudam junto. · Vindos da carteira, não editáveis aqui: <b>Projeto, Título, Município, Responsável, Supervisor, Postes, Latitude, Longitude</b> · Centro de serviço = sigla do estado + município · Status usa o da planilha quando existir.
+      Cada base guarda o seu próprio conjunto: ao trocar de base no card 1, estes campos mudam junto. · Vindos da carteira, não editáveis aqui: <b>Projeto, Título, Município, Responsável, Supervisor, Postes, Latitude, Longitude</b> · Centro de serviço = sigla do estado + município · Status: por padrão o <b>STATUS*</b> do card 2 vale para todas as obras; marque “Manter status da carteira” para cada obra sair com o status da planilha.
     </div>
     </div>
   </div>
@@ -385,15 +386,15 @@ function coProcessar(txt){
       var mun=(cMun>=0?(row[cMun]||''):'').trim();
       var reg={};
       reg['Projeto*']=pep;
-      reg['Titulo da obra*']=(cTit>=0?(row[cTit]||''):'').trim();
+      reg['Titulo da obra*']=(cTit>=0?(row[cTit]||''):'').replace(/[\r\n]+/g,' ').replace(/\s{2,}/g,' ').trim();
       reg['Municipio*']=mun;
       reg['RESPONSAVEL*']=(cSup>=0?(row[cSup]||''):'').split(' - ')[0].trim();
       var _stPlan=(cStat>=0?(row[cStat]||''):'').trim();
       reg['_statusDaPlanilha']=_stPlan;   // se vazio, usa a constante STATUS*
       // as demais colunas sao preenchidas por coAplicarConstantes() (card 2)
-      reg['Postes']=(cPost>=0?(row[cPost]||''):'').trim();
-      reg['LATITUDE']=(cLat>=0?(row[cLat]||''):'').trim().replace('.',',');
-      reg['LONGITUDE']=(cLon>=0?(row[cLon]||''):'').trim().replace('.',',');
+      reg['Postes']=coUmaLinha(cPost>=0?(row[cPost]||''):'');
+      reg['LATITUDE']=coUmaLinha(cLat>=0?(row[cLat]||''):'').replace('.',',');
+      reg['LONGITUDE']=coUmaLinha(cLon>=0?(row[cLon]||''):'').replace('.',',');
       reg['SUPERVISOR']=(cSup>=0?(row[cSup]||''):'').split(' - ')[0].trim();
       // só obras em Execução ou Programada
       var _st=coNorm(_stPlan || coConstAtual()['STATUS*'] || '');
@@ -410,6 +411,13 @@ function coProcessar(txt){
     var b=document.getElementById('co-baixar'); b.disabled=false; b.style.opacity='1';
     coAplicarConstantes();
     coPreview();
+}
+
+// celula da carteira com varias linhas (ex.: 5 coordenadas empilhadas) -> so a primeira
+function coUmaLinha(v){
+  var partes=String(v==null?'':v).split(/[\r\n]+/);
+  for(var i=0;i<partes.length;i++){ var t=partes[i].trim(); if(t) return t; }
+  return '';
 }
 
 function coDataHoje(){ var d=new Date(); return ('0'+d.getDate()).slice(-2)+'/'+('0'+(d.getMonth()+1)).slice(-2)+'/'+d.getFullYear(); }
@@ -457,6 +465,23 @@ function coColunasConst(){
   return CO_HEADERS.filter(function(h){ return CO_CAMPOS_CARTEIRA.indexOf(h)<0; });
 }
 
+// ---------- status: carteira ou card 2 ----------
+// desmarcado (padrao) = o STATUS* do card 2 manda em todas as obras
+function coUsarStatusPlanilha(){
+  var el=document.getElementById('co-status-planilha');
+  return !!(el && el.checked);
+}
+function coStatusPlanilhaMudou(){
+  try{ localStorage.setItem('cadastro_obra_status_planilha', coUsarStatusPlanilha()?'1':'0'); }catch(e){}
+  coAplicarEAtualizar(coUsarStatusPlanilha()?'Status vindo da carteira':'Status do card 2 em todas as obras');
+}
+function coRestaurarStatusPlanilha(){
+  var el=document.getElementById('co-status-planilha'); if(!el) return;
+  var v=null;
+  try{ v=localStorage.getItem('cadastro_obra_status_planilha'); }catch(e){}
+  el.checked=(v==='1');
+}
+
 // ---------- aplica nas obras carregadas ----------
 function coAplicarConstantes(){
   if(!CO_ROWS.length) return;
@@ -466,7 +491,8 @@ function coAplicarConstantes(){
   CO_ROWS.forEach(function(reg){
     cols.forEach(function(h){ reg[h]=C[h]||''; });
     // status: o da planilha manda; a constante e o padrao de quem veio vazio
-    reg['STATUS*']=(reg['_statusDaPlanilha']||C['STATUS*']||'');
+    reg['STATUS*']=coUsarStatusPlanilha() ? (reg['_statusDaPlanilha']||C['STATUS*']||'')
+                                          : (C['STATUS*']||reg['_statusDaPlanilha']||'');
     reg['CENTRO SERVICO']=reg['Municipio*']?(sigla+'-'+reg['Municipio*'].toUpperCase()):'';
     if(!reg['DATA_RECEBIMENTO*']) reg['DATA_RECEBIMENTO*']=coDataHoje();
   });
@@ -580,7 +606,7 @@ function coCopiarDe(){
 
 // ---------- salvar / carregar ----------
 function coSalvarConstantes(){
-  var pacote={ versao:2, bases:CO_CONST_BASES, estado:coEstado(), quando:new Date().toISOString() };
+  var pacote={ versao:2, bases:CO_CONST_BASES, estado:coEstado(), statusPlanilha:coUsarStatusPlanilha(), quando:new Date().toISOString() };
   var n=CO_ROWS.length;
   coAplicarConstantes();
   if(n) coPreview();
@@ -613,6 +639,10 @@ function coAplicarPacote(pac){
     CO_CONST_BASES[CO_BASE]=C;
   }
   if(pac.estado){ var e=document.getElementById('co-estado'); if(e) e.value=pac.estado; }
+  if(typeof pac.statusPlanilha==='boolean'){
+    var sp=document.getElementById('co-status-planilha'); if(sp) sp.checked=pac.statusPlanilha;
+    try{ localStorage.setItem('cadastro_obra_status_planilha', pac.statusPlanilha?'1':'0'); }catch(e){}
+  }
 }
 function coCarregarConstantes(){
   try{ var lc=localStorage.getItem('cadastro_obra_constantes'); if(lc) coAplicarPacote(JSON.parse(lc)); }catch(e){}
@@ -623,7 +653,7 @@ function coCarregarConstantes(){
       if(pac){ coAplicarPacote(pac); try{ localStorage.setItem('cadastro_obra_constantes', JSON.stringify(pac)); }catch(e){} }
     })
     .catch(function(){})
-    .then(function(){ coPopularEstados(); coPopularConstantes(); coRestaurarPainelConst(); });
+    .then(function(){ coPopularEstados(); coRestaurarStatusPlanilha(); coPopularConstantes(); coRestaurarPainelConst(); });
 }
 
 function coBaixar(){
