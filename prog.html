@@ -327,7 +327,7 @@ const PROG_ATIVIDADES_BASE = PROG_ATIVIDADES.slice();
       <div style="position:relative;">
         <input type="text" id="pf-pep-input" placeholder="Digite PEP ou nome da obra..." autocomplete="off"
           style="width:100%;padding:9px 12px;border:1.5px solid #e0e8f0;border-radius:9px;font-family:'Barlow',sans-serif;font-size:0.82rem;font-weight:700;color:#1a365d;outline:none;box-sizing:border-box;"
-          oninput="progPepSearch(this.value)" onfocus="this.style.borderColor='#7e3af2';progPepSearch(this.value)" onblur="setTimeout(()=>document.getElementById('pf-pep-dd').style.display='none',200)">
+          oninput="progPepSearch(this.value)" onfocus="this.style.borderColor='#7e3af2';progPepSearch(this.value)" onkeydown="progPepTecla(event)" onblur="setTimeout(()=>{if(typeof progPepResolve==='function')progPepResolve();document.getElementById('pf-pep-dd').style.display='none';},200)">
         <input type="hidden" id="pf-pep-val">
         <div id="pf-pep-dd" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:1.5px solid #7e3af2;border-radius:9px;max-height:300px;overflow-y:auto;z-index:50;box-shadow:0 8px 24px rgba(0,0,0,0.15);margin-top:3px;"></div>
       </div>
@@ -496,7 +496,70 @@ const PROG_ATIVIDADES_BASE = PROG_ATIVIDADES.slice();
     <input type="date" id="prog-cli-data" title="Dia da programação que vai para o cliente" style="padding:8px 10px;border:1.5px solid #e0e8f0;border-radius:9px;font-family:'Barlow',sans-serif;font-size:0.78rem;font-weight:700;color:#1a365d;background:#fff;outline:none;" onfocus="this.style.borderColor='#7e3af2'" onblur="this.style.borderColor='#e0e8f0'">
     <button onclick="progLayoutCliente()" title="Folha A4 com a logo da Mariuá para mandar ao cliente" style="padding:9px 16px;background:linear-gradient(135deg,#1a365d,#2b6cb0);border:none;border-radius:9px;font-family:'Barlow',sans-serif;font-size:0.75rem;font-weight:800;color:#fff;cursor:pointer;letter-spacing:0.5px;">📤 CLIENTE</button>
     <button onclick="progExportCSV()" style="padding:9px 16px;background:#276749;border:none;border-radius:9px;font-family:'Barlow',sans-serif;font-size:0.75rem;font-weight:800;color:#fff;cursor:pointer;letter-spacing:0.5px;">⬇️ EXCEL</button>
+    <button type="button" id="prog-btn-filtros" onclick="progToggleFiltros()" style="padding:9px 16px;background:#fff;border:1.5px solid #e0e8f0;border-radius:9px;font-family:'Barlow',sans-serif;font-size:0.75rem;font-weight:800;color:#64748b;cursor:pointer;letter-spacing:0.5px;white-space:nowrap;">🔎 FILTROS</button>
     <span id="prog-list-count" style="font-size:0.72rem;font-weight:800;color:#888;white-space:nowrap;"></span>
+
+    <div id="prog-filtros-extra" style="display:none;width:100%;border-top:1px solid #eef2f7;margin-top:4px;padding-top:12px;">
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;">
+        <div>
+          <label class="_s1">ENCARREGADO</label>
+          <select id="prog-filter-enc" class="_s6" onchange="progRenderList()"><option value="">Todos</option></select>
+        </div>
+        <div>
+          <label class="_s1">MUNICÍPIO</label>
+          <select id="prog-filter-mun" class="_s6" onchange="progRenderList()"><option value="">Todos</option></select>
+        </div>
+        <div>
+          <label class="_s1">PEP OBRA</label>
+          <select id="prog-filter-pep" class="_s6" onchange="progRenderList()"><option value="">Todos</option></select>
+        </div>
+        <div>
+          <label class="_s1">ATIVIDADE</label>
+          <select id="prog-filter-ativ" class="_s6" onchange="progRenderList()"><option value="">Todas</option></select>
+        </div>
+        <div>
+          <label class="_s1">TURNO</label>
+          <select id="prog-filter-turno" class="_s6" onchange="progRenderList()">
+            <option value="">Todos</option>
+            <option value="DIA INTEIRO">DIA INTEIRO</option>
+            <option value="MANHÃ">MANHÃ</option>
+            <option value="TARDE">TARDE</option>
+          </select>
+        </div>
+        <div>
+          <label class="_s1">ALOJADOS</label>
+          <select id="prog-filter-aloj" class="_s6" onchange="progRenderList()">
+            <option value="">Todos</option>
+            <option value="SIM">SIM</option>
+            <option value="NÃO">NÃO</option>
+          </select>
+        </div>
+        <div>
+          <label class="_s1">STATUS</label>
+          <select id="prog-filter-status" class="_s6" onchange="progRenderList()">
+            <option value="">Todos</option>
+            <option value="100">CONCLUÍDO (100%+)</option>
+            <option value="parcial">PARCIAL (50 a 99%)</option>
+            <option value="baixo">ABAIXO DE 50%</option>
+            <option value="zero">SEM REALIZAÇÃO (0%)</option>
+          </select>
+        </div>
+        <div>
+          <label class="_s1">DATA DE</label>
+          <input type="date" id="prog-filter-de" class="_s6" onchange="progRenderList()">
+        </div>
+        <div>
+          <label class="_s1">DATA ATÉ</label>
+          <input type="date" id="prog-filter-ate" class="_s6" onchange="progRenderList()">
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:12px;">
+        <button type="button" onclick="progFiltroPeriodo('hoje')" style="padding:6px 14px;background:#f8f5ff;border:1.5px solid #e9d8fd;border-radius:8px;font-family:'Barlow',sans-serif;font-size:0.7rem;font-weight:800;color:#7e3af2;cursor:pointer;">HOJE</button>
+        <button type="button" onclick="progFiltroPeriodo('7')" style="padding:6px 14px;background:#f8f5ff;border:1.5px solid #e9d8fd;border-radius:8px;font-family:'Barlow',sans-serif;font-size:0.7rem;font-weight:800;color:#7e3af2;cursor:pointer;">ÚLTIMOS 7 DIAS</button>
+        <button type="button" onclick="progFiltroPeriodo('mes')" style="padding:6px 14px;background:#f8f5ff;border:1.5px solid #e9d8fd;border-radius:8px;font-family:'Barlow',sans-serif;font-size:0.7rem;font-weight:800;color:#7e3af2;cursor:pointer;">MÊS ATUAL</button>
+        <button type="button" onclick="progLimparFiltros()" style="padding:6px 14px;background:#fff5f5;border:1.5px solid #fed7d7;border-radius:8px;font-family:'Barlow',sans-serif;font-size:0.7rem;font-weight:800;color:#c53030;cursor:pointer;margin-left:auto;">✕ LIMPAR FILTROS</button>
+      </div>
+    </div>
   </div>
   <div style="background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,0.1);">
     <div style="overflow-x:auto;">
@@ -4366,12 +4429,57 @@ info.fonte === 'cadastro' ? ('equipe ' + info.equipe + ' · do Cadastro de Equip
 : info.fonte === 'fixo' ? 'lista fixa — não achei no cadastro'
 : '';
 }
+// ===== PEP: BUSCA QUE NAO EXIGE O "B-" =====
+// A carteira guarda o PEP como "B-1207032", mas quase todo mundo digita so os
+// numeros. Aqui a comparacao ignora prefixo, traco, ponto e espaco.
+function progPepNorm(v){ return String(v||'').toUpperCase().replace(/[^A-Z0-9]/g,''); }
+function progPepDig(v){ return String(v||'').replace(/\D/g,''); }
+// Acha a obra pelo que foi digitado, com ou sem o "B-".
+function progPepAchar(txt){
+const n = progPepNorm(txt), d = progPepDig(txt);
+if (!n) return null;
+const obras = progListaObras();
+return obras.find(o => progPepNorm(o.pep) === n)
+|| (d.length >= 5 ? obras.find(o => progPepDig(o.pep) === d) : null)
+|| null;
+}
+// Chamado ao sair do campo, no Enter e ao salvar: se o texto digitado for um PEP
+// da carteira, completa obra, municipio e AR. Se nao for, aceita do mesmo jeito,
+// so padronizando para "B-numero" quando vier apenas numero.
+function progPepResolve(){
+const inp = document.getElementById('pf-pep-input');
+const hid = document.getElementById('pf-pep-val');
+if (!inp) return '';
+const txt = (inp.value || '').trim();
+if (!txt) { if (hid) hid.value = ''; return ''; }
+if (hid && hid.value && progPepNorm(hid.value) === progPepNorm(txt)) return hid.value;
+const o = progPepAchar(txt);
+if (o) { progSelectPep(o.pep, o.titulo, o.municipio, o.ar); return o.pep; }
+const d = progPepDig(txt);
+const pep = (d.length >= 5 && !/[A-Za-z]/.test(txt)) ? 'B-' + d : txt.toUpperCase();
+inp.value = pep;
+if (hid) hid.value = pep;
+return pep;
+}
+// Enter escolhe a primeira obra da lista; se nao houver lista, resolve o texto.
+function progPepTecla(e){
+if (e.key !== 'Enter') return;
+e.preventDefault();
+const dd = document.getElementById('pf-pep-dd');
+const primeiro = dd && dd.style.display === 'block' ? dd.querySelector('div[onclick]') : null;
+if (primeiro) { primeiro.click(); return; }
+progPepResolve();
+if (dd) dd.style.display = 'none';
+}
 function progPepSearch(val) {
 const dd = document.getElementById('pf-pep-dd');
 if (!dd) return;
 const q = val.trim().toUpperCase();
 if (!q || q.length < 2) { dd.style.display = 'none'; return; }
+const qn = progPepNorm(q), qd = progPepDig(q);
 const achados = progListaObras().filter(o =>
+progPepNorm(o.pep).includes(qn) ||
+(qd.length >= 2 && progPepDig(o.pep).includes(qd)) ||
 (o.pep||'').toUpperCase().includes(q) ||
 (o.titulo||'').toUpperCase().includes(q) ||
 (o.municipio||'').toUpperCase().includes(q) ||
@@ -5371,11 +5479,19 @@ const data    = document.getElementById('pf-data').value;
 const sup     = document.getElementById('pf-supervisor').value;
 const prog    = document.getElementById('pf-programador').value;
 const enc     = document.getElementById('pf-encarregado').value;
-const pep     = document.getElementById('pf-pep-val').value || document.getElementById('pf-pep-input').value;
+const pep     = (typeof progPepResolve === 'function' ? progPepResolve() : '')
+|| document.getElementById('pf-pep-val').value
+|| document.getElementById('pf-pep-input').value.trim();
 const atSel   = document.getElementById('pf-atividade').value;
 const tipo    = document.getElementById('pf-tipo').value;
 if (!data || !sup || !enc || !pep || !atSel) {
-progToast('❌ Preencha os campos obrigatórios: DATA, SUPERVISOR, ENCARREGADO, PEP OBRA e ATIVIDADE.', 'error');
+const faltam = [];
+if (!data) faltam.push('DATA');
+if (!sup)  faltam.push('SUPERVISOR');
+if (!enc)  faltam.push('ENCARREGADO');
+if (!pep)  faltam.push('PEP OBRA');
+if (!atSel) faltam.push('ATIVIDADE');
+progToast('❌ Falta preencher: ' + faltam.join(', ') + '.', 'error');
 return;
 }
 const atParts = atSel.split('|');
@@ -5725,10 +5841,64 @@ el.innerHTML = cards.map(c => `
 <div style="font-size:0.6rem;color:rgba(255,255,255,0.6);font-weight:700;letter-spacing:0.5px;">${c.label}</div>
 </div>`).join('');
 }
+// ===== FILTROS DA LISTA =====
+// Abre e fecha o painel com os filtros extras.
+function progToggleFiltros() {
+const box = document.getElementById('prog-filtros-extra');
+if (!box) return;
+box.style.display = (box.style.display === 'none' || !box.style.display) ? 'block' : 'none';
+}
+// Monta as opcoes dos selects a partir do que existe nos registros,
+// sem perder o que ja estava escolhido.
+function progPopularFiltros() {
+const mapa = [
+['prog-filter-enc',  'encarregado', 'Todos'],
+['prog-filter-mun',  'municipio',   'Todos'],
+['prog-filter-pep',  'pep',         'Todos'],
+['prog-filter-ativ', 'atividade',   'Todas']
+];
+mapa.forEach(([id, campo, rotulo]) => {
+const sel = document.getElementById(id);
+if (!sel) return;
+const escolhido = sel.value;
+const vals = Array.from(new Set(
+(progRegistros || []).map(r => (r[campo] || '').trim()).filter(Boolean)
+)).sort((a,b) => a.localeCompare(b,'pt-BR'));
+sel.innerHTML = `<option value="">${rotulo}</option>` +
+vals.map(v => `<option value="${v.replace(/"/g,'&quot;')}">${v}</option>`).join('');
+sel.value = vals.includes(escolhido) ? escolhido : '';
+});
+}
+// Atalhos de periodo.
+function progFiltroPeriodo(qual) {
+const de = document.getElementById('prog-filter-de');
+const ate = document.getElementById('prog-filter-ate');
+if (!de || !ate) return;
+const iso = d => d.toISOString().slice(0,10);
+const hoje = new Date();
+if (qual === 'hoje') { de.value = iso(hoje); ate.value = iso(hoje); }
+else if (qual === '7') { const d = new Date(); d.setDate(d.getDate()-6); de.value = iso(d); ate.value = iso(hoje); }
+else if (qual === 'mes') {
+de.value = iso(new Date(hoje.getFullYear(), hoje.getMonth(), 1));
+ate.value = iso(new Date(hoje.getFullYear(), hoje.getMonth()+1, 0));
+}
+progRenderList();
+}
+// Zera tudo, inclusive a busca e os dois filtros que ja existiam.
+function progLimparFiltros() {
+['prog-search','prog-filter-sup','prog-filter-tipo','prog-filter-enc','prog-filter-mun',
+'prog-filter-pep','prog-filter-ativ','prog-filter-turno','prog-filter-aloj',
+'prog-filter-status','prog-filter-de','prog-filter-ate'].forEach(id => {
+const el = document.getElementById(id);
+if (el) el.value = '';
+});
+progRenderList();
+}
 function progRenderList() {
 const tbody = document.getElementById('prog-tbody');
 const empty = document.getElementById('prog-empty');
 const count = document.getElementById('prog-list-count');
+progPopularFiltros();
 // O envio ao cliente e sempre do dia; so muda quando alguem escolhe outra data.
 const cliData = document.getElementById('prog-cli-data');
 if (cliData && !cliData.value && typeof progHoje === 'function') cliData.value = progHoje();
@@ -5736,16 +5906,50 @@ if (!tbody) return;
 const search = (document.getElementById('prog-search')?.value || '').toLowerCase();
 const filterSup = document.getElementById('prog-filter-sup')?.value || '';
 const filterTipo = document.getElementById('prog-filter-tipo')?.value || '';
+const fEnc    = document.getElementById('prog-filter-enc')?.value || '';
+const fMun    = document.getElementById('prog-filter-mun')?.value || '';
+const fPep    = document.getElementById('prog-filter-pep')?.value || '';
+const fAtiv   = document.getElementById('prog-filter-ativ')?.value || '';
+const fTurno  = document.getElementById('prog-filter-turno')?.value || '';
+const fAloj   = document.getElementById('prog-filter-aloj')?.value || '';
+const fStatus = document.getElementById('prog-filter-status')?.value || '';
+const fDe     = document.getElementById('prog-filter-de')?.value || '';
+const fAte    = document.getElementById('prog-filter-ate')?.value || '';
+const ativos = [filterSup,filterTipo,fEnc,fMun,fPep,fAtiv,fTurno,fAloj,fStatus,fDe,fAte].filter(Boolean).length;
+const btnF = document.getElementById('prog-btn-filtros');
+if (btnF) {
+btnF.textContent = ativos ? `🔎 FILTROS (${ativos})` : '🔎 FILTROS';
+btnF.style.background = ativos ? '#f8f5ff' : '#fff';
+btnF.style.borderColor = ativos ? '#c9a9fb' : '#e0e8f0';
+btnF.style.color = ativos ? '#7e3af2' : '#64748b';
+}
 let filtered = progRegistros.filter(r => {
 if (filterSup && r.supervisor!==filterSup) return false;
 if (filterTipo && r.tipo!==filterTipo) return false;
+if (fEnc && (r.encarregado||'').trim()!==fEnc) return false;
+if (fMun && (r.municipio||'').trim()!==fMun) return false;
+if (fPep && (r.pep||'').trim()!==fPep) return false;
+if (fAtiv && (r.atividade||'').trim()!==fAtiv) return false;
+if (fTurno && (r.turno||'')!==fTurno) return false;
+if (fAloj && (r.alojados||'')!==fAloj) return false;
+if (fDe && (!r.data || r.data < fDe)) return false;
+if (fAte && (!r.data || r.data > fAte)) return false;
+if (fStatus) {
+const pct = Number(r.status_pct) || 0;
+if (fStatus==='100'     && pct < 100) return false;
+if (fStatus==='parcial' && (pct < 50 || pct >= 100)) return false;
+if (fStatus==='baixo'   && (pct <= 0 || pct >= 50)) return false;
+if (fStatus==='zero'    && pct > 0) return false;
+}
 if (search) {
 const hay = [r.encarregado,r.pep,r.nome_obra,r.municipio,r.atividade,r.supervisor].join(' ').toLowerCase();
 if (!hay.includes(search)) return false;
 }
 return true;
 }).sort((a,b) => b.data.localeCompare(a.data));
-if (count) count.textContent = filtered.length + ' registro(s)';
+if (count) count.textContent = (ativos || search)
+? filtered.length + ' de ' + progRegistros.length + ' registro(s)'
+: filtered.length + ' registro(s)';
 if (!filtered.length) {
 tbody.innerHTML = '';
 if (empty) empty.style.display = 'block';
