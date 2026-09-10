@@ -146,20 +146,36 @@ body.sm-collapsed .sm-side:hover .sm-group-head{justify-content:flex-start;paddi
   </div>
 
   <div style="background:#fff;border:1px solid #e6ecf3;border-radius:14px;padding:16px;margin-bottom:14px;">
-    <div style="font-size:.78rem;font-weight:800;color:#0d7377;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">2 · Valores fixos do contrato</div>
     <input type="hidden" id="co-estado" value="ba">
-    <div style="font-size:.68rem;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px;">Estado</div>
-    <div id="co-estado-btns" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;"></div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;">
-      <div><label style="font-size:.7rem;font-weight:700;color:#64748b;">Contrato</label><input id="co-contrato" value="OBRAS - BA" style="width:100%;padding:7px 9px;border:1.5px solid #e2e8f0;border-radius:7px;font-size:.78rem;"></div>
-      <div><label style="font-size:.7rem;font-weight:700;color:#64748b;">Tipo de obra</label><input id="co-tipoobra" value="BA - Construção e Manutenção" style="width:100%;padding:7px 9px;border:1.5px solid #e2e8f0;border-radius:7px;font-size:.78rem;"></div>
-      <div><label style="font-size:.7rem;font-weight:700;color:#64748b;">Tipo serviço</label><input id="co-tiposervico" value="SERVICOS_RUR-BA" style="width:100%;padding:7px 9px;border:1.5px solid #e2e8f0;border-radius:7px;font-size:.78rem;"></div>
-      <div><label style="font-size:.7rem;font-weight:700;color:#64748b;">Natureza</label><input id="co-natureza" value="RURAL" style="width:100%;padding:7px 9px;border:1.5px solid #e2e8f0;border-radius:7px;font-size:.78rem;"></div>
-      <div><label style="font-size:.7rem;font-weight:700;color:#64748b;">Status</label><input id="co-statusobra" value="Em Execução" style="width:100%;padding:7px 9px;border:1.5px solid #e2e8f0;border-radius:7px;font-size:.78rem;"></div>
-      <div><label style="font-size:.7rem;font-weight:700;color:#64748b;">Obriga vistoria</label><input id="co-vistoria" value="NÃO" style="width:100%;padding:7px 9px;border:1.5px solid #e2e8f0;border-radius:7px;font-size:.78rem;"></div>
-      <div><label style="font-size:.7rem;font-weight:700;color:#64748b;">Data recebimento</label><input id="co-data" type="date" style="width:100%;padding:7px 9px;border:1.5px solid #e2e8f0;border-radius:7px;font-size:.78rem;"></div>
+
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:12px;">
+      <div>
+        <div style="font-size:.78rem;font-weight:800;color:#0d7377;text-transform:uppercase;letter-spacing:.5px;">2 · Constantes do arquivo <span style="background:#eef4f4;color:#0d7377;border:1px solid #cfe3e2;border-radius:6px;padding:2px 7px;font-size:.62rem;margin-left:6px;">v7 · 10/09</span></div>
+        <div style="font-size:.7rem;color:#94a3b8;font-weight:700;margin-top:3px;">Base <span id="co-const-base" style="color:#0d7377;">—</span> <span id="co-const-count"></span></div>
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+        <button onclick="coToggleConst()" id="co-const-toggle" style="padding:8px 13px;background:#f8fafc;color:#0d7377;border:1.5px solid #cfe3e2;border-radius:8px;font-family:inherit;font-weight:800;font-size:.76rem;cursor:pointer;">⚙️ Editar constantes</button>
+        <select id="co-copiar-de" style="padding:8px 9px;border:1.5px solid #e2e8f0;border-radius:8px;font-family:inherit;font-weight:700;font-size:.75rem;color:#64748b;background:#fff;cursor:pointer;"></select>
+        <button onclick="coCopiarDe()" style="padding:8px 12px;background:#f8fafc;color:#0d7377;border:1.5px solid #cfe3e2;border-radius:8px;font-family:inherit;font-weight:800;font-size:.76rem;cursor:pointer;">Copiar</button>
+        <button onclick="coSalvarConstantes()" style="padding:8px 14px;background:#0d7377;color:#fff;border:0;border-radius:8px;font-family:inherit;font-weight:800;font-size:.78rem;cursor:pointer;">💾 Salvar e aplicar</button>
+        <button onclick="coLimparConstantes()" style="padding:8px 12px;background:#fff;color:#c53030;border:1.5px solid #f3d2d2;border-radius:8px;font-family:inherit;font-weight:800;font-size:.76rem;cursor:pointer;">🧹 Limpar</button>
+      </div>
     </div>
-    <div style="font-size:.68rem;color:#94a3b8;margin-top:8px;">Responsável = Supervisor · Centro de serviço = "BA-" + município · Postes, latitude e longitude vêm da carteira.</div>
+
+    <div id="co-const-box" style="display:none;">
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding-bottom:12px;border-bottom:1px solid #eef2f7;margin-bottom:12px;">
+      <span style="font-size:.66rem;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;">Estado</span>
+      <div id="co-estado-btns" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
+      <label style="display:inline-flex;align-items:center;gap:6px;margin-left:auto;font-size:.71rem;font-weight:700;color:#64748b;cursor:pointer;"><input type="checkbox" id="co-so-preenchidas" onchange="coPopularConstantes()" style="width:15px;height:15px;accent-color:#0d7377;cursor:pointer;"> Mostrar só preenchidas</label>
+      <label style="display:inline-flex;align-items:center;gap:6px;font-size:.71rem;font-weight:700;color:#64748b;cursor:pointer;"><input type="checkbox" id="co-auto-baixar" checked style="width:15px;height:15px;accent-color:#0d7377;cursor:pointer;"> Baixar CSV ao salvar</label>
+    </div>
+
+    <div id="co-const-grupos"></div>
+
+    <div style="font-size:.67rem;color:#94a3b8;margin-top:12px;padding-top:10px;border-top:1px solid #eef2f7;">
+      Cada base guarda o seu próprio conjunto: ao trocar de base no card 1, estes campos mudam junto. · Vindos da carteira, não editáveis aqui: <b>Projeto, Título, Município, Responsável, Supervisor, Postes, Latitude, Longitude</b> · Centro de serviço = sigla do estado + município · Status usa o da planilha quando existir.
+    </div>
+    </div>
   </div>
 
   <div style="background:#fff;border:1px solid #e6ecf3;border-radius:14px;padding:16px;">
@@ -180,7 +196,7 @@ var CO_ROWS = [];
 
 // ===== estado -> valores fixos do contrato =====
 var CO_ESTADO_DEF={
-  ba:{sigla:'BA', nome:'Bahia',   contrato:'OBRAS - BA',    tipoObra:'BA - Construção e Manutenção', tipoServico:'SERVICOS_RUR-BA', processo:''},
+  ba:{sigla:'BA', nome:'Bahia',   contrato:'OBRAS - BA',    tipoObra:'BA - Construção e Manutenção', tipoServico:'CONSTRUÇÃO-BA', processo:''},
   mg:{sigla:'MG', nome:'Minas',   contrato:'CON_MANUT-MG',  tipoObra:'',                              tipoServico:'',                processo:''},
   se:{sigla:'SE', nome:'Sergipe', contrato:'OBRAS-SE',      tipoObra:'SE - Construção e Manutenção',  tipoServico:'SERVICOS_RDU-SE', processo:'SE_PROCESSO'}
 };
@@ -196,13 +212,14 @@ function coPopularEstados(){
 }
 function coSelecionarEstado(uf){
   document.getElementById('co-estado').value=uf;
-  var d=CO_ESTADO_DEF[uf];
-  document.getElementById('co-contrato').value=d.contrato;
-  document.getElementById('co-tipoobra').value=d.tipoObra;
-  document.getElementById('co-tiposervico').value=d.tipoServico;
+  var d=CO_ESTADO_DEF[uf]||{}, C=coConstAtual();
+  C['Contrato*']=d.contrato||'';
+  C['TIPO DE OBRA*']=d.tipoObra||'';
+  C['TIPO SERVICO*']=d.tipoServico||'';
+  C['PROCESSO']=d.processo||'';
   coPopularEstados();
-  // se já houver obras carregadas, re-mapeia pra atualizar o centro de serviço
-  if(CO_ROWS.length && typeof coRemapear==='function') coRemapear();
+  coPopularConstantes();
+  coAplicarEAtualizar('Estado '+(d.sigla||uf)+': contrato, tipo de obra e tipo de serviço atualizados.');
 }
 
 function coSt(t,cor){ var el=document.getElementById('co-status'); if(el){ el.textContent=t; el.style.color=cor||'#94a3b8'; } }
@@ -259,6 +276,7 @@ function coSelecionarBase(id){
   var d=coBaseObj();
   document.getElementById('co-link').value=d.link||'';
   coPopularBases(); coPopularMeses();
+  coPopularConstantes();   // cada base tem o seu conjunto de constantes
   var k=coMesKey(); var gid=(d.meses||{})[k];
   if(gid){ document.getElementById('co-gid').value=gid; coCarregar(); }
   else { coSt('Base '+coNomeBase(id)+' selecionada. Escolha o mês.','#64748b'); }
@@ -369,22 +387,16 @@ function coProcessar(txt){
       reg['Projeto*']=pep;
       reg['Titulo da obra*']=(cTit>=0?(row[cTit]||''):'').trim();
       reg['Municipio*']=mun;
-      reg['Contrato*']=document.getElementById('co-contrato').value.trim();
-      reg['TIPO DE OBRA*']=document.getElementById('co-tipoobra').value.trim();
-      reg['PROCESSO']=CO_ESTADO_DEF[coEstado()].processo||'';
-      reg['NATUREZA OBRAS']=document.getElementById('co-natureza').value.trim();
-      reg['CENTRO SERVICO']=mun?(CO_ESTADO_DEF[coEstado()].sigla+'-'+mun.toUpperCase()):'';
       reg['RESPONSAVEL*']=(cSup>=0?(row[cSup]||''):'').split(' - ')[0].trim();
-      reg['TIPO SERVICO*']=document.getElementById('co-tiposervico').value.trim();
-      reg['DATA_RECEBIMENTO*']=coDataBR();
-      reg['OBRIGA VISTORIA']=document.getElementById('co-vistoria').value.trim();
-      reg['STATUS*']=((cStat>=0 && (row[cStat]||'').trim()) ? row[cStat].trim() : document.getElementById('co-statusobra').value.trim());
+      var _stPlan=(cStat>=0?(row[cStat]||''):'').trim();
+      reg['_statusDaPlanilha']=_stPlan;   // se vazio, usa a constante STATUS*
+      // as demais colunas sao preenchidas por coAplicarConstantes() (card 2)
       reg['Postes']=(cPost>=0?(row[cPost]||''):'').trim();
       reg['LATITUDE']=(cLat>=0?(row[cLat]||''):'').trim().replace('.',',');
       reg['LONGITUDE']=(cLon>=0?(row[cLon]||''):'').trim().replace('.',',');
       reg['SUPERVISOR']=(cSup>=0?(row[cSup]||''):'').split(' - ')[0].trim();
       // só obras em Execução ou Programada
-      var _st=coNorm(reg['STATUS*']||'');
+      var _st=coNorm(_stPlan || coConstAtual()['STATUS*'] || '');
       if(_st.indexOf('EXECUCAO')<0 && _st.indexOf('PROGRAMAD')<0){ foraFiltro++; var _k=_st||'(vazio)'; foraDet[_k]=(foraDet[_k]||0)+1; continue; }
       out.push(reg);
     }
@@ -396,13 +408,14 @@ function coProcessar(txt){
     coSt('✅ '+out.length+' obras carregadas (só Execução/Programada)'+(foraFiltro?' · '+foraFiltro+' fora do filtro: '+foraTxt:'')+'. Postes: coluna "'+_nm(cPost)+'" (índice '+cPost+') · '+comPostes+' com valor · amostra: '+amostra,'#0d7377');
     document.getElementById('co-count').textContent='· '+out.length+' obras';
     var b=document.getElementById('co-baixar'); b.disabled=false; b.style.opacity='1';
+    coAplicarConstantes();
     coPreview();
 }
 
-function coDataBR(){ var v=document.getElementById('co-data').value; if(v){ var p=v.split('-'); return p[2]+'/'+p[1]+'/'+p[0]; } var d=new Date(); return ('0'+d.getDate()).slice(-2)+'/'+('0'+(d.getMonth()+1)).slice(-2)+'/'+d.getFullYear(); }
+function coDataHoje(){ var d=new Date(); return ('0'+d.getDate()).slice(-2)+'/'+('0'+(d.getMonth()+1)).slice(-2)+'/'+d.getFullYear(); }
 
 function coPreview(){
-  var cols=['Projeto*','Titulo da obra*','Municipio*','RESPONSAVEL*','CENTRO SERVICO','Postes','LATITUDE','LONGITUDE','STATUS*'];
+  var cols=['Projeto*','Titulo da obra*','Municipio*','RESPONSAVEL*','CENTRO SERVICO','TIPO SERVICO*','NATUREZA OBRAS','Postes','LATITUDE','LONGITUDE','STATUS*'];
   var h='<table style="width:100%;border-collapse:collapse;font-size:.72rem;color:#334155;"><thead><tr style="background:#f0fafa;color:#0d7377;">'+cols.map(function(c){return '<th style="text-align:left;padding:6px 8px;white-space:nowrap;">'+c+'</th>';}).join('')+'</tr></thead><tbody>';
   CO_ROWS.slice(0,25).forEach(function(reg){ h+='<tr style="border-bottom:1px solid #eef2f7;">'+cols.map(function(c){return '<td style="padding:6px 8px;white-space:nowrap;">'+(reg[c]||'').replace(/</g,'&lt;')+'</td>';}).join('')+'</tr>'; });
   h+='</tbody></table>';
@@ -410,8 +423,212 @@ function coPreview(){
   document.getElementById('co-preview').innerHTML=h;
 }
 
+/* ==========================================================================
+   CONSTANTES DO ARQUIVO  —  um conjunto por base
+   CO_CONST_BASES = { irc:{ 'Contrato*':'OBRAS - BA', ... }, jac:{...} }
+   ========================================================================== */
+var CO_CONST_BASES={};
+
+// colunas que vem da carteira: nunca aparecem no painel
+var CO_CAMPOS_CARTEIRA=['Projeto*','Titulo da obra*','Municipio*','RESPONSAVEL*','SUPERVISOR','Postes','LATITUDE','LONGITUDE','CENTRO SERVICO'];
+
+// grupos do painel (o resto cai em "Outros campos")
+var CO_GRUPOS=[
+  {nome:'Contrato e serviço', cols:['Contrato*','TIPO DE OBRA*','TIPO SERVICO*','NATUREZA OBRAS','STATUS*','OBRIGA VISTORIA','PROCESSO','origem','tipo_prioridade']},
+  {nome:'Datas', cols:['DATA_RECEBIMENTO*','DATA_PREVISTO_RECEBIMENTO','DATA_PREVISAO_INICIO','DATA_PREVISAO_FIM','data_inicio','data_aceite','data_prazo_venc','data_limite_vist']},
+  {nome:'Local e identificação', cols:['ENDEREÇO','Bairro','CEP','REFERENCIA','OS','MEDIDOR','fiscal_concessionaria','Interessado','OBSERVACAO']},
+  {nome:'Quantidades', cols:['qtd_clientes','qtd_transformadores','qtd_extensao_bt','qtd_extensao_mt','Fator K']},
+  {nome:'Orçamento', cols:['descricao_orcamento','valor_orcamento_mao_obra','valor_orcamento_material','valor_previsto_obra']}
+];
+
+function coConstPadrao(){
+  var d=CO_ESTADO_DEF[coEstado()]||{};
+  return {'Contrato*':d.contrato||'', 'TIPO DE OBRA*':d.tipoObra||'', 'TIPO SERVICO*':d.tipoServico||'',
+          'PROCESSO':d.processo||'', 'NATUREZA OBRAS':'RURAL', 'STATUS*':'Em Execução',
+          'OBRIGA VISTORIA':'NÃO', 'DATA_RECEBIMENTO*':coDataHoje()};
+}
+// constantes da base selecionada agora
+function coConstAtual(){
+  var b=coBaseId();
+  if(!CO_CONST_BASES[b]) CO_CONST_BASES[b]=coConstPadrao();
+  return CO_CONST_BASES[b];
+}
+function coColunasConst(){
+  return CO_HEADERS.filter(function(h){ return CO_CAMPOS_CARTEIRA.indexOf(h)<0; });
+}
+
+// ---------- aplica nas obras carregadas ----------
+function coAplicarConstantes(){
+  if(!CO_ROWS.length) return;
+  var C=coConstAtual();
+  var sigla=(CO_ESTADO_DEF[coEstado()]||{}).sigla||'';
+  var cols=coColunasConst();
+  CO_ROWS.forEach(function(reg){
+    cols.forEach(function(h){ reg[h]=C[h]||''; });
+    // status: o da planilha manda; a constante e o padrao de quem veio vazio
+    reg['STATUS*']=(reg['_statusDaPlanilha']||C['STATUS*']||'');
+    reg['CENTRO SERVICO']=reg['Municipio*']?(sigla+'-'+reg['Municipio*'].toUpperCase()):'';
+    if(!reg['DATA_RECEBIMENTO*']) reg['DATA_RECEBIMENTO*']=coDataHoje();
+  });
+}
+function coAplicarEAtualizar(msg){
+  coAplicarConstantes();
+  if(CO_ROWS.length){ coPreview(); coSt((msg||'Constantes atualizadas')+' · '+CO_ROWS.length+' obras · lembre de salvar.','#0d7377'); }
+  coContarConst();
+}
+
+// ---------- abrir / fechar o painel ----------
+function coPainelConst(aberto){
+  var b=document.getElementById('co-const-box'); if(!b) return;
+  b.style.display=aberto?'block':'none';
+  var t=document.getElementById('co-const-toggle');
+  if(t) t.textContent=aberto?'\u2716\ufe0f Fechar':'\u2699\ufe0f Editar constantes';
+}
+function coToggleConst(){
+  var b=document.getElementById('co-const-box');
+  var abrir=(b.style.display==='none');
+  coPainelConst(abrir);
+  try{ localStorage.setItem('cadastro_obra_painel', abrir?'aberto':'fechado'); }catch(e){}
+}
+function coRestaurarPainelConst(){
+  var pref='fechado';
+  try{ pref=localStorage.getItem('cadastro_obra_painel')||'fechado'; }catch(e){}
+  coPainelConst(pref==='aberto');
+}
+
+// ---------- painel ----------
+function coPainelBaseLabel(){
+  var el=document.getElementById('co-const-base');
+  if(el) el.textContent=coNomeBase(coBaseId());
+}
+function coContarConst(){
+  var C=coConstAtual();
+  var n=coColunasConst().filter(function(h){ return (C[h]||'').trim()!==''; }).length;
+  var el=document.getElementById('co-const-count');
+  if(el) el.innerHTML='· <b style="color:#0d7377;">'+n+'</b> de '+coColunasConst().length+' preenchidas';
+}
+function coPopularConstantes(){
+  var box=document.getElementById('co-const-grupos'); if(!box) return;
+  var C=coConstAtual();
+  var so=document.getElementById('co-so-preenchidas');
+  var soPreenchidas=so&&so.checked;
+
+  // monta a lista de grupos + os campos que sobraram
+  var usados={}; CO_GRUPOS.forEach(function(g){ g.cols.forEach(function(c){ usados[c]=1; }); });
+  var sobra=coColunasConst().filter(function(h){ return !usados[h]; });
+  var grupos=CO_GRUPOS.map(function(g){ return {nome:g.nome, cols:g.cols.filter(function(c){ return CO_HEADERS.indexOf(c)>=0; })}; });
+  if(sobra.length) grupos.push({nome:'Outros campos', cols:sobra});
+
+  box.innerHTML=grupos.map(function(g){
+    var cols=g.cols.filter(function(h){ return !soPreenchidas || (C[h]||'').trim()!==''; });
+    if(!cols.length) return '';
+    var campos=cols.map(function(h){
+      var ehData=/^DATA|^data_/.test(h);
+      var obrig=/\*$/.test(h);
+      var val=(C[h]||'').replace(/"/g,'&quot;');
+      var cheio=(C[h]||'').trim()!=='';
+      return '<div>'
+        + '<label style="font-size:.66rem;font-weight:800;color:'+(obrig?'#0d7377':'#64748b')+';display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:3px;" title="'+h+'">'+h+'</label>'
+        + '<input data-col="'+h+'" oninput="coConstMudou(this)" value="'+val+'"'
+        + (ehData?' placeholder="dd/mm/aaaa"':'')
+        + ' style="width:100%;padding:7px 9px;border:1.5px solid '+(cheio?'#bfe0dd':'#e2e8f0')+';border-radius:7px;font-size:.77rem;font-family:inherit;background:'+(cheio?'#f6fdfc':'#fff')+';">'
+        + '</div>';
+    }).join('');
+    return '<div style="margin-bottom:14px;">'
+      + '<div style="font-size:.65rem;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:.6px;margin-bottom:7px;">'+g.nome+'</div>'
+      + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(185px,1fr));gap:9px;">'+campos+'</div>'
+      + '</div>';
+  }).join('');
+
+  if(!box.innerHTML) box.innerHTML='<div style="font-size:.74rem;color:#94a3b8;padding:8px 0;">Nenhuma constante preenchida nesta base. Desmarque "Mostrar só preenchidas" para editar.</div>';
+
+  coPainelBaseLabel(); coContarConst(); coPopularCopiarDe();
+}
+function coConstMudou(inp){
+  var h=inp.getAttribute('data-col'), v=inp.value;
+  var C=coConstAtual();
+  if(v.trim()==='') delete C[h]; else C[h]=v;
+  inp.style.borderColor=v.trim()?'#bfe0dd':'#e2e8f0';
+  inp.style.background=v.trim()?'#f6fdfc':'#fff';
+  coAplicarEAtualizar('"'+h+'" alterada');
+}
+function coLimparConstantes(){
+  CO_CONST_BASES[coBaseId()]={};
+  coPopularConstantes();
+  coAplicarEAtualizar('Constantes da base '+coNomeBase(coBaseId())+' limpas');
+}
+
+// ---------- copiar de outra base ----------
+function coPopularCopiarDe(){
+  var sel=document.getElementById('co-copiar-de'); if(!sel) return;
+  var atual=coBaseId(), ant=sel.value;
+  sel.innerHTML='<option value="">copiar de...</option>'+CO_BASES.filter(function(b){return b.id!==atual;}).map(function(b){
+    var n=Object.keys(CO_CONST_BASES[b.id]||{}).length;
+    return '<option value="'+b.id+'">'+b.nome+(n?' ('+n+')':' (vazia)')+'</option>';
+  }).join('');
+  if(ant && ant!==atual) sel.value=ant;
+}
+function coCopiarDe(){
+  var sel=document.getElementById('co-copiar-de'); var de=sel?sel.value:'';
+  if(!de){ coSt('Escolha de qual base copiar.','#b9821c'); return; }
+  var origem=CO_CONST_BASES[de]||{}; var copia={};
+  Object.keys(origem).forEach(function(k){ copia[k]=origem[k]; });
+  CO_CONST_BASES[coBaseId()]=copia;
+  coPopularConstantes();
+  coAplicarEAtualizar('Constantes copiadas de '+coNomeBase(de));
+}
+
+// ---------- salvar / carregar ----------
+function coSalvarConstantes(){
+  var pacote={ versao:2, bases:CO_CONST_BASES, estado:coEstado(), quando:new Date().toISOString() };
+  var n=CO_ROWS.length;
+  coAplicarConstantes();
+  if(n) coPreview();
+  var local=false;
+  try{ localStorage.setItem('cadastro_obra_constantes', JSON.stringify(pacote)); local=true; }catch(e){}
+  coSt('Salvando...','#64748b');
+  fetch(CO_SUPA+'/rest/v1/turno_data?on_conflict=key',{method:'POST',headers:Object.assign({'Prefer':'resolution=merge-duplicates,return=minimal'},CO_H),body:JSON.stringify({key:'cadastro_obra_constantes',value:pacote,updated_at:new Date().toISOString()})})
+    .then(function(r){
+      if(r.ok) coSt('✅ Constantes da base '+coNomeBase(coBaseId())+' salvas e aplicadas'+(n?' em '+n+' obras':'')+'.','#0d7377');
+      else coSt('⚠️ Aplicado no CSV'+(local?' e salvo neste navegador':'')+', mas o Supabase recusou (HTTP '+r.status+').','#b9821c');
+    })
+    .catch(function(){ coSt('⚠️ Aplicado no CSV'+(local?' e salvo neste navegador':'')+', mas sem conexão com o Supabase.','#b9821c'); })
+    .then(function(){
+      var auto=document.getElementById('co-auto-baixar');
+      if(n && (!auto || auto.checked)) coBaixar();
+    });
+}
+function coAplicarPacote(pac){
+  if(!pac) return;
+  if(pac.versao===2 && pac.bases){ CO_CONST_BASES=pac.bases||{}; }
+  else if(pac.extras || pac.fixos){        // formato antigo: joga tudo na base atual
+    var f=pac.fixos||{}, C={};
+    Object.keys(pac.extras||{}).forEach(function(k){ C[k]=pac.extras[k]; });
+    if(f.contrato) C['Contrato*']=f.contrato;
+    if(f.tipoObra) C['TIPO DE OBRA*']=f.tipoObra;
+    if(f.tipoServico) C['TIPO SERVICO*']=f.tipoServico;
+    if(f.natureza) C['NATUREZA OBRAS']=f.natureza;
+    if(f.vistoria) C['OBRIGA VISTORIA']=f.vistoria;
+    if(f.status) C['STATUS*']=f.status;
+    CO_CONST_BASES[CO_BASE]=C;
+  }
+  if(pac.estado){ var e=document.getElementById('co-estado'); if(e) e.value=pac.estado; }
+}
+function coCarregarConstantes(){
+  try{ var lc=localStorage.getItem('cadastro_obra_constantes'); if(lc) coAplicarPacote(JSON.parse(lc)); }catch(e){}
+  return fetch(CO_SUPA+'/rest/v1/turno_data?select=value&key=eq.cadastro_obra_constantes&limit=1',{headers:{apikey:CO_KEY,Authorization:'Bearer '+CO_KEY}})
+    .then(function(r){return r.ok?r.json():[];})
+    .then(function(j){
+      var pac=(Array.isArray(j)&&j.length&&j[0].value)?j[0].value:null;
+      if(pac){ coAplicarPacote(pac); try{ localStorage.setItem('cadastro_obra_constantes', JSON.stringify(pac)); }catch(e){} }
+    })
+    .catch(function(){})
+    .then(function(){ coPopularEstados(); coPopularConstantes(); coRestaurarPainelConst(); });
+}
+
 function coBaixar(){
   if(!CO_ROWS.length) return;
+  coAplicarConstantes();   // garante que o CSV sai com as constantes da base atual
   var sep=';';
   var linhas=[CO_HEADERS.join(sep)];
   CO_ROWS.forEach(function(reg){
@@ -421,11 +638,9 @@ function coBaixar(){
   var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='importar_obras_'+coGid()+'.csv'; a.click();
 }
 
-// data padrão = hoje
-(function(){ var d=new Date(); var el=document.getElementById('co-data'); if(el) el.value=d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2); })();
 // estados + mapa de bases/meses
 coPopularEstados();
-coCarregarMapa();
+coCarregarConstantes().then(function(){ coCarregarMapa(); });
 
 </script>
 <script>
