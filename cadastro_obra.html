@@ -146,7 +146,7 @@ body.sm-collapsed .sm-side:hover .sm-group-head{justify-content:flex-start;paddi
   </div>
 
   <div style="background:#fff;border:1px solid #e6ecf3;border-radius:14px;padding:16px;margin-bottom:14px;">
-    <div style="font-size:.78rem;font-weight:800;color:#0d7377;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">2 · Valores fixos do contrato <span style="background:#eef4f4;color:#0d7377;border:1px solid #cfe3e2;border-radius:6px;padding:2px 7px;font-size:.62rem;margin-left:6px;">v2 · 10/09</span></div>
+    <div style="font-size:.78rem;font-weight:800;color:#0d7377;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">2 · Valores fixos do contrato <span style="background:#eef4f4;color:#0d7377;border:1px solid #cfe3e2;border-radius:6px;padding:2px 7px;font-size:.62rem;margin-left:6px;">v3 · 10/09</span></div>
     <input type="hidden" id="co-estado" value="ba">
     <div style="font-size:.68rem;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px;">Estado</div>
     <div id="co-estado-btns" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;"></div>
@@ -160,6 +160,21 @@ body.sm-collapsed .sm-side:hover .sm-group-head{justify-content:flex-start;paddi
       <div><label style="font-size:.7rem;font-weight:700;color:#64748b;">Data recebimento</label><input id="co-data" oninput="coFixosMudou()" onchange="coFixosMudou()" type="date" style="width:100%;padding:7px 9px;border:1.5px solid #e2e8f0;border-radius:7px;font-size:.78rem;"></div>
     </div>
     <div style="font-size:.68rem;color:#94a3b8;margin-top:8px;">Responsável = Supervisor · Centro de serviço = "BA-" + município · Postes, latitude e longitude vêm da carteira.</div>
+  </div>
+
+  <div style="background:#fff;border:1px solid #e6ecf3;border-radius:14px;padding:16px;margin-bottom:14px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+      <div style="font-size:.78rem;font-weight:800;color:#0d7377;text-transform:uppercase;letter-spacing:.5px;">2b · Outras constantes do arquivo <span id="co-const-count" style="color:#94a3b8;font-weight:700;"></span></div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;">
+        <button onclick="coToggleConst()" id="co-const-toggle" style="padding:8px 13px;background:#f8fafc;color:#0d7377;border:1.5px solid #cfe3e2;border-radius:8px;font-family:inherit;font-weight:800;font-size:.78rem;cursor:pointer;">⚙️ Editar constantes</button>
+        <button onclick="coSalvarConstantes()" style="padding:8px 13px;background:#0d7377;color:#fff;border:0;border-radius:8px;font-family:inherit;font-weight:800;font-size:.78rem;cursor:pointer;">💾 Salvar padrão</button>
+        <button onclick="coLimparConstantes()" style="padding:8px 13px;background:#fff;color:#c53030;border:1.5px solid #f3d2d2;border-radius:8px;font-family:inherit;font-weight:800;font-size:.78rem;cursor:pointer;">🧹 Limpar</button>
+      </div>
+    </div>
+    <div id="co-const-box" style="display:none;margin-top:12px;">
+      <div style="font-size:.68rem;color:#94a3b8;margin-bottom:9px;">Preencha só o que precisar: o valor digitado vai repetido em <b>todas</b> as obras do CSV, e campos vazios saem vazios. Clique em <b>Salvar padrão</b> para o preenchimento ficar guardado e voltar sozinho na próxima vez.</div>
+      <div id="co-const-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(165px,1fr));gap:9px;"></div>
+    </div>
   </div>
 
   <div style="background:#fff;border:1px solid #e6ecf3;border-radius:14px;padding:16px;">
@@ -431,8 +446,83 @@ function coAplicarFixos(){
     reg['PROCESSO']=fx.processo;
     reg['CENTRO SERVICO']=reg['Municipio*']?(fx.sigla+'-'+reg['Municipio*'].toUpperCase()):'';
     reg['STATUS*']=(reg['_statusDaPlanilha']||fx.status);
+    // constantes livres editadas pelo usuario (card 2b)
+    Object.keys(CO_CONST).forEach(function(h){ reg[h]=CO_CONST[h]; });
   });
 }
+// ===== constantes editaveis: colunas que saem com o mesmo valor em todas as obras =====
+var CO_CAMPOS_CARTEIRA=['Projeto*','Titulo da obra*','Municipio*','RESPONSAVEL*','SUPERVISOR','CENTRO SERVICO','Postes','LATITUDE','LONGITUDE','STATUS*'];
+var CO_CAMPOS_FIXOS={'Contrato*':1,'TIPO DE OBRA*':1,'TIPO SERVICO*':1,'NATUREZA OBRAS':1,'OBRIGA VISTORIA':1,'DATA_RECEBIMENTO*':1,'PROCESSO':1};
+var CO_CONST={};   // { 'NOME DA COLUNA': 'valor' }
+
+function coColunasConst(){
+  return CO_HEADERS.filter(function(h){ return CO_CAMPOS_CARTEIRA.indexOf(h)<0 && !CO_CAMPOS_FIXOS[h]; });
+}
+function coToggleConst(){
+  var b=document.getElementById('co-const-box');
+  var aberto=(b.style.display==='none');
+  b.style.display=aberto?'block':'none';
+  document.getElementById('co-const-toggle').textContent=aberto?'\u2716\ufe0f Fechar':'\u2699\ufe0f Editar constantes';
+}
+function coPopularConstantes(){
+  var grid=document.getElementById('co-const-grid'); if(!grid) return;
+  grid.innerHTML=coColunasConst().map(function(h){
+    var ehData=/^DATA|^data_/.test(h);
+    var val=(CO_CONST[h]||'').replace(/"/g,'&quot;');
+    var id='cc_'+h.replace(/[^A-Za-z0-9_]/g,'_');
+    return '<div><label style="font-size:.66rem;font-weight:700;color:#64748b;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="'+h+'">'+h+'</label>'
+      + '<input id="'+id+'" data-col="'+h+'" oninput="coConstMudou(this)" value="'+val+'"'
+      + (ehData?' placeholder="dd/mm/aaaa"':'')
+      + ' style="width:100%;padding:6px 8px;border:1.5px solid '+(val?'#cfe3e2':'#e2e8f0')+';border-radius:7px;font-size:.76rem;font-family:inherit;background:'+(val?'#f7fdfc':'#fff')+';"></div>';
+  }).join('');
+  coContarConst();
+}
+function coContarConst(){
+  var n=Object.keys(CO_CONST).filter(function(k){return (CO_CONST[k]||'').trim()!=='';}).length;
+  var el=document.getElementById('co-const-count');
+  if(el) el.textContent = n ? ('\u00b7 '+n+' preenchida'+(n>1?'s':'')) : '\u00b7 nenhuma preenchida';
+}
+function coConstMudou(inp){
+  var h=inp.getAttribute('data-col'), v=inp.value;
+  if(v.trim()==='') delete CO_CONST[h]; else CO_CONST[h]=v;
+  inp.style.borderColor=v.trim()?'#cfe3e2':'#e2e8f0';
+  inp.style.background=v.trim()?'#f7fdfc':'#fff';
+  coContarConst();
+  if(CO_ROWS.length){ coAplicarFixos(); coPreview(); coSt('\u270f\ufe0f "'+h+'" atualizada em '+CO_ROWS.length+' obras.','#0d7377'); }
+}
+function coLimparConstantes(){
+  CO_CONST={}; coPopularConstantes();
+  if(CO_ROWS.length){ coAplicarFixos(); coPreview(); }
+  coSt('Constantes limpas. Clique em "Salvar padr\u00e3o" se quiser gravar assim.','#64748b');
+}
+function coSalvarConstantes(){
+  function v(id){ var el=document.getElementById(id); return el?el.value:''; }
+  var pacote={ extras:CO_CONST, fixos:{
+    contrato:v('co-contrato'), tipoObra:v('co-tipoobra'), tipoServico:v('co-tiposervico'),
+    natureza:v('co-natureza'), vistoria:v('co-vistoria'), status:v('co-statusobra')
+  }, estado:coEstado() };
+  fetch(CO_SUPA+'/rest/v1/turno_data?on_conflict=key',{method:'POST',headers:Object.assign({'Prefer':'resolution=merge-duplicates,return=minimal'},CO_H),body:JSON.stringify({key:'cadastro_obra_constantes',value:pacote,updated_at:new Date().toISOString()})})
+    .then(function(r){ coSt(r.ok?'\u2705 Padr\u00e3o salvo \u00b7 esses valores voltam sozinhos na pr\u00f3xima vez que abrir a p\u00e1gina.':'\u26a0\ufe0f N\u00e3o foi poss\u00edvel salvar o padr\u00e3o.', r.ok?'#0d7377':'#c53030'); })
+    .catch(function(){ coSt('Falha ao salvar o padr\u00e3o.','#c53030'); });
+}
+function coCarregarConstantes(){
+  return fetch(CO_SUPA+'/rest/v1/turno_data?select=value&key=eq.cadastro_obra_constantes&limit=1',{headers:{apikey:CO_KEY,Authorization:'Bearer '+CO_KEY}})
+    .then(function(r){return r.ok?r.json():[];})
+    .then(function(j){
+      var pac=(Array.isArray(j)&&j.length&&j[0].value)?j[0].value:null;
+      if(pac){
+        CO_CONST=pac.extras||{};
+        var f=pac.fixos||{};
+        function set(id,val){ var el=document.getElementById(id); if(el&&val!=null&&val!=='') el.value=val; }
+        set('co-contrato',f.contrato); set('co-tipoobra',f.tipoObra); set('co-tiposervico',f.tipoServico);
+        set('co-natureza',f.natureza); set('co-vistoria',f.vistoria); set('co-statusobra',f.status);
+        if(pac.estado){ document.getElementById('co-estado').value=pac.estado; coPopularEstados(); }
+      }
+    })
+    .catch(function(){})
+    .then(function(){ coPopularConstantes(); });
+}
+
 function coFixosMudou(){
   if(!CO_ROWS.length) return;
   coAplicarFixos();
@@ -456,7 +546,7 @@ function coBaixar(){
 (function(){ var d=new Date(); var el=document.getElementById('co-data'); if(el) el.value=d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2); })();
 // estados + mapa de bases/meses
 coPopularEstados();
-coCarregarMapa();
+coCarregarConstantes().then(function(){ coCarregarMapa(); });
 
 </script>
 <script>
