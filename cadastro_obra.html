@@ -146,14 +146,14 @@ body.sm-collapsed .sm-side:hover .sm-group-head{justify-content:flex-start;paddi
   </div>
 
   <div style="background:#fff;border:1px solid #e6ecf3;border-radius:14px;padding:16px;margin-bottom:14px;">
-    <div style="font-size:.78rem;font-weight:800;color:#0d7377;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">2 · Valores fixos do contrato</div>
+    <div style="font-size:.78rem;font-weight:800;color:#0d7377;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">2 · Valores fixos do contrato <span style="background:#eef4f4;color:#0d7377;border:1px solid #cfe3e2;border-radius:6px;padding:2px 7px;font-size:.62rem;margin-left:6px;">v2 · 10/09</span></div>
     <input type="hidden" id="co-estado" value="ba">
     <div style="font-size:.68rem;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px;">Estado</div>
     <div id="co-estado-btns" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;"></div>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;">
       <div><label style="font-size:.7rem;font-weight:700;color:#64748b;">Contrato</label><input id="co-contrato" oninput="coFixosMudou()" onchange="coFixosMudou()" value="OBRAS - BA" style="width:100%;padding:7px 9px;border:1.5px solid #e2e8f0;border-radius:7px;font-size:.78rem;"></div>
       <div><label style="font-size:.7rem;font-weight:700;color:#64748b;">Tipo de obra</label><input id="co-tipoobra" oninput="coFixosMudou()" onchange="coFixosMudou()" value="BA - Construção e Manutenção" style="width:100%;padding:7px 9px;border:1.5px solid #e2e8f0;border-radius:7px;font-size:.78rem;"></div>
-      <div><label style="font-size:.7rem;font-weight:700;color:#64748b;">Tipo serviço</label><input id="co-tiposervico" oninput="coFixosMudou()" onchange="coFixosMudou()" value="SERVICOS_RUR-BA" style="width:100%;padding:7px 9px;border:1.5px solid #e2e8f0;border-radius:7px;font-size:.78rem;"></div>
+      <div><label style="font-size:.7rem;font-weight:700;color:#64748b;">Tipo serviço</label><input id="co-tiposervico" oninput="coFixosMudou()" onchange="coFixosMudou()" value="CONSTRUÇÃO-BA" style="width:100%;padding:7px 9px;border:1.5px solid #e2e8f0;border-radius:7px;font-size:.78rem;"></div>
       <div><label style="font-size:.7rem;font-weight:700;color:#64748b;">Natureza</label><input id="co-natureza" oninput="coFixosMudou()" onchange="coFixosMudou()" value="RURAL" style="width:100%;padding:7px 9px;border:1.5px solid #e2e8f0;border-radius:7px;font-size:.78rem;"></div>
       <div><label style="font-size:.7rem;font-weight:700;color:#64748b;">Status</label><input id="co-statusobra" oninput="coFixosMudou()" onchange="coFixosMudou()" value="Em Execução" style="width:100%;padding:7px 9px;border:1.5px solid #e2e8f0;border-radius:7px;font-size:.78rem;"></div>
       <div><label style="font-size:.7rem;font-weight:700;color:#64748b;">Obriga vistoria</label><input id="co-vistoria" oninput="coFixosMudou()" onchange="coFixosMudou()" value="NÃO" style="width:100%;padding:7px 9px;border:1.5px solid #e2e8f0;border-radius:7px;font-size:.78rem;"></div>
@@ -180,7 +180,7 @@ var CO_ROWS = [];
 
 // ===== estado -> valores fixos do contrato =====
 var CO_ESTADO_DEF={
-  ba:{sigla:'BA', nome:'Bahia',   contrato:'OBRAS - BA',    tipoObra:'BA - Construção e Manutenção', tipoServico:'SERVICOS_RUR-BA', processo:''},
+  ba:{sigla:'BA', nome:'Bahia',   contrato:'OBRAS - BA',    tipoObra:'BA - Construção e Manutenção', tipoServico:'CONSTRUÇÃO-BA', processo:''},
   mg:{sigla:'MG', nome:'Minas',   contrato:'CON_MANUT-MG',  tipoObra:'',                              tipoServico:'',                processo:''},
   se:{sigla:'SE', nome:'Sergipe', contrato:'OBRAS-SE',      tipoObra:'SE - Construção e Manutenção',  tipoServico:'SERVICOS_RDU-SE', processo:'SE_PROCESSO'}
 };
