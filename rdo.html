@@ -523,7 +523,8 @@ box-shadow:0 2px 8px rgba(0,0,0,0.08)}
   <button class="rdo-state-btn" id="rdo-state-ba" onclick="rdoSetState('ba')">🟡 BA</button>
   <button class="rdo-state-btn" id="rdo-state-mg" onclick="rdoSetState('mg')">🔵 MG</button>
   <button class="rdo-state-btn" id="rdo-state-se" onclick="rdoSetState('se')">🟣 SE</button>
-  <div id="rdo-state-counts" style="margin-left:auto;font-size:0.62rem;font-weight:700;color:rgba(255,255,255,0.4);white-space:nowrap;"></div>
+  <div id="rdo-cad-info" style="margin-left:auto;font-size:0.62rem;font-weight:700;color:rgba(255,255,255,0.35);white-space:nowrap;"></div>
+  <div id="rdo-state-counts" style="margin-left:14px;font-size:0.62rem;font-weight:700;color:rgba(255,255,255,0.4);white-space:nowrap;"></div>
 </div>
 
 <!-- Filtro Filial -->
@@ -784,8 +785,334 @@ const RDO_CONMNT = {
   'DOUGLAS-PA':'CON_MNT-LV-01','SIDNEI-PA':'CON_MNT-LV-02'
 };
 function rdoDisplayName(n) {
+  if (!n) return '';
+  // turma que mudou de base: o codigo antigo do historico passa a valer pelo novo
+  var re = (typeof RDO_CAD_REBASE !== 'undefined') ? RDO_CAD_REBASE[n] : null;
+  if (re) return RDO_CONMNT[re] || re;
   return RDO_CONMNT[n] || n || '';
 }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// SINCRONIA COM A TELA "CADASTRO DE EQUIPES"  (turno_data -> cadastro_equipes)
+// A lista fixa RDO_EQUIPES passa a ser so o ponto de partida: o cadastro manda.
+// Turma nova entra sozinha, turma que mudou de base troca de codigo e o
+// historico antigo continua apontando para ela.
+// ═══════════════════════════════════════════════════════════════════════════
+// De onde vieram os codigos da lista fixa: nome do encarregado -> codigo.
+// Serve so para reconhecer quem ja estava aqui; assim que a turma aparece no
+// cadastro com codigo proprio, esta tabela deixa de ser consultada para ela.
+const RDO_NOME_CODIGO = {
+  'ADAO LUCIANO DOS SANTOS':'ADAO-AJU',
+  'ADRIANO FRANCA DE ARAUJO':'ADRIANO-AJU',
+  'FELIPE BEZERRA VIEIRA':'FELIPE-AJU',
+  'FRANCINALDO BEZERRA DA ROCHA':'FRANCINALDO-AJU',
+  'FRANCISCO HILARIO VIEIRA SANTOS':'FRANCISCO-AJU',
+  'GILMAR MACIEL DOS SANTOS':'GILMAR-AJU',
+  'JEAN FELIPE SANTANA SILVA':'JEAN-AJU',
+  'JOSE FERNANDO DE JESUS SANTOS':'JOSEFERNANDO-AJU',
+  'JOSENILTON MELO DOS SANTOS JUNIOR':'JOSENILTON-AJU',
+  'JOSE ROBERTO OLIVEIRA SANTOS':'JOSEROBERTO-AJU',
+  'LUAN DE ANDRADE NASCIMENTO':'LUAN-AJU',
+  'ROBSON FERREIRA DOS SANTOS':'ROBSON-AJU',
+  'RODRIGO ARAUJO TELES':'RODRIGOARAUJO-AJU',
+  'RODRIGO FIGUEIREDO DE JESUS':'RODRIGOJESUS-AJU',
+  'VALDEMAR DOS SANTOS FILHO':'VALDEMAR-AJU',
+  'WILSON RAFAEL LIMA ROSA':'WILSON-AJU',
+  'ALAN NUNES BARRETO':'ALAN-IRC',
+  'ALEX SANDRO SANTOS BISPO':'ALEX-IRC',
+  'DANILO NUNES DE OLIVEIRA':'DANILO-IRC',
+  'EDILSON DE SOUZA SANTOS':'EDILSON-IRC',
+  'EDMILSON RIBEIRO DO NASCIMENTO':'EDMILSON-IRC',
+  'ANDERSON SANTANA DE SOUZA':'EDMILSON-IRC',
+  'ELIEZER BATISTA':'ELIEZER-IRC',
+  'ENES RAMOS DA SILVA':'ENES-IRC',
+  'ESMERALDO DOS SANTOS OLIVEIRA':'ESMERALDO-IRC',
+  'FELIPE PEREIRA ALVES':'FELIPE-IRC',
+  'GABRIEL DOS SANTOS SILVA':'GABRIEL-IRC',
+  'GIORLAN EVANGELISTA SOUZA':'GIORLAN-IRC',
+  'JAILSON SANTOS SILVA':'JAILSON-IRC',
+  'JARBAS SOUZA AMORIM':'JARBAS-IRC',
+  'MARCOS PAULO CARDOSO':'MARCOS-IRC',
+  'VANDERLEI DE MENEZES SEVERO':'MENEZES-IRC',
+  'REVERTON BASTOS ROCHA NOVAIS':'REVERTON-IRC',
+  'RIAN LUCAS FERREIRA OLIVEIRA':'RIAN-IRC',
+  'ROMERO DIAS SILVA':'ROMERO-IRC',
+  'TIAGO BARBOZA DE SOUZA':'TIAGO-IRC',
+  'UBERDAN CERQUEIRA DA SILVA':'UBERDAN-IRC',
+  'VAGNO SILVA NOVAIS':'VAGNO-IRC',
+  'VANILSON LUCIO DOS SANTOS SILVA':'VANILSON-IRC',
+  'WASHINGTON ALVES OLIVEIRA':'WASHINGTON-IRC',
+  'WESLEY REIS DE OLIVEIRA':'WESLEY-IRC',
+  'WILIAN DA SILVA SENA':'WILIAN-IRC',
+  'CLAYTON JOSE ANTUNES':'CLAYTON-ITA',
+  'CRISTIANO GOMES THEODORO':'CRISTIANO-ITA',
+  'JULIANO SILVA DA CRUZ':'JULIANO-ITA',
+  'LEANDRO RODRIGO RIBEIRO':'LEANDRO-ITA',
+  'RAFAEL DE AZEVEDO CARVALHO':'RAFAEL-ITA',
+  'CARLOS ANDRE SANTOS DA SILVA':'ANDRE-JAC',
+  'CAIQUE SILVA LIMA':'CAIQUE-JAC',
+  'CARLOS DA CRUZ SANTANA':'CARLOS-JAC',
+  'CLEBSON REIS NETO':'CLEBSON-JAC',
+  'DIOGO CRUZ DOS SANTOS':'DIOGO-JAC',
+  'DOUGLAS DA SILVA MELO':'DOUGLAS-JAC',
+  'EMERSON DE CARVALHO SILVA':'EMERSON-JAC',
+  'ERONILSON SILVA SANTANA':'ERONILSON-JAC',
+  'FABIANO LOPES DE MORAES':'FABIANO-JAC',
+  'FABIO DIAS GOMES':'FABIO-JAC',
+  'GERALDO DA COSTA GOMES':'GERALDO-JAC',
+  'JAILTON DA SILVA':'JAILTON-JAC',
+  'JAIR DE JESUS':'JAIR-JAC',
+  'JOAO PEREIRA DA SILVA':'JOAO-JAC',
+  'JULIO SERAFIM DAMACENO DOS SANTOS':'JULIO-JAC',
+  'LUIZ CARLOS SILVA DOS SANTOS':'LUIZ-JAC',
+  'MARCELO MENESES DOS SANTOS':'MARCELO-JAC',
+  'MAURIVALDO GOMES OLIVEIRA':'MAURIVALDO-JAC',
+  'MURILO SILVA PINTO':'MURILO-JAC',
+  'PATRICIO DA SILVA BARBOSA':'PATRICIO-JAC',
+  'RODRIGO SANTOS SILVA':'RODRIGO-JAC',
+  'UELTON FERREIRA DE OLIVEIRA':'UELTON-JAC',
+  'VALMIR ALVES DA SILVA':'VALMIR-JAC',
+  'DOUGLAS BARBOSA DA CRUZ OLIVEIRA':'DOUGLAS-PA',
+  'FABRICIO DA SILVA OLIVEIRA':'FABRICIO-PA',
+  'GILVANDRO ALVES DE SOUZA':'GILVANDRO-PA',
+  'LEVY LEONARDO MONTOYA CALCURIAN':'LEVY-PA',
+  'LUIZ CARLOS DA FONSECA':'LUIZCF-PA',
+  'OTAVIO MACHADO DOS SANTOS':'OTAVIO-PA',
+  'RAIMUNDO NONATO GOMES PEIXOTO':'RAIMUNDO-PA',
+  'RICHARD AUGUSTO PELOSO':'RICHARD-PA',
+  'SIDNEI SPADA':'SIDNEI-PA'
+};
+
+const RDO_CAD_KEY     = 'cadastro_equipes';        // chave no turno_data
+const RDO_CAD_LS_RAW  = 'cadastro_equipes_v1';     // cache que a tela de Cadastro deixa
+const RDO_CAD_LS_MEUS = 'mariua_rdo_cad_codigos';  // codigos que esta sincronia criou
+const RDO_CAD_MIN_MS  = 20000;
+
+let RDO_CAD_INFO   = {};   // codigo -> dados da turma no cadastro
+let RDO_CAD_REBASE = {};   // codigo antigo -> codigo novo
+let RDO_CAD_META   = { atualizado:null, por:'', total:0 };
+let RDO_CAD_CRIADOS = (function(){ try { return JSON.parse(localStorage.getItem(RDO_CAD_LS_MEUS)||'[]')||[]; } catch(e){ return []; } })();
+let _rdoCadUltimaSync = 0;
+
+function rdoCadNorm(t) {
+  return String(t==null?'':t).normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .toUpperCase().replace(/[^A-Z0-9 ]/g,' ').replace(/\s+/g,' ').trim();
+}
+function rdoCadSquash(c) { return rdoCadNorm(c).replace(/[^A-Z0-9]/g,''); }
+function rdoCadSufixo(code) {
+  const m = String(code||'').toUpperCase().match(/-(IRC|JAC|FSA|SRR|AJU|PA|ITA)$/);
+  return m ? m[1] : '';
+}
+const RDO_UTD_REGRAS = [
+  [/IRECE/,'IRC'], [/JACOBINA/,'JAC'], [/FEIRA/,'FSA'], [/SERRINHA/,'SRR'], [/ARACAJU/,'AJU'],
+  [/ITAJUBA/,'ITA'], [/POUSO ALEGRE/,'PA'], [/LINHA VIVA/,'PA'], [/CON.?MANUT.?MG/,'PA'], [/CONGONHAL/,'PA']
+];
+const RDO_UTDS = ['IRC','JAC','FSA','SRR','AJU','PA','ITA'];
+function rdoCadUTD(txt) {
+  const t = rdoCadNorm(txt);
+  if (!t) return '';
+  for (let i=0;i<RDO_UTD_REGRAS.length;i++) if (RDO_UTD_REGRAS[i][0].test(t)) return RDO_UTD_REGRAS[i][1];
+  return '';
+}
+function rdoCadUtdLinha(q, fallback) {
+  const u = String((q && q.utd) || '').toUpperCase().trim();
+  if (RDO_UTDS.indexOf(u) >= 0) return u;
+  return rdoCadUTD((q && (q.centro || q.base)) || '') || fallback || '';
+}
+// Turma da lista equivalente a esse codigo (mesma grafia ou mesmo nome exibido):
+// resolve "JOSE FERNANDO-AJU" = "JOSEFERNANDO-AJU" e "CON_MNT-11" = "CRISTIANO-ITA"
+function rdoCadEquivalente(code) {
+  const alvo = rdoCadSquash(code);
+  if (!alvo) return '';
+  for (let i=0;i<RDO_EQUIPES.length;i++) {
+    const e = RDO_EQUIPES[i];
+    if (rdoCadSquash(e) === alvo) return e;
+    if (rdoCadSquash(RDO_CONMNT[e] || '') === alvo) return e;
+  }
+  return '';
+}
+function rdoCadGerar(encarregado, utd, usados) {
+  const toks = rdoCadNorm(encarregado).split(' ').filter(Boolean);
+  let raiz = toks[0] || 'TURMA';
+  if (raiz.length <= 2 && toks[1]) raiz += toks[1];
+  const suf = utd ? '-'+utd : '';
+  if (!usados.has(raiz+suf)) return raiz+suf;
+  if (toks[1] && !usados.has(raiz+toks[1]+suf)) return raiz+toks[1]+suf;
+  let i = 2; while (usados.has(raiz+i+suf)) i++;
+  return raiz+i+suf;
+}
+
+function rdoCadAplicar(pkg) {
+  const vazio = { novas:[], removidas:[], rebases:[], foraRdo:[], total:0 };
+  if (!pkg || !Array.isArray(pkg.equipes)) return vazio;
+  const utdBase = rdoCadUTD((pkg.gerente && pkg.gerente.base) || '');
+  const antes   = new Set(RDO_EQUIPES);
+  const usados  = new Set(RDO_EQUIPES);
+  RDO_EQUIPES.forEach(function(e){ if (RDO_CONMNT[e]) usados.add(RDO_CONMNT[e]); });
+  const tomados = new Set();
+  const atuais = [], rebases = [], foraRdo = [];
+  // codigos que o cadastro traz: um codigo que continua na lista nao pode ser
+  // tratado como "mudou de base" so porque outra turma herdou o primeiro nome
+  const codigosCad = new Set();
+  pkg.equipes.forEach(function(q){ if (q && q.codigo) codigosCad.add(rdoCadSquash(q.codigo)); });
+  RDO_CAD_INFO = {};
+  // RDO_CAD_REBASE nao e limpo: depois da 1a sincronia o nome do encarregado ja
+  // aponta para o codigo novo, e sem guardar o de-para o historico antigo se perde
+
+  pkg.equipes.forEach(function(q) {
+    if (!q || !rdoCadNorm(q.encarregado)) return;
+    const utd    = rdoCadUtdLinha(q, utdBase);
+    const codCad = String(q.codigo||'').replace(/\s+/g,' ').trim().toUpperCase();
+    const full   = rdoCadNorm(q.encarregado);
+    const porNome = RDO_NOME_CODIGO[full] ? rdoCadEquivalente(RDO_NOME_CODIGO[full]) : '';
+    let code = '', alias = '', entra = true;
+
+    if (codCad) {
+      const suf   = rdoCadSufixo(codCad);
+      const equiv = rdoCadEquivalente(codCad);
+      if (suf) {
+        code = equiv || codCad;
+      } else if (utd) {
+        // codigo fora do padrao NOME-UTD (CON_MNT-11, EQUIPE LM 01): usa um codigo
+        // interno com base, para os filtros funcionarem, e exibe o codigo oficial
+        code  = equiv || porNome || rdoCadGerar(q.encarregado, utd, usados);
+        alias = codCad;
+      } else {
+        code  = equiv || codCad;
+        entra = false;   // sem centro de servico reconhecido: fica fora do RDO
+      }
+      // mesma pessoa com codigo diferente do que a lista tinha: mudou de base
+      if (entra && suf && porNome && rdoCadSquash(porNome) !== rdoCadSquash(code)
+          && !codigosCad.has(rdoCadSquash(porNome))
+          && !codigosCad.has(rdoCadSquash(RDO_CONMNT[porNome] || ''))) {
+        RDO_CAD_REBASE[porNome] = code;
+        rebases.push(porNome + ' -> ' + code);
+        const iv = RDO_EQUIPES.indexOf(porNome);
+        if (iv >= 0) RDO_EQUIPES.splice(iv, 1);
+      }
+    } else {
+      // cadastro antigo, sem codigo: usa o que a lista ja conhecia pelo nome
+      code = porNome || rdoCadGerar(q.encarregado, utd, usados);
+    }
+
+    if (tomados.has(code)) {
+      code = (porNome && !tomados.has(porNome)) ? porNome : rdoCadGerar(q.encarregado, utd, usados);
+    }
+    usados.add(code); tomados.add(code); atuais.push(code);
+    RDO_CAD_INFO[code] = {
+      encarregado: String(q.encarregado||'').trim(),
+      matricula:   String(q.matricula||'').trim(),
+      cod_equipe:  String(q.cod_equipe||'').trim(),
+      supervisor:  String(q.supervisor||'').trim(),
+      qtd_colab:   (q.qtd_colab===0 ? 0 : (parseInt(q.qtd_colab,10) || '')),
+      centro:      String(q.centro||'').trim(),
+      tipo:        String(q.tipo||'').trim(),
+      utd:         utd,
+      rdo:         entra
+    };
+    // registra o codigo desta turma: na proxima sincronia ela e reconhecida pelo nome
+    if (codCad || !RDO_NOME_CODIGO[full]) RDO_NOME_CODIGO[full] = code;
+    if (alias && alias !== code && !RDO_CONMNT[code]) RDO_CONMNT[code] = alias;
+    if (!entra) { foraRdo.push(code); return; }
+    if (RDO_EQUIPES.indexOf(code) < 0) RDO_EQUIPES.push(code);
+  });
+
+  const novas = atuais.filter(function(c){ return !antes.has(c) && foraRdo.indexOf(c) < 0; });
+  // turma que esta sincronia criou e que saiu do cadastro tambem sai da lista
+  const removidas = RDO_CAD_CRIADOS.filter(function(c){ return atuais.indexOf(c) < 0; });
+  removidas.forEach(function(c) {
+    const i = RDO_EQUIPES.indexOf(c); if (i >= 0) RDO_EQUIPES.splice(i,1);
+    delete RDO_CAD_INFO[c];
+  });
+  RDO_CAD_CRIADOS = atuais.filter(function(c){
+    return foraRdo.indexOf(c) < 0 && (novas.indexOf(c) >= 0 || RDO_CAD_CRIADOS.indexOf(c) >= 0);
+  });
+  try { localStorage.setItem(RDO_CAD_LS_MEUS, JSON.stringify(RDO_CAD_CRIADOS)); } catch(e) {}
+  RDO_CAD_META = { atualizado: pkg.atualizado || null, por: pkg.por || '', total: atuais.length };
+  return { novas:novas, removidas:removidas, rebases:rebases, foraRdo:foraRdo, total:atuais.length };
+}
+
+// Lancamento e justificativa gravados com o codigo antigo passam para o novo
+function rdoCadMigrarDados() {
+  const chaves = Object.keys(RDO_CAD_REBASE);
+  if (!chaves.length) return;
+  chaves.forEach(function(velho) {
+    const novo = RDO_CAD_REBASE[velho];
+    if (rdoData && rdoData[velho]) {
+      rdoData[novo] = (rdoData[novo] || []).concat(rdoData[velho]);
+      delete rdoData[velho];
+    }
+    if (rdoJustif && rdoJustif[velho]) {
+      if (!rdoJustif[novo]) rdoJustif[novo] = rdoJustif[velho];
+      delete rdoJustif[velho];
+    }
+  });
+}
+
+function rdoCadPacoteLocal() {
+  try {
+    const v = JSON.parse(localStorage.getItem(RDO_CAD_LS_RAW)||'null');
+    if (v && Array.isArray(v.equipes)) return v;
+  } catch(e) {}
+  try {
+    const v2 = JSON.parse(localStorage.getItem('mariua_'+RDO_CAD_KEY)||'null');
+    if (v2 && Array.isArray(v2.equipes)) return v2;
+  } catch(e) {}
+  return null;
+}
+
+async function rdoCadSincronizar(forcar) {
+  const agora = Date.now();
+  if (!forcar && agora - _rdoCadUltimaSync < RDO_CAD_MIN_MS) return;
+  _rdoCadUltimaSync = agora;
+  try {
+    const ctrl = new AbortController();
+    const tid  = setTimeout(function(){ ctrl.abort(); }, 8000);
+    const res  = await fetch(SUPA_URL + '/rest/v1/turno_data?select=value&key=eq.' + RDO_CAD_KEY + '&limit=1',
+      { headers: SUPA_HEADERS, signal: ctrl.signal });
+    clearTimeout(tid);
+    if (!res.ok) { console.warn('[cadastro] HTTP', res.status); return; }
+    const data = await res.json();
+    if (!Array.isArray(data) || !data.length) { console.warn('[cadastro] chave vazia no banco'); return; }
+    let pkg = data[0].value;
+    if (typeof pkg === 'string') { try { pkg = JSON.parse(pkg); } catch(e) {} }
+    if (!pkg || !Array.isArray(pkg.equipes)) { console.warn('[cadastro] formato inesperado'); return; }
+    try { localStorage.setItem('mariua_'+RDO_CAD_KEY, JSON.stringify(pkg)); } catch(e) {}
+    const r = rdoCadAplicar(pkg);
+    rdoCadMigrarDados();
+    try { rdoRender(); } catch(e) {}
+    console.log('[cadastro] ' + r.total + ' turma(s) no cadastro'
+      + (r.novas.length     ? ' · nova(s): ' + r.novas.join(', ') : '')
+      + (r.removidas.length ? ' · removida(s): ' + r.removidas.join(', ') : ''));
+    if (r.rebases.length) console.warn('[cadastro] turma(s) que mudaram de base: ' + r.rebases.join(' | '));
+    if (r.foraRdo.length)  console.log('[cadastro] fora do RDO (sem centro de servico): ' + r.foraRdo.join(', '));
+    rdoCadRenderInfo();
+  } catch(e) {
+    console.warn('[cadastro] falha ao sincronizar:', e.name, e.message);
+  }
+}
+
+function rdoCadRenderInfo() {
+  const el = document.getElementById('rdo-cad-info');
+  if (!el) return;
+  if (!RDO_CAD_META.total) { el.textContent = ''; return; }
+  const fora = Object.keys(RDO_CAD_INFO).filter(function(k){ return RDO_CAD_INFO[k].rdo === false; }).length;
+  let quando = '';
+  try { if (RDO_CAD_META.atualizado) quando = new Date(RDO_CAD_META.atualizado)
+    .toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}); } catch(e) {}
+  el.textContent = (RDO_CAD_META.total - fora) + ' turmas do Cadastro de Equipes'
+    + (fora ? ' · ' + fora + ' fora do RDO' : '')
+    + (quando ? ' · cadastro de ' + quando : '');
+}
+window.rdoCadSincronizar = rdoCadSincronizar;
+window.rdoCadInfo = function(n){ return RDO_CAD_INFO[n] || null; };
+
+// Cache local ja na abertura: a lista sai certa antes da rede responder
+try { rdoCadAplicar(rdoCadPacoteLocal()); } catch(e) { console.warn('[cadastro] cache local:', e.message); }
+// Revalida quando a aba volta ao foco (alguem acabou de mexer no cadastro)
+document.addEventListener('visibilitychange', function(){ if (!document.hidden) rdoCadSincronizar(); });
+window.addEventListener('focus', function(){ rdoCadSincronizar(); });
+
 
 // ── Salvar/Carregar Supabase ─────────────────────────────────────────────────
 function rdoKeyForDate(date) {
@@ -973,7 +1300,11 @@ function rdoRender() {
     if (type === 'falta') {
       return '<div class="card absent" title="Clique para justificar a falta" onclick="rdoJustificar(\''+name+'\')"><span class="card-name">'+disp+'</span><span class="badge falta">FALTA</span></div>';
     }
-    return '<div class="card"><span class="card-name">'+disp+'</span><span class="badge ok">OK</span></div>';
+    var ci = RDO_CAD_INFO[name];
+    var tt = ci ? [ci.encarregado, ci.centro, ci.supervisor ? 'sup. '+ci.supervisor : '',
+                   (ci.qtd_colab || ci.qtd_colab === 0) ? ci.qtd_colab+' colab.' : '']
+                   .filter(Boolean).join(' · ').replace(/"/g,'&quot;') : '';
+    return '<div class="card"'+(tt?' title="'+tt+'"':'')+'><span class="card-name">'+disp+'</span><span class="badge ok">OK</span></div>';
   }
 
   var gl = document.getElementById('rdo-grid-lancou');
@@ -1076,6 +1407,8 @@ function rdoImportar(file) {
 rdoBuildBaseButtons();
 rdoBuildCentroButtons();
 rdoCarregarBanco();
+// Puxa o Cadastro de Equipes do banco (turma nova entra sozinha)
+try { rdoCadSincronizar(true); } catch(e) { console.warn('[cadastro] init:', e.message); }
 </script>
 
 
