@@ -449,8 +449,9 @@ body.dark .cad-mod{background:#101a28 !important;color:#dbe4ee}
     <div class="toolbar">
       <table class="cad-tab">
         <thead><tr>
-          <th style="width:26%">Encarregado</th><th style="width:11%">Matrícula</th><th style="width:11%">Cód. equipe</th>
-          <th style="width:22%">Supervisor</th><th style="width:11%">Qtd colab.</th><th style="width:13%">Alojados</th><th></th>
+          <th style="width:15%">Equipe (código)</th><th style="width:13%">Centro de serviço</th>
+          <th style="width:19%">Encarregado</th><th style="width:8%">Matrícula</th><th style="width:6%">Cód.</th>
+          <th style="width:16%">Supervisor</th><th style="width:6%">Colab</th><th style="width:9%">Alojados</th><th></th>
         </tr></thead>
         <tbody id="tbEqs"></tbody>
       </table>
@@ -464,9 +465,9 @@ body.dark .cad-mod{background:#101a28 !important;color:#dbe4ee}
 <div class="cad-ov" id="impOv">
   <div class="cad-mod">
     <b style="font-size:0.95rem;color:#0d7377;">Importar equipes de planilha</b>
-    <p class="cad-dica" style="margin:8px 0 12px;">Cole as células copiadas do Excel/Sheets (com a linha de cabeçalho) ou escolha um arquivo .csv. São reconhecidas as colunas <b>encarregado</b>, <b>matrícula</b>, <b>equipe</b> (ou código), <b>supervisor</b>, <b>qtd colab</b> e <b>alojados</b> — em qualquer ordem, com ou sem acento.</p>
-    <textarea id="impTxt" placeholder="ENCARREGADO	MATRICULA	EQUIPE	SUPERVISOR	QTD COLAB	ALOJADOS
-DOUGLAS MELO	27483	2299	ETEMILSON SANTOS	6	SIM"></textarea>
+    <p class="cad-dica" style="margin:8px 0 12px;">Escolha o <b>export oficial do sistema</b> (.csv) ou cole as células do Excel/Sheets com a linha de cabeçalho. São reconhecidas <b>Equipe</b> (o código, ex.: DOUGLAS-JAC), <b>Centro de Serviço</b>, <b>Encarregado</b>, <b>Parceiros</b> (conta o efetivo), <b>Supervisor</b>, <b>Código</b>, <b>Tipo de Equipe</b> e <b>Veículo</b> — em qualquer ordem, com ou sem acento. Matrícula colada no nome (<b>NOME-27483</b>) é separada automaticamente, e linhas com <b>Situação</b> diferente de "Ativo" são ignoradas.</p>
+    <textarea id="impTxt" placeholder='"Código";"Centro de Serviço";"Equipe";"Encarregado";"Parceiros";"Supervisor"
+"2299";"BA-JACOBINA";"DOUGLAS-JAC";"DOUGLAS DA SILVA MELO-27483";"ERASMO DO NASCIMENTO - JOSE GILDO VIEIRA";"JAILTON SILVA DE ALMEIDA-21885"'></textarea>
     <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:10px;">
       <input type="file" id="impFile" accept=".csv,.txt,.tsv" style="font-size:0.75rem;">
       <label style="font-size:0.75rem;font-weight:700;color:#4a5568;display:flex;align-items:center;gap:6px;">
@@ -493,6 +494,43 @@ DOUGLAS MELO	27483	2299	ETEMILSON SANTOS	6	SIM"></textarea>
   const DB_KEY  = 'cadastro_equipes';
   const LS_KEY  = 'cadastro_equipes_v1';
   const SEED    = {"gerente": {"nome": "ALÉCIO OLIVEIRA", "base": "BASE JACOBINA - BA"}, "supervisores": [{"nome": "ALÉCIO OLIVEIRA", "matricula": ""}, {"nome": "ETEMILSON SANTOS", "matricula": ""}, {"nome": "GILVANDO CRUZ", "matricula": ""}], "equipes": [{"encarregado": "CARLOS ANDRÉ", "matricula": "27565", "cod_equipe": "2363", "supervisor": "ALÉCIO OLIVEIRA", "qtd_colab": 3, "alojados": "SIM"}, {"encarregado": "JAIR DE JESUS", "matricula": "28051", "cod_equipe": "2368", "supervisor": "ALÉCIO OLIVEIRA", "qtd_colab": 2, "alojados": "SIM"}, {"encarregado": "JENILSON OLIVEIRA", "matricula": "27786", "cod_equipe": "2350", "supervisor": "ALÉCIO OLIVEIRA", "qtd_colab": 6, "alojados": "SIM"}, {"encarregado": "JOAO PEREIRA", "matricula": "27492", "cod_equipe": "2351", "supervisor": "ALÉCIO OLIVEIRA", "qtd_colab": 1, "alojados": "SIM"}, {"encarregado": "OSIMAR SOUZA", "matricula": "27985", "cod_equipe": "2352", "supervisor": "ALÉCIO OLIVEIRA", "qtd_colab": 1, "alojados": "SIM"}, {"encarregado": "PATRICIO BARBOSA", "matricula": "27946", "cod_equipe": "2333", "supervisor": "ALÉCIO OLIVEIRA", "qtd_colab": 5, "alojados": "SIM"}, {"encarregado": "RYAN", "matricula": "28289", "cod_equipe": "2541", "supervisor": "ALÉCIO OLIVEIRA", "qtd_colab": 2, "alojados": "SIM"}, {"encarregado": "TIAGO SOUZA", "matricula": "28348", "cod_equipe": "2371", "supervisor": "ALÉCIO OLIVEIRA", "qtd_colab": 1, "alojados": "SIM"}, {"encarregado": "VALMIR SILVA", "matricula": "2340", "cod_equipe": "2340", "supervisor": "ALÉCIO OLIVEIRA", "qtd_colab": 2, "alojados": "SIM"}, {"encarregado": "CARLOS CRUZ", "matricula": "27970", "cod_equipe": "2349", "supervisor": "ETEMILSON SANTOS", "qtd_colab": 6, "alojados": "SIM"}, {"encarregado": "CLEBSON NETO", "matricula": "27567", "cod_equipe": "2303", "supervisor": "ETEMILSON SANTOS", "qtd_colab": 6, "alojados": "SIM"}, {"encarregado": "DOUGLAS MELO", "matricula": "27483", "cod_equipe": "2299", "supervisor": "ETEMILSON SANTOS", "qtd_colab": 6, "alojados": "SIM"}, {"encarregado": "EMERSON SILVA", "matricula": "27906", "cod_equipe": "2332", "supervisor": "ETEMILSON SANTOS", "qtd_colab": 6, "alojados": "SIM"}, {"encarregado": "GERALDO GOMES", "matricula": "27426", "cod_equipe": "2302", "supervisor": "ETEMILSON SANTOS", "qtd_colab": 6, "alojados": "SIM"}, {"encarregado": "JAILTON SILVA", "matricula": "27489", "cod_equipe": "2301", "supervisor": "ETEMILSON SANTOS", "qtd_colab": 6, "alojados": "SIM"}, {"encarregado": "JULIO SANTOS", "matricula": "27560", "cod_equipe": "2339", "supervisor": "ETEMILSON SANTOS", "qtd_colab": 6, "alojados": "SIM"}, {"encarregado": "RODRIGO SILVA", "matricula": "27591", "cod_equipe": "2300", "supervisor": "ETEMILSON SANTOS", "qtd_colab": 6, "alojados": "SIM"}, {"encarregado": "AMILTON COSTA", "matricula": "27873", "cod_equipe": "2330", "supervisor": "GILVANDO CRUZ", "qtd_colab": 6, "alojados": "SIM"}, {"encarregado": "CAIQUE", "matricula": "28653", "cod_equipe": "2541", "supervisor": "GILVANDO CRUZ", "qtd_colab": 6, "alojados": "SIM"}, {"encarregado": "DIOGO SANTOS", "matricula": "27675", "cod_equipe": "2304", "supervisor": "GILVANDO CRUZ", "qtd_colab": 6, "alojados": "SIM"}, {"encarregado": "FABIANO MORAES", "matricula": "27780", "cod_equipe": "2326", "supervisor": "GILVANDO CRUZ", "qtd_colab": 6, "alojados": "SIM"}, {"encarregado": "LUCIANO SILVA", "matricula": "27943", "cod_equipe": "2305", "supervisor": "GILVANDO CRUZ", "qtd_colab": 6, "alojados": "SIM"}]};
+
+  // Centros de servico do contrato (nome no export oficial) e a UTD que o Turno usa
+  const CENTROS = [
+    { nome:'BA-IRECÊ',            utd:'IRC' },
+    { nome:'BA-JACOBINA',         utd:'JAC' },
+    { nome:'BA-FEIRA DE SANTANA', utd:'FSA' },
+    { nome:'BA-SERRINHA',         utd:'SRR' },
+    { nome:'SE-ARACAJU',          utd:'AJU' },
+    { nome:'POLO POUSO ALEGRE',   utd:'PA'  },
+    { nome:'POLO ITAJUBÁ',        utd:'ITA' },
+    { nome:'LINHA VIVA',          utd:'PA'  }
+  ];
+  // Casamento tolerante: "CONSTR E MANUTENCAO - ITAJUBA" cai em ITA, "CON_MANUT-MG" em PA
+  const CENTRO_REGRAS = [
+    [/IRECE/,'IRC'], [/JACOBINA/,'JAC'], [/FEIRA/,'FSA'], [/SERRINHA/,'SRR'], [/ARACAJU/,'AJU'],
+    [/ITAJUBA/,'ITA'], [/POUSO ALEGRE/,'PA'], [/LINHA VIVA/,'PA'], [/CON.?MANUT.?MG/,'PA'], [/CONGONHAL/,'PA']
+  ];
+  function utdDoCentro(centro){
+    const c = norm(centro);
+    if(!c) return '';
+    for(let i=0;i<CENTRO_REGRAS.length;i++) if(CENTRO_REGRAS[i][0].test(c)) return CENTRO_REGRAS[i][1];
+    return '';
+  }
+  // "DOUGLAS DA SILVA MELO-27483" -> { nome:'DOUGLAS DA SILVA MELO', matricula:'27483' }
+  function separarMatricula(txt){
+    const t = String(txt||'').trim();
+    const m = t.match(/^(.*?)\s*-\s*(\d{2,8})$/);
+    if(m) return { nome:m[1].trim(), matricula:m[2].replace(/^0+(?=\d)/,'') };
+    return { nome:t, matricula:'' };
+  }
+  // "A - B - C" -> 3
+  function contarParceiros(txt){
+    return String(txt||'').split(/\s+-\s+/).map(x => x.trim()).filter(Boolean).length;
+  }
+  function codigoEquipe(txt){
+    return String(txt||'').replace(/\s+/g,' ').trim().toUpperCase();
+  }
 
   let gerente = { nome:'', base:'' };
   let supervisores = [];
@@ -553,7 +591,15 @@ DOUGLAS MELO	27483	2299	ETEMILSON SANTOS	6	SIM"></textarea>
       const tr=document.createElement('tr');
       // supervisor que nao esta na lista continua aparecendo, para nao sumir calado
       const orfao = q.supervisor && !supervisores.some(s => norm(s.nome)===norm(q.supervisor));
+      const centroOrfao = q.centro && !CENTROS.some(c => norm(c.nome)===norm(q.centro));
+      const optCentro = ['<option value="">—</option>']
+        .concat(CENTROS.map(c => '<option value="'+esc(c.nome)+'">'+esc(c.nome)+'</option>'))
+        .concat(centroOrfao ? ['<option value="'+esc(q.centro)+'">'+esc(q.centro)+' (fora da lista)</option>'] : [])
+        .join('');
+      const utd = utdDoCentro(q.centro);
       tr.innerHTML =
+        '<td><input type="text" value="'+esc(q.codigo)+'" data-c="codigo" placeholder="ex.: DOUGLAS-JAC" style="font-weight:800;"></td>'+
+        '<td><select data-c="centro">'+optCentro+'</select></td>'+
         '<td><input type="text" value="'+esc(q.encarregado)+'" data-c="encarregado" placeholder="Nome do encarregado"></td>'+
         '<td><input type="text" value="'+esc(q.matricula)+'" data-c="matricula" placeholder="—"></td>'+
         '<td><input type="text" value="'+esc(q.cod_equipe)+'" data-c="cod_equipe" placeholder="—"></td>'+
@@ -562,7 +608,11 @@ DOUGLAS MELO	27483	2299	ETEMILSON SANTOS	6	SIM"></textarea>
         '<td><select data-c="alojados"><option value="SIM">SIM</option><option value="NÃO">NÃO</option></select></td>'+
         '<td style="text-align:right;"><button class="cad-x" title="Remover">×</button></td>';
       tr.querySelector('[data-c=supervisor]').value = q.supervisor || '';
+      tr.querySelector('[data-c=centro]').value = q.centro || '';
       tr.querySelector('[data-c=alojados]').value = (q.alojados==='NÃO') ? 'NÃO' : 'SIM';
+      // sem UTD reconhecida a equipe nao entra no controle de turno por base
+      if(q.centro && !utd) tr.querySelector('[data-c=centro]').style.borderColor = '#f0a500';
+      if(!q.codigo) tr.querySelector('[data-c=codigo]').style.borderColor = '#f0a500';
       tr.querySelectorAll('input,select').forEach(el => {
         el.addEventListener('input', e => { q[e.target.dataset.c] = e.target.value; marcarSujo(); atualizarStats(); });
         el.addEventListener('change', e => { q[e.target.dataset.c] = e.target.value; marcarSujo(); atualizarStats(); });
@@ -589,7 +639,9 @@ DOUGLAS MELO	27483	2299	ETEMILSON SANTOS	6	SIM"></textarea>
 
   // ---------- banco ----------
   function pacote(){
-    return { gerente, supervisores, equipes,
+    // utd sempre derivada do centro na hora de salvar, para o Turno nao ter que adivinhar
+    equipes.forEach(q => { q.utd = utdDoCentro(q.centro); });
+    return { gerente, supervisores, equipes, formato: 2,
              atualizado: new Date().toISOString(),
              por: window.MARIUA_USER || '' };
   }
@@ -598,8 +650,11 @@ DOUGLAS MELO	27483	2299	ETEMILSON SANTOS	6	SIM"></textarea>
     if(v.gerente) gerente = { nome:v.gerente.nome||'', base:v.gerente.base||'' };
     if(Array.isArray(v.supervisores)) supervisores = v.supervisores.map(s => ({nome:s.nome||'',matricula:s.matricula||''}));
     if(Array.isArray(v.equipes)) equipes = v.equipes.map(q => ({
+      codigo:q.codigo||'', centro:q.centro||'', utd:q.utd||utdDoCentro(q.centro),
       encarregado:q.encarregado||'', matricula:q.matricula||'', cod_equipe:q.cod_equipe||'',
-      supervisor:q.supervisor||'', qtd_colab:q.qtd_colab===0?0:(q.qtd_colab||''), alojados:q.alojados||'SIM' }));
+      supervisor:q.supervisor||'', sup_matricula:q.sup_matricula||'',
+      qtd_colab:q.qtd_colab===0?0:(q.qtd_colab||''), alojados:q.alojados||'SIM',
+      tipo:q.tipo||'', veiculo:q.veiculo||'' }));
   }
   function salvarCache(){ try{ localStorage.setItem(LS_KEY, JSON.stringify(pacote())); }catch(e){} }
 
@@ -648,26 +703,63 @@ DOUGLAS MELO	27483	2299	ETEMILSON SANTOS	6	SIM"></textarea>
   function fmt(iso){ try{ return new Date(iso).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}); }catch(e){ return ''; } }
 
   // ---------- importar planilha ----------
+  // Dois formatos:
+  //  A) export oficial do sistema: Codigo;Centro de Servico;Equipe;Encarregado;Parceiros;Supervisor;...
+  //  B) planilha simples montada a mao: encarregado, matricula, equipe, supervisor, qtd colab, alojados
   const COLS = {
-    encarregado:['encarregado','enc','responsavel'],
-    matricula:['matricula','mat'],
-    cod_equipe:['cod equipe','codigo equipe','cod','codigo','equipe','des equipe','turma'],
-    supervisor:['supervisor','sup'],
-    qtd_colab:['qtd colab','qtd colaboradores','colab','colaboradores','efetivo','qtd'],
-    alojados:['alojados','alojado','alojamento']
+    codigo:      ['equipe','des equipe','cod interno','codigo interno','turma'],
+    centro:      ['centro de servico','centro','base','filial','utd'],
+    encarregado: ['encarregado','enc','responsavel'],
+    matricula:   ['matricula','mat'],
+    cod_equipe:  ['codigo','cod equipe','codigo equipe','cod'],
+    supervisor:  ['supervisor','sup'],
+    parceiros:   ['parceiros','equipe composicao','colaboradores nomes'],
+    qtd_colab:   ['qtd colab','qtd colaboradores','colab','efetivo','qtd'],
+    alojados:    ['alojados','alojado','alojamento'],
+    tipo:        ['tipo de equipe','tipo'],
+    veiculo:     ['veiculo','placa'],
+    situacao:    ['situacao','status']
   };
-  function separar(linha){
-    if(linha.indexOf('\t') >= 0) return linha.split('\t');
-    if(linha.indexOf(';') >= 0) return linha.split(';');
-    return linha.split(',');
+  // Divide respeitando aspas — o export oficial vem todo entre aspas duplas
+  function separarCSV(linha, delim){
+    const out=[]; let cur='', q=false;
+    for(let k=0;k<linha.length;k++){
+      const ch = linha[k];
+      if(ch === '"'){
+        if(q && linha[k+1] === '"'){ cur+='"'; k++; }
+        else q = !q;
+        continue;
+      }
+      if(ch === delim && !q){ out.push(cur); cur=''; continue; }
+      cur += ch;
+    }
+    out.push(cur);
+    return out.map(x => x.trim());
+  }
+  function delimitador(linha){
+    if(linha.indexOf('\t') >= 0) return '\t';
+    const fora = linha.replace(/"[^"]*"/g,'');
+    if(fora.indexOf(';') >= 0) return ';';
+    if(fora.indexOf(',') >= 0) return ',';
+    return ';';
   }
   function mapearColunas(cab){
     const idx = {};
     cab.forEach((c,i) => {
       const n = norm(c).toLowerCase();
+      if(!n) return;
       Object.keys(COLS).forEach(k => {
         if(idx[k] !== undefined) return;
-        if(COLS[k].some(cand => n === cand || n.indexOf(cand) === 0)) idx[k] = i;
+        if(COLS[k].some(cand => n === cand)) idx[k] = i;
+      });
+    });
+    // segunda passada tolerante (cabecalho com sufixo, ex.: "Cod. Red. Veiculo")
+    cab.forEach((c,i) => {
+      const n = norm(c).toLowerCase();
+      if(!n) return;
+      Object.keys(COLS).forEach(k => {
+        if(idx[k] !== undefined) return;
+        if(COLS[k].some(cand => n.indexOf(cand) === 0)) idx[k] = i;
       });
     });
     return idx;
@@ -675,41 +767,90 @@ DOUGLAS MELO	27483	2299	ETEMILSON SANTOS	6	SIM"></textarea>
   function importar(texto, substituir){
     const linhas = String(texto||'').split(/\r?\n/).filter(l => l.trim());
     if(linhas.length < 2) return { erro:'Cole ao menos a linha de cabeçalho e uma linha de dados.' };
-    const cab = separar(linhas[0]).map(c => c.replace(/^"|"$/g,'').trim());
+    const delim = delimitador(linhas[0]);
+    const cab = separarCSV(linhas[0].replace(/^\uFEFF/,''), delim);
     const idx = mapearColunas(cab);
-    if(idx.encarregado === undefined) return { erro:'Não encontrei a coluna do encarregado no cabeçalho: ' + cab.join(' | ') };
-    const lidas = [];
+    if(idx.encarregado === undefined)
+      return { erro:'Não encontrei a coluna do encarregado no cabeçalho: ' + cab.join(' | ') };
+    const oficial = idx.centro !== undefined && idx.codigo !== undefined;
+    const lidas = [], puladas = [];
     for(let i=1;i<linhas.length;i++){
-      const c = separar(linhas[i]).map(x => x.replace(/^"|"$/g,'').trim());
-      const nome = (c[idx.encarregado]||'').trim();
-      if(!nome) continue;
+      const c = separarCSV(linhas[i], delim);
       const pega = k => (idx[k] !== undefined ? (c[idx[k]]||'').trim() : '');
+      const sit = norm(pega('situacao'));
+      if(sit && sit !== 'ATIVO'){ puladas.push(pega('encarregado') + ' (' + pega('situacao') + ')'); continue; }
+      const enc = separarMatricula(pega('encarregado'));
+      if(!enc.nome) continue;
+      const sup = separarMatricula(pega('supervisor'));
+      const centro = pega('centro');
+      let qtd = pega('qtd_colab').replace(/[^0-9]/g,'');
+      if(qtd === '' && idx.parceiros !== undefined) qtd = String(contarParceiros(pega('parceiros')));
       const aloj = norm(pega('alojados'));
-      lidas.push({ encarregado:nome, matricula:pega('matricula'), cod_equipe:pega('cod_equipe'),
-        supervisor:pega('supervisor'),
-        qtd_colab:(pega('qtd_colab').replace(/[^0-9]/g,'') || ''),
-        alojados: aloj ? (aloj.indexOf('N')===0 ? 'NÃO' : 'SIM') : 'SIM' });
+      lidas.push({
+        codigo:      codigoEquipe(pega('codigo')),
+        centro:      centro,
+        utd:         utdDoCentro(centro),
+        encarregado: enc.nome,
+        matricula:   enc.matricula || pega('matricula'),
+        cod_equipe:  pega('cod_equipe'),
+        supervisor:  sup.nome,
+        sup_matricula: sup.matricula,
+        qtd_colab:   qtd,
+        alojados:    aloj ? (aloj.indexOf('N')===0 ? 'NÃO' : 'SIM') : '',
+        tipo:        pega('tipo'),
+        veiculo:     pega('veiculo')
+      });
     }
-    if(!lidas.length) return { erro:'Nenhuma linha com encarregado preenchido.' };
+    if(!lidas.length) return { erro:'Nenhuma linha com encarregado preenchido (ou todas fora de "Ativo").' };
+    // chave de mesclagem: codigo interno, depois matricula, depois nome
+    function achar(l){
+      let j = -1;
+      if(l.codigo)    j = equipes.findIndex(q => q.codigo && norm(q.codigo) === norm(l.codigo));
+      if(j < 0 && l.matricula) j = equipes.findIndex(q => q.matricula && String(q.matricula) === String(l.matricula));
+      if(j < 0)       j = equipes.findIndex(q => norm(q.encarregado) === norm(l.encarregado));
+      return j;
+    }
     let novas = 0, atualizadas = 0;
-    if(substituir){ equipes = lidas; novas = lidas.length; }
-    else lidas.forEach(l => {
-      const j = equipes.findIndex(q => norm(q.encarregado) === norm(l.encarregado));
-      if(j >= 0){
-        // mescla: campo vazio na planilha nao apaga o que ja estava
-        Object.keys(l).forEach(k => { if(l[k] !== '' && l[k] != null) equipes[j][k] = l[k]; });
-        atualizadas++;
-      }else{ equipes.push(l); novas++; }
-    });
-    // supervisor citado na planilha entra na lista
+    if(substituir){
+      // preserva o "alojados" ja ajustado a mao, que nao vem no export
+      const antes = equipes.slice();
+      equipes = lidas.map(l => {
+        const velho = antes.find(q =>
+          (l.codigo && norm(q.codigo) === norm(l.codigo)) ||
+          (l.matricula && String(q.matricula) === String(l.matricula)) ||
+          norm(q.encarregado) === norm(l.encarregado));
+        if(!l.alojados) l.alojados = (velho && velho.alojados) ? velho.alojados : 'SIM';
+        return l;
+      });
+      novas = equipes.length;
+    }else{
+      lidas.forEach(l => {
+        const j = achar(l);
+        if(j >= 0){
+          Object.keys(l).forEach(k => { if(l[k] !== '' && l[k] != null) equipes[j][k] = l[k]; });
+          atualizadas++;
+        }else{
+          if(!l.alojados) l.alojados = 'SIM';
+          equipes.push(l); novas++;
+        }
+      });
+    }
+    // supervisor citado na planilha entra na lista, com matricula quando vier
     let supsNovos = 0;
     equipes.forEach(q => {
-      if(q.supervisor && !supervisores.some(s => norm(s.nome) === norm(q.supervisor))){
-        supervisores.push({ nome:q.supervisor, matricula:'' }); supsNovos++;
-      }
+      if(!q.supervisor) return;
+      const j = supervisores.findIndex(sv => norm(sv.nome) === norm(q.supervisor));
+      if(j < 0){ supervisores.push({ nome:q.supervisor, matricula:q.sup_matricula || '' }); supsNovos++; }
+      else if(!supervisores[j].matricula && q.sup_matricula) supervisores[j].matricula = q.sup_matricula;
     });
-    equipes.sort((a,b) => (a.supervisor||'').localeCompare(b.supervisor||'') || (a.encarregado||'').localeCompare(b.encarregado||''));
-    return { novas, atualizadas, supsNovos };
+    supervisores.sort((a,b) => (a.nome||'').localeCompare(b.nome||''));
+    equipes.sort((a,b) =>
+      (a.centro||'zz').localeCompare(b.centro||'zz') ||
+      (a.codigo||'').localeCompare(b.codigo||'') ||
+      (a.encarregado||'').localeCompare(b.encarregado||''));
+    const semCodigo = equipes.filter(q => !q.codigo).length;
+    const semUtd    = equipes.filter(q => !utdDoCentro(q.centro)).length;
+    return { novas, atualizadas, supsNovos, oficial, puladas:puladas.length, semCodigo, semUtd };
   }
 
   function abrirImport(){ $('#impErro').style.display='none'; $('#impOv').style.display='flex'; $('#impTxt').focus(); }
@@ -717,9 +858,10 @@ DOUGLAS MELO	27483	2299	ETEMILSON SANTOS	6	SIM"></textarea>
 
   // ---------- exportar ----------
   function exportar(){
-    const cols = ['ENCARREGADO','MATRICULA','COD EQUIPE','SUPERVISOR','QTD COLAB','ALOJADOS'];
+    const cols = ['EQUIPE','CENTRO DE SERVICO','UTD','ENCARREGADO','MATRICULA','CODIGO','SUPERVISOR','MAT SUPERVISOR','QTD COLAB','ALOJADOS','TIPO','VEICULO'];
     const linhas = [cols.join(',')];
-    equipes.forEach(q => linhas.push([q.encarregado,q.matricula,q.cod_equipe,q.supervisor,q.qtd_colab,q.alojados]
+    equipes.forEach(q => linhas.push([q.codigo,q.centro,utdDoCentro(q.centro),q.encarregado,q.matricula,q.cod_equipe,
+      q.supervisor,q.sup_matricula,q.qtd_colab,q.alojados,q.tipo,q.veiculo]
       .map(v => '"'+String(v==null?'':v).replace(/"/g,'""')+'"').join(',')));
     const blob = new Blob([linhas.join('\n')], {type:'text/csv;charset=utf-8;'});
     const a = document.createElement('a');
@@ -733,8 +875,10 @@ DOUGLAS MELO	27483	2299	ETEMILSON SANTOS	6	SIM"></textarea>
   $('#gerBase').addEventListener('input', e => { gerente.base = e.target.value; marcarSujo(); });
   $('#btnAddSup').addEventListener('click', () => { supervisores.push({nome:'',matricula:''}); marcarSujo(); renderTudo();
     const ins = document.querySelectorAll('#tbSups input[data-c=nome]'); const last = ins[ins.length-1]; if(last) last.focus(); });
-  $('#btnAddEq').addEventListener('click', () => { equipes.push({encarregado:'',matricula:'',cod_equipe:'',supervisor:'',qtd_colab:'',alojados:'SIM'}); marcarSujo(); renderTudo();
-    const ins = document.querySelectorAll('#tbEqs input[data-c=encarregado]'); const last = ins[ins.length-1]; if(last) last.focus(); });
+  $('#btnAddEq').addEventListener('click', () => {
+    equipes.push({codigo:'',centro:'',utd:'',encarregado:'',matricula:'',cod_equipe:'',supervisor:'',sup_matricula:'',qtd_colab:'',alojados:'SIM',tipo:'',veiculo:''});
+    marcarSujo(); renderTudo();
+    const ins = document.querySelectorAll('#tbEqs input[data-c=codigo]'); const last = ins[ins.length-1]; if(last) last.focus(); });
   $('#btnSalvar').addEventListener('click', salvar);
   $('#btnExportar').addEventListener('click', exportar);
   $('#btnImportar').addEventListener('click', abrirImport);
@@ -751,8 +895,16 @@ DOUGLAS MELO	27483	2299	ETEMILSON SANTOS	6	SIM"></textarea>
     const r = importar($('#impTxt').value, $('#impSubst').checked);
     if(r.erro){ const e=$('#impErro'); e.textContent = r.erro; e.style.display='block'; return; }
     fecharImport(); marcarSujo(); renderTudo();
-    setStatus('ok', r.novas + ' equipe(s) nova(s), ' + r.atualizadas + ' atualizada(s)' +
-      (r.supsNovos ? ', ' + r.supsNovos + ' supervisor(es) novo(s)' : '') + ' — confira e clique em "Salvar no banco".');
+    const avisos = [];
+    if(r.puladas)   avisos.push(r.puladas + ' fora de "Ativo" ignorada(s)');
+    if(r.semCodigo) avisos.push(r.semCodigo + ' sem código de equipe');
+    if(r.semUtd)    avisos.push(r.semUtd + ' sem centro reconhecido (não entram no controle de turno)');
+    setStatus(avisos.length ? '' : 'ok',
+      (r.oficial ? 'Export oficial lido. ' : '') +
+      r.novas + ' equipe(s) nova(s), ' + r.atualizadas + ' atualizada(s)' +
+      (r.supsNovos ? ', ' + r.supsNovos + ' supervisor(es) novo(s)' : '') +
+      (avisos.length ? ' · ' + avisos.join(' · ') : '') +
+      ' — confira e clique em "Salvar no banco".');
   });
   $('#btnSeed').addEventListener('click', () => {
     if(equipes.length && !confirm('Isto substitui o cadastro que está na tela pelo que hoje está fixo dentro da Prog. Diária. Continuar?')) return;

@@ -1455,7 +1455,8 @@ if (_cad) {
   info.style.cssText = 'font-size:0.68rem;color:#8a94a0;font-weight:700;flex-basis:100%;padding:1px 0 3px;';
   info.textContent = [
     _cad.encarregado,
-    _cad.cod_equipe ? 'eq. ' + _cad.cod_equipe : '',
+    _cad.centro || '',
+    _cad.cod_equipe ? 'cód. ' + _cad.cod_equipe : '',
     _cad.supervisor ? 'sup. ' + _cad.supervisor : '',
     (_cad.qtd_colab || _cad.qtd_colab === 0) ? _cad.qtd_colab + ' colab.' : ''
   ].filter(Boolean).join(' · ');
@@ -1760,6 +1761,10 @@ const TURNO_CONMNT = {
 function toDisplayName(name) {
   if (!name) return name;
   var up = name.trim().toUpperCase();
+  // equipe que mudou de base no cadastro: o codigo antigo passa a valer pelo novo,
+  // para o historico salvo no banco continuar apontando para a mesma equipe
+  var re = (typeof CAD_REBASE !== 'undefined') ? CAD_REBASE[up] : null;
+  if (re) return TURNO_CONMNT[re] || re;
   return TURNO_CONMNT[up] || NOME_CURTO[up] || name;
 }
 function getUTD(name) { return name ? (CADASTRO_EQUIPES[name.trim().toUpperCase()] || '') : ''; }
@@ -1777,6 +1782,7 @@ const CAD_LS_RAW   = 'cadastro_equipes_v1';    // cache que a propria tela de Ca
 const CAD_LS_MEUS  = 'mariua_cad_sync_codigos';// codigos que ESTA sincronia criou
 const CAD_MIN_MS   = 20000;                    // nao re-sincroniza antes disso
 
+let CAD_REBASE = {};  // codigo antigo -> codigo novo (equipe que mudou de base)
 let CAD_INFO  = {};   // codigo interno -> dados da equipe no cadastro
 let CAD_META  = { gerente:{nome:'',base:''}, supervisores:[], atualizado:null, por:'', total:0 };
 let CAD_CRIADOS = (function(){ try { return JSON.parse(localStorage.getItem(CAD_LS_MEUS)||'[]')||[]; } catch(e){ return []; } })();
@@ -1790,8 +1796,34 @@ function cadNorm(t) {
 // "BASE JACOBINA - BA" -> "JAC" (sufixo dos codigos internos)
 const CAD_UTD_REGRAS = [
   [/JACOBINA/,'JAC'], [/IRECE/,'IRC'], [/FEIRA/,'FSA'], [/SERRINHA/,'SRR'],
-  [/LINHA VIVA/,'PA'], [/CONGONHAL/,'PA'], [/ITAJUBA/,'ITA'], [/ARACAJU/,'AJU']
+  [/LINHA VIVA/,'PA'], [/CONGONHAL/,'PA'], [/POUSO ALEGRE/,'PA'], [/CON.?MANUT.?MG/,'PA'],
+  [/ITAJUBA/,'ITA'], [/ARACAJU/,'AJU']
 ];
+const CAD_UTDS = ['IRC','JAC','FSA','SRR','AJU','PA','ITA'];
+// Compara codigos ignorando espaco, underscore e acento:
+// "JOSE FERNANDO-AJU" e "JOSEFERNANDO-AJU" sao a mesma equipe
+function cadSquash(c) { return cadNorm(c).replace(/[^A-Z0-9]/g,''); }
+function cadSufixoUTD(code) {
+  const m = String(code||'').toUpperCase().match(/-(IRC|JAC|FSA|SRR|AJU|PA|ITA)$/);
+  return m ? m[1] : '';
+}
+// UTD da linha do cadastro: campo utd, senao o centro de servico, senao a base do gerente
+function cadUtdDaLinha(q, fallback) {
+  const u = String((q && q.utd) || '').toUpperCase().trim();
+  if (CAD_UTDS.indexOf(u) >= 0) return u;
+  return cadUTD((q && (q.centro || q.base)) || '') || fallback || '';
+}
+// Equipe ativa equivalente a esse codigo (mesma grafia ou mesmo nome de exibicao)
+function cadAtivaEquivalente(code) {
+  const alvo = cadSquash(code);
+  if (!alvo) return '';
+  for (let i=0;i<EQUIPES_ATIVAS.length;i++) {
+    const e = EQUIPES_ATIVAS[i];
+    if (cadSquash(e) === alvo) return e;
+    if (cadSquash(toDisplayName(e)) === alvo) return e;
+  }
+  return '';
+}
 function cadUTD(txt) {
   const t = cadNorm(txt);
   for (let i=0;i<CAD_UTD_REGRAS.length;i++) if (CAD_UTD_REGRAS[i][0].test(t)) return CAD_UTD_REGRAS[i][1];
@@ -1846,24 +1878,68 @@ function cadGerar(encarregado, utd, usados) {
 }
 // Aplica o pacote do cadastro nas estruturas desta tela
 function cadAplicar(pkg) {
-  const vazio = { novas:[], removidas:[], total:0 };
+  const vazio = { novas:[], removidas:[], rebases:[], foraTurno:[], total:0 };
   if (!pkg || !Array.isArray(pkg.equipes)) return vazio;
   const utdBase = cadUTD((pkg.gerente && pkg.gerente.base) || '');
   const antes   = new Set(EQUIPES_ATIVAS);
   const usados  = cadCodigosConhecidos();
   const tomados = new Set();   // codigos ja entregues nesta passada
-  const atuais  = [], divergentes = [];
+  const atuais  = [], rebases = [], foraTurno = [];
+  // todo codigo que o proprio cadastro traz: um codigo que continua na lista
+  // nao pode ser tratado como "mudou de base" so porque outra equipe herdou o nome
+  const codigosCad = new Set();
+  pkg.equipes.forEach(function(q){ if (q && q.codigo) codigosCad.add(cadSquash(q.codigo)); });
   CAD_INFO = {};
+  CAD_REBASE = {};
   pkg.equipes.forEach(function(q) {
     if (!q || !cadNorm(q.encarregado)) return;
-    const utd  = cadUTD(q.base || q.utd || '') || utdBase;
-    let   code = cadResolver(q.encarregado, utd);
-    // dois encarregados nao podem dividir o mesmo codigo
-    if (code && tomados.has(code)) code = '';
-    if (!code) code = cadGerar(q.encarregado, utd, usados);
-    // casou com equipe de outra base: a base do cadastro e so a do gerente,
-    // entao vale avisar em vez de decidir calado
-    if (utd && code.slice(-(utd.length+1)) !== '-'+utd) divergentes.push(code);
+    const utd    = cadUtdDaLinha(q, utdBase);
+    const codCad = String(q.codigo||'').replace(/\s+/g,' ').trim().toUpperCase();
+    const full   = cadNorm(q.encarregado);
+    let code = '', alias = '', ativa = true;
+
+    if (codCad) {
+      // ── cadastro traz o codigo da equipe: e ele que manda ──────────────────
+      const suf   = cadSufixoUTD(codCad);
+      const equiv = cadAtivaEquivalente(codCad);
+      if (suf) {
+        code = equiv || codCad;
+      } else if (utd) {
+        // codigo fora do padrao NOME-UTD (CON_MNT-11, EQUIPE LM 01): mantem um
+        // codigo interno com base para os filtros funcionarem e exibe o oficial
+        const porNome = NOME_CURTO[full];
+        code  = equiv || (porNome ? cadAtivaEquivalente(porNome) : '') || cadGerar(q.encarregado, utd, usados);
+        alias = codCad;
+      } else {
+        // sem centro de servico reconhecido: fica no cadastro, fora do turno
+        code  = equiv || codCad;
+        ativa = false;
+      }
+      // mesma pessoa com codigo diferente do que o Turno tinha: mudou de base
+      if (ativa && suf) {
+        const porNome = NOME_CURTO[full];
+        const velho   = porNome ? cadAtivaEquivalente(porNome) : '';
+        if (velho && cadSquash(velho) !== cadSquash(code) && !codigosCad.has(cadSquash(velho))) {
+          CAD_REBASE[velho] = code;
+          rebases.push(velho + ' -> ' + code);
+          const iv = EQUIPES_ATIVAS.indexOf(velho);
+          if (iv >= 0) EQUIPES_ATIVAS.splice(iv,1);
+          if (Array.isArray(teams.falta)) teams.falta = teams.falta.filter(function(n){ return n !== velho; });
+        }
+      }
+    } else {
+      // ── cadastro antigo, sem codigo: cai no casamento por nome ────────────
+      code = cadResolver(q.encarregado, utd);
+      if (code && tomados.has(code)) code = '';
+      if (!code) code = cadGerar(q.encarregado, utd, usados);
+    }
+
+    // dois encarregados nao podem dividir o mesmo codigo. Quem chega depois fica
+    // com o codigo que ja era dele, se ainda estiver livre, para nao criar um novo a cada sincronia
+    if (tomados.has(code)) {
+      const meu = NOME_CURTO[full];
+      code = (meu && !tomados.has(meu)) ? meu : cadGerar(q.encarregado, utd, usados);
+    }
     usados.add(code); tomados.add(code); atuais.push(code);
     CAD_INFO[code] = {
       encarregado: String(q.encarregado||'').trim(),
@@ -1872,15 +1948,21 @@ function cadAplicar(pkg) {
       supervisor:  String(q.supervisor||'').trim(),
       qtd_colab:   (q.qtd_colab===0 ? 0 : (parseInt(q.qtd_colab,10) || '')),
       alojados:    String(q.alojados||'').trim(),
-      utd:         utd
+      centro:      String(q.centro||'').trim(),
+      tipo:        String(q.tipo||'').trim(),
+      utd:         utd,
+      turno:       ativa
     };
     // alimenta os mapas de nome usados por toDisplayName() e getUTD()
-    const full = cadNorm(q.encarregado);
-    if (utd && !CADASTRO_EQUIPES[full]) CADASTRO_EQUIPES[full] = utd;
-    if (!NOME_CURTO[full]) NOME_CURTO[full] = code;
+    if (utd) CADASTRO_EQUIPES[full] = utd;
+    if (codCad || !NOME_CURTO[full]) NOME_CURTO[full] = code;
+    // exibe pelo codigo oficial quando ele nao serve como codigo interno,
+    // sem mexer no que o Turno ja exibia (MG continua em CON_MNT)
+    if (alias && alias !== code && !TURNO_CONMNT[code]) TURNO_CONMNT[code] = alias;
+    if (!ativa) { foraTurno.push(code); return; }
     if (EQUIPES_ATIVAS.indexOf(code) < 0) EQUIPES_ATIVAS.push(code);
   });
-  const novas = atuais.filter(function(c){ return !antes.has(c); });
+  const novas = atuais.filter(function(c){ return !antes.has(c) && foraTurno.indexOf(c) < 0; });
   // equipe que esta sincronia criou e que saiu do cadastro tambem sai daqui
   const removidas = CAD_CRIADOS.filter(function(c){ return atuais.indexOf(c) < 0; });
   removidas.forEach(function(c) {
@@ -1888,7 +1970,9 @@ function cadAplicar(pkg) {
     if (Array.isArray(teams.falta)) teams.falta = teams.falta.filter(function(n){ return n !== c; });
     delete CAD_INFO[c];
   });
-  CAD_CRIADOS = atuais.filter(function(c){ return novas.indexOf(c) >= 0 || CAD_CRIADOS.indexOf(c) >= 0; });
+  CAD_CRIADOS = atuais.filter(function(c){
+    return foraTurno.indexOf(c) < 0 && (novas.indexOf(c) >= 0 || CAD_CRIADOS.indexOf(c) >= 0);
+  });
   try { localStorage.setItem(CAD_LS_MEUS, JSON.stringify(CAD_CRIADOS)); } catch(e) {}
   CAD_META = {
     gerente: pkg.gerente || {nome:'',base:''},
@@ -1897,7 +1981,8 @@ function cadAplicar(pkg) {
     por: pkg.por || '',
     total: atuais.length
   };
-  return { novas:novas, removidas:removidas, divergentes:divergentes, total:atuais.length };
+  return { novas:novas, removidas:removidas, rebases:rebases,
+           foraTurno:foraTurno, total:atuais.length };
 }
 // Recoloca em FALTA toda equipe ativa que ainda nao abriu (inclui as novas)
 function cadRecalcularFalta() {
@@ -1944,9 +2029,11 @@ async function cadSincronizar(forcar) {
     console.log('[cadastro] ' + r.total + ' equipe(s) no cadastro'
       + (r.novas.length     ? ' · nova(s): ' + r.novas.join(', ') : '')
       + (r.removidas.length ? ' · removida(s): ' + r.removidas.join(', ') : ''));
-    if (r.divergentes && r.divergentes.length) {
-      console.warn('[cadastro] equipe(s) casadas com outra base (confira se e a mesma pessoa): '
-        + r.divergentes.join(', '));
+    if (r.rebases && r.rebases.length) {
+      console.warn('[cadastro] equipe(s) que mudaram de base: ' + r.rebases.join(' | '));
+    }
+    if (r.foraTurno && r.foraTurno.length) {
+      console.log('[cadastro] fora do controle de turno (sem centro de servico): ' + r.foraTurno.join(', '));
     }
     cadRenderInfo();
   } catch(e) {
@@ -1965,8 +2052,12 @@ function cadRenderInfo() {
   let quando = '';
   try { if (CAD_META.atualizado) quando = new Date(CAD_META.atualizado)
     .toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}); } catch(e) {}
-  const colab = Object.keys(CAD_INFO).reduce(function(a,k){ return a + (parseInt(CAD_INFO[k].qtd_colab,10)||0); }, 0);
-  el.innerHTML = '<b>' + CAD_META.total + ' equipe(s)</b> vindas do Cadastro de Equipes'
+  const colab = Object.keys(CAD_INFO).reduce(function(a,k){
+    return a + (CAD_INFO[k].turno === false ? 0 : (parseInt(CAD_INFO[k].qtd_colab,10)||0));
+  }, 0);
+  const fora = Object.keys(CAD_INFO).filter(function(k){ return CAD_INFO[k].turno === false; }).length;
+  el.innerHTML = '<b>' + (CAD_META.total - fora) + ' equipe(s)</b> vindas do Cadastro de Equipes'
+    + (fora ? ' · ' + fora + ' fora do turno' : '')
     + (colab ? ' · ' + colab + ' colaboradores' : '')
     + (CAD_META.gerente && CAD_META.gerente.base ? ' · ' + CAD_META.gerente.base : '')
     + (quando ? ' · cadastro de ' + quando : '')
