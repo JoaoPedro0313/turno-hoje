@@ -1430,6 +1430,7 @@ showMsg('Data atualizada: ' + val,'success');
 await dbSaveTurno();
 }
 function renderManageList() {
+try { cadRenderInfo(); } catch(e) {}
 const q  = document.getElementById('search-input').value.trim().toUpperCase();
 const el = document.getElementById('manage-list'); el.innerHTML = '';
 const all = [
@@ -1447,6 +1448,19 @@ const nameSpan = document.createElement('span');
 nameSpan.className = 'team-row-name';
 nameSpan.textContent = n;
 row.appendChild(nameSpan);
+// Dados vindos do Cadastro de Equipes (encarregado, supervisor, efetivo)
+const _cad = (typeof CAD_INFO !== 'undefined') ? CAD_INFO[n] : null;
+if (_cad) {
+  const info = document.createElement('span');
+  info.style.cssText = 'font-size:0.68rem;color:#8a94a0;font-weight:700;flex-basis:100%;padding:1px 0 3px;';
+  info.textContent = [
+    _cad.encarregado,
+    _cad.cod_equipe ? 'eq. ' + _cad.cod_equipe : '',
+    _cad.supervisor ? 'sup. ' + _cad.supervisor : '',
+    (_cad.qtd_colab || _cad.qtd_colab === 0) ? _cad.qtd_colab + ' colab.' : ''
+  ].filter(Boolean).join(' · ');
+  row.appendChild(info);
+}
 if (obs) {
   const obsSpan = document.createElement('span');
   obsSpan.style.cssText = 'font-size:0.7rem;color:#888;font-weight:600;flex-basis:100%;padding:2px 0 4px;';
@@ -1750,6 +1764,227 @@ function toDisplayName(name) {
 }
 function getUTD(name) { return name ? (CADASTRO_EQUIPES[name.trim().toUpperCase()] || '') : ''; }
 function utdBadge(name) { return ''; }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// SINCRONIA COM A ABA "CADASTRO DE EQUIPES"
+// Le a chave cadastro_equipes do turno_data (a mesma que a tela de Cadastro
+// grava) e transforma cada encarregado no codigo interno usado aqui
+// (NOME-UTD). Equipe nova cadastrada la entra sozinha em EQUIPES_ATIVAS e
+// aparece como FALTA ate abrir o turno. Nao precisa editar codigo.
+// ═══════════════════════════════════════════════════════════════════════════
+const CAD_DB_KEY   = 'cadastro_equipes';       // chave no turno_data
+const CAD_LS_RAW   = 'cadastro_equipes_v1';    // cache que a propria tela de Cadastro deixa
+const CAD_LS_MEUS  = 'mariua_cad_sync_codigos';// codigos que ESTA sincronia criou
+const CAD_MIN_MS   = 20000;                    // nao re-sincroniza antes disso
+
+let CAD_INFO  = {};   // codigo interno -> dados da equipe no cadastro
+let CAD_META  = { gerente:{nome:'',base:''}, supervisores:[], atualizado:null, por:'', total:0 };
+let CAD_CRIADOS = (function(){ try { return JSON.parse(localStorage.getItem(CAD_LS_MEUS)||'[]')||[]; } catch(e){ return []; } })();
+let _cadLastTs = '';
+let _cadLastSync = 0;
+
+function cadNorm(t) {
+  return String(t==null?'':t).normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .toUpperCase().replace(/[^A-Z0-9 ]/g,' ').replace(/\s+/g,' ').trim();
+}
+// "BASE JACOBINA - BA" -> "JAC" (sufixo dos codigos internos)
+const CAD_UTD_REGRAS = [
+  [/JACOBINA/,'JAC'], [/IRECE/,'IRC'], [/FEIRA/,'FSA'], [/SERRINHA/,'SRR'],
+  [/LINHA VIVA/,'PA'], [/CONGONHAL/,'PA'], [/ITAJUBA/,'ITA'], [/ARACAJU/,'AJU']
+];
+function cadUTD(txt) {
+  const t = cadNorm(txt);
+  for (let i=0;i<CAD_UTD_REGRAS.length;i++) if (CAD_UTD_REGRAS[i][0].test(t)) return CAD_UTD_REGRAS[i][1];
+  return '';
+}
+function cadCodigosConhecidos() {
+  const s = new Set(EQUIPES_ATIVAS);
+  Object.keys(NOME_CURTO).forEach(function(k){ if (NOME_CURTO[k]) s.add(NOME_CURTO[k]); });
+  return s;
+}
+// Encarregado do cadastro -> codigo interno JA existente (ou '' se for gente nova)
+// Ordem importa: o casamento pelo nome completo vem ANTES do chute pelo
+// primeiro nome, senao "CARLOS ANDRE" rouba o codigo de "CARLOS DA CRUZ".
+function cadResolver(encarregado, utd) {
+  const nome = cadNorm(encarregado);
+  if (!nome) return '';
+  if (NOME_CURTO[nome]) return NOME_CURTO[nome];            // 1) nome completo identico
+  const toks  = nome.split(' ').filter(Boolean);
+  const sufxo = utd ? '-'+utd : '';
+  // 2) todo token do cadastro tem que existir no nome completo cadastrado aqui.
+  //    Empate: ganha a mesma UTD; depois o nome mais curto (casamento mais proximo).
+  if (toks.length >= 2) {
+    let melhor = '', peso = -1;
+    Object.keys(NOME_CURTO).forEach(function(full) {
+      const ftoks = cadNorm(full).split(' ');
+      for (let i=0;i<toks.length;i++) if (ftoks.indexOf(toks[i]) < 0) return;
+      const code = NOME_CURTO[full];
+      const p = (sufxo && code.slice(-sufxo.length) === sufxo ? 1000 : 0) + (100 - ftoks.length);
+      if (p > peso) { peso = p; melhor = code; }
+    });
+    if (melhor) return melhor;
+  }
+  // 3) chute pelo codigo: PRIMEIRO-UTD ou ULTIMO-UTD que ja exista
+  if (utd) {
+    const codes = cadCodigosConhecidos();
+    if (codes.has(toks[0]+sufxo)) return toks[0]+sufxo;                    // CAIQUE -> CAIQUE-JAC
+    const ult = toks[toks.length-1];
+    if (codes.has(ult+sufxo)) return ult+sufxo;
+  }
+  return '';   // ninguem parecido: e equipe nova mesmo
+}
+// Gera codigo para encarregado que ainda nao existe aqui
+function cadGerar(encarregado, utd, usados) {
+  const toks = cadNorm(encarregado).split(' ').filter(Boolean);
+  let raiz = toks[0] || 'EQUIPE';
+  if (raiz.length <= 2 && toks[1]) raiz += toks[1];
+  const suf = utd ? '-'+utd : '';
+  if (!usados.has(raiz+suf)) return raiz+suf;
+  if (toks[1] && !usados.has(raiz+toks[1]+suf)) return raiz+toks[1]+suf;
+  let i = 2; while (usados.has(raiz+i+suf)) i++;
+  return raiz+i+suf;
+}
+// Aplica o pacote do cadastro nas estruturas desta tela
+function cadAplicar(pkg) {
+  const vazio = { novas:[], removidas:[], total:0 };
+  if (!pkg || !Array.isArray(pkg.equipes)) return vazio;
+  const utdBase = cadUTD((pkg.gerente && pkg.gerente.base) || '');
+  const antes   = new Set(EQUIPES_ATIVAS);
+  const usados  = cadCodigosConhecidos();
+  const tomados = new Set();   // codigos ja entregues nesta passada
+  const atuais  = [], divergentes = [];
+  CAD_INFO = {};
+  pkg.equipes.forEach(function(q) {
+    if (!q || !cadNorm(q.encarregado)) return;
+    const utd  = cadUTD(q.base || q.utd || '') || utdBase;
+    let   code = cadResolver(q.encarregado, utd);
+    // dois encarregados nao podem dividir o mesmo codigo
+    if (code && tomados.has(code)) code = '';
+    if (!code) code = cadGerar(q.encarregado, utd, usados);
+    // casou com equipe de outra base: a base do cadastro e so a do gerente,
+    // entao vale avisar em vez de decidir calado
+    if (utd && code.slice(-(utd.length+1)) !== '-'+utd) divergentes.push(code);
+    usados.add(code); tomados.add(code); atuais.push(code);
+    CAD_INFO[code] = {
+      encarregado: String(q.encarregado||'').trim(),
+      matricula:   String(q.matricula||'').trim(),
+      cod_equipe:  String(q.cod_equipe||'').trim(),
+      supervisor:  String(q.supervisor||'').trim(),
+      qtd_colab:   (q.qtd_colab===0 ? 0 : (parseInt(q.qtd_colab,10) || '')),
+      alojados:    String(q.alojados||'').trim(),
+      utd:         utd
+    };
+    // alimenta os mapas de nome usados por toDisplayName() e getUTD()
+    const full = cadNorm(q.encarregado);
+    if (utd && !CADASTRO_EQUIPES[full]) CADASTRO_EQUIPES[full] = utd;
+    if (!NOME_CURTO[full]) NOME_CURTO[full] = code;
+    if (EQUIPES_ATIVAS.indexOf(code) < 0) EQUIPES_ATIVAS.push(code);
+  });
+  const novas = atuais.filter(function(c){ return !antes.has(c); });
+  // equipe que esta sincronia criou e que saiu do cadastro tambem sai daqui
+  const removidas = CAD_CRIADOS.filter(function(c){ return atuais.indexOf(c) < 0; });
+  removidas.forEach(function(c) {
+    const i = EQUIPES_ATIVAS.indexOf(c); if (i >= 0) EQUIPES_ATIVAS.splice(i,1);
+    if (Array.isArray(teams.falta)) teams.falta = teams.falta.filter(function(n){ return n !== c; });
+    delete CAD_INFO[c];
+  });
+  CAD_CRIADOS = atuais.filter(function(c){ return novas.indexOf(c) >= 0 || CAD_CRIADOS.indexOf(c) >= 0; });
+  try { localStorage.setItem(CAD_LS_MEUS, JSON.stringify(CAD_CRIADOS)); } catch(e) {}
+  CAD_META = {
+    gerente: pkg.gerente || {nome:'',base:''},
+    supervisores: Array.isArray(pkg.supervisores) ? pkg.supervisores : [],
+    atualizado: pkg.atualizado || null,
+    por: pkg.por || '',
+    total: atuais.length
+  };
+  return { novas:novas, removidas:removidas, divergentes:divergentes, total:atuais.length };
+}
+// Recoloca em FALTA toda equipe ativa que ainda nao abriu (inclui as novas)
+function cadRecalcularFalta() {
+  const okD = new Set((teams.ok||[]).map(function(n){ return toDisplayName(n); }));
+  const jD  = new Set((teams.justif||[]).map(function(t){ return toDisplayName(t && t.name ? t.name : t); }));
+  const set = new Set((teams.falta||[]).map(function(n){ return toDisplayName(n); }));
+  EQUIPES_ATIVAS.forEach(function(e){ if (!okD.has(e) && !jD.has(e)) set.add(e); });
+  teams.falta = [...set].filter(function(n){ return !okD.has(n) && !jD.has(n); });
+}
+// Cache local: primeiro o que a tela de Cadastro deixou, depois o desta tela
+function cadPacoteLocal() {
+  try {
+    const v = JSON.parse(localStorage.getItem(CAD_LS_RAW)||'null');
+    if (v && Array.isArray(v.equipes)) return v;
+  } catch(e) {}
+  return lsGet(CAD_DB_KEY);
+}
+// Busca no banco e aplica
+async function cadSincronizar(forcar) {
+  const agora = Date.now();
+  if (!forcar && agora - _cadLastSync < CAD_MIN_MS) return;
+  _cadLastSync = agora;
+  try {
+    const ctrl = new AbortController();
+    const tid  = setTimeout(function(){ ctrl.abort(); }, 8000);
+    const res  = await fetch(
+      SUPA_URL + '/rest/v1/turno_data?select=value,updated_at&key=eq.' + CAD_DB_KEY + '&limit=1',
+      { headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY }, signal: ctrl.signal }
+    );
+    clearTimeout(tid);
+    if (!res.ok) { console.warn('[cadastro] HTTP', res.status); return; }
+    const data = await res.json();
+    if (!Array.isArray(data) || !data.length) { console.warn('[cadastro] chave vazia no banco'); return; }
+    let pkg = data[0].value;
+    if (typeof pkg === 'string') { try { pkg = JSON.parse(pkg); } catch(e) {} }
+    if (!pkg || !Array.isArray(pkg.equipes)) { console.warn('[cadastro] formato inesperado'); return; }
+    _cadLastTs = data[0].updated_at || _cadLastTs;
+    lsSet(CAD_DB_KEY, pkg);
+    const r = cadAplicar(pkg);
+    cadRecalcularFalta();
+    try { render(); } catch(e) {}
+    try { if (typeof renderApr === 'function' && aprData && aprData.length) renderApr(); } catch(e) {}
+    try { if (typeof renderManageList === 'function' && document.getElementById('manage-list')) renderManageList(); } catch(e) {}
+    console.log('[cadastro] ' + r.total + ' equipe(s) no cadastro'
+      + (r.novas.length     ? ' · nova(s): ' + r.novas.join(', ') : '')
+      + (r.removidas.length ? ' · removida(s): ' + r.removidas.join(', ') : ''));
+    if (r.divergentes && r.divergentes.length) {
+      console.warn('[cadastro] equipe(s) casadas com outra base (confira se e a mesma pessoa): '
+        + r.divergentes.join(', '));
+    }
+    cadRenderInfo();
+  } catch(e) {
+    console.warn('[cadastro] falha ao sincronizar:', e.name, e.message);
+  }
+}
+// Linha de status na aba Equipes (engrenagem)
+function cadRenderInfo() {
+  const el = document.getElementById('cad-sync-info');
+  if (!el) return;
+  if (!CAD_META.total) {
+    el.innerHTML = '<b>Cadastro de Equipes</b> · nada carregado ainda. '
+      + '<a href="equipes.html" style="color:#0d7377;font-weight:800;">abrir cadastro</a>';
+    return;
+  }
+  let quando = '';
+  try { if (CAD_META.atualizado) quando = new Date(CAD_META.atualizado)
+    .toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}); } catch(e) {}
+  const colab = Object.keys(CAD_INFO).reduce(function(a,k){ return a + (parseInt(CAD_INFO[k].qtd_colab,10)||0); }, 0);
+  el.innerHTML = '<b>' + CAD_META.total + ' equipe(s)</b> vindas do Cadastro de Equipes'
+    + (colab ? ' · ' + colab + ' colaboradores' : '')
+    + (CAD_META.gerente && CAD_META.gerente.base ? ' · ' + CAD_META.gerente.base : '')
+    + (quando ? ' · cadastro de ' + quando : '')
+    + ' · <span id="cad-sync-now" style="color:#0d7377;font-weight:800;cursor:pointer;">sincronizar agora</span>';
+  const btn = document.getElementById('cad-sync-now');
+  if (btn) btn.addEventListener('click', function(){ el.innerHTML = 'Sincronizando…'; cadSincronizar(true); });
+}
+
+// Cache local ja no carregamento: a lista sai certa antes da rede responder
+try { cadAplicar(cadPacoteLocal()); } catch(e) { console.warn('[cadastro] cache local:', e.message); }
+
+// Revalida quando a aba volta ao foco (ex.: usuario cadastrou equipe na outra aba)
+document.addEventListener('visibilitychange', function(){ if (!document.hidden) cadSincronizar(); });
+window.addEventListener('focus', function(){ cadSincronizar(); });
+
+window.cadSincronizar = cadSincronizar;
+window.cadEquipeInfo  = function(nome){ const c = toDisplayName(nome); return CAD_INFO[c] || CAD_INFO[nome] || null; };
+window.cadDados       = function(){ return { meta: CAD_META, equipes: CAD_INFO }; };
 function receberAbertura(file) {
 if (!file) return;
 const r = new FileReader();
@@ -2311,6 +2546,13 @@ setDbStatus('online', 'Banco online');
 const CHAVES_MONITORADAS = ['turno','producao','apr_data','prog_diaria'];
 let houveAlteracao = false;
 const primeiraVez = Object.keys(lastTsMap).length === 0;
+// Cadastro de Equipes mudou? re-sincroniza a lista de equipes ativas
+try {
+  const rowCad = data.find(r => r.key === CAD_DB_KEY);
+  const tsCad  = rowCad ? (rowCad.updated_at || '') : '';
+  if (tsCad && _cadLastTs && tsCad !== _cadLastTs) cadSincronizar(true);
+  if (tsCad && !_cadLastTs) _cadLastTs = tsCad;
+} catch(e) {}
 data.forEach(row => {
 if (!CHAVES_MONITORADAS.includes(row.key)) return;
 const ts = row.updated_at || '';
@@ -2469,6 +2711,8 @@ try {
 }
 
 startAutoRefresh();
+// Puxa o Cadastro de Equipes do banco (equipes novas entram sozinhas)
+try { cadSincronizar(true); } catch(e) { console.warn('[cadastro] init:', e.message); }
 // Expose inner functions to window so onclick handlers can reach them
 // CORRIGIDO: versao segura de switchPage com try/catch global
 const _switchPageOriginal = switchPage;
@@ -5868,6 +6112,7 @@ setTimeout(presenceInit, 1500);
             <span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:0.9rem;">🔍</span>
             <input id="search-input" type="text" placeholder="Buscar equipe..." oninput="renderManageList()" style="width:100%;box-sizing:border-box;padding:8px 12px 8px 32px;border:1.5px solid #e2e8f0;border-radius:8px;font-family:'Barlow',sans-serif;font-size:0.82rem;font-weight:700;outline:none;">
           </div>
+          <div id="cad-sync-info" style="font-size:0.7rem;font-weight:700;color:#666;background:#f0fafa;border:1px solid #c0e8e5;border-radius:8px;padding:8px 11px;margin-bottom:8px;line-height:1.5;"></div>
           <div id="manage-list" class="team-list"></div>
           <script>setTimeout(function(){if(typeof renderManageList==='function')renderManageList();},200);</script>
         </div>
