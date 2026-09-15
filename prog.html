@@ -505,6 +505,7 @@ const PROG_ATIVIDADES_BASE = PROG_ATIVIDADES.slice();
     <button onclick="progLayoutCliente()" title="Folha A4 com a logo da Mariuá para mandar ao cliente" style="padding:9px 16px;background:linear-gradient(135deg,#1a365d,#2b6cb0);border:none;border-radius:9px;font-family:'Barlow',sans-serif;font-size:0.75rem;font-weight:800;color:#fff;cursor:pointer;letter-spacing:0.5px;">📤 CLIENTE</button>
     <button onclick="progExportCSV()" style="padding:9px 16px;background:#276749;border:none;border-radius:9px;font-family:'Barlow',sans-serif;font-size:0.75rem;font-weight:800;color:#fff;cursor:pointer;letter-spacing:0.5px;">⬇️ EXCEL</button>
     <button onclick="progExportCSVBotao()" title="Baixar em CSV (abre no Excel, Google Planilhas e qualquer sistema)" style="padding:9px 16px;background:#fff;border:1.5px solid #c6dfd0;border-radius:9px;font-family:'Barlow',sans-serif;font-size:0.75rem;font-weight:800;color:#276749;cursor:pointer;letter-spacing:0.5px;white-space:nowrap;">📄 CSV</button>
+    <button type="button" id="prog-btn-hoje" onclick="progFiltroHoje()" title="Mostrar so a programacao de hoje (clique de novo para tirar)" style="padding:9px 16px;background:#f8f5ff;border:1.5px solid #e9d8fd;border-radius:9px;font-family:'Barlow',sans-serif;font-size:0.75rem;font-weight:800;color:#7e3af2;cursor:pointer;letter-spacing:0.5px;white-space:nowrap;">📅 HOJE</button>
     <button type="button" id="prog-btn-filtros" onclick="progToggleFiltros()" style="padding:9px 16px;background:#fff;border:1.5px solid #e0e8f0;border-radius:9px;font-family:'Barlow',sans-serif;font-size:0.75rem;font-weight:800;color:#64748b;cursor:pointer;letter-spacing:0.5px;white-space:nowrap;">🔎 FILTROS</button>
     <span id="prog-list-count" style="font-size:0.72rem;font-weight:800;color:#888;white-space:nowrap;"></span>
 
@@ -563,7 +564,6 @@ const PROG_ATIVIDADES_BASE = PROG_ATIVIDADES.slice();
         </div>
       </div>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:12px;">
-        <button type="button" onclick="progFiltroPeriodo('hoje')" style="padding:6px 14px;background:#f8f5ff;border:1.5px solid #e9d8fd;border-radius:8px;font-family:'Barlow',sans-serif;font-size:0.7rem;font-weight:800;color:#7e3af2;cursor:pointer;">HOJE</button>
         <button type="button" onclick="progFiltroPeriodo('7')" style="padding:6px 14px;background:#f8f5ff;border:1.5px solid #e9d8fd;border-radius:8px;font-family:'Barlow',sans-serif;font-size:0.7rem;font-weight:800;color:#7e3af2;cursor:pointer;">ÚLTIMOS 7 DIAS</button>
         <button type="button" onclick="progFiltroPeriodo('mes')" style="padding:6px 14px;background:#f8f5ff;border:1.5px solid #e9d8fd;border-radius:8px;font-family:'Barlow',sans-serif;font-size:0.7rem;font-weight:800;color:#7e3af2;cursor:pointer;">MÊS ATUAL</button>
         <button type="button" onclick="progLimparFiltros()" style="padding:6px 14px;background:#fff5f5;border:1.5px solid #fed7d7;border-radius:8px;font-family:'Barlow',sans-serif;font-size:0.7rem;font-weight:800;color:#c53030;cursor:pointer;margin-left:auto;">✕ LIMPAR FILTROS</button>
@@ -5952,7 +5952,9 @@ function progFiltroPeriodo(qual) {
 const de = document.getElementById('prog-filter-de');
 const ate = document.getElementById('prog-filter-ate');
 if (!de || !ate) return;
-const iso = d => d.toISOString().slice(0,10);
+// Mesmo cuidado do progHoje(): toISOString() usa UTC e depois das 21h na Bahia
+// ele jogava tudo para o dia seguinte.
+const iso = d => d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
 const hoje = new Date();
 if (qual === 'hoje') { de.value = iso(hoje); ate.value = iso(hoje); }
 else if (qual === '7') { const d = new Date(); d.setDate(d.getDate()-6); de.value = iso(d); ate.value = iso(hoje); }
@@ -5961,6 +5963,26 @@ de.value = iso(new Date(hoje.getFullYear(), hoje.getMonth(), 1));
 ate.value = iso(new Date(hoje.getFullYear(), hoje.getMonth()+1, 0));
 }
 progRenderList();
+}
+// O HOJE agora fica na barra de cima, sempre a vista. Por isso ele liga e desliga:
+// se o periodo ja esta em hoje, o clique limpa as duas datas.
+function progHojeAtivo() {
+const de = document.getElementById('prog-filter-de');
+const ate = document.getElementById('prog-filter-ate');
+if (!de || !ate) return false;
+const hj = (typeof progHoje === 'function') ? progHoje() : '';
+return !!hj && de.value === hj && ate.value === hj;
+}
+function progFiltroHoje() {
+if (progHojeAtivo()) {
+const de = document.getElementById('prog-filter-de');
+const ate = document.getElementById('prog-filter-ate');
+if (de) de.value = '';
+if (ate) ate.value = '';
+progRenderList();
+return;
+}
+progFiltroPeriodo('hoje');
 }
 // Zera tudo, inclusive a busca e os dois filtros que ja existiam.
 function progLimparFiltros() {
@@ -6030,6 +6052,14 @@ btnF.textContent = ativos ? `🔎 FILTROS (${ativos})` : '🔎 FILTROS';
 btnF.style.background = ativos ? '#f8f5ff' : '#fff';
 btnF.style.borderColor = ativos ? '#c9a9fb' : '#e0e8f0';
 btnF.style.color = ativos ? '#7e3af2' : '#64748b';
+}
+// Botao HOJE preenchido quando o filtro esta valendo.
+const btnH = document.getElementById('prog-btn-hoje');
+if (btnH) {
+const on = progHojeAtivo();
+btnH.style.background = on ? '#7e3af2' : '#f8f5ff';
+btnH.style.borderColor = on ? '#7e3af2' : '#e9d8fd';
+btnH.style.color = on ? '#fff' : '#7e3af2';
 }
 let filtered = progFiltrarRegistros(f).sort((a,b) => String(b.data||'').localeCompare(String(a.data||'')));
 if (count) count.textContent = (ativos || search)
