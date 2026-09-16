@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Comparador de Postes — Mariuá</title>
-<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700;800&family=Barlow+Semi+Condensed:wght@500;600;700&display=swap" rel="stylesheet">
 <style>
   *{margin:0;padding:0;box-sizing:border-box;font-family:'Barlow',sans-serif;}
   body{background:#f0f4f5;color:#222;padding-left:232px;padding-top:52px;transition:padding .22s ease;}
@@ -74,79 +74,167 @@ body.sm-collapsed .sm-group-head{justify-content:center;padding:9px 0}
     body.sm-expanded .sm-top{justify-content:flex-start;padding:12px 14px}
     body.sm-expanded .sm-item{justify-content:flex-start;padding:9px 11px}
   }
-  .wrap{max-width:1100px;margin:16px auto;padding:0 12px 70px;}
-  .page-head{background:linear-gradient(135deg,#0d7377 0%,#14a085 60%,#0d7377 100%);border-radius:14px;padding:18px 22px;color:#fff;margin-bottom:16px;box-shadow:0 4px 16px rgba(13,115,119,.25);position:relative;overflow:hidden;}
-  .page-head::before{content:'';position:absolute;inset:0;background:repeating-linear-gradient(45deg,rgba(255,255,255,.04) 0,rgba(255,255,255,.04) 1px,transparent 1px,transparent 18px);}
-  .page-head h1{font-size:1.15rem;font-weight:900;letter-spacing:.5px;position:relative;display:flex;align-items:center;gap:10px;}
-  .page-head p{font-size:0.76rem;font-weight:600;opacity:.9;margin-top:3px;position:relative;}
-  .page-head .edge{position:absolute;left:0;right:0;bottom:0;height:4px;background:linear-gradient(90deg,#ff6b35,#ff9a3c,#ff6b35);}
-  .section{background:#fff;border-radius:12px;margin-bottom:16px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,.07);}
-  .section-header{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:1px solid #c0e8e5;background:#f0fafa;}
-  .section-header.blue{background:#ebf4ff;border-bottom-color:#bee3f8;}
-  .section-header.orange{background:#fffbf0;border-bottom-color:#fde8b0;}
-  .section-label{display:flex;align-items:center;gap:10px;font-size:0.96rem;font-weight:800;letter-spacing:.5px;color:#222;}
-  .section-icon{width:26px;height:26px;border-radius:7px;background:#14a085;color:#fff;display:flex;align-items:center;justify-content:center;font-size:0.95rem;}
-  .section-icon.blue{background:#2b6cb0;} .section-icon.orange{background:#f0a500;}
-  .section-body{padding:18px 20px;}
-  .card{background:#fff;border-radius:14px;box-shadow:0 2px 14px rgba(0,0,0,.07);padding:20px;margin-bottom:16px;}
-  .btn-main{display:block;width:100%;background:linear-gradient(135deg,#0d7377,#14a085);color:#fff;border:none;border-radius:12px;padding:16px;font-size:1rem;font-weight:900;letter-spacing:.4px;cursor:pointer;box-shadow:0 4px 14px rgba(13,115,119,.3);transition:all .2s;}
-  .btn-main:hover{box-shadow:0 6px 20px rgba(13,115,119,.4);transform:translateY(-1px);} .btn-main:disabled{opacity:.6;cursor:wait;transform:none;}
-  .status{margin-top:12px;font-size:0.82rem;font-weight:700;text-align:center;color:#555;min-height:20px;}
-  .kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:16px;}
-  .kpi{background:#fff;border-radius:12px;padding:16px 18px;text-align:center;box-shadow:0 2px 12px rgba(0,0,0,.07);border-top:3px solid #14a085;}
-  .kpi.alt{border-top-color:#ff6b35;} .kpi.nova{border-top-color:#2b6cb0;} .kpi.tot{border-top-color:#0d7377;}
-  .kpi .num{font-size:2rem;font-weight:900;line-height:1;color:#2d3748;}
-  .kpi.alt .num{color:#ff6b35;} .kpi.nova .num{color:#2b6cb0;} .kpi.tot .num{color:#0d7377;}
-  .kpi .lbl{font-size:0.65rem;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:#888;margin-top:6px;}
-  table{width:100%;border-collapse:collapse;font-size:0.84rem;}
-  thead tr{background:#f8fafc;border-bottom:2px solid #e8ecef;}
-  th{text-align:left;padding:11px 14px;font-size:0.66rem;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:#888;white-space:nowrap;}
-  td{padding:11px 14px;border-bottom:1px solid #edf0f2;color:#2d3748;}
-  tbody tr:hover{background:#f9fbff;}
-  td code{color:#0d7377;font-weight:800;font-size:0.8rem;background:#f0fafa;padding:2px 7px;border-radius:4px;}
-  .delta-up{color:#0d7377;font-weight:800;background:#d0f0ee;padding:2px 7px;border-radius:5px;font-size:0.72rem;} .delta-dn{color:#c53030;font-weight:800;background:#fde8e8;padding:2px 7px;border-radius:5px;font-size:0.72rem;}
-  .no-change{color:#888;font-weight:700;font-size:0.72rem;}
-  .arrow{color:#ccc;margin:0 6px;} .old{color:#aaa;text-decoration:line-through;text-decoration-color:#e53e3e;} .new{font-weight:800;}
-  .empty{text-align:center;padding:50px 20px;color:#aaa;font-weight:600;} .empty .big{font-size:3rem;margin-bottom:12px;}
-  .err{background:#fff5f5;border:1.5px solid #fc8181;border-radius:10px;padding:14px;color:#c53030;font-size:0.82rem;font-weight:700;margin-top:12px;white-space:pre-wrap;line-height:1.5;}
-  .sec-title{font-size:0.66rem;font-weight:900;letter-spacing:1px;text-transform:uppercase;color:#0d7377;margin-bottom:10px;}
-  .toggle{display:inline-block;font-size:0.74rem;font-weight:800;color:#6b46c1;cursor:pointer;border:1.5px solid #d6bcfa;border-radius:18px;padding:6px 16px;background:#faf5ff;transition:all .15s;}
-  .toggle:hover{background:#f0e6ff;}
-  .hist-item{padding:10px 0;border-bottom:1px solid #f0f0f0;font-size:0.82rem;} .hist-item:last-child{border-bottom:none;} .hist-item .when{font-weight:800;color:#0d7377;}
-  .comp-tag{display:inline-block;font-size:0.7rem;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:#2b6cb0;background:#ebf4ff;padding:6px 14px;border-radius:20px;margin-bottom:16px;}
-  .comp-fontes{display:grid;grid-template-columns:1fr auto 1fr;gap:0;align-items:center;margin-bottom:18px;}
-  .comp-fonte{border-radius:12px;padding:14px 16px;}
-  .comp-fonte.verde{border:1.5px solid #c6f6d5;background:#f0fff4;}
-  .comp-fonte.azul{border:1.5px solid #bee3f8;background:#ebf8ff;}
-  .comp-fonte-top{display:flex;align-items:center;gap:7px;margin-bottom:6px;}
-  .comp-fonte-lbl{font-size:0.6rem;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;}
-  .comp-fonte-lbl.verde{color:#276749;} .comp-fonte-lbl.azul{color:#2b6cb0;}
-  .comp-fonte-val{font-size:0.78rem;font-weight:700;color:#888;}
-  .comp-fonte-seta{text-align:center;padding:0 12px;font-size:1.5rem;color:#cbd5e0;user-select:none;}
-  .hist-header{background:linear-gradient(135deg,#2d3748,#4a5568);padding:14px 20px;display:flex;align-items:center;gap:10px;}
-  .hist-header-ic{width:34px;height:34px;background:rgba(255,255,255,.15);border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0;}
-  .hist-header-title{display:block;color:#fff;font-size:0.92rem;font-weight:800;letter-spacing:.5px;}
-  .hist-header-sub{display:block;color:rgba(255,255,255,.6);font-size:0.68rem;font-weight:600;margin-top:1px;}
-  .table-wrap{overflow-x:auto;}
-  .toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:14px 20px;border-bottom:1px solid #edf0f2;background:#fafbfc;}
-  .toolbar label{font-size:0.68rem;font-weight:800;color:#aaa;letter-spacing:1.5px;text-transform:uppercase;white-space:nowrap;}
-  .filter-btn{background:#fff;border:1.5px solid #e2e8f0;color:#666;padding:6px 14px;border-radius:8px;font-size:0.75rem;font-family:'Barlow',sans-serif;font-weight:700;cursor:pointer;transition:all .15s;}
-  .filter-btn:hover{border-color:#14a085;color:#0d7377;}
-  .filter-btn.active{background:#14a085;border-color:#14a085;color:#fff;}
-  .comp-search{background:#fff;border:1.5px solid #e2e8f0;color:#2d3748;padding:7px 14px;border-radius:8px;font-size:0.82rem;font-family:'Barlow',sans-serif;font-weight:600;min-width:200px;flex:1;margin-left:auto;outline:none;}
-  .comp-search:focus{border-color:#14a085;}
-  .count-tag{background:#0d7377;color:#fff;font-size:0.72rem;font-weight:800;padding:3px 10px;border-radius:5px;}
-  .legend{display:flex;gap:16px;font-size:0.72rem;font-weight:700;color:#888;align-items:center;padding:10px 20px;border-bottom:1px solid #edf0f2;flex-wrap:wrap;}
-  .legend span{display:flex;align-items:center;gap:5px;}
-  .dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
-  .status-badge{display:inline-block;padding:3px 9px;border-radius:5px;font-size:0.65rem;font-weight:800;letter-spacing:.5px;text-transform:uppercase;white-space:nowrap;background:#edf2f7;color:#4a5568;}
-  .diff-cell{text-align:center;min-width:130px;} .td-main{font-weight:700;color:#1a365d;}
-  .bottom-bar{position:fixed;bottom:0;left:232px;right:0;z-index:100;display:flex;justify-content:center;align-items:center;gap:10px;padding:12px 20px;background:rgba(255,255,255,.92);backdrop-filter:blur(10px);border-top:1px solid rgba(0,0,0,.08);box-shadow:0 -4px 24px rgba(0,0,0,.1);transition:left .22s ease;}
-  body.sm-collapsed .bottom-bar{left:64px;}
-  .bb-btn{color:#fff;border:none;border-radius:12px;padding:11px 20px;font-family:'Barlow',sans-serif;font-size:0.84rem;font-weight:800;letter-spacing:.5px;cursor:pointer;display:flex;align-items:center;gap:8px;transition:all .2s;}
-  .bb-btn:hover{transform:translateY(-2px);}
-  @media(max-width:780px){ .bottom-bar{left:64px;} }
-  @media(max-width:560px){ .kpis{grid-template-columns:1fr;} .comp-fontes{grid-template-columns:1fr;gap:8px;} .comp-fonte-seta{transform:rotate(90deg);} }
+  :root{
+    --ink:#16242c; --ink2:#4a5b64; --ink3:#8b9aa1;
+    --surface:#fff; --line:#e0e8ea; --line2:#c7d5d8;
+    --teal:#0d7377; --teal2:#14a085; --wash:#f7fafa;
+    --up:#0d7377; --dn:#b3261e; --new:#2563a8;
+    --alert:#b1521c; --alert-bg:#fdf4ec;
+    --r:10px;
+  }
+  body{background:#eef2f3;color:var(--ink);}
+  .mod{max-width:1060px;margin:0 auto;padding:22px 18px 44px;}
+  .num{font-variant-numeric:tabular-nums;}
+
+  /* cabeçalho do módulo */
+  .mod-head{display:flex;align-items:flex-end;justify-content:space-between;gap:18px;flex-wrap:wrap;
+            padding-bottom:13px;border-bottom:1px solid var(--line2);}
+  .mod-head h1{font-size:1.5rem;font-weight:800;letter-spacing:-.02em;line-height:1.1;}
+  .mod-sub{font-size:0.82rem;font-weight:500;color:var(--ink3);margin-top:3px;font-variant-numeric:tabular-nums;}
+  .acts{display:flex;gap:7px;align-items:center;flex-wrap:wrap;}
+  .act{font-family:'Barlow',sans-serif;font-size:0.82rem;font-weight:600;color:var(--ink2);
+       background:var(--surface);border:1px solid var(--line2);border-radius:8px;padding:8px 14px;cursor:pointer;
+       transition:border-color .15s,color .15s;}
+  .act:hover{border-color:var(--teal);color:var(--teal);}
+  .act.primary{background:var(--teal);border-color:var(--teal);color:#fff;font-weight:700;}
+  .act.primary:hover{background:#0b6265;color:#fff;}
+  .act:disabled{opacity:.55;cursor:wait;}
+  .status{font-size:0.78rem;font-weight:500;color:var(--ink3);padding:11px 2px 0;min-height:18px;}
+
+  /* veredito: a resposta em tipo grande */
+  .verdict{display:flex;align-items:center;gap:22px;flex-wrap:wrap;background:var(--surface);
+           border:1px solid var(--line);border-left:4px solid var(--teal);border-radius:var(--r);
+           padding:20px 24px;margin-top:6px;}
+  .verdict.news{border-left-color:var(--alert);background:var(--alert-bg);border-color:#f2ddc8;}
+  .v-n{font-size:2.7rem;font-weight:800;line-height:.92;letter-spacing:-.03em;font-variant-numeric:tabular-nums;}
+  .verdict.news .v-n{color:var(--alert);}
+  .v-txt{font-size:1.04rem;font-weight:700;line-height:1.3;}
+  .v-sub{display:block;font-size:0.84rem;font-weight:500;color:var(--ink2);margin-top:4px;max-width:66ch;}
+  .v-sub b{font-weight:700;color:var(--ink);}
+
+  /* régua de números */
+  .rail{display:flex;flex-wrap:wrap;background:var(--surface);border:1px solid var(--line);
+        border-radius:var(--r);margin-top:12px;overflow:hidden;}
+  .rail-i{flex:1 1 140px;padding:13px 18px;border-left:1px solid var(--line);}
+  .rail-i:first-child{border-left:none;}
+  .rail-n{font-family:'Barlow Semi Condensed',sans-serif;font-size:1.5rem;font-weight:700;line-height:1;
+          font-variant-numeric:tabular-nums;}
+  .rail-n small{font-size:0.82rem;font-weight:600;color:var(--ink3);margin-left:4px;}
+  .rail-l{font-size:0.72rem;font-weight:600;color:var(--ink3);margin-top:5px;}
+
+  /* painéis */
+  .panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);margin-top:22px;overflow:hidden;}
+  .panel-h{display:flex;align-items:center;gap:10px;padding:13px 18px;border-bottom:1px solid var(--line);}
+  .panel-t{font-size:0.98rem;font-weight:700;letter-spacing:-.01em;}
+  .panel-n{font-size:0.78rem;font-weight:600;color:var(--ink3);font-variant-numeric:tabular-nums;}
+  .panel-note{font-size:0.78rem;font-weight:500;color:var(--ink3);margin-left:auto;text-align:right;max-width:46ch;}
+
+  /* barra de ferramentas */
+  .tools{display:flex;gap:6px;align-items:center;flex-wrap:wrap;padding:11px 14px;background:var(--wash);
+         border-bottom:1px solid var(--line);}
+  .tools-l{font-size:0.74rem;font-weight:600;color:var(--ink3);margin-right:2px;}
+  .chip{font-family:'Barlow',sans-serif;font-size:0.78rem;font-weight:600;color:var(--ink2);background:var(--surface);
+        border:1px solid var(--line2);border-radius:999px;padding:6px 13px;cursor:pointer;transition:all .14s;}
+  .chip:hover{border-color:var(--teal);color:var(--teal);}
+  .chip.on{background:var(--ink);border-color:var(--ink);color:#fff;}
+  .chip.on.alert{background:var(--alert);border-color:var(--alert);}
+  .find{font-family:'Barlow',sans-serif;font-size:0.82rem;font-weight:500;color:var(--ink);background:var(--surface);
+        border:1px solid var(--line2);border-radius:8px;padding:7px 12px;min-width:170px;flex:1;margin-left:auto;outline:none;}
+  .find:focus{border-color:var(--teal);}
+
+  /* feed por dia */
+  .day{display:grid;grid-template-columns:138px 1fr;border-bottom:1px solid var(--line);}
+  .day:last-child{border-bottom:none;}
+  .day-k{padding:14px 16px;background:var(--wash);border-right:1px solid var(--line);cursor:pointer;}
+  .day-t{display:block;font-size:0.9rem;font-weight:700;letter-spacing:-.01em;}
+  .day-s{display:block;font-size:0.72rem;font-weight:500;color:var(--ink3);margin-top:2px;font-variant-numeric:tabular-nums;}
+  .day.hoje .day-k{background:var(--alert-bg);} .day.hoje .day-t{color:var(--alert);}
+  .ev{display:grid;grid-template-columns:52px 96px 1fr auto;gap:12px;align-items:baseline;
+      padding:10px 16px;border-bottom:1px solid #f2f6f7;}
+  .ev:last-child{border-bottom:none;}
+  .ev-h{font-family:'Barlow Semi Condensed',sans-serif;font-size:0.82rem;font-weight:600;color:var(--ink3);
+        font-variant-numeric:tabular-nums;}
+  .ev-p{font-family:'Barlow Semi Condensed',sans-serif;font-size:0.84rem;font-weight:700;color:var(--teal);
+        font-variant-numeric:tabular-nums;}
+  .ev-o{font-size:0.86rem;font-weight:500;color:var(--ink);overflow:hidden;text-overflow:ellipsis;}
+  .ev-o i{font-style:normal;color:var(--ink3);font-size:0.76rem;margin-left:6px;}
+  .day-more{display:block;width:100%;text-align:left;font-family:'Barlow',sans-serif;font-size:0.8rem;font-weight:600;
+            color:var(--teal);background:none;border:none;padding:12px 16px;cursor:pointer;}
+  .day-more:hover{text-decoration:underline;}
+
+  /* variação de postes */
+  .delta{font-family:'Barlow Semi Condensed',sans-serif;font-size:0.9rem;font-weight:600;white-space:nowrap;
+         font-variant-numeric:tabular-nums;}
+  .delta .from{color:var(--ink3);text-decoration:line-through;text-decoration-color:#d8e0e2;}
+  .delta .arw{color:var(--ink3);margin:0 5px;}
+  .delta .to{color:var(--ink);font-weight:700;}
+  .delta .sign{font-weight:700;margin-left:7px;}
+  .delta .sign.up{color:var(--up);} .delta .sign.dn{color:var(--dn);}
+  .delta .sign.eq{color:var(--ink3);font-weight:600;}
+  .badge-new{font-family:'Barlow',sans-serif;font-size:0.66rem;font-weight:700;color:var(--new);background:#eaf1fa;
+             border-radius:4px;padding:2px 6px;margin-right:6px;}
+
+  /* tabelas */
+  .tbl{overflow-x:auto;}
+  table{width:100%;border-collapse:collapse;}
+  thead th{background:var(--surface);text-align:left;padding:10px 14px;font-size:0.73rem;font-weight:600;
+           color:var(--ink3);white-space:nowrap;border-bottom:1px solid var(--line2);}
+  th.right,td.right{text-align:right;}
+  td{padding:10px 14px;border-bottom:1px solid #f2f6f7;font-size:0.86rem;font-weight:500;color:var(--ink);vertical-align:top;}
+  tbody tr:last-child td{border-bottom:none;}
+  code{font-family:'Barlow Semi Condensed',sans-serif;font-size:0.86rem;font-weight:700;color:var(--teal);
+       font-variant-numeric:tabular-nums;}
+  .t-obra{font-weight:600;}
+  .t-utd{font-size:0.78rem;color:var(--ink2);}
+  .st{font-size:0.72rem;font-weight:600;color:var(--ink2);background:#f1f5f6;border-radius:5px;padding:3px 8px;white-space:nowrap;}
+  .postes{font-family:'Barlow Semi Condensed',sans-serif;font-size:1rem;font-weight:700;font-variant-numeric:tabular-nums;}
+  .when{font-size:0.82rem;font-weight:600;white-space:nowrap;}
+  .when small{display:block;font-size:0.7rem;font-weight:500;color:var(--ink3);margin-top:1px;font-variant-numeric:tabular-nums;}
+  .when.hoje{color:var(--alert);} .when.never{color:#b9c4c8;font-weight:500;}
+  tr.obra{cursor:pointer;} tr.obra:hover{background:var(--wash);}
+  tr.obra .exp{color:var(--ink3);font-weight:700;}
+  tr.tl-row>td{background:var(--wash);padding:0 16px;border-bottom:1px solid var(--line);}
+
+  /* linha do tempo de uma obra (é sequência, por isso tem trilha) */
+  .tl{padding:14px 2px 16px 6px;}
+  .tl-h{font-size:0.78rem;font-weight:600;color:var(--ink3);margin-bottom:10px;}
+  .tl-i{display:grid;grid-template-columns:16px 116px 1fr;gap:10px;align-items:baseline;padding:6px 0;position:relative;}
+  .tl-i::before{content:'';position:absolute;left:7px;top:0;bottom:0;width:1px;background:var(--line2);}
+  .tl-is .tl-i:first-child::before{top:11px;} .tl-is .tl-i:last-child::before{bottom:auto;height:11px;}
+  .tl-dot{width:7px;height:7px;border-radius:50%;background:var(--up);margin:6px 0 0 4px;position:relative;z-index:1;
+          box-shadow:0 0 0 3px var(--wash);}
+  .tl-dot.dn{background:var(--dn);} .tl-dot.nv{background:var(--new);} .tl-dot.ini{background:#c7d5d8;}
+  .tl-d{font-family:'Barlow Semi Condensed',sans-serif;font-size:0.82rem;font-weight:600;color:var(--ink2);
+        font-variant-numeric:tabular-nums;}
+  .tl-w{font-size:0.84rem;font-weight:500;}
+  .tl-w em{font-style:normal;color:var(--ink3);}
+
+  /* vazio e erro */
+  .none{padding:38px 22px;text-align:center;color:var(--ink3);font-size:0.88rem;font-weight:500;}
+  .none b{display:block;color:var(--ink2);font-size:0.94rem;font-weight:700;margin-bottom:5px;}
+  .note{background:#fdf4f3;border:1px solid #f0d2ce;border-left:3px solid var(--dn);border-radius:8px;
+        padding:12px 15px;margin-top:12px;font-size:0.82rem;font-weight:500;color:#8c2b23;white-space:pre-wrap;line-height:1.5;}
+
+  a:focus-visible,button:focus-visible,input:focus-visible,tr:focus-visible{outline:2px solid var(--teal);outline-offset:2px;}
+  @media (prefers-reduced-motion:reduce){*{transition:none!important;}}
+  @media(max-width:700px){
+    .mod{padding:18px 13px 36px;}
+    .mod-head h1{font-size:1.28rem;}
+    .verdict{gap:14px;padding:17px 18px;} .v-n{font-size:2.1rem;}
+    .rail-i{flex:1 1 50%;border-left:none;border-top:1px solid var(--line);}
+    .rail-i:nth-child(odd){border-right:1px solid var(--line);}
+    .rail-i:nth-child(1),.rail-i:nth-child(2){border-top:none;}
+    .day{grid-template-columns:1fr;}
+    .day-k{border-right:none;border-bottom:1px solid var(--line);display:flex;align-items:baseline;gap:8px;}
+    .day-s{margin-top:0;}
+    .ev{grid-template-columns:46px 1fr;gap:4px 10px;}
+    .ev-p{grid-column:2;} .ev-o{grid-column:2;} .delta{grid-column:2;margin-top:2px;}
+  }
+  @media print{
+    .top-bar,.sm-side,.acts,.tools,.status,.day-more{display:none!important;}
+    body{padding:0!important;background:#fff;}
+    .panel,.verdict,.rail{border-color:#ccc;break-inside:avoid;}
+  }
 </style>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.47.0/tabler-icons.min.css">
   <style>.sm-ic .ti{font-size:19px;line-height:1}</style>
@@ -188,95 +276,80 @@ body.sm-collapsed .sm-side:hover .sm-group-head{justify-content:flex-start;paddi
 </div>
 
 <div class="main">
-<div class="wrap">
-  <div class="section">
-    <div class="section-body">
-      <div class="comp-tag">🔍 COMPARAR POSTES — BANCO vs PLANILHA ATUAL</div>
+<div class="mod">
 
-      <div class="comp-fontes">
-        <div class="comp-fonte verde">
-          <div class="comp-fonte-top"><span>📦</span><span class="comp-fonte-lbl verde">RETRATO SALVO</span></div>
-          <div class="comp-fonte-val" id="fonte-banco">Carregando…</div>
-        </div>
-        <div class="comp-fonte-seta">→</div>
-        <div class="comp-fonte azul">
-          <div class="comp-fonte-top"><span>🔄</span><span class="comp-fonte-lbl azul">PLANILHA ATUAL (SHEETS)</span></div>
-          <div class="comp-fonte-val" id="fonte-sheets">Jacobina + Irecê · todos os meses</div>
-        </div>
-      </div>
-
-      <button class="btn-main" id="btn" onclick="rodar()">🔄 ATUALIZAR E COMPARAR</button>
-      <div class="status" id="status">Conferindo os postes das obras…</div>
-      <div id="errbox"></div>
+  <header class="mod-head">
+    <div>
+      <h1>Postes das obras</h1>
+      <p class="mod-sub" id="sub">Carteiras de Jacobina e Irecê</p>
     </div>
+    <div class="acts">
+      <button class="act primary" id="btn" onclick="rodar()">Verificar agora</button>
+      <button class="act" onclick="document.getElementById('coelba-file').click()">Importar CSV da Coelba</button>
+      <button class="act" onclick="window.print()">Imprimir</button>
+      <input type="file" id="coelba-file" accept=".csv" style="display:none" onchange="importarCoelba(this.files[0]); this.value='';">
+    </div>
+  </header>
+
+  <p class="status" id="status">Conferindo os postes das obras…</p>
+  <div id="aviso"></div>
+  <div id="errbox"></div>
+
+  <div class="rail" id="rail" style="display:none;">
+    <div class="rail-i"><div class="rail-n num" id="k-hoje">0</div><div class="rail-l">atualizações hoje</div></div>
+    <div class="rail-i"><div class="rail-n num" id="k-sem">0</div><div class="rail-l">nos últimos 7 dias</div></div>
+    <div class="rail-i"><div class="rail-n num" id="k-tot">0</div><div class="rail-l">obras acompanhadas</div></div>
+    <div class="rail-i"><div class="rail-n num" id="k-ult">—</div><div class="rail-l">última mudança registrada</div></div>
   </div>
 
-  <div class="kpis" id="kpis" style="display:none;">
-    <div class="kpi tot"><div class="num" id="k-tot">0</div><div class="lbl">Obras com alteração</div></div>
-    <div class="kpi alt"><div class="num" id="k-alt">0</div><div class="lbl">Postes alterados</div></div>
-    <div class="kpi nova"><div class="num" id="k-nova">0</div><div class="lbl">Obras novas</div></div>
-  </div>
+  <section class="panel" id="card-hist" style="display:none;">
+    <div class="panel-h">
+      <h2 class="panel-t">Atualizações</h2>
+      <span class="panel-n" id="hist-n"></span>
+      <span class="panel-note">Cada mudança de postes fica registrada com data e hora.</span>
+    </div>
+    <div id="hist"></div>
+  </section>
 
-  <div class="section" id="card-tabela" style="display:none;">
-    <div class="section-header">
-      <div class="section-label"><span class="section-icon">⚡</span> DETALHAMENTO DE ALTERAÇÕES</div>
-      <span class="count-tag" id="count-tag">0</span>
+  <section class="panel" id="card-tabela" style="display:none;">
+    <div class="panel-h">
+      <h2 class="panel-t">Obras</h2>
+      <span class="panel-n" id="count-tag">0</span>
+      <span class="panel-note">Clique numa obra para ver a linha do tempo dela.</span>
     </div>
-    <div class="toolbar">
-      <label>Filtrar:</label>
-      <button class="filter-btn active" id="fb-alteradas" onclick="setFiltro('alteradas',this)">Só alteradas</button>
-      <button class="filter-btn" id="fb-todas" onclick="setFiltro('todas',this)" style="border-color:#6b46c1;color:#6b46c1;">📋 Ver todas do mês</button>
-      <input class="comp-search" type="text" id="comp-search" placeholder="🔍 Buscar por obra, PEP..." oninput="aplicarTabela()">
+    <div class="tools">
+      <span class="tools-l">Mostrar</span>
+      <button class="chip" id="fb-hoje" onclick="setFiltro('hoje')">atualizadas hoje</button>
+      <button class="chip" id="fb-7d" onclick="setFiltro('7d')">últimos 7 dias</button>
+      <button class="chip on" id="fb-comalt" onclick="setFiltro('comalt')">com atualização</button>
+      <button class="chip" id="fb-todas" onclick="setFiltro('todas')">todas</button>
+      <input class="find" type="text" id="comp-search" placeholder="Buscar obra ou PEP" oninput="aplicarTabela()">
     </div>
-    <div class="toolbar" style="border-top:none;padding-top:0;">
-      <label>📍 BASE:</label>
-      <button class="filter-btn active" id="bb-TODAS" onclick="setBase('TODAS',this)">Todas</button>
-      <button class="filter-btn" id="bb-JACOBINA" onclick="setBase('JACOBINA',this)" style="border-color:#c05621;color:#c05621;">📍 Jacobina</button>
-      <button class="filter-btn" id="bb-IRECÊ" onclick="setBase('IRECÊ',this)" style="border-color:#2b6cb0;color:#2b6cb0;">📍 Irecê</button>
+    <div class="tools" style="border-top:none;padding-top:0;background:var(--wash);">
+      <span class="tools-l">Base</span>
+      <button class="chip on" id="bb-TODAS" onclick="setBase('TODAS',this)">Jacobina e Irecê</button>
+      <button class="chip" id="bb-JACOBINA" onclick="setBase('JACOBINA',this)">Jacobina</button>
+      <button class="chip" id="bb-IRECÊ" onclick="setBase('IRECÊ',this)">Irecê</button>
     </div>
-    <div class="legend">
-      <span><span class="dot" style="background:#14a085"></span> Aumentou</span>
-      <span><span class="dot" style="background:#e53e3e"></span> Reduziu</span>
-      <span><span class="dot" style="background:#ccc"></span> Sem alteração</span>
-    </div>
-    <div class="section-body" style="padding:0;"><div class="table-wrap" id="tabela"></div></div>
-  </div>
+    <div class="tbl" id="tabela"></div>
+  </section>
 
-  <div class="section" id="card-coelba" style="display:none;">
-    <div class="section-header" style="background:#f0fff4;border-bottom-color:#c6f6d5;">
-      <div class="section-label"><span class="section-icon" style="background:#276749;">🔌</span> COMPARAÇÃO COM COELBA</div>
-      <span class="count-tag" id="coelba-count" style="background:#276749;">0</span>
+  <section class="panel" id="card-coelba" style="display:none;">
+    <div class="panel-h">
+      <h2 class="panel-t">Coelba</h2>
+      <span class="panel-n" id="coelba-count">0</span>
+      <span class="panel-note">Postes realizados na Coelba (PSTR) contra a carteira, casando pelo PEP.</span>
     </div>
-    <div class="legend">
-      <span>Compara <b>PSTR</b> (postes realizados Coelba) com os postes da carteira, casando pelo PEP (coluna PROCESSO do CSV).</span>
+    <div class="tools">
+      <span class="tools-l">Mostrar</span>
+      <button class="chip on" id="cf-dif" onclick="setCoelbaFiltro('dif',this)">só divergentes</button>
+      <button class="chip" id="cf-todas" onclick="setCoelbaFiltro('todas',this)">todas</button>
+      <input class="find" type="text" id="coelba-search" placeholder="Buscar obra ou PEP" oninput="renderCoelbaAtual()">
     </div>
-    <div class="toolbar" style="border-top:none;">
-      <label>Mostrar:</label>
-      <button class="filter-btn active" id="cf-dif" onclick="setCoelbaFiltro('dif',this)">Só divergentes</button>
-      <button class="filter-btn" id="cf-todas" onclick="setCoelbaFiltro('todas',this)">Todas</button>
-      <input class="comp-search" type="text" id="coelba-search" placeholder="🔍 Buscar PEP/obra..." oninput="renderCoelbaAtual()">
-    </div>
-    <div class="section-body" style="padding:0;"><div class="table-wrap" id="coelba-tabela"></div></div>
-  </div>
+    <div class="tbl" id="coelba-tabela"></div>
+  </section>
 
-  <div class="section" id="card-hist" style="display:none;">
-    <div class="hist-header">
-      <div class="hist-header-ic">📅</div>
-      <div>
-        <span class="hist-header-title">HISTÓRICO DE ALTERAÇÕES POR DIA</span>
-        <span class="hist-header-sub">Obras modificadas a cada verificação</span>
-      </div>
-    </div>
-    <div class="section-body"><div id="hist"></div></div>
-  </div>
 </div>
-</div>
-
-<div class="bottom-bar">
-  <button class="bb-btn" style="background:#2b6cb0;" onclick="window.print()">🖨️ SALVAR PRINT</button>
-  <button class="bb-btn" style="background:#276749;" onclick="document.getElementById('coelba-file').click()">🔌 IMPORTAR CSV COELBA</button>
-  <button class="bb-btn" style="background:#0d7377;" onclick="rodar()">🔄 ATUALIZAR</button>
-  <input type="file" id="coelba-file" accept=".csv" style="display:none" onchange="importarCoelba(this.files[0]); this.value='';">
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
@@ -285,8 +358,9 @@ body.sm-collapsed .sm-side:hover .sm-group-head{justify-content:flex-start;paddi
 const SUPA_URL = 'https://eqxejfoibebcbtsqymji.supabase.co';
 const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVxeGVqZm9pYmViY2J0c3F5bWppIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE4NjUzMTEsImV4cCI6MjA4NzQ0MTMxMX0.lwf7_EJ6UchEOpzhW3cVKztxDGy78gaQblRvgiEwWh8';
 const SUPA_HEADERS = { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY, 'Content-Type': 'application/json' };
-const KEY_BASE  = 'comp_postes_base';  // retrato anterior dos postes (do comparador)
-const KEY_HIST  = 'comp_postes_hist';  // histórico de alterações
+const KEY_BASE  = 'comp_postes_base';    // retrato atual dos postes de cada obra
+const KEY_HIST  = 'comp_postes_hist';    // histórico no formato antigo (só leitura, migrado uma vez)
+const KEY_EVENT = 'comp_postes_eventos'; // registro permanente: o que mudou, em qual obra, quando
 // Carteira (Google Sheets) — mesmas planilhas/gids do Mapa
 const SHEET_JAC = 'https://docs.google.com/spreadsheets/d/142gvn8pNgJGTGDkidCfuOWMHJ2OCKpJd_FQU8zeo0x8/export?format=csv&gid=';
 const SHEET_IRC = 'https://docs.google.com/spreadsheets/d/14ImbZb8-OCBp78jDtd0QFkSLrMG5vXA7tzrM-x6KQVo/export?format=csv&gid=';
@@ -300,13 +374,39 @@ const MESES = [
   { ano:2026, mes:6, jac:'557360701',  irc:'1842405101' },
 ];
 
-let ULTIMA_LISTA = [], ULTIMA_ALTERADAS = [], ULTIMA_TEMBASE = false, MOSTRANDO_TODAS = false;
+let ULTIMA_LISTA = [];     // obras lidas agora, já com .ultimaAlt / .eventos
+let EVENTOS = [];          // registro completo de atualizações (mais antigo → mais novo)
+let EVENTOS_POR_PEP = {};  // pepNorm → [eventos daquela obra]
+let NOVOS_AGORA = [];      // atualizações detectadas nesta verificação
+let ULTIMA_TEMBASE = false;
 
 // ===================== HELPERS =====================
 function norm(s){ return String(s==null?'':s).toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,'').trim(); }
 function num(v){ if(v==null) return null; let s=String(v).trim(); if(!s) return null; s=s.replace(/\./g,'').replace(',', '.').replace(/[^\d.\-]/g,''); const n=parseFloat(s); return isNaN(n)?null:n; }
 function setStatus(t){ document.getElementById('status').textContent=t; }
-function showErr(html){ document.getElementById('errbox').innerHTML = html ? '<div class="err">'+html+'</div>' : ''; }
+function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+// --- datas: guardamos sempre em ISO e exibimos em pt-BR ---
+function hojeKey(d){ const x=d?new Date(d):new Date(); return x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0')+'-'+String(x.getDate()).padStart(2,'0'); }
+function diasAtras(iso){ const t=new Date(iso).getTime(); if(isNaN(t)) return 9999; return Math.floor((Date.now()-t)/86400000); }
+function hhmm(iso){ const d=new Date(iso); return isNaN(d.getTime())?'':String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); }
+function dataBR(iso){ const d=new Date(iso); if(isNaN(d.getTime())) return '—';
+  return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear(); }
+// "hoje 09:12" / "ontem 17:40" / "há 3 dias · 12/09 08:30" / "12/09/2026 08:30"
+function quando(iso){
+  const d=new Date(iso); if(isNaN(d.getTime())) return '—';
+  const dif = Math.floor((new Date(hojeKey()) - new Date(hojeKey(d)))/86400000);
+  if(dif<=0) return 'hoje '+hhmm(iso);
+  if(dif===1) return 'ontem '+hhmm(iso);
+  if(dif<=6) return 'há '+dif+' dias';
+  return dataBR(iso);
+}
+// converte o texto pt-BR do histórico antigo ("12/09/2026 09:12:33") em ISO
+function parseTsBR(s){
+  const m=String(s||'').match(/(\d{2})\/(\d{2})\/(\d{4})[,\s]+(\d{2}):(\d{2})(?::(\d{2}))?/);
+  if(m) return new Date(+m[3],+m[2]-1,+m[1],+m[4],+m[5],+(m[6]||0)).toISOString();
+  const d=new Date(s); return isNaN(d.getTime())?new Date().toISOString():d.toISOString();
+}
+function showErr(html){ document.getElementById('errbox').innerHTML = html ? '<div class="note">'+html+'</div>' : ''; }
 function getCol(obj, ...termos){
   const keys = Object.keys(obj);
   for(const termo of termos){
@@ -379,30 +479,62 @@ async function salvarBasePostes(mapaObras){
   const body = { key: KEY_BASE, value: { updatedAt:new Date().toISOString(), obras:mapaObras }, updated_at:new Date().toISOString() };
   await fetch(SUPA_URL+'/rest/v1/turno_data', { method:'POST', headers:{...SUPA_HEADERS,'Prefer':'resolution=merge-duplicates'}, body: JSON.stringify(body) });
 }
-async function carregarHist(){
+// ---- registro permanente de atualizações ----
+let MIGROU = false; // true quando o registro veio do histórico antigo e ainda precisa ser gravado
+async function carregarEventos(){
+  try{
+    const r = await fetch(SUPA_URL+'/rest/v1/turno_data?select=value&key=eq.'+KEY_EVENT+'&limit=1', { headers: SUPA_HEADERS });
+    if(r.ok){
+      const a = await r.json();
+      const v = (a && a[0] && a[0].value) ? a[0].value : null;
+      if(v && Array.isArray(v.eventos)) return v.eventos;
+    }
+  }catch(e){}
+  // primeira vez: aproveita o histórico antigo para não começar do zero
+  MIGROU = true;
+  return await migrarHistAntigo();
+}
+async function migrarHistAntigo(){
   try{
     const r = await fetch(SUPA_URL+'/rest/v1/turno_data?select=value&key=eq.'+KEY_HIST+'&limit=1', { headers: SUPA_HEADERS });
     if(!r.ok) return [];
     const a = await r.json();
-    return (a && a[0] && Array.isArray(a[0].value)) ? a[0].value : [];
+    const hist = (a && a[0] && Array.isArray(a[0].value)) ? a[0].value : [];
+    const ev = [];
+    hist.forEach(h=>{
+      const ts = parseTsBR(h.ts);
+      (Array.isArray(h.itens)?h.itens:[]).forEach(i=>{
+        ev.push({ ts, pep:i.pep, pepN:norm(i.pep), titulo:i.titulo||'', utd:i.utd||'', de:(i.de==null?null:Number(i.de)), para:(i.para==null?null:Number(i.para)), tipo:'alt' });
+      });
+    });
+    ev.sort((x,y)=> new Date(x.ts)-new Date(y.ts));
+    return ev;
   }catch(e){ return []; }
 }
-async function salvarHist(hist){
-  await fetch(SUPA_URL+'/rest/v1/turno_data', { method:'POST', headers:{...SUPA_HEADERS,'Prefer':'resolution=merge-duplicates'}, body: JSON.stringify({ key:KEY_HIST, value:hist.slice(-60), updated_at:new Date().toISOString() }) });
+async function salvarEventos(eventos){
+  await fetch(SUPA_URL+'/rest/v1/turno_data', {
+    method:'POST', headers:{...SUPA_HEADERS,'Prefer':'resolution=merge-duplicates'},
+    body: JSON.stringify({ key:KEY_EVENT, value:{ updatedAt:new Date().toISOString(), eventos:eventos.slice(-4000) }, updated_at:new Date().toISOString() })
+  });
+}
+function indexarEventos(){
+  EVENTOS_POR_PEP = {};
+  EVENTOS.forEach(e=>{ const k=e.pepN||norm(e.pep); (EVENTOS_POR_PEP[k]=EVENTOS_POR_PEP[k]||[]).push(e); });
+  Object.keys(EVENTOS_POR_PEP).forEach(k=>EVENTOS_POR_PEP[k].sort((a,b)=> new Date(b.ts)-new Date(a.ts))); // mais recente primeiro
 }
 
 // ===================== FLUXO PRINCIPAL =====================
 async function rodar(){
   const btn = document.getElementById('btn');
-  btn.disabled = true; btn.textContent='⏳ Buscando carteiras…'; showErr('');
+  btn.disabled = true; btn.textContent='Conferindo…'; showErr('');
   try{
     // busca TODOS os meses (mais recente primeiro → vence na dedup)
     const dedup = {};
     const ordenados = MESES.slice().sort((a,b)=> (b.ano*12+b.mes)-(a.ano*12+a.mes));
-    let semPostes=[], headersVistos='';
+    let semPostes=[], headersVistos='', falhas=[];
     for(const m of ordenados){
       const lbl = MESES_NOME[m.mes]+'/'+String(m.ano).slice(-2);
-      btn.textContent='⏳ '+lbl+'…';
+      btn.textContent='Conferindo '+lbl+'…';
       for(const [base,gid,utd] of [[SHEET_JAC,m.jac,'JACOBINA'],[SHEET_IRC,m.irc,'IRECÊ']]){
         if(!gid) continue;
         try{
@@ -416,7 +548,7 @@ async function rodar(){
               if(k && !dedup[k]){ o.mes=lbl; dedup[k]=o; }
             });
           }
-        }catch(e){ /* mês indisponível */ }
+        }catch(e){ falhas.push(lbl+' · '+utd); }
       }
     }
     const lista = Object.values(dedup);
@@ -428,130 +560,274 @@ async function rodar(){
       showErr('⚠️ Não encontrei a coluna de POSTES nas carteiras.\n\nColunas vistas:\n'+(headersVistos||'(nenhuma)'));
     }
 
-    // compara com o retrato anterior
+    // ---------- compara com o retrato guardado e REGISTRA o que mudou ----------
+    btn.textContent='Comparando…';
     const base = await carregarBasePostes();
     const temBase = Object.keys(base).length>0;
-    // atualiza os cartões do topo
-    const fb=document.getElementById('fonte-banco');
-    if(fb) fb.textContent = temBase ? (Object.keys(base).length+' obras no retrato anterior') : 'Sem retrato anterior (1ª carga)';
-    const fs=document.getElementById('fonte-sheets');
-    if(fs) fs.textContent = lista.length+' obras lidas · todos os meses';
-    const alteradas=[], novoMapa={};
-    let novas=0;
+    EVENTOS = await carregarEventos();
+
+    const agora = new Date().toISOString();
+    // o retrato NÃO é substituído: as obras não lidas agora continuam guardadas,
+    // assim uma aba que falhou não faz obra antiga reaparecer como "nova".
+    const novoMapa = Object.assign({}, base);
+    const novos = [];
+
     lista.forEach(o=>{
       const k = norm(o.pep);
-      novoMapa[k] = { pep:o.pep, titulo:o.titulo, utd:o.utd, mun:o.mun, postes:o.postes };
       const ant = base[k];
-      if(!ant){ if(temBase) novas++; return; }
-      const pa = ant.postes==null?null:Number(ant.postes);
       const pn = o.postes==null?null:Number(o.postes);
-      if(pa!==pn) alteradas.push({ ...o, de:pa, para:pn });
+      novoMapa[k] = { pep:o.pep, titulo:o.titulo, utd:o.utd, mun:o.mun, postes:pn, visto:agora,
+                      desde:(ant && ant.desde) ? ant.desde : agora };
+      if(!ant){
+        // obra nova (só registra se já existia um retrato, senão a 1ª carga viraria milhares de eventos)
+        if(temBase) novos.push({ ts:agora, pep:o.pep, pepN:k, titulo:o.titulo, utd:o.utd, de:null, para:pn, tipo:'nova' });
+        return;
+      }
+      const pa = ant.postes==null?null:Number(ant.postes);
+      if(pa!==pn) novos.push({ ts:agora, pep:o.pep, pepN:k, titulo:o.titulo, utd:o.utd, de:pa, para:pn, tipo:'alt' });
     });
 
-    // mostra
-    document.getElementById('kpis').style.display='grid';
-    document.getElementById('k-tot').textContent = lista.length;
-    document.getElementById('k-alt').textContent = alteradas.length;
-    document.getElementById('k-nova').textContent = novas;
-    ULTIMA_ALTERADAS=alteradas; ULTIMA_TEMBASE=temBase;
+    // evita duplicar o mesmo evento se a página for aberta em duas abas ao mesmo tempo
+    const novosFiltrados = novos.filter(n=>{
+      const ult = EVENTOS.filter(e=>(e.pepN||norm(e.pep))===n.pepN).pop();
+      if(!ult) return true;
+      const mesmo = (ult.de==null?null:Number(ult.de))===n.de && (ult.para==null?null:Number(ult.para))===n.para;
+      return !(mesmo && (Date.now()-new Date(ult.ts).getTime()) < 6*3600*1000);
+    });
+
+    NOVOS_AGORA = novosFiltrados;
+    if(novosFiltrados.length) EVENTOS = EVENTOS.concat(novosFiltrados);
+    // grava se houve novidade OU se o histórico antigo acabou de ser migrado (uma única vez)
+    if(novosFiltrados.length || (MIGROU && EVENTOS.length)){
+      await salvarEventos(EVENTOS);
+      MIGROU = false;
+    }
+    await salvarBasePostes(novoMapa);
+    indexarEventos();
+
+    // ---------- anexa em cada obra a sua última atualização ----------
+    lista.forEach(o=>{
+      const k = norm(o.pep);
+      const evs = EVENTOS_POR_PEP[k] || [];
+      o.eventos = evs;
+      o.ultimaAlt = evs.length ? evs[0] : null;
+      o.desde = (novoMapa[k] && novoMapa[k].desde) || null;
+    });
+    // obras com atualização mais recente primeiro
+    ULTIMA_LISTA = lista.slice().sort((a,b)=>{
+      const ta=a.ultimaAlt?new Date(a.ultimaAlt.ts).getTime():0;
+      const tb=b.ultimaAlt?new Date(b.ultimaAlt.ts).getTime():0;
+      if(tb!==ta) return tb-ta;
+      return (a.pep>b.pep?1:-1);
+    });
+    ULTIMA_TEMBASE = temBase;
+
+    // ---------- cabeçalho e régua de números ----------
+    const sub=document.getElementById('sub');
+    if(sub) sub.textContent = lista.length+' obras nas carteiras de Jacobina e Irecê, conferidas às '+hhmm(agora);
+
+    const evHoje = EVENTOS.filter(e=>hojeKey(e.ts)===hojeKey());
+    const ev7d   = EVENTOS.filter(e=>diasAtras(e.ts)<=7);
+    const ultEv  = EVENTOS.length ? EVENTOS[EVENTOS.length-1] : null;
+
+    document.getElementById('rail').style.display='flex';
+    document.getElementById('k-tot').textContent  = lista.length;
+    document.getElementById('k-hoje').textContent = evHoje.length;
+    document.getElementById('k-sem').textContent  = ev7d.length;
+    document.getElementById('k-ult').innerHTML    = ultEv
+      ? (hojeKey(ultEv.ts)===hojeKey() ? hhmm(ultEv.ts)+'<small>hoje</small>' : dataBR(ultEv.ts).slice(0,5)+'<small>'+hhmm(ultEv.ts)+'</small>')
+      : '—';
+
+    // filtro inicial: mostra o que é notícia
+    FILTRO_VIEW = evHoje.length ? 'hoje' : (EVENTOS.length ? 'comalt' : 'todas');
+    marcarBotaoFiltro();
     document.getElementById('card-tabela').style.display='block';
     aplicarTabela();
+    renderDias();
+    renderAviso(novosFiltrados, evHoje, ultEv, lista.length);
 
-    // salva o novo retrato automaticamente
-    await salvarBasePostes(novoMapa);
+    if(falhas.length) showErr('Não consegui ler '+falhas.length+' aba(s): '+falhas.join(', ')+'.\nAs obras dessas abas ficaram com o último valor conhecido (nada foi apagado).');
 
-    // histórico
-    const hist = await carregarHist();
-    if(alteradas.length){
-      hist.push({ ts:new Date().toLocaleString('pt-BR'), n:alteradas.length, itens:alteradas.slice(0,200).map(a=>({pep:a.pep,titulo:a.titulo,utd:a.utd,de:a.de,para:a.para})) });
-      await salvarHist(hist);
-    }
-    renderHist(hist);
-
-    if(!temBase) setStatus('✅ Primeira carga: '+lista.length+' obras salvas. Da próxima vez, mostro o que mudou.');
-    else if(alteradas.length) setStatus('✅ '+alteradas.length+' obra(s) com alteração de postes. Valores salvos.');
-    else setStatus('✅ Nenhuma alteração de postes desde a última verificação. ('+lista.length+' obras conferidas)');
+    setStatus(lista.length+' obras conferidas às '+hhmm(agora)+(falhas.length?', '+falhas.length+' aba(s) sem resposta':'')+'.');
   }catch(e){
     showErr('Erro: '+e.message); setStatus('Falha ao comparar.');
   }finally{
-    btn.disabled=false; btn.textContent='🔄 ATUALIZAR E COMPARAR';
+    btn.disabled=false; btn.textContent='Verificar agora';
   }
 }
 
-let FILTRO_VIEW='alteradas', FILTRO_BASE='TODAS';
-function setFiltro(v,btn){
-  FILTRO_VIEW=v;
-  document.querySelectorAll('#fb-alteradas,#fb-todas').forEach(b=>b.classList.remove('active'));
-  if(btn) btn.classList.add('active');
-  aplicarTabela();
+let FILTRO_VIEW='comalt', FILTRO_BASE='TODAS';
+const FILTRO_BTNS = { hoje:'fb-hoje', '7d':'fb-7d', comalt:'fb-comalt', todas:'fb-todas' };
+function marcarBotaoFiltro(){
+  Object.keys(FILTRO_BTNS).forEach(k=>{ const b=document.getElementById(FILTRO_BTNS[k]); if(b){ b.classList.remove('on'); b.classList.remove('alert'); } });
+  const b=document.getElementById(FILTRO_BTNS[FILTRO_VIEW]);
+  if(b){ b.classList.add('on'); if(FILTRO_VIEW==='hoje') b.classList.add('alert'); }
 }
+function setFiltro(v){ FILTRO_VIEW=v; marcarBotaoFiltro(); aplicarTabela(); }
 function setBase(b,btn){
   FILTRO_BASE=b;
-  document.querySelectorAll('#bb-TODAS,#bb-JACOBINA,#bb-IRECÊ').forEach(x=>x.classList.remove('active'));
-  if(btn) btn.classList.add('active');
+  document.querySelectorAll('#bb-TODAS,#bb-JACOBINA,#bb-IRECÊ').forEach(x=>x.classList.remove('on'));
+  if(btn) btn.classList.add('on');
   aplicarTabela();
 }
+
+// ---------- variação de postes ----------
+function deltaHtml(e){
+  if(!e) return '';
+  if(e.tipo==='nova') return '<span class="delta"><span class="badge-new">obra nova</span><span class="to">'+(e.para==null?'—':e.para)+'</span></span>';
+  const de=e.de==null?'—':e.de, para=e.para==null?'—':e.para;
+  const d=(Number(e.para)||0)-(Number(e.de)||0);
+  const cls=d>0?'up':(d<0?'dn':'eq'), sinal=d>0?'+':'';
+  return '<span class="delta"><span class="from">'+de+'</span><span class="arw">&rarr;</span><span class="to">'+para+'</span>'
+       + '<span class="sign '+cls+'">'+sinal+d+'</span></span>';
+}
+
+// ---------- linha do tempo de uma obra ----------
+function timelineHtml(o){
+  const evs=o.eventos||[];
+  if(!evs.length) return '';
+  let h='<div class="tl"><div class="tl-h">'+evs.length+' '+(evs.length===1?'mudança registrada':'mudanças registradas')+' nesta obra</div><div class="tl-is">';
+  h+=evs.map(e=>{
+      const d=(Number(e.para)||0)-(Number(e.de)||0);
+      const dot = e.tipo==='nova' ? 'nv' : (d>0?'':'dn');
+      return '<div class="tl-i"><span class="tl-dot '+dot+'"></span>'
+        + '<span class="tl-d">'+dataBR(e.ts)+' &middot; '+hhmm(e.ts)+'</span>'
+        + '<span class="tl-w">'+deltaHtml(e)+'</span></div>';
+    }).join('');
+  if(o.desde) h+='<div class="tl-i"><span class="tl-dot ini"></span><span class="tl-d">'+dataBR(o.desde)+'</span>'
+               + '<span class="tl-w"><em>entrou no acompanhamento</em></span></div>';
+  return h+'</div></div>';
+}
+function obraToggle(i){
+  const tr=document.getElementById('tl-'+i), ex=document.getElementById('exp-'+i);
+  if(!tr) return;
+  const abrir = tr.style.display==='none';
+  tr.style.display = abrir?'table-row':'none';
+  if(ex) ex.textContent = abrir?'–':'+';
+}
+
+// ---------- tabela de obras ----------
 function aplicarTabela(){
   const el=document.getElementById('tabela'); if(!el) return;
   const busca=(document.getElementById('comp-search')?document.getElementById('comp-search').value||'':'').toLowerCase().trim();
   const filtraBase = o => FILTRO_BASE==='TODAS' || (o.utd||'').toUpperCase()===FILTRO_BASE;
   const filtraBusca = o => !busca || (o.pep||'').toLowerCase().includes(busca) || (o.titulo||'').toLowerCase().includes(busca);
-  let linhas, modoAlteradas = (FILTRO_VIEW==='alteradas');
-  if(modoAlteradas) linhas = ULTIMA_ALTERADAS.filter(filtraBase).filter(filtraBusca);
-  else linhas = ULTIMA_LISTA.filter(filtraBase).filter(filtraBusca).slice().sort((a,b)=>(a.pep>b.pep?1:-1));
-
+  const filtraQuando = o => {
+    if(FILTRO_VIEW==='todas')  return true;
+    if(FILTRO_VIEW==='comalt') return (o.eventos||[]).length>0;
+    if(!o.ultimaAlt) return false;
+    if(FILTRO_VIEW==='hoje') return hojeKey(o.ultimaAlt.ts)===hojeKey();
+    if(FILTRO_VIEW==='7d')   return diasAtras(o.ultimaAlt.ts)<=7;
+    return true;
+  };
+  const linhas = ULTIMA_LISTA.filter(filtraQuando).filter(filtraBase).filter(filtraBusca);
   const ct=document.getElementById('count-tag'); if(ct) ct.textContent=linhas.length;
 
   if(!linhas.length){
-    el.innerHTML = '<div class="empty"><div class="big">'+(modoAlteradas?'✅':'🔍')+'</div>'
-      + (modoAlteradas ? (ULTIMA_TEMBASE?'Nenhuma alteração de postes.':'Primeira carga concluída — valores salvos.') : 'Nenhuma obra encontrada.')
-      + '<br><span style="font-size:0.8rem;">'+(modoAlteradas?'Use "Ver todas do mês" para conferir os postes atuais.':'Ajuste a busca ou a base.')+'</span></div>';
+    const m = {
+      hoje:  ['Nenhuma obra mudou de postes hoje.','Veja os últimos 7 dias ou o histórico completo nos filtros acima.'],
+      '7d':  ['Nenhuma mudança nos últimos 7 dias.','Use "com atualização" para ver tudo que já mudou.'],
+      comalt:[ULTIMA_TEMBASE?'Nenhuma obra registrou mudança até agora.':'Primeira carga concluída.','Daqui em diante, toda mudança de postes aparece aqui com data e hora.'],
+      todas: ['Nenhuma obra encontrada.','Ajuste a busca ou a base.']
+    }[FILTRO_VIEW] || ['Nenhuma obra encontrada.',''];
+    el.innerHTML='<div class="none"><b>'+m[0]+'</b>'+m[1]+'</div>';
     return;
   }
-  const stBadge = s => s ? '<span class="status-badge">'+s+'</span>' : '<span style="color:#ccc;">–</span>';
-  let h='<table><thead><tr><th>PEP Obra</th><th>Título</th><th>UTD</th><th>Status</th><th class="diff-cell">Postes Realizados</th></tr></thead><tbody>';
-  if(modoAlteradas){
-    linhas.forEach(a=>{
-      const de=a.de==null?'—':a.de, para=a.para==null?'—':a.para, diff=(Number(a.para)||0)-(Number(a.de)||0);
-      const cls=diff>0?'delta-up':'delta-dn', sinal=diff>0?'+':'';
-      h+='<tr><td><code>'+a.pep+'</code></td><td class="td-main">'+(a.titulo||'')+'</td><td>'+(a.utd||'')+'</td><td>'+stBadge(a.status)+'</td>'
-        +'<td class="diff-cell"><span class="old">'+de+'</span><span class="arrow">→</span><span class="new">'+para+'</span> <span class="'+cls+'">('+sinal+diff+')</span></td></tr>';
-    });
-  } else {
-    linhas.forEach(o=>{
-      h+='<tr><td><code>'+o.pep+'</code></td><td class="td-main">'+(o.titulo||'')+'</td><td>'+(o.utd||'')+'</td><td>'+stBadge(o.status)+'</td>'
-        +'<td class="diff-cell"><span class="new">'+(o.postes==null?'—':o.postes)+'</span></td></tr>';
-    });
-  }
+
+  let h='<table><thead><tr><th style="width:26px;"></th><th>PEP</th><th>Obra</th><th>Status</th>'
+      + '<th class="right">Postes</th><th>Última mudança</th></tr></thead><tbody>';
+  linhas.forEach((o,i)=>{
+    const ev=o.ultimaAlt, temEv=(o.eventos||[]).length>0;
+    let cel;
+    if(ev){
+      const eHoje = hojeKey(ev.ts)===hojeKey();
+      cel = '<span class="when'+(eHoje?' hoje':'')+'">'+quando(ev.ts)+'<small>'+dataBR(ev.ts)+' &middot; '+hhmm(ev.ts)+'</small></span>'
+          + '<div style="margin-top:5px;">'+deltaHtml(ev)+'</div>';
+    } else {
+      cel = '<span class="when never">nunca mudou'+(o.desde?'<small>acompanhada desde '+dataBR(o.desde)+'</small>':'')+'</span>';
+    }
+    h+='<tr class="obra"'+(temEv?' onclick="obraToggle('+i+')"':'')+'>'
+      +'<td>'+(temEv?'<span class="exp" id="exp-'+i+'">+</span>':'')+'</td>'
+      +'<td><code>'+esc(o.pep)+'</code></td>'
+      +'<td><div class="t-obra">'+esc(o.titulo||'')+'</div><div class="t-utd">'+esc(o.utd||'')+(o.mun?', '+esc(o.mun):'')+'</div></td>'
+      +'<td>'+(o.status?'<span class="st">'+esc(o.status)+'</span>':'<span style="color:#c7d5d8;">—</span>')+'</td>'
+      +'<td class="right"><span class="postes">'+(o.postes==null?'—':o.postes)+'</span></td>'
+      +'<td>'+cel+'</td></tr>';
+    if(temEv) h+='<tr class="tl-row" id="tl-'+i+'" style="display:none;"><td colspan="6">'+timelineHtml(o)+'</td></tr>';
+  });
   el.innerHTML=h+'</tbody></table>';
 }
-function renderHist(hist){
-  if(!hist || !hist.length) return;
-  document.getElementById('card-hist').style.display='block';
-  const el = document.getElementById('hist');
-  el.innerHTML = hist.slice().reverse().slice(0,30).map((h,idx)=>{
-    const itens = Array.isArray(h.itens) ? h.itens : [];
-    let det = '';
-    if(itens.length){
-      det = '<div class="hist-det" id="hist-det-'+idx+'" style="display:none;margin-top:8px;border-top:1px dashed #e2e8f0;padding-top:8px;">'
-        + '<table style="width:100%;"><thead><tr><th>PEP</th><th>Título</th><th>UTD</th><th>Postes</th></tr></thead><tbody>'
-        + itens.map(a=>{
-            const de=a.de==null?'—':a.de, para=a.para==null?'—':a.para, diff=(Number(a.para)||0)-(Number(a.de)||0);
-            const cls=diff>0?'delta-up':'delta-dn', sinal=diff>0?'+':'';
-            return '<tr><td><code>'+a.pep+'</code></td><td>'+(a.titulo||'')+'</td><td>'+(a.utd||'')+'</td>'
-              +'<td><span class="old">'+de+'</span><span class="arrow">→</span><span class="new">'+para+'</span> <span class="'+cls+'">('+sinal+diff+')</span></td></tr>';
-          }).join('')
-        + '</tbody></table></div>';
-    }
-    return '<div class="hist-item">'
-      + '<div onclick="histToggle('+idx+')" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:8px;">'
-      +   '<span><span class="when">'+h.ts+'</span> — <b>'+h.n+'</b> obra(s) com alteração de postes</span>'
-      +   (itens.length?'<span id="hist-arrow-'+idx+'" style="color:#0d7377;font-weight:900;">▸</span>':'')
+
+// ---------- veredito: teve atualização? quando? ----------
+function renderAviso(novos, evHoje, ultEv, total){
+  const el=document.getElementById('aviso'); if(!el) return;
+  const resumo = e => '<b>'+esc(e.pep)+'</b>'+(e.titulo?' '+esc(e.titulo):'')+', '
+      + (e.tipo==='nova' ? 'obra nova com '+(e.para==null?'—':e.para)+' poste(s)'
+                         : 'de '+(e.de==null?'—':e.de)+' para '+(e.para==null?'—':e.para)+' postes');
+  let cls='', n, txt, sub;
+  if(novos && novos.length){
+    const obras = Object.keys(novos.reduce((a,x)=>{a[x.pepN]=1;return a;},{})).length;
+    cls=' news'; n=novos.length;
+    txt=(novos.length===1?'mudança registrada agora':'mudanças registradas agora')+', em '+obras+(obras===1?' obra':' obras');
+    sub='Às '+hhmm(new Date().toISOString())+' de hoje. '+novos.slice(0,2).map(resumo).join('. ')
+        +(novos.length>2?'. E outras '+(novos.length-2)+'.':'.');
+  } else if(evHoje && evHoje.length){
+    const u=evHoje[evHoje.length-1];
+    n=evHoje.length;
+    txt=(evHoje.length===1?'mudança hoje':'mudanças hoje')+', nenhuma neste instante';
+    sub='A última foi às '+hhmm(u.ts)+'. '+resumo(u)+'.';
+  } else if(ultEv){
+    n='0'; txt='mudanças nesta verificação';
+    sub='A última foi '+quando(ultEv.ts)+', em '+dataBR(ultEv.ts)+' às '+hhmm(ultEv.ts)+'. '+resumo(ultEv)+'.';
+  } else {
+    n=total; txt='obras acompanhadas, nenhuma mudança registrada ainda';
+    sub='Esta primeira verificação guardou os valores de hoje. A partir daqui, toda mudança de postes aparece aqui com o dia e a hora.';
+  }
+  el.innerHTML='<div class="verdict'+cls+'"><div class="v-n">'+n+'</div>'
+             + '<div><div class="v-txt">'+txt+'</div><span class="v-sub">'+sub+'</span></div></div>';
+}
+
+// ---------- feed de atualizações, agrupado por dia ----------
+function diaToggle(i){
+  const d=document.getElementById('dia-'+i), b=document.getElementById('diam-'+i);
+  if(!d) return;
+  const abrir = d.style.display==='none';
+  d.style.display = abrir?'block':'none';
+  if(b) b.style.display = abrir?'none':'block';
+}
+function renderDias(){
+  const card=document.getElementById('card-hist');
+  if(!EVENTOS.length){ if(card) card.style.display='none'; return; }
+  if(card) card.style.display='block';
+  const el=document.getElementById('hist'); if(!el) return;
+  const grupos={};
+  EVENTOS.forEach(e=>{ const k=hojeKey(e.ts); (grupos[k]=grupos[k]||[]).push(e); });
+  const dias=Object.keys(grupos).sort().reverse().slice(0,60);
+  const n=document.getElementById('hist-n');
+  if(n) n.textContent = EVENTOS.length+(EVENTOS.length===1?' registro':' registros')+' em '+dias.length+(dias.length===1?' dia':' dias');
+
+  el.innerHTML = dias.map((k,i)=>{
+    const evs=grupos[k].slice().sort((a,b)=> new Date(b.ts)-new Date(a.ts));
+    const ref=evs[0].ts, eHoje = k===hojeKey();
+    const rotulo = eHoje ? 'Hoje' : (diasAtras(ref)===1 ? 'Ontem' : dataBR(ref));
+    const aberto = i<3;
+    const linhas = evs.map(e=>'<div class="ev">'
+        + '<span class="ev-h">'+hhmm(e.ts)+'</span>'
+        + '<span class="ev-p">'+esc(e.pep)+'</span>'
+        + '<span class="ev-o">'+esc(e.titulo||'')+(e.utd?'<i>'+esc(e.utd)+'</i>':'')+'</span>'
+        + deltaHtml(e) + '</div>').join('');
+    return '<div class="day'+(eHoje?' hoje':'')+'">'
+      + '<div class="day-k" onclick="diaToggle('+i+')">'
+      +   '<span class="day-t">'+rotulo+'</span>'
+      +   '<span class="day-s">'+(eHoje||diasAtras(ref)===1 ? dataBR(ref)+', ' : '')+evs.length+(evs.length===1?' mudança':' mudanças')+'</span>'
       + '</div>'
-      + det
-      + '</div>';
+      + '<div>'
+      +   '<div id="dia-'+i+'" style="display:'+(aberto?'block':'none')+';">'+linhas+'</div>'
+      +   '<button class="day-more" id="diam-'+i+'" style="display:'+(aberto?'none':'block')+';" onclick="diaToggle('+i+')">'+(evs.length===1?'mostrar a mudança deste dia':'mostrar as '+evs.length+' mudanças deste dia')+'</button>'
+      + '</div></div>';
   }).join('');
 }
+
 // ===================== COMPARADOR COELBA (CSV Neoex) =====================
 // CSV Neoex: latin-1, separador ; — coluna PROCESSO = PEP, PSTR = postes realizados Coelba.
 let COELBA_LINHAS = [], COELBA_FILTRO = 'dif';
@@ -568,7 +844,7 @@ function processarCoelba(texto){
   const head = linhas[0].split(sep).map(h=>norm(h));
   const ix = (...nomes)=>{ for(const n of nomes){ const i=head.indexOf(norm(n)); if(i>=0) return i; } return -1; };
   const iPep=ix('PROCESSO'), iPstr=ix('PSTR'), iPstp=ix('PSTP'), iTit=ix('TITULO'), iSta=ix('STATUS');
-  if(iPep<0 || iPstr<0){ showErr('CSV Coelba: não achei as colunas PROCESSO e PSTR.\nColunas vistas: '+linhas[0].slice(0,300)); return; }
+  if(iPep<0 || iPstr<0){ showErr('CSV Coelba: não achei as colunas PROCESSO e PSTR.\nColunas vistas: '+esc(linhas[0].slice(0,300))); return; }
   const coelba = {};
   for(let i=1;i<linhas.length;i++){
     const v = linhas[i].split(sep);
@@ -595,7 +871,7 @@ function processarCoelba(texto){
   }).sort((a,b)=>Math.abs(b.dif)-Math.abs(a.dif));
   document.getElementById('card-coelba').style.display='block';
   renderCoelbaAtual();
-  setStatus('✅ CSV Coelba importado: '+COELBA_LINHAS.length+' obras (carteira × Coelba). Divergentes: '+COELBA_LINHAS.filter(r=>r.dif!==0).length+'.');
+  setStatus('CSV da Coelba importado: '+COELBA_LINHAS.length+' obras cruzadas, '+COELBA_LINHAS.filter(r=>r.dif!==0).length+' com divergência de postes.');
   document.getElementById('card-coelba').scrollIntoView({behavior:'smooth',block:'start'});
 }
 function setCoelbaFiltro(f,btn){
@@ -611,28 +887,24 @@ function renderCoelbaAtual(){
   if(COELBA_FILTRO==='dif') linhas = linhas.filter(r=>r.dif!==0);
   if(busca) linhas = linhas.filter(r=>(r.pep||'').toLowerCase().includes(busca)||(r.titulo||'').toLowerCase().includes(busca));
   const ct=document.getElementById('coelba-count'); if(ct) ct.textContent=linhas.length;
-  if(!linhas.length){ el.innerHTML='<div class="empty"><div class="big">✅</div>'+(COELBA_FILTRO==='dif'?'Nenhuma divergência entre carteira e Coelba.':'Nenhuma obra encontrada.')+'</div>'; return; }
-  let h='<table><thead><tr><th>PEP Obra</th><th>Título</th><th>UTD</th><th>Status</th>'
-    +'<th class="diff-cell">Carteira</th><th class="diff-cell">Coelba</th><th class="diff-cell">Diferença</th></tr></thead><tbody>';
+  if(!linhas.length){
+    el.innerHTML='<div class="none"><b>'+(COELBA_FILTRO==='dif'?'Carteira e Coelba batem em todas as obras.':'Nenhuma obra encontrada.')+'</b>'
+      +(COELBA_FILTRO==='dif'?'Nenhuma divergência de postes no arquivo importado.':'Ajuste a busca ou mostre todas.')+'</div>';
+    return;
+  }
+  let h='<table><thead><tr><th>PEP</th><th>Obra</th><th>Status</th>'
+      + '<th class="right">Carteira</th><th class="right">Coelba</th><th class="right">Diferença</th></tr></thead><tbody>';
   linhas.forEach(r=>{
     const cart=r.cart==null?'—':r.cart, coel=r.coelba==null?'—':r.coelba;
-    const cls=r.dif>0?'delta-up':(r.dif<0?'delta-dn':'no-change'), sinal=r.dif>0?'+':'';
-    const stBadge=r.status?'<span class="status-badge">'+r.status+'</span>':'<span style="color:#ccc;">–</span>';
-    const pepCol=r.naCarteira?'<code>'+r.pep+'</code>':'<code style="opacity:.55;">'+r.pep+'</code> <span style="font-size:0.58rem;color:#c05621;font-weight:800;">fora da carteira</span>';
-    h+='<tr><td>'+pepCol+'</td><td class="td-main">'+(r.titulo||'')+'</td><td>'+(r.utd||'')+'</td><td>'+stBadge+'</td>'
-      +'<td class="diff-cell"><span class="new">'+cart+'</span></td>'
-      +'<td class="diff-cell"><span class="new">'+coel+'</span></td>'
-      +'<td class="diff-cell"><span class="'+cls+'">'+(r.dif===0?'✓ igual':sinal+r.dif)+'</span></td></tr>';
+    const cls=r.dif>0?'up':(r.dif<0?'dn':'eq'), sinal=r.dif>0?'+':'';
+    h+='<tr><td><code>'+esc(r.pep)+'</code>'+(r.naCarteira?'':'<div class="t-utd" style="color:var(--alert);">fora da carteira</div>')+'</td>'
+      +'<td><div class="t-obra">'+esc(r.titulo||'')+'</div><div class="t-utd">'+esc(r.utd||'')+'</div></td>'
+      +'<td>'+(r.status?'<span class="st">'+esc(r.status)+'</span>':'<span style="color:#c7d5d8;">—</span>')+'</td>'
+      +'<td class="right"><span class="postes">'+cart+'</span></td>'
+      +'<td class="right"><span class="postes">'+coel+'</span></td>'
+      +'<td class="right"><span class="delta"><span class="sign '+cls+'">'+(r.dif===0?'igual':sinal+r.dif)+'</span></span></td></tr>';
   });
   el.innerHTML=h+'</tbody></table>';
-}
-
-function histToggle(idx){
-  const d=document.getElementById('hist-det-'+idx), ar=document.getElementById('hist-arrow-'+idx);
-  if(!d) return;
-  const open = d.style.display==='none';
-  d.style.display = open?'block':'none';
-  if(ar) ar.textContent = open?'▾':'▸';
 }
 
 // Relógio na top-bar (igual aos outros módulos)
