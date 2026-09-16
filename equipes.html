@@ -387,6 +387,11 @@ try{if(localStorage.getItem("mariua_darkmode")==="1")document.body.classList.add
 .cad-mod{background:#fff;border-radius:16px;padding:20px;max-width:620px;width:100%;max-height:86vh;overflow:auto}
 .cad-mod textarea{width:100%;height:150px;padding:10px;border:1.5px solid #e2e8f0;border-radius:10px;font-family:ui-monospace,monospace;font-size:0.72rem;resize:vertical}
 .cad-dica{font-size:0.72rem;color:#8a94a0;font-weight:600;line-height:1.5}
+.cart-sub{font-size:0.66rem;font-weight:800;letter-spacing:0.8px;text-transform:uppercase;color:#0d7377;margin-bottom:8px}
+.cart-ver{font-size:0.68rem;font-weight:800;color:#0d7377;margin-right:8px;white-space:nowrap}
+.cart-nova td{border-top:1px solid #e2e8f0}
+.cart-chave{font-family:ui-monospace,monospace;font-size:0.7rem;font-weight:700;color:#0d7377;background:#f0fafa;padding:1px 6px;border-radius:4px}
+body.dark .cart-chave{background:#0d1723 !important;color:#7fd1cc !important}
 body.dark .cad-tab input,body.dark .cad-tab select{background:#0d1723 !important;border-color:#22303f !important;color:#dbe4ee !important}
 body.dark .cad-mod{background:#101a28 !important;color:#dbe4ee}
 </style>
@@ -394,12 +399,13 @@ body.dark .cad-mod{background:#101a28 !important;color:#dbe4ee}
 <div class="page-hdr">
   <div>
     <h2>Cadastro de Equipes</h2>
-    <p>Gerente, supervisores e equipes do contrato. É daqui que as outras telas leem quem é encarregado de qual equipe, sob qual supervisor, e quantos colaboradores ela tem.</p>
+    <p>Gerente, supervisores, equipes e as carteiras mensais do contrato. É daqui que as outras telas leem quem é encarregado de qual equipe, sob qual supervisor, quantos colaboradores ela tem — e em qual planilha está a carteira de cada mês.</p>
   </div>
   <div class="head-stats">
     <div class="stat"><b id="stEquipes">0</b><span>Equipes</span></div>
     <div class="stat"><b id="stSups">0</b><span>Supervisores</span></div>
     <div class="stat"><b id="stColab">0</b><span>Colaboradores</span></div>
+    <div class="stat"><b id="stCart">0</b><span>Carteiras lançadas</span></div>
   </div>
 </div>
 
@@ -456,6 +462,28 @@ body.dark .cad-mod{background:#101a28 !important;color:#dbe4ee}
         <tbody id="tbEqs"></tbody>
       </table>
       <div class="cad-vazio" id="eqsVazio">Nenhuma equipe cadastrada.</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-header">
+      <div class="section-label"><div class="icon-teal">C</div> CARTEIRAS</div>
+      <button class="btn btn-sm" id="btnCartSeed" title="Preenche com as planilhas e os meses que hoje estão fixos dentro do Comparador">Carregar carteiras atuais</button>
+    </div>
+    <div class="toolbar">
+      <p class="cad-dica" style="margin-bottom:14px;">Uma linha por <b>mês e base</b>: onde está a carteira daquele mês naquela base. As outras telas leem esta lista direto do banco (chave <span class="cart-chave">cadastro_carteiras</span>), então quando entra um mês novo é só lançar aqui — não precisa mais editar página por página. Cole a URL da aba do Google Sheets no campo da aba: o gid é extraído sozinho, e a planilha também, se o campo estiver vazio. O campo Base sugere os centros de serviço do contrato (Jacobina, Irecê, Serrinha, Feira de Santana, Aracaju e os polos) e aceita qualquer outra que você digitar.</p>
+      <div style="overflow-x:auto;">
+        <table class="cad-tab">
+          <thead><tr>
+            <th style="width:80px">Ano</th><th style="width:96px">Mês</th><th style="width:19%">Base</th>
+            <th>Planilha (ID ou URL)</th><th style="width:15%">Aba (gid)</th><th style="width:74px"></th>
+          </tr></thead>
+          <tbody id="tbCart"></tbody>
+        </table>
+      </div>
+      <div class="cad-vazio" id="cartVazio">Nenhuma carteira lançada.</div>
+      <button class="btn btn-sm" id="btnAddCart" type="button" style="margin-top:9px;">Lançar carteira</button>
+      <datalist id="dlBases"></datalist>
     </div>
   </div>
 
@@ -530,6 +558,68 @@ body.dark .cad-mod{background:#101a28 !important;color:#dbe4ee}
   }
   function codigoEquipe(txt){
     return String(txt||'').replace(/\s+/g,' ').trim().toUpperCase();
+  }
+
+  // ===== Carteiras: uma por mês e base, lidas pelas outras telas =====
+  const DB_KEY_CART = 'cadastro_carteiras';
+  const LS_KEY_CART = 'cadastro_carteiras_v1';
+  const MES_NOME = ['','JAN','FEV','MAR','ABR','MAI','JUN','JUL','AGO','SET','OUT','NOV','DEZ'];
+  // o que hoje está fixo dentro do Comparador, para migrar em um clique
+  const SEED_JAC = '142gvn8pNgJGTGDkidCfuOWMHJ2OCKpJd_FQU8zeo0x8';
+  const SEED_IRC = '14ImbZb8-OCBp78jDtd0QFkSLrMG5vXA7tzrM-x6KQVo';
+  const SEED_CART = [
+    { ano:2026, mes:1, utd:'JACOBINA', sheet:SEED_JAC, gid:'310661297'  },
+    { ano:2026, mes:1, utd:'IRECÊ',    sheet:SEED_IRC, gid:'1816810936' },
+    { ano:2026, mes:2, utd:'JACOBINA', sheet:SEED_JAC, gid:'1111886256' },
+    { ano:2026, mes:2, utd:'IRECÊ',    sheet:SEED_IRC, gid:'420931092'  },
+    { ano:2026, mes:3, utd:'JACOBINA', sheet:SEED_JAC, gid:'624598081'  },
+    { ano:2026, mes:3, utd:'IRECÊ',    sheet:SEED_IRC, gid:'534264140'  },
+    { ano:2026, mes:4, utd:'JACOBINA', sheet:SEED_JAC, gid:'257935593'  },
+    { ano:2026, mes:4, utd:'IRECÊ',    sheet:SEED_IRC, gid:'1837597274' },
+    { ano:2026, mes:5, utd:'JACOBINA', sheet:SEED_JAC, gid:'1209313517' },
+    { ano:2026, mes:5, utd:'IRECÊ',    sheet:SEED_IRC, gid:'663282613'  },
+    { ano:2026, mes:6, utd:'JACOBINA', sheet:SEED_JAC, gid:'557360701'  },
+    { ano:2026, mes:6, utd:'IRECÊ',    sheet:SEED_IRC, gid:'1842405101' }
+  ];
+  let carteiras = [];   // [{ ano, mes, utd, sheet, gid }]
+
+  // As bases oferecidas vêm dos centros de serviço do contrato (CENTROS, logo abaixo),
+  // sem o prefixo do estado: BA-SERRINHA -> SERRINHA. Digitar uma base fora da lista continua valendo.
+  function baseDoCentro(nome){ return String(nome||'').replace(/^[A-Z]{2}-/,'').trim().toUpperCase(); }
+  function basesDoContrato(){
+    const out=[], vis={};
+    CENTROS.forEach(c => {
+      const u = baseDoCentro(c.nome);
+      if(u && !vis[u]){ vis[u]=1; out.push(u); }
+    });
+    return out;
+  }
+  // sugestões: primeiro as bases que já têm carteira, depois o resto do contrato
+  function basesSugeridas(){
+    const usadas = basesUsadas(), vis={};
+    const out = usadas.slice();
+    usadas.forEach(u => { vis[u]=1; });
+    basesDoContrato().forEach(u => { if(!vis[u]){ vis[u]=1; out.push(u); } });
+    return out;
+  }
+
+  const baseNome = t => String(t||'').trim().toUpperCase();
+  // aceita o ID cru ou a URL colada: .../spreadsheets/d/<id>/edit#gid=<gid>
+  function idDaPlanilha(txt){
+    const t = String(txt||'').trim();
+    const m = t.match(/\/spreadsheets\/d\/([A-Za-z0-9-_]{20,})/);
+    return m ? m[1] : t.replace(/\s+/g,'');
+  }
+  function gidDaUrl(txt){ const m = String(txt||'').match(/[#&?]gid=(\d+)/); return m ? m[1] : ''; }
+  function chaveMes(c){ return (Number(c.ano)||0)*12 + (Number(c.mes)||0); }
+  // mais recente primeiro, e dentro do mês em ordem de base
+  function cartOrdenadas(){
+    return carteiras.slice().sort((a,b) => chaveMes(b)-chaveMes(a) || baseNome(a.utd).localeCompare(baseNome(b.utd)));
+  }
+  function basesUsadas(){
+    const out=[], vis={};
+    cartOrdenadas().forEach(c => { const u=baseNome(c.utd); if(u && !vis[u]){ vis[u]=1; out.push(u); } });
+    return out;
   }
 
   let gerente = { nome:'', base:'' };
@@ -626,15 +716,73 @@ body.dark .cad-mod{background:#101a28 !important;color:#dbe4ee}
     $('#eqsVazio').style.display = equipes.length ? 'none' : 'block';
   }
 
+  function renderCart(){
+    const tb=$('#tbCart'); tb.innerHTML='';
+    const optMes = MES_NOME.slice(1).map((n,k) => '<option value="'+(k+1)+'">'+n+'</option>').join('');
+    const dl=$('#dlBases');
+    if(dl) dl.innerHTML = basesSugeridas().map(u => '<option value="'+esc(u)+'"></option>').join('');
+    let mesAnterior = null;
+    cartOrdenadas().forEach(c => {
+      const tr=document.createElement('tr');
+      // um fio separa cada mês, para não confundir linhas de meses diferentes
+      if(mesAnterior !== null && chaveMes(c) !== mesAnterior) tr.className='cart-nova';
+      mesAnterior = chaveMes(c);
+      const gidOk = /^\d+$/.test(String(c.gid||'').trim());
+      const link = (String(c.sheet||'').trim() && gidOk)
+        ? '<a class="cart-ver" target="_blank" rel="noopener" href="https://docs.google.com/spreadsheets/d/'+esc(c.sheet)+'/edit#gid='+esc(c.gid)+'">ver</a>' : '';
+      tr.innerHTML =
+        '<td><input type="number" min="2000" max="2100" step="1" value="'+esc(c.ano)+'" data-c="ano"></td>'+
+        '<td><select data-c="mes">'+optMes+'</select></td>'+
+        '<td><input type="text" value="'+esc(c.utd)+'" data-c="utd" list="dlBases" placeholder="Ex.: JACOBINA" style="font-weight:800;"></td>'+
+        '<td><input type="text" value="'+esc(c.sheet)+'" data-c="sheet" placeholder="Cole a URL da planilha ou só o ID"></td>'+
+        '<td><input type="text" value="'+esc(c.gid)+'" data-c="gid" placeholder="cole a URL da aba"></td>'+
+        '<td style="text-align:right;white-space:nowrap;">'+link+'<button class="cad-x" title="Remover">×</button></td>';
+      const iAno=tr.querySelector('[data-c=ano]'), iMes=tr.querySelector('[data-c=mes]'),
+            iUtd=tr.querySelector('[data-c=utd]'), iSheet=tr.querySelector('[data-c=sheet]'),
+            iGid=tr.querySelector('[data-c=gid]');
+      iMes.value = String(Number(c.mes)||1);
+      iAno.addEventListener('input',  e => { c.ano = e.target.value; marcarSujo(); });
+      iAno.addEventListener('change', () => { renderCart(); });
+      iMes.addEventListener('change', e => { c.mes = Number(e.target.value); marcarSujo(); renderCart(); });
+      iUtd.addEventListener('input',  e => { c.utd = e.target.value; marcarSujo(); });
+      iUtd.addEventListener('change', e => { c.utd = baseNome(e.target.value); renderCart(); });
+      iSheet.addEventListener('input',  e => { c.sheet = idDaPlanilha(e.target.value); marcarSujo(); });
+      iSheet.addEventListener('change', e => { e.target.value = c.sheet || ''; renderCart(); });
+      iGid.addEventListener('input', e => {
+        const bruto = e.target.value;
+        const gid = gidDaUrl(bruto), id = (bruto.match(/\/spreadsheets\/d\/([A-Za-z0-9-_]{20,})/)||[])[1];
+        if(gid) e.target.value = gid;
+        c.gid = String(gid || bruto).trim();
+        // URL colada resolve a planilha também, quando o campo ainda está vazio
+        if(id && !String(c.sheet||'').trim()){ c.sheet = id; iSheet.value = id; }
+        marcarSujo();
+      });
+      iGid.addEventListener('change', () => { renderCart(); });
+      if(!baseNome(c.utd))               iUtd.style.borderColor  = '#f0a500';
+      if(!String(c.sheet||'').trim())    iSheet.style.borderColor= '#f0a500';
+      if(!gidOk)                         iGid.style.borderColor  = '#f0a500';
+      tr.querySelector('.cad-x').addEventListener('click', () => {
+        const quando = (MES_NOME[Number(c.mes)]||'?')+'/'+(c.ano||'?');
+        if(!confirm('Remover a carteira de '+quando+' · '+(baseNome(c.utd)||'sem base')+'?')) return;
+        const k = carteiras.indexOf(c);
+        if(k>=0) carteiras.splice(k,1);
+        marcarSujo(); renderCart(); atualizarStats();
+      });
+      tb.appendChild(tr);
+    });
+    $('#cartVazio').style.display = carteiras.length ? 'none' : 'block';
+  }
+
   function atualizarStats(){
     $('#stEquipes').textContent = equipes.length;
     $('#stSups').textContent = supervisores.length;
     $('#stColab').textContent = equipes.reduce((s,q) => s + (parseInt(q.qtd_colab,10)||0), 0);
+    $('#stCart').textContent = carteiras.length;
   }
   function renderTudo(){
     $('#gerNome').value = gerente.nome || '';
     $('#gerBase').value = gerente.base || '';
-    renderSups(); renderEqs(); atualizarStats();
+    renderSups(); renderEqs(); renderCart(); atualizarStats();
   }
 
   // ---------- banco ----------
@@ -658,6 +806,76 @@ body.dark .cad-mod{background:#101a28 !important;color:#dbe4ee}
   }
   function salvarCache(){ try{ localStorage.setItem(LS_KEY, JSON.stringify(pacote())); }catch(e){} }
 
+  // ---------- carteiras: pacote, leitura e gravação ----------
+  function pacoteCart(){
+    const cs = carteiras.map(c => ({
+        ano: Number(c.ano)||0, mes: Number(c.mes)||0, utd: baseNome(c.utd),
+        sheet: idDaPlanilha(c.sheet), gid: String(c.gid||'').trim()
+      }))
+      .filter(c => c.ano || c.mes || c.utd || c.sheet || c.gid)
+      .sort((a,b) => (a.ano*12+a.mes)-(b.ano*12+b.mes) || a.utd.localeCompare(b.utd));
+    return { formato:2, carteiras:cs, atualizado:new Date().toISOString(), por: window.MARIUA_USER || '' };
+  }
+  function aplicarCart(v){
+    if(!v) return;
+    if(Array.isArray(v.carteiras)){
+      carteiras = v.carteiras.map(c => ({ ano:c.ano||'', mes:c.mes||'', utd:c.utd||'', sheet:c.sheet||'', gid:c.gid||'' }));
+    }else if(Array.isArray(v.meses)){
+      // formato anterior (planilha fixa por base + um gid por mês) vira uma linha por mês e base
+      const sheets = {};
+      (v.bases||[]).forEach(b => { sheets[baseNome(b.utd)] = b.sheet||''; });
+      const out = [];
+      v.meses.forEach(m => Object.keys(m.gids||{}).forEach(u => {
+        out.push({ ano:m.ano||'', mes:m.mes||'', utd:baseNome(u), sheet:sheets[baseNome(u)]||'', gid:m.gids[u]||'' });
+      }));
+      carteiras = out;
+    }
+    carteiras.sort((a,b) => chaveMes(a)-chaveMes(b) || baseNome(a.utd).localeCompare(baseNome(b.utd)));
+  }
+  function salvarCacheCart(){ try{ localStorage.setItem(LS_KEY_CART, JSON.stringify(pacoteCart())); }catch(e){} }
+  // devolve '' quando está tudo certo, ou a mensagem do primeiro problema
+  function validarCart(p){
+    const vistos = {};
+    for(const c of p.carteiras){
+      const quando = (MES_NOME[c.mes]||'?')+'/'+(c.ano||'?');
+      if(!(c.mes>=1 && c.mes<=12))      return 'Tem uma carteira com mês inválido ('+quando+').';
+      if(!(c.ano>=2000 && c.ano<=2100)) return 'Tem uma carteira com ano inválido ('+quando+').';
+      if(!c.utd)                        return 'A carteira de '+quando+' está sem a base.';
+      if(!c.sheet)                      return 'A carteira de '+quando+' · '+c.utd+' está sem o ID da planilha.';
+      if(!/^\d+$/.test(c.gid))          return 'A aba de '+quando+' · '+c.utd+' não tem um gid numérico. Cole a URL da aba ou só o número do gid.';
+      const k = c.ano+'-'+c.mes+'-'+c.utd;
+      if(vistos[k])                     return quando+' · '+c.utd+' está lançada duas vezes.';
+      vistos[k] = 1;
+    }
+    return '';
+  }
+  async function carregarCarteiras(){
+    try{
+      const r = await fetch(SUPA_URL+'/rest/v1/turno_data?select=value&key=eq.'+DB_KEY_CART+'&limit=1',{headers:SUPA_H});
+      if(!r.ok) throw new Error('HTTP '+r.status);
+      const j = await r.json();
+      const v = (Array.isArray(j) && j.length) ? j[0].value : null;
+      if(v){ aplicarCart(v); salvarCacheCart(); return true; }
+      return false;
+    }catch(e){
+      console.error('cadastro_carteiras: falha ao ler o banco', e);
+      try{ aplicarCart(JSON.parse(localStorage.getItem(LS_KEY_CART)||'null')); }catch(x){}
+      return false;
+    }
+  }
+  async function salvarCarteiras(){
+    const p = pacoteCart();
+    const erro = validarCart(p);
+    if(erro) throw new Error(erro);
+    const r = await fetch(SUPA_URL+'/rest/v1/turno_data',{
+      method:'POST',
+      headers:Object.assign({'Prefer':'resolution=merge-duplicates'},SUPA_H),
+      body:JSON.stringify({key:DB_KEY_CART, value:p, updated_at:new Date().toISOString()})
+    });
+    if(!r.ok) throw new Error('HTTP '+r.status+' ao salvar as carteiras');
+    aplicarCart(p); salvarCacheCart(); renderCart(); atualizarStats();
+  }
+
   async function carregar(){
     setDbStatus('syncing','Carregando...'); setStatus('loading','Lendo o banco…');
     try{
@@ -665,13 +883,16 @@ body.dark .cad-mod{background:#101a28 !important;color:#dbe4ee}
       if(!r.ok) throw new Error('HTTP '+r.status);
       const j = await r.json();
       const v = (Array.isArray(j) && j.length) ? j[0].value : null;
+      await carregarCarteiras();
+      const cart = carteiras.length ? ' · ' + carteiras.length + ' carteira(s) lançada(s)' : ' · nenhuma carteira lançada';
       if(v){
         aplicar(v); salvarCache(); renderTudo(); sujo = false;
         setDbStatus('online','Compartilhado · ' + fmt(v.atualizado) + (v.por ? ' por '+v.por : ''));
-        setStatus('ok', equipes.length + ' equipe(s) · ' + supervisores.length + ' supervisor(es)');
+        setStatus('ok', equipes.length + ' equipe(s) · ' + supervisores.length + ' supervisor(es)' + cart);
       }else{
+        renderTudo();
         setDbStatus('online','Compartilhado · vazio');
-        setStatus('', 'Cadastro vazio — use "Carregar cadastro inicial" ou "Importar planilha".');
+        setStatus('', 'Cadastro vazio — use "Carregar cadastro inicial" ou "Importar planilha".' + (carteiras.length?'':' As carteiras também estão vazias: use "Carregar carteiras atuais".'));
       }
     }catch(e){
       console.error('cadastro_equipes: falha ao ler o banco', e);
@@ -691,9 +912,11 @@ body.dark .cad-mod{background:#101a28 !important;color:#dbe4ee}
         body:JSON.stringify({key:DB_KEY, value:p, updated_at:new Date().toISOString()})
       });
       if(!r.ok) throw new Error('HTTP '+r.status);
+      await salvarCarteiras();
       salvarCache(); sujo = false;
       setDbStatus('online','Compartilhado · ' + fmt(p.atualizado));
-      setStatus('ok','Cadastro salvo. ' + equipes.length + ' equipe(s) · ' + supervisores.length + ' supervisor(es)');
+      setStatus('ok','Cadastro salvo. ' + equipes.length + ' equipe(s) · ' + supervisores.length + ' supervisor(es) · '
+        + carteiras.length + ' carteira(s), lidas pelas outras telas.');
     }catch(e){
       console.error('cadastro_equipes: falha ao salvar', e);
       setDbStatus('offline','Alteração só no aparelho');
@@ -913,6 +1136,35 @@ body.dark .cad-mod{background:#101a28 !important;color:#dbe4ee}
     equipes = SEED.equipes.map(q => ({...q}));
     marcarSujo(); renderTudo();
     setStatus('ok','Cadastro inicial carregado. Confira e clique em "Salvar no banco".');
+  });
+  $('#btnAddCart').addEventListener('click', () => {
+    const ord = cartOrdenadas(), bases = basesUsadas();
+    let ano, mes, utd = '', sheet = '';
+    if(ord.length){
+      const topo = ord[0];
+      ano = Number(topo.ano) || new Date().getFullYear();
+      mes = Number(topo.mes) || 1;
+      // primeiro completa as bases que faltam no mês mais recente; depois abre o mês seguinte
+      const jaLancadas = carteiras.filter(c => Number(c.ano)===ano && Number(c.mes)===mes).map(c => baseNome(c.utd));
+      const faltando = bases.filter(u => jaLancadas.indexOf(u) < 0);
+      if(faltando.length){ utd = faltando[0]; }
+      else { mes++; if(mes>12){ mes=1; ano++; } utd = bases[0] || ''; }
+      // a planilha costuma ser a mesma da última carteira daquela base
+      const anterior = ord.filter(c => baseNome(c.utd)===utd)[0];
+      if(anterior) sheet = anterior.sheet || '';
+    }else{
+      const d = new Date(); ano = d.getFullYear(); mes = d.getMonth()+1;
+      utd = basesSugeridas()[0] || '';
+    }
+    carteiras.push({ ano, mes, utd, sheet, gid:'' });
+    marcarSujo(); renderCart(); atualizarStats();
+    setStatus('', 'Carteira de '+(MES_NOME[mes]||'?')+'/'+ano+(utd?' · '+utd:'')+' criada. Cole a URL da aba e salve.');
+  });
+  $('#btnCartSeed').addEventListener('click', () => {
+    if(carteiras.length && !confirm('Isto substitui as carteiras que estão na tela pelas que hoje estão fixas dentro do Comparador. Continuar?')) return;
+    carteiras = SEED_CART.map(c => ({...c}));
+    marcarSujo(); renderCart(); atualizarStats();
+    setStatus('ok','Carteiras atuais carregadas: '+carteiras.length+' lançamentos. Confira e clique em "Salvar no banco".');
   });
   window.addEventListener('beforeunload', e => { if(sujo){ e.preventDefault(); e.returnValue = ''; } });
 
