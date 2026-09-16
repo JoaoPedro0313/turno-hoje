@@ -471,7 +471,19 @@ body.dark .cad-mod{background:#101a28 !important;color:#dbe4ee}
       <button class="btn btn-sm" id="btnCartSeed" title="Preenche com as planilhas e os meses que hoje estão fixos dentro do Comparador">Carregar carteiras atuais</button>
     </div>
     <div class="toolbar">
-      <p class="cad-dica" style="margin-bottom:14px;">Uma linha por <b>mês e base</b>: onde está a carteira daquele mês naquela base. As outras telas leem esta lista direto do banco (chave <span class="cart-chave">cadastro_carteiras</span>), então quando entra um mês novo é só lançar aqui — não precisa mais editar página por página. Cole a URL da aba do Google Sheets no campo da aba: o gid é extraído sozinho, e a planilha também, se o campo estiver vazio. O campo Base sugere os centros de serviço do contrato (Jacobina, Irecê, Serrinha, Feira de Santana, Aracaju e os polos) e aceita qualquer outra que você digitar.</p>
+      <p class="cad-dica" style="margin-bottom:14px;">Uma linha por <b>mês e base</b>: onde está a carteira daquele mês naquela base. As outras telas leem esta lista direto do banco (chave <span class="cart-chave">cadastro_carteiras</span>), então quando entra um mês novo é só lançar aqui — não precisa mais editar página por página. Cole a URL da aba do Google Sheets no campo da aba: o gid é extraído sozinho, e a planilha também, se o campo estiver vazio. As bases são cadastradas logo abaixo e aparecem para escolher em cada carteira; a planilha padrão da base já entra preenchida no lançamento.</p>
+      <div class="cart-sub">Bases</div>
+      <table class="cad-tab">
+        <thead><tr><th style="width:30%">Base</th><th>Planilha padrão (ID ou URL)</th><th style="width:40px"></th></tr></thead>
+        <tbody id="tbBases"></tbody>
+      </table>
+      <div class="cad-vazio" id="basesVazio">Nenhuma base cadastrada. Cadastre as bases aqui e elas aparecem para escolher em cada carteira.</div>
+      <div style="display:flex;gap:7px;flex-wrap:wrap;margin-top:9px;">
+        <button class="btn btn-sm" id="btnAddBase" type="button">Adicionar base</button>
+        <button class="btn btn-sm" id="btnBasesContrato" type="button" title="Cadastra de uma vez os centros de serviço que já estão na lista do contrato">Trazer os centros do contrato</button>
+      </div>
+
+      <div class="cart-sub" style="margin-top:24px;">Carteiras</div>
       <div style="overflow-x:auto;">
         <table class="cad-tab">
           <thead><tr>
@@ -483,7 +495,6 @@ body.dark .cad-mod{background:#101a28 !important;color:#dbe4ee}
       </div>
       <div class="cad-vazio" id="cartVazio">Nenhuma carteira lançada.</div>
       <button class="btn btn-sm" id="btnAddCart" type="button" style="margin-top:9px;">Lançar carteira</button>
-      <datalist id="dlBases"></datalist>
     </div>
   </div>
 
@@ -581,6 +592,7 @@ body.dark .cad-mod{background:#101a28 !important;color:#dbe4ee}
     { ano:2026, mes:6, utd:'JACOBINA', sheet:SEED_JAC, gid:'557360701'  },
     { ano:2026, mes:6, utd:'IRECÊ',    sheet:SEED_IRC, gid:'1842405101' }
   ];
+  let basesCad = [];    // [{ nome, sheet }] — as bases do contrato, cadastradas na tela
   let carteiras = [];   // [{ ano, mes, utd, sheet, gid }]
 
   // As bases oferecidas vêm dos centros de serviço do contrato (CENTROS, logo abaixo),
@@ -594,13 +606,16 @@ body.dark .cad-mod{background:#101a28 !important;color:#dbe4ee}
     });
     return out;
   }
-  // sugestões: primeiro as bases que já têm carteira, depois o resto do contrato
-  function basesSugeridas(){
-    const usadas = basesUsadas(), vis={};
-    const out = usadas.slice();
-    usadas.forEach(u => { vis[u]=1; });
-    basesDoContrato().forEach(u => { if(!vis[u]){ vis[u]=1; out.push(u); } });
+  // nomes cadastrados, na ordem em que estão na tabela
+  function basesCadastradas(){
+    const out=[], vis={};
+    basesCad.forEach(b => { const u=baseNome(b.nome); if(u && !vis[u]){ vis[u]=1; out.push(u); } });
     return out;
+  }
+  function planilhaDaBase(nome){
+    const u = baseNome(nome);
+    const b = basesCad.filter(x => baseNome(x.nome)===u)[0];
+    return b ? (b.sheet||'') : '';
   }
 
   const baseNome = t => String(t||'').trim().toUpperCase();
@@ -716,11 +731,47 @@ body.dark .cad-mod{background:#101a28 !important;color:#dbe4ee}
     $('#eqsVazio').style.display = equipes.length ? 'none' : 'block';
   }
 
+  function renderBases(){
+    const tb=$('#tbBases'); tb.innerHTML='';
+    basesCad.forEach(b => {
+      const tr=document.createElement('tr');
+      tr.innerHTML =
+        '<td><input type="text" value="'+esc(b.nome)+'" data-c="nome" placeholder="Ex.: SERRINHA" style="font-weight:800;"></td>'+
+        '<td><input type="text" value="'+esc(b.sheet)+'" data-c="sheet" placeholder="Opcional — cole a URL da planilha desta base"></td>'+
+        '<td style="text-align:right;"><button class="cad-x" title="Remover">×</button></td>';
+      const iNome=tr.querySelector('[data-c=nome]'), iSheet=tr.querySelector('[data-c=sheet]');
+      iNome.addEventListener('input', e => { b.nome = e.target.value; marcarSujo(); });
+      iNome.addEventListener('change', e => {
+        const antes = baseNome(b.nome), agora = baseNome(e.target.value);
+        // renomear a base acompanha as carteiras dela, senão elas ficariam órfãs
+        if(antes && antes!==agora) carteiras.forEach(c => { if(baseNome(c.utd)===antes) c.utd = agora; });
+        b.nome = agora; renderBases(); renderCart();
+      });
+      iSheet.addEventListener('input',  e => { b.sheet = idDaPlanilha(e.target.value); marcarSujo(); });
+      iSheet.addEventListener('change', e => { e.target.value = b.sheet || ''; });
+      if(!baseNome(b.nome)) iNome.style.borderColor = '#f0a500';
+      tr.querySelector('.cad-x').addEventListener('click', () => {
+        const u = baseNome(b.nome);
+        const usos = carteiras.filter(c => baseNome(c.utd)===u).length;
+        if(usos && !confirm('Remover a base "'+(b.nome||'sem nome')+'"? '+usos+' carteira(s) ficam com a base fora do cadastro.')) return;
+        const k = basesCad.indexOf(b); if(k>=0) basesCad.splice(k,1);
+        marcarSujo(); renderBases(); renderCart();
+      });
+      tb.appendChild(tr);
+    });
+    $('#basesVazio').style.display = basesCad.length ? 'none' : 'block';
+  }
+
+  // as bases cadastradas viram as opções; base fora do cadastro continua aparecendo, para não sumir calada
+  function optBase(atual){
+    const u = baseNome(atual), lista = basesCadastradas();
+    let h = '<option value="">—</option>' + lista.map(x => '<option value="'+esc(x)+'">'+esc(x)+'</option>').join('');
+    if(u && lista.indexOf(u) < 0) h += '<option value="'+esc(u)+'">'+esc(u)+' (fora do cadastro)</option>';
+    return h;
+  }
   function renderCart(){
     const tb=$('#tbCart'); tb.innerHTML='';
     const optMes = MES_NOME.slice(1).map((n,k) => '<option value="'+(k+1)+'">'+n+'</option>').join('');
-    const dl=$('#dlBases');
-    if(dl) dl.innerHTML = basesSugeridas().map(u => '<option value="'+esc(u)+'"></option>').join('');
     let mesAnterior = null;
     cartOrdenadas().forEach(c => {
       const tr=document.createElement('tr');
@@ -733,7 +784,7 @@ body.dark .cad-mod{background:#101a28 !important;color:#dbe4ee}
       tr.innerHTML =
         '<td><input type="number" min="2000" max="2100" step="1" value="'+esc(c.ano)+'" data-c="ano"></td>'+
         '<td><select data-c="mes">'+optMes+'</select></td>'+
-        '<td><input type="text" value="'+esc(c.utd)+'" data-c="utd" list="dlBases" placeholder="Ex.: JACOBINA" style="font-weight:800;"></td>'+
+        '<td><select data-c="utd" style="font-weight:800;">'+optBase(c.utd)+'</select></td>'+
         '<td><input type="text" value="'+esc(c.sheet)+'" data-c="sheet" placeholder="Cole a URL da planilha ou só o ID"></td>'+
         '<td><input type="text" value="'+esc(c.gid)+'" data-c="gid" placeholder="cole a URL da aba"></td>'+
         '<td style="text-align:right;white-space:nowrap;">'+link+'<button class="cad-x" title="Remover">×</button></td>';
@@ -741,11 +792,16 @@ body.dark .cad-mod{background:#101a28 !important;color:#dbe4ee}
             iUtd=tr.querySelector('[data-c=utd]'), iSheet=tr.querySelector('[data-c=sheet]'),
             iGid=tr.querySelector('[data-c=gid]');
       iMes.value = String(Number(c.mes)||1);
+      iUtd.value = baseNome(c.utd);
       iAno.addEventListener('input',  e => { c.ano = e.target.value; marcarSujo(); });
       iAno.addEventListener('change', () => { renderCart(); });
       iMes.addEventListener('change', e => { c.mes = Number(e.target.value); marcarSujo(); renderCart(); });
-      iUtd.addEventListener('input',  e => { c.utd = e.target.value; marcarSujo(); });
-      iUtd.addEventListener('change', e => { c.utd = baseNome(e.target.value); renderCart(); });
+      iUtd.addEventListener('change', e => {
+        c.utd = baseNome(e.target.value);
+        // a planilha padrão da base entra sozinha quando o campo está vazio
+        if(!String(c.sheet||'').trim()) c.sheet = planilhaDaBase(c.utd);
+        marcarSujo(); renderCart();
+      });
       iSheet.addEventListener('input',  e => { c.sheet = idDaPlanilha(e.target.value); marcarSujo(); });
       iSheet.addEventListener('change', e => { e.target.value = c.sheet || ''; renderCart(); });
       iGid.addEventListener('input', e => {
@@ -782,7 +838,7 @@ body.dark .cad-mod{background:#101a28 !important;color:#dbe4ee}
   function renderTudo(){
     $('#gerNome').value = gerente.nome || '';
     $('#gerBase').value = gerente.base || '';
-    renderSups(); renderEqs(); renderCart(); atualizarStats();
+    renderSups(); renderEqs(); renderBases(); renderCart(); atualizarStats();
   }
 
   // ---------- banco ----------
@@ -814,10 +870,13 @@ body.dark .cad-mod{background:#101a28 !important;color:#dbe4ee}
       }))
       .filter(c => c.ano || c.mes || c.utd || c.sheet || c.gid)
       .sort((a,b) => (a.ano*12+a.mes)-(b.ano*12+b.mes) || a.utd.localeCompare(b.utd));
-    return { formato:2, carteiras:cs, atualizado:new Date().toISOString(), por: window.MARIUA_USER || '' };
+    const bs = basesCad.map(b => ({ nome: baseNome(b.nome), sheet: idDaPlanilha(b.sheet) }))
+                       .filter(b => b.nome || b.sheet);
+    return { formato:2, bases:bs, carteiras:cs, atualizado:new Date().toISOString(), por: window.MARIUA_USER || '' };
   }
   function aplicarCart(v){
     if(!v) return;
+    if(Array.isArray(v.bases)) basesCad = v.bases.map(b => ({ nome:b.nome||b.utd||'', sheet:b.sheet||'' }));
     if(Array.isArray(v.carteiras)){
       carteiras = v.carteiras.map(c => ({ ano:c.ano||'', mes:c.mes||'', utd:c.utd||'', sheet:c.sheet||'', gid:c.gid||'' }));
     }else if(Array.isArray(v.meses)){
@@ -831,10 +890,23 @@ body.dark .cad-mod{background:#101a28 !important;color:#dbe4ee}
       carteiras = out;
     }
     carteiras.sort((a,b) => chaveMes(a)-chaveMes(b) || baseNome(a.utd).localeCompare(baseNome(b.utd)));
+    // base que já tem carteira mas não está cadastrada entra na lista, para não ficar órfã
+    const cad = {};
+    basesCad.forEach(b => { cad[baseNome(b.nome)] = 1; });
+    carteiras.forEach(c => {
+      const u = baseNome(c.utd);
+      if(u && !cad[u]){ cad[u] = 1; basesCad.push({ nome:u, sheet:c.sheet||'' }); }
+    });
   }
   function salvarCacheCart(){ try{ localStorage.setItem(LS_KEY_CART, JSON.stringify(pacoteCart())); }catch(e){} }
   // devolve '' quando está tudo certo, ou a mensagem do primeiro problema
   function validarCart(p){
+    const nomes = {};
+    for(const b of p.bases){
+      if(!b.nome) return 'Tem uma base sem nome no cadastro de bases.';
+      if(nomes[b.nome]) return 'A base "'+b.nome+'" está cadastrada duas vezes.';
+      nomes[b.nome] = 1;
+    }
     const vistos = {};
     for(const c of p.carteiras){
       const quando = (MES_NOME[c.mes]||'?')+'/'+(c.ano||'?');
@@ -873,7 +945,7 @@ body.dark .cad-mod{background:#101a28 !important;color:#dbe4ee}
       body:JSON.stringify({key:DB_KEY_CART, value:p, updated_at:new Date().toISOString()})
     });
     if(!r.ok) throw new Error('HTTP '+r.status+' ao salvar as carteiras');
-    aplicarCart(p); salvarCacheCart(); renderCart(); atualizarStats();
+    aplicarCart(p); salvarCacheCart(); renderBases(); renderCart(); atualizarStats();
   }
 
   async function carregar(){
@@ -1137,8 +1209,20 @@ body.dark .cad-mod{background:#101a28 !important;color:#dbe4ee}
     marcarSujo(); renderTudo();
     setStatus('ok','Cadastro inicial carregado. Confira e clique em "Salvar no banco".');
   });
+  $('#btnAddBase').addEventListener('click', () => {
+    basesCad.push({ nome:'', sheet:'' }); marcarSujo(); renderBases(); renderCart();
+  });
+  $('#btnBasesContrato').addEventListener('click', () => {
+    const tem = {}; basesCadastradas().forEach(u => { tem[u]=1; });
+    const novas = basesDoContrato().filter(u => !tem[u]);
+    if(!novas.length){ setStatus('', 'Todos os centros do contrato já estão cadastrados como base.'); return; }
+    novas.forEach(u => basesCad.push({ nome:u, sheet:'' }));
+    marcarSujo(); renderBases(); renderCart();
+    setStatus('ok', novas.length+' base(s) cadastrada(s): '+novas.join(', ')+'. A planilha de cada uma é opcional.');
+  });
   $('#btnAddCart').addEventListener('click', () => {
-    const ord = cartOrdenadas(), bases = basesUsadas();
+    const ord = cartOrdenadas();
+    const bases = basesCadastradas().length ? basesCadastradas() : basesUsadas();
     let ano, mes, utd = '', sheet = '';
     if(ord.length){
       const topo = ord[0];
@@ -1151,10 +1235,11 @@ body.dark .cad-mod{background:#101a28 !important;color:#dbe4ee}
       else { mes++; if(mes>12){ mes=1; ano++; } utd = bases[0] || ''; }
       // a planilha costuma ser a mesma da última carteira daquela base
       const anterior = ord.filter(c => baseNome(c.utd)===utd)[0];
-      if(anterior) sheet = anterior.sheet || '';
+      sheet = (anterior && anterior.sheet) || planilhaDaBase(utd);
     }else{
       const d = new Date(); ano = d.getFullYear(); mes = d.getMonth()+1;
-      utd = basesSugeridas()[0] || '';
+      utd = bases[0] || '';
+      sheet = planilhaDaBase(utd);
     }
     carteiras.push({ ano, mes, utd, sheet, gid:'' });
     marcarSujo(); renderCart(); atualizarStats();
@@ -1163,7 +1248,8 @@ body.dark .cad-mod{background:#101a28 !important;color:#dbe4ee}
   $('#btnCartSeed').addEventListener('click', () => {
     if(carteiras.length && !confirm('Isto substitui as carteiras que estão na tela pelas que hoje estão fixas dentro do Comparador. Continuar?')) return;
     carteiras = SEED_CART.map(c => ({...c}));
-    marcarSujo(); renderCart(); atualizarStats();
+    basesCad = [{ nome:'JACOBINA', sheet:SEED_JAC }, { nome:'IRECÊ', sheet:SEED_IRC }];
+    marcarSujo(); renderBases(); renderCart(); atualizarStats();
     setStatus('ok','Carteiras atuais carregadas: '+carteiras.length+' lançamentos. Confira e clique em "Salvar no banco".');
   });
   window.addEventListener('beforeunload', e => { if(sujo){ e.preventDefault(); e.returnValue = ''; } });
