@@ -22,6 +22,23 @@
   if (window.__MARIUA_AUTH__) return;
   window.__MARIUA_AUTH__ = true;
 
+  /* Pasta onde este arquivo está. Algumas telas (neoex, cadastro_obra) ficam
+     em subpasta e carregam a guarda como ../mariua-auth.js — sem esta base,
+     a foto do login e os links de "sem permissão" apontariam para o lugar
+     errado. */
+  var BASE = (function () {
+    var sc = document.currentScript;
+    if (!sc) {
+      var todos = document.getElementsByTagName('script');
+      for (var i = todos.length - 1; i >= 0; i--) {
+        if ((todos[i].src || '').indexOf('mariua-auth.js') >= 0) { sc = todos[i]; break; }
+      }
+    }
+    if (!sc || !sc.src) return '';
+    return sc.src.replace(/[?#].*$/, '').replace(/[^\/]*$/, '');
+  })();
+  window.MARIUA_BASE = BASE;
+
   // ─── 1. CONFIGURAÇÃO ──────────────────────────────────────────────────────
   var SUPA_URL = 'https://eqxejfoibebcbtsqymji.supabase.co';
   var SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVxeGVqZm9pYmViY2J0c3F5bWppIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE4NjUzMTEsImV4cCI6MjA4NzQ0MTMxMX0.lwf7_EJ6UchEOpzhW3cVKztxDGy78gaQblRvgiEwWh8';
@@ -67,7 +84,7 @@
     "font-family:'Barlow',system-ui,-apple-system,sans-serif;" +
     'background:rgba(9,42,44,.68);backdrop-filter:blur(7px);-webkit-backdrop-filter:blur(7px)}' +
     // fundo da tela de login: foto da cidade + véu da marca
-    "#mariua-ovl.is-login{background:linear-gradient(180deg,rgba(13,115,119,.90) 0%,rgba(13,115,119,.72) 42%,rgba(240,90,26,.42) 100%),url('login-bg.jpg') center/cover no-repeat,#0d7377;backdrop-filter:none;-webkit-backdrop-filter:none}" +
+    "#mariua-ovl.is-login{background:linear-gradient(180deg,rgba(13,115,119,.90) 0%,rgba(13,115,119,.72) 42%,rgba(240,90,26,.42) 100%),url(\'" + BASE + "login-bg.jpg\') center/cover no-repeat,#0d7377;backdrop-filter:none;-webkit-backdrop-filter:none}" +
     // ── cartão ───────────────────────────────────────────────────────────
     '#mariua-ovl .mx{background:#fff;border-radius:18px;max-width:404px;width:100%;' +
     'padding:30px 30px 24px;box-shadow:0 26px 70px rgba(0,0,0,.34);' +
@@ -381,11 +398,22 @@
     return u.telas.indexOf(id) >= 0;
   }
   window.mariuaTemTela = podeVer;
+  /* O nav.js pergunta isto para cada item do menu: qual tela é este arquivo?
+     Devolve null para arquivo fora do catálogo (aí o nav deixa passar). */
+  window.mariuaTelaDeArquivo = function (href) {
+    var f = normArq(href);
+    for (var i = 0; i < TELAS.length; i++) {
+      if (TELAS[i].arquivos.map(normArq).indexOf(f) >= 0) return TELAS[i].id;
+    }
+    return null;
+  };
 
   function normArq(v) {
     v = String(v || '').split('?')[0].split('#')[0];
     try { v = decodeURIComponent(v); } catch (e) {}
-    return v.replace(/^\.?\//, '').toLowerCase();
+    // compara só o nome do arquivo: as telas em subpasta usam ../prog.html
+    v = v.replace(/\\$/, '/').split('/').pop();
+    return v.toLowerCase();
   }
   function arquivoAtual() {
     return normArq(location.pathname.split('/').pop() || '');
@@ -413,6 +441,7 @@
           if (h === normArq(arq)) {
             var alvo = a.closest('.sm-item') || a.closest('li') || a;
             alvo.style.display = 'none';
+            alvo.setAttribute('data-mariua-oculto', '1');
           }
         });
       });
@@ -424,6 +453,29 @@
         if (el) { el.style.display = 'none'; el.dataset.mariuaBloqueada = '1'; }
       });
     });
+  }
+
+  /* Um módulo do menu (o grupo "Obras", "SESMT", "Financeiro"…) só aparece se
+     sobrou ao menos um item liberado dentro dele. Sem isso ficava o título do
+     grupo sozinho, abrindo para uma lista vazia.
+     Funciona pela estrutura que o nav.js gera: .sm-group > .sm-group-items > .sm-item */
+  function esconderModulos() {
+    var grupos = document.querySelectorAll('.sm-group, [data-modulo]');
+    for (var i = 0; i < grupos.length; i++) {
+      var g = grupos[i];
+      var itens = g.querySelectorAll('.sm-item, a[href]');
+      if (!itens.length) continue;            // grupo sem itens: não mexe
+      var algum = false;
+      for (var j = 0; j < itens.length; j++) {
+        var it = itens[j];
+        var esc = it.closest('.sm-item') || it;
+        if (esc.getAttribute('data-mariua-oculto') !== '1' && esc.style.display !== 'none') {
+          algum = true; break;
+        }
+      }
+      g.style.display = algum ? '' : 'none';
+      if (!algum) g.classList.remove('open');
+    }
   }
 
   function blindarSwitchPage() {
@@ -442,7 +494,7 @@
   function avisoSemAcesso(nome) {
     var permitidas = TELAS.filter(function (t) { return podeVer(t.id) && t.arquivos[0]; });
     var links = permitidas.map(function (t) {
-      return '<a class="tg" href="' + t.arquivos[0] + '">' + esc(t.nome) + '</a>';
+      return '<a class="tg" href="' + BASE + t.arquivos[0] + '">' + esc(t.nome) + '</a>';
     }).join('');
     var d = ovl();
     d.innerHTML = '<div class="mx">' +
@@ -450,7 +502,7 @@
         '</b>. Fale com o administrador se precisar dessa liberação.') +
       (links ? '<label>Telas que você pode abrir</label><div style="margin-bottom:16px">' + links + '</div>'
              : '<p style="text-align:center;margin-bottom:16px">Você ainda não tem nenhuma tela liberada.</p>') +
-      '<a class="bt teal" href="index.html" style="display:block;text-align:center;text-decoration:none;box-sizing:border-box">Ir para o início</a>' +
+      '<a class="bt teal" href="' + BASE + 'index.html" style="display:block;text-align:center;text-decoration:none;box-sizing:border-box">Ir para o início</a>' +
       '<div class="mx-links" style="justify-content:center"><button class="lk" onclick="window.mariuaSair()">Sair da conta</button></div>' +
       RODAPE + '</div>';
     liberarTela();
@@ -462,8 +514,15 @@
     fecharOvl();
     liberarTela();
     var passos = 0;
+    var navRedesenhado = false;
     var aplicaTudo = function () {
+      // o jeito limpo: o nav.js remonta o menu já filtrado pela permissão
+      if (!navRedesenhado && window.mariuaNav && typeof window.mariuaNav.render === 'function') {
+        try { window.mariuaNav.render(); navRedesenhado = true; } catch (e) {}
+      }
+      // rede de segurança, para menus montados de outra forma
       esconderNav();
+      esconderModulos();
       blindarSwitchPage();
       pintarAvatar();
       if (++passos < 12) setTimeout(aplicaTudo, 400); // menus montados depois

@@ -89,18 +89,32 @@
            '<span class="sm-tx">' + esc(item.texto) + '</span></a>';
   }
 
+  // ---- permissão: só entra no menu a tela que a pessoa pode abrir ----------
+  // Quem decide é o mariua-auth.js. Enquanto o login não resolve (ou numa
+  // página sem guarda, como admin.html), monta tudo: a página inteira está
+  // escondida pela trava nesse meio-tempo, e a guarda manda redesenhar o menu
+  // assim que sabe quem entrou.
+  function podeItem(href) {
+    if (!window.MARIUA_USER || typeof window.mariuaTemTela !== 'function') return true;
+    var tela = (typeof window.mariuaTelaDeArquivo === 'function') ? window.mariuaTelaDeArquivo(href) : null;
+    if (!tela) return true;   // tela fora do catálogo: não esconde o que não conhece
+    return window.mariuaTemTela(tela);
+  }
+
   function montarHtml() {
     var h = '<div class="sm-toggle"><button type="button" onclick="smToggle()" title="Recolher / expandir">↔</button></div>' +
             '<nav class="sm-nav">' + link(NAV.inicio, false);
     NAV.grupos.forEach(function (g) {
-      var temAtivo = g.itens.some(function (i) { return arquivoDe(i.href) === atual; });
+      var itens = g.itens.filter(function (i) { return podeItem(i.href); });
+      if (!itens.length) return;   // módulo sem nenhuma tela liberada: nem aparece
+      var temAtivo = itens.some(function (i) { return arquivoDe(i.href) === atual; });
       h += '<div class="sm-group' + (temAtivo ? ' open' : '') + '" data-group="' + g.id + '">' +
              '<div class="sm-group-head" onclick="smGroupToggle(this)">' +
                '<span class="sm-ic"><i class="ti ti-' + g.icone + '"></i></span>' +
                '<span class="sm-tx">' + esc(g.texto) + '</span>' +
                '<span class="sm-arrow">▸</span>' +
              '</div><div class="sm-group-items">' +
-               g.itens.map(function (i) { return link(i, true); }).join('') +
+               itens.map(function (i) { return link(i, true); }).join('') +
              '</div></div>';
     });
     return h + '</nav><div class="sm-foot">Mariuá · Sistema de Obras</div>';
