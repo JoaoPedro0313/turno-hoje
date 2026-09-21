@@ -265,6 +265,24 @@ body.sm-collapsed .sm-side:hover .sm-group-head{justify-content:flex-start;paddi
   .co-card-b{padding:14px}
 }
 </style>
+<style>
+/* busca da prévia */
+.co-busca-bar{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:12px}
+.co-busca{position:relative;display:flex;align-items:center;flex:1 1 340px;max-width:520px;
+  background:#fff;border:1.5px solid #dbe3e8;border-radius:10px;height:42px;padding:0 10px 0 12px;
+  transition:border-color .15s,box-shadow .15s}
+.co-busca:focus-within{border-color:#0d7377;box-shadow:0 0 0 3px rgba(13,115,119,.12)}
+.co-busca-ic{font-size:.9rem;opacity:.55;flex-shrink:0}
+.co-busca input{flex:1;min-width:0;border:none;outline:none;background:none;margin:0;padding:0 10px;
+  font-family:'Barlow',sans-serif;font-size:.86rem;font-weight:700;color:#12343b}
+.co-busca input::placeholder{color:#a9b4bf;font-weight:600}
+.co-busca button{display:none;border:none;background:none;cursor:pointer;color:#a9b4bf;
+  font-size:.8rem;padding:6px 4px;line-height:1}
+.co-busca button:hover{color:#c53030}
+.co-busca.tem-texto button{display:block}
+.co-busca-res{font-size:.76rem;font-weight:700;color:#8b99a4}
+@media(max-width:620px){ .co-busca{flex:1 1 100%;max-width:none} }
+</style>
 </head>
 <body class="sm-collapsed">
 <script>try{if(localStorage.getItem("mariua_menu")==="aberto")document.body.classList.remove("sm-collapsed");}catch(e){}</script>
@@ -403,6 +421,16 @@ body.sm-collapsed .sm-side:hover .sm-group-head{justify-content:flex-start;paddi
       <button id="co-baixar" class="co-bt baixar" onclick="coBaixar()" disabled>⬇️ Baixar CSV (modelo)</button>
     </header>
     <div class="co-card-b">
+      <div class="co-busca-bar">
+        <div class="co-busca">
+          <span class="co-busca-ic">🔎</span>
+          <input id="co-busca" placeholder="Pesquisar obra — PEP, título, município, responsável, status…"
+                 autocomplete="off" spellcheck="false" oninput="coPreview()"
+                 onkeydown="if(event.key==='Escape'){this.value='';coPreview();this.blur();}">
+          <button type="button" id="co-busca-x" onclick="document.getElementById('co-busca').value='';coPreview();document.getElementById('co-busca').focus();" title="Limpar">✕</button>
+        </div>
+        <span id="co-busca-res" class="co-busca-res"></span>
+      </div>
       <div id="co-preview" class="co-preview">Carregue a carteira para ver a prévia.</div>
     </div>
   </section>
@@ -642,14 +670,48 @@ function coUmaLinha(v){
 
 function coDataHoje(){ var d=new Date(); return ('0'+d.getDate()).slice(-2)+'/'+('0'+(d.getMonth()+1)).slice(-2)+'/'+d.getFullYear(); }
 
+function coBuscaNorm(t){
+  return String(t==null?'':t).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+}
 function coPreview(){
   var cols=['Projeto*','Titulo da obra*','Municipio*','RESPONSAVEL*','CENTRO SERVICO','TIPO SERVICO*','NATUREZA OBRAS','Postes','LATITUDE','LONGITUDE','STATUS*'];
+  var cx=document.getElementById('co-busca');
+  var q=coBuscaNorm(cx?cx.value:'').trim();
+  var termos=q?q.split(/\s+/):[];
+  var bar=document.querySelector('.co-busca');
+  if(bar) bar.classList.toggle('tem-texto', !!q);
+
+  // busca em TODOS os campos da obra, não só nos que a prévia mostra;
+  // vários termos = todos precisam aparecer (busca "serrinha execucao")
+  var achadas = termos.length
+    ? CO_ROWS.filter(function(reg){
+        var alvo=''; for (var k in reg) if (Object.prototype.hasOwnProperty.call(reg,k)) alvo += ' ' + reg[k];
+        alvo = coBuscaNorm(alvo);
+        return termos.every(function(t){ return alvo.indexOf(t) >= 0; });
+      })
+    : CO_ROWS;
+
+  var limite = termos.length ? 100 : 25;
   var h='<table style="width:100%;border-collapse:collapse;font-size:.72rem;color:#334155;"><thead><tr style="background:#f0fafa;color:#0d7377;">'+cols.map(function(c){return '<th style="text-align:left;padding:6px 8px;white-space:nowrap;">'+c+'</th>';}).join('')+'</tr></thead><tbody>';
-  CO_ROWS.slice(0,25).forEach(function(reg){ h+='<tr style="border-bottom:1px solid #eef2f7;">'+cols.map(function(c){return '<td style="padding:6px 8px;white-space:nowrap;">'+(reg[c]||'').replace(/</g,'&lt;')+'</td>';}).join('')+'</tr>'; });
+  achadas.slice(0,limite).forEach(function(reg){ h+='<tr style="border-bottom:1px solid #eef2f7;">'+cols.map(function(c){return '<td style="padding:6px 8px;white-space:nowrap;">'+(reg[c]||'').replace(/</g,'&lt;')+'</td>';}).join('')+'</tr>'; });
   h+='</tbody></table>';
-  if(CO_ROWS.length>25) h+='<div style="font-size:.7rem;color:#94a3b8;margin-top:6px;">Mostrando 25 de '+CO_ROWS.length+' — o CSV terá todas.</div>';
+  if(!achadas.length){
+    h = '<div style="padding:34px;text-align:center;color:#a9b4bf;font-weight:700;font-size:.82rem;">'
+      + (CO_ROWS.length ? 'Nenhuma obra encontrada para “'+String(cx?cx.value:'').replace(/</g,'&lt;')+'”.'
+                        : 'Carregue a carteira para ver a prévia.') + '</div>';
+  } else if(achadas.length>limite){
+    h+='<div style="font-size:.7rem;color:#94a3b8;margin:8px 10px;">Mostrando '+limite+' de '+achadas.length+' — o CSV terá todas.</div>';
+  }
   document.getElementById('co-preview').innerHTML=h;
+
+  var res=document.getElementById('co-busca-res');
+  if(res){
+    res.textContent = !CO_ROWS.length ? ''
+      : termos.length ? achadas.length+' de '+CO_ROWS.length+' obras · o CSV continua saindo com todas'
+      : CO_ROWS.length+' obras carregadas';
+  }
 }
+
 
 /* ==========================================================================
    CONSTANTES DO ARQUIVO  —  um conjunto por base
