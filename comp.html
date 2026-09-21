@@ -296,6 +296,19 @@ body.sm-collapsed .sm-side:hover .sm-group-head{justify-content:flex-start;paddi
 /* rótulo do dia um pouco mais largo, já que há espaço */
 @media(min-width:1000px){ .day{grid-template-columns:168px 1fr} }
 </style>
+<style>
+/* painel "Produção com status Programada" */
+#card-prog{border-left:4px solid var(--alert)}
+#card-prog .panel-t{color:var(--alert)}
+#card-prog .panel-n{background:var(--alert);color:#fff;border-radius:999px;padding:2px 10px;font-weight:700}
+#card-prog td.r,#card-prog th.r{text-align:right;font-variant-numeric:tabular-nums}
+#card-prog td.pep{font-family:'Barlow Semi Condensed',sans-serif;font-weight:700;color:var(--teal);white-space:nowrap}
+#card-prog td.dim{color:var(--ink3);font-size:0.78rem}
+#card-prog tr.grave td{background:var(--alert-bg)}
+#card-prog .tag-prog{font-size:0.74rem;font-weight:600;color:var(--alert);background:var(--alert-bg);
+  border:1px solid #f2ddc8;border-radius:999px;padding:2px 9px;white-space:nowrap}
+#card-prog .empty{padding:26px;text-align:center;color:var(--ink3);font-size:0.84rem;font-weight:500}
+</style>
 </head>
 <body class="sm-collapsed">
 <script>try{if(localStorage.getItem("mariua_menu")==="aberto")document.body.classList.remove("sm-collapsed");}catch(e){}</script>
@@ -378,6 +391,23 @@ body.sm-collapsed .sm-side:hover .sm-group-head{justify-content:flex-start;paddi
       <button class="chip" id="bb-IRECÊ" onclick="setBase('IRECÊ',this)">Irecê</button>
     </div>
     <div class="tbl" id="tabela"></div>
+  </section>
+
+  <!-- obras com produção lançada mas status ainda Programada -->
+  <section class="panel" id="card-prog" style="display:none;">
+    <div class="panel-h">
+      <h2 class="panel-t">Produção com status Programada</h2>
+      <span class="panel-n" id="prog-n">0</span>
+      <span class="panel-note">Tem cava ou poste realizado, mas a carteira ainda diz Programada. O status precisa ser atualizado.</span>
+    </div>
+    <div class="tools">
+      <span class="tools-l">Mostrar:</span>
+      <button class="chip on alert" id="cp-todas" onclick="progFiltro('todas')">Todas</button>
+      <button class="chip" id="cp-poste" onclick="progFiltro('poste')">Com poste</button>
+      <button class="chip" id="cp-cava" onclick="progFiltro('cava')">Só cava</button>
+      <button class="act" style="margin-left:auto" onclick="progCopiar()">Copiar lista</button>
+    </div>
+    <div id="prog-body"></div>
   </section>
 
   <section class="panel" id="card-coelba" style="display:none;">
@@ -523,6 +553,10 @@ function parseCarteira(text, utd){
   const iSta=idx('STATUS DA OBRA','STATUS');
   // POSTES REALIZADO (não PREVISTOS, não À IMPLANTA)
   let iPos = headers.findIndex(h=>{ const hn=norm(h); return hn.includes('POSTES')&&hn.includes('REALIZAD'); });
+  // CAVA REALIZADA (não a prevista / a implantar)
+  let iCav = headers.findIndex(h=>{ const hn=norm(h); return hn.includes('CAVA')&&hn.includes('REALIZAD'); });
+  if(iCav<0) iCav = headers.findIndex(h=>{ const hn=norm(h);
+    return hn.includes('CAVA') && !hn.includes('PREVIST') && !hn.includes('IMPLANT'); });
   const obras=[];
   for(let i=hIdx+1;i<rows.length;i++){
     const row=rows[i]||[];
@@ -533,7 +567,8 @@ function parseCarteira(text, utd){
       pep, titulo: iTit>=0?String(row[iTit]||'').trim():'',
       utd, mun: iMun>=0?String(row[iMun]||'').trim():'',
       status: iSta>=0?String(row[iSta]||'').trim():'',
-      postes: iPos>=0 ? num(row[iPos]) : null
+      postes: iPos>=0 ? num(row[iPos]) : null,
+      cava:   iCav>=0 ? num(row[iCav]) : null
     });
   }
   return { obras, headers };
@@ -733,6 +768,8 @@ async function rodar(){
     document.getElementById('card-tabela').style.display='block';
     aplicarTabela();
     renderDias();
+    PROG_LISTA = acharProgComProducao(lista);
+    renderProg();
     renderAviso(novosFiltrados, evHoje, ultEv, lista.length);
 
     if(falhas.length) showErr('Não consegui ler '+falhas.length+' aba(s): '+falhas.join(', ')+'.\nAs obras dessas abas ficaram com o último valor conhecido (nada foi apagado).');
@@ -918,6 +955,86 @@ function renderDias(){
       +   '<button class="day-more" id="diam-'+i+'" style="display:'+(aberto?'none':'block')+';" onclick="diaToggle('+i+')">'+(evs.length===1?'mostrar a mudança deste dia':'mostrar as '+evs.length+' mudanças deste dia')+'</button>'
       + '</div></div>';
   }).join('');
+}
+
+/* ═══ PRODUÇÃO COM STATUS PROGRAMADA ═════════════════════════════════════
+   Obra que já tem cava aberta ou poste plantado, mas a carteira continua
+   marcando Programada. É divergência de apontamento: a produção andou e o
+   status ficou atrás. */
+let PROG_LISTA = [], PROG_FILTRO = 'todas';
+
+function ehProgramada(st){
+  const n = norm(st);                       // sem acento, maiúscula, sem espaço
+  if(!n) return false;
+  // pega PROGRAMADA, PROGRAMADO, A PROGRAMAR, REPROGRAMADA, EM PROGRAMAÇÃO…
+  return n.includes('PROGRAMAD') || n.includes('PROGRAMAR') || n.includes('PROGRAMAC');
+}
+function acharProgComProducao(lista){
+  return (lista||[]).filter(o=>{
+    if(!ehProgramada(o.status)) return false;
+    const c = Number(o.cava)   > 0;
+    const p = Number(o.postes) > 0;
+    return c || p;
+  }).sort((a,b)=>{
+    // quem tem poste vem primeiro: está mais adiantada do que o status admite
+    const pa=Number(a.postes)>0?1:0, pb=Number(b.postes)>0?1:0;
+    if(pa!==pb) return pb-pa;
+    return (Number(b.postes)||0)-(Number(a.postes)||0) || (Number(b.cava)||0)-(Number(a.cava)||0);
+  });
+}
+window.progFiltro = function(f){
+  PROG_FILTRO = f;
+  ['todas','poste','cava'].forEach(k=>{
+    const b=document.getElementById('cp-'+k);
+    if(b){ b.classList.toggle('on', k===f); b.classList.toggle('alert', k===f); }
+  });
+  renderProg();
+};
+window.progCopiar = function(){
+  const l = progFiltrados();
+  if(!l.length){ setStatus('Nada para copiar.'); return; }
+  const txt = 'PEP\tOBRA\tMUNICIPIO\tUTD\tCAVA\tPOSTES\tSTATUS\n'
+    + l.map(o=>[o.pep,o.titulo,o.mun,o.utd,(o.cava??''),(o.postes??''),o.status].join('\t')).join('\n');
+  if(navigator.clipboard) navigator.clipboard.writeText(txt)
+    .then(()=>setStatus(l.length+' obra(s) copiada(s) — cole na planilha ou no e-mail.'))
+    .catch(()=>setStatus('Não foi possível copiar.'));
+};
+function progFiltrados(){
+  if(PROG_FILTRO==='poste') return PROG_LISTA.filter(o=>Number(o.postes)>0);
+  if(PROG_FILTRO==='cava')  return PROG_LISTA.filter(o=>!(Number(o.postes)>0) && Number(o.cava)>0);
+  return PROG_LISTA;
+}
+function renderProg(){
+  const card=document.getElementById('card-prog');
+  const body=document.getElementById('prog-body');
+  const n=document.getElementById('prog-n');
+  if(!card||!body) return;
+  if(!PROG_LISTA.length){ card.style.display='none'; return; }
+  card.style.display='block';
+  const comPoste = PROG_LISTA.filter(o=>Number(o.postes)>0).length;
+  if(n) n.textContent = PROG_LISTA.length + (comPoste? ' · '+comPoste+' com poste' : '');
+  const l = progFiltrados();
+  if(!l.length){ body.innerHTML='<div class="empty">Nenhuma obra nesta seleção.</div>'; return; }
+  body.innerHTML =
+    '<div class="tbl"><table><thead><tr>'
+    + '<th>PEP</th><th>Obra</th><th>Município</th><th>UTD</th>'
+    + '<th class="r">Cava</th><th class="r">Postes</th><th>Status na carteira</th>'
+    + '</tr></thead><tbody>'
+    + l.map(o=>{
+        const cav = Number(o.cava)>0 ? '<b>'+o.cava+'</b>' : '—';
+        const pos = Number(o.postes)>0 ? '<b>'+o.postes+'</b>' : '—';
+        const grave = Number(o.postes)>0;
+        return '<tr'+(grave?' class="grave"':'')+'>'
+          + '<td class="pep">'+esc(o.pep)+'</td>'
+          + '<td>'+esc(o.titulo||'')+'</td>'
+          + '<td>'+esc(o.mun||'')+'</td>'
+          + '<td class="dim">'+esc(o.utd||'')+'</td>'
+          + '<td class="r">'+cav+'</td>'
+          + '<td class="r">'+pos+'</td>'
+          + '<td><span class="tag-prog">'+esc(o.status||'—')+'</span></td>'
+          + '</tr>';
+      }).join('')
+    + '</tbody></table></div>';
 }
 
 // ===================== COMPARADOR COELBA (CSV Neoex) =====================
