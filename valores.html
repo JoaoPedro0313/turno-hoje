@@ -484,7 +484,16 @@ function mostrarFormReset(){ $('login-title').textContent='Definir nova senha'; 
 async function entrar(){
   setMsg('Entrando…',true);
   const {error}=await sb.auth.signInWithPassword({email:$('email').value.trim(),password:$('senha').value});
-  if(error){setMsg('E-mail ou senha inválidos.');return;}
+  if(error){
+    console.warn('[login] recusado:', error);
+    var _m=String(error.message||'');
+    setMsg(/invalid login credentials/i.test(_m) ? 'E-mail ou senha incorretos.'
+      : /email not confirmed/i.test(_m) ? 'E-mail ainda não confirmado. Confirme no painel do Supabase (Authentication → Users) ou use "Esqueci minha senha".'
+      : /user not found/i.test(_m) ? 'Não existe conta com esse e-mail.'
+      : /rate limit|too many/i.test(_m) ? 'Muitas tentativas seguidas. Aguarde um minuto.'
+      : 'Não foi possível entrar: '+_m);
+    return;
+  }
   checarGestorEEntrar();
 }
 async function checarGestorEEntrar(){
