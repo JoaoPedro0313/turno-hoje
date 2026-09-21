@@ -372,6 +372,16 @@ body.sm-collapsed .sm-side:hover .sm-group-head{justify-content:flex-start;paddi
           </div>
         </div>
         <div class="fg-full">
+          <label>Telas liberadas
+            <span style="font-weight:600;color:#94a3b8;font-size:.72rem;">(gestor vê todas, independente do que estiver marcado)</span>
+          </label>
+          <div id="ed-telas" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:2px 14px;margin-top:4px;"></div>
+          <div style="display:flex;gap:10px;margin-top:6px;">
+            <button type="button" onclick="edTelasTodas(true)" style="background:none;border:none;color:#0d7377;font-weight:800;font-size:.72rem;cursor:pointer;padding:0;">marcar todas</button>
+            <button type="button" onclick="edTelasTodas(false)" style="background:none;border:none;color:#94a3b8;font-weight:800;font-size:.72rem;cursor:pointer;padding:0;">desmarcar todas</button>
+          </div>
+        </div>
+        <div class="fg-full">
           <div id="ed-msg" style="font-size:.78rem;font-weight:700;min-height:16px;margin-top:10px;"></div>
           <button class="btn add" style="width:100%;margin-top:6px;" onclick="salvarEdicao()">Salvar alterações</button>
         </div>
@@ -398,13 +408,25 @@ async function entrar(){
 }
 async function checarGestorEEntrar(){
   const {data,error}=await sb.rpc('is_gestor');
-  if(error||data!==true){ setMsg('Seu usuário não tem permissão de gestor.'); await sb.auth.signOut(); return; }
+  if(error||data!==true){
+    // NÃO desloga: com login único isso tiraria a pessoa de todas as telas.
+    setMsg('Seu usuário não tem permissão de gestor para esta tela. Volte ao início.');
+    var _v=document.getElementById('login-view');
+    if(_v && !document.getElementById('volta-inicio')){
+      var a=document.createElement('a'); a.id='volta-inicio'; a.href='index.html';
+      a.textContent='← Voltar ao sistema';
+      a.style.cssText='display:block;text-align:center;margin-top:14px;color:#0d7377;font-weight:800;font-size:.8rem;text-decoration:none;';
+      var box=_v.querySelector('.adminbox,.box,div'); (box||_v).appendChild(a);
+    }
+    return;
+  }
   const {data:{user}}=await sb.auth.getUser();
   $('who').textContent=user?user.email:'';
   $('login-view').style.display='none'; $('app-view').style.display='block';
   carregarGestores();
   carregarSolicitacoes();
   carregarContratos();
+  carregarTelasUsuarios();
 }
 async function esqueci(){
   const email=$('email').value.trim(); if(!email){setMsg('Digite seu e-mail primeiro.');return;}
@@ -540,13 +562,18 @@ async function carregarGestores(){
       ? '<span class="u-sit on">● Ativo</span>'
       : '<span class="u-sit off">● Inativo</span>';
     var tagG = u.gestor ? '<span class="u-tag g">Gestor</span>' : '';
+    var _tl = USUARIO_TELAS[String(u.email||'').trim().toLowerCase()];
+    var tagT = u.gestor
+      ? '<span class="u-tag" title="Gestor vê todas as telas">todas as telas</span>'
+      : '<span class="u-tag" title="Telas liberadas">'
+        + (_tl && _tl.length ? _tl.length + (_tl.length===1?' tela':' telas') : 'telas padrão') + '</span>';
     return '<tr>'
       + '<td><span class="u-act">'
         + '<button class="u-ic" title="Editar" onclick="editarUsuario(\''+u.email+'\')">✏️</button>'
         + '<button class="u-sw'+(u.ativo?' on':'')+'" title="'+(u.ativo?'Desativar':'Ativar')+'" onclick="toggleAtivo(\''+u.email+'\','+(u.ativo?'false':'true')+')"></button>'
       + '</span></td>'
       + '<td class="u-cod">'+u.cod+'</td>'
-      + '<td class="u-nome">'+escapeHtml(u.nome||'(sem nome)')+tagG+'</td>'
+      + '<td class="u-nome">'+escapeHtml(u.nome||'(sem nome)')+tagG+tagT+'</td>'
       + '<td>'+(u.matricula
             ? '<b>'+escapeHtml(u.matricula)+'</b>'+(u.func_nome?'<br><span style="font-size:.66rem;color:#94a3b8;font-weight:600;">'+escapeHtml(u.func_nome)+'</span>':'')
             : '<div class="u-link-row">'
@@ -582,6 +609,7 @@ function editarUsuario(email){
   var _cts = USUARIO_CONTRATO[normNomeU(u.func_nome||'')] || USUARIO_CONTRATO[normNomeU(u.nome||'')] || [];
   if(!Array.isArray(_cts)) _cts = _cts ? [_cts] : [];
   document.querySelectorAll('.ed-ct').forEach(function(cb){ cb.checked = _cts.indexOf(cb.value)>=0; });
+  edTelasRender(USUARIO_TELAS[String(u.email||'').trim().toLowerCase()]||[]);
   $('ed-titulo').textContent=u.matricula||u.email;
   $('ed-msg').textContent='';
   $('user-edit-ovl').classList.add('open');
@@ -626,6 +654,7 @@ async function salvarEdicao(){
   var funcNome=($('ed-func-atual').textContent||'').replace(/^✓\s*/,'').trim();
   var cts=[]; document.querySelectorAll('.ed-ct').forEach(function(cb){ if(cb.checked) cts.push(cb.value); });
   await definirContratoUsuario([funcNome, nome], cts);
+  await salvarTelasUsuario(email, edTelasSelecionadas());
   fecharEdicao(); carregarGestores();
 }
 var USUARIO_CONTRATO = {};
@@ -641,6 +670,66 @@ async function definirContratoUsuario(nomes, states){
     (nomes||[]).forEach(function(nm){ var k=normNomeU(nm); if(!k)return; if(states.length) map[k]=states; else delete map[k]; });
     await fetch(SUPA_URL+'/rest/v1/turno_data?on_conflict=key',{method:'POST',headers:{apikey:SUPA_KEY,Authorization:'Bearer '+SUPA_KEY,'Content-Type':'application/json',Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify({key:'usuario_contrato',value:map,updated_at:new Date().toISOString()})});
     USUARIO_CONTRATO=map;
+  }catch(e){}
+}
+
+/* ===== TELAS LIBERADAS POR USUÁRIO =====
+   Grava em turno_data.usuario_telas: { "email": ["mapa","turno", ...] }
+   É esse mapa que o mariua-auth.js lê em cada página do sistema.
+   Os ids abaixo TÊM de ser os mesmos do catálogo TELAS do mariua-auth.js. */
+var TELAS_SISTEMA = [
+  { id:'turno',      nome:'Turno' },
+  { id:'rdo',        nome:'RDO' },
+  { id:'prog',       nome:'Programação' },
+  { id:'mapa',       nome:'Mapa de obras' },
+  { id:'comp',       nome:'Comparador de postes' },
+  { id:'estagios',   nome:'Estágios de obras' },
+  { id:'projecao',   nome:'Projeção / PDA' },
+  { id:'neoex',      nome:'NEOEX · apontamento' },
+  { id:'obra',       nome:'Cadastro de obra' },
+  { id:'equipes',    nome:'Cadastro de equipes' },
+  { id:'cursos',     nome:'Vencimento de cursos' },
+  { id:'ensaios',    nome:'Ensaios · SESMT' },
+  { id:'brigada',    nome:'Brigada / extintores' },
+  { id:'permissoes', nome:'Telas × usuários' },
+  { id:'valores',    nome:'Financeiro (só gestor)' },
+  { id:'admin',      nome:'Admin (só gestor)' }
+];
+var USUARIO_TELAS = {};
+async function carregarTelasUsuarios(){
+  try{
+    var r=await fetch(SUPA_URL+'/rest/v1/turno_data?select=value&key=eq.usuario_telas',{headers:{apikey:SUPA_KEY,Authorization:'Bearer '+SUPA_KEY}});
+    var arr=r.ok?await r.json():[];
+    USUARIO_TELAS=(arr&&arr[0]&&arr[0].value)||{};
+  }catch(e){ USUARIO_TELAS={}; }
+}
+function edTelasRender(marcadas){
+  var box=$('ed-telas'); if(!box) return;
+  marcadas=Array.isArray(marcadas)?marcadas:[];
+  box.innerHTML=TELAS_SISTEMA.map(function(t){
+    return '<label class="chk"><input type="checkbox" class="ed-tl" value="'+t.id+'"'
+      +(marcadas.indexOf(t.id)>=0?' checked':'')+'> '+escapeHtml(t.nome)+'</label>';
+  }).join('');
+}
+function edTelasTodas(on){ document.querySelectorAll('.ed-tl').forEach(function(cb){ cb.checked=!!on; }); }
+function edTelasSelecionadas(){
+  var out=[]; document.querySelectorAll('.ed-tl').forEach(function(cb){ if(cb.checked) out.push(cb.value); });
+  return out;
+}
+async function salvarTelasUsuario(email, telas){
+  var k=String(email||'').trim().toLowerCase(); if(!k) return;
+  try{
+    // relê antes de gravar, pra não apagar alteração feita por outro admin
+    var r=await fetch(SUPA_URL+'/rest/v1/turno_data?select=value&key=eq.usuario_telas',{headers:{apikey:SUPA_KEY,Authorization:'Bearer '+SUPA_KEY}});
+    var arr=r.ok?await r.json():[]; var map=(arr&&arr[0]&&arr[0].value)||{};
+    if(telas&&telas.length) map[k]=telas; else delete map[k];
+    await fetch(SUPA_URL+'/rest/v1/turno_data?on_conflict=key',{
+      method:'POST',
+      headers:{apikey:SUPA_KEY,Authorization:'Bearer '+SUPA_KEY,'Content-Type':'application/json',Prefer:'resolution=merge-duplicates,return=minimal'},
+      body:JSON.stringify({key:'usuario_telas',value:map,updated_at:new Date().toISOString()})
+    });
+    USUARIO_TELAS=map;
+    try{ await sb.rpc('admin_set_telas',{p_email:k,p_telas:telas||[]}); }catch(e){}
   }catch(e){}
 }
 

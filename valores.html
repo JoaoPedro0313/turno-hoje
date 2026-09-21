@@ -489,7 +489,18 @@ async function entrar(){
 }
 async function checarGestorEEntrar(){
   const {data,error}=await sb.rpc('is_gestor');
-  if(error||data!==true){ setMsg('Seu usuário não tem permissão de gestor.'); await sb.auth.signOut(); return; }
+  if(error||data!==true){
+    // NÃO desloga: com login único isso tiraria a pessoa de todas as telas.
+    setMsg('Seu usuário não tem permissão de gestor para esta tela. Volte ao início.');
+    var _v=document.getElementById('login-view');
+    if(_v && !document.getElementById('volta-inicio')){
+      var a=document.createElement('a'); a.id='volta-inicio'; a.href='index.html';
+      a.textContent='← Voltar ao sistema';
+      a.style.cssText='display:block;text-align:center;margin-top:14px;color:#0d7377;font-weight:800;font-size:.8rem;text-decoration:none;';
+      var box=_v.querySelector('.adminbox,.box,div'); (box||_v).appendChild(a);
+    }
+    return;
+  }
   const {data:{user}}=await sb.auth.getUser();
   $('login-view').style.display='none'; $('app-view').style.display='block';
   finMontarMenu(user||null);
