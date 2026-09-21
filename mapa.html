@@ -3673,6 +3673,26 @@ s.onerror = function() {
 };
 document.head.appendChild(s);
 }
+/* Linha de controle da planilha: marcador que segura fórmula/intervalo
+   ("NÃO ELIMINAR ESTA LINHA"), linha de soma, legenda. Não é obra e não deve
+   entrar na contagem nem no acumulado. */
+function mapaLinhaDeControle(o) {
+  if (!o) return false;
+  var pep = String(o['PEP OBRA']||'').toUpperCase().trim();
+  var tit = String(o['TÍTULO']||o['TITULO']||'').toUpperCase().trim();
+  var mun = String(o['MUNICIPIO']||o['MUNICÍPIO']||'').toUpperCase().trim();
+  var tudo = (pep+' '+tit+' '+mun).normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  // "não eliminar / não excluir / não apagar / não mexer" em qualquer campo
+  if (/NAO\s*(A\s*)?(ELIMINAR|EXCLUIR|APAGAR|DELETAR|REMOVER|MEXER|ALTERAR|PREENCHER)/.test(tudo)) return true;
+  if (/(ELIMINAR|EXCLUIR|APAGAR)\s+ESTA\s+LINHA/.test(tudo)) return true;
+  // linha de fechamento
+  var soma = /^(TOTAL|TOTAIS|SUBTOTAL|SOMA|GERAL|MEDIA|LEGENDA|RESUMO)\b/;
+  var pn = pep.normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  var tn = tit.normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  var mn = mun.normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  if (soma.test(pn) || soma.test(tn) || soma.test(mn)) return true;
+  return false;
+}
 function compParseCSVText(text, utdLabel) {
 const rows = Papa.parse(text.replace(/^\uFEFF/,''), { skipEmptyLines: true }).data;
 // Normaliza a celula do cabecalho: maiuscula, sem acento, sem quebra de linha,
@@ -3707,6 +3727,7 @@ const headers = rows[headerIdx].map(c => {
 });
 const data = [];
 let _ignoradas = 0;
+let _controle = 0;
 const _semPep = [];
 for (let i=headerIdx+1; i<rows.length; i++) {
 const row = rows[i];
@@ -3718,6 +3739,8 @@ headers.forEach((h,idx) => { if (h && (obj[h]===undefined || obj[h]==='')) obj[h
 // mas isso inflou a contagem (Serrinha saltou de 14 para 65, pegando linha que
 // não é obra). Voltou a exigir PEP; o que fica de fora vai para o painel de
 // diagnóstico, para você decidir caso a caso em vez de o sistema adivinhar.
+// marcador da planilha / linha de fechamento: não é obra
+if (mapaLinhaDeControle(obj)) { _controle++; continue; }
 if (obj['PEP OBRA']) { data.push(obj); continue; }
 // Sem PEP: ainda pode ser obra — a aba de Serrinha, por exemplo, tem obra com
 // a coluna do PEP em branco. Aceita quando há título e (município ou
@@ -3725,9 +3748,7 @@ if (obj['PEP OBRA']) { data.push(obj); continue; }
 const _tit = (obj['TÍTULO'] || obj['TITULO'] || '').trim();
 const _mun = (obj['MUNICIPIO'] || obj['MUNICÍPIO'] || '').trim();
 const _lat = (obj['LATITUDE'] || obj['LATITUDE SUL'] || obj['LAT'] || '').trim();
-const _ehSoma = /^(TOTAL|TOTAIS|SUBTOTAL|SOMA|GERAL|M[ÉE]DIA|LEGENDA)\b/i.test(_tit)
-             || /^(TOTAL|TOTAIS|SUBTOTAL|SOMA)\b/i.test(_mun);
-if (_tit && (_mun || _lat) && !_ehSoma) { obj['_SEM_PEP'] = '1'; data.push(obj); continue; }
+if (_tit && (_mun || _lat)) { obj['_SEM_PEP'] = '1'; data.push(obj); continue; }
 const _preenchidas = row.filter(c=>String(c).trim()).length;
 if (_preenchidas >= 3) {
   _ignoradas++;
@@ -3743,7 +3764,9 @@ if (_preenchidas >= 3) {
 }
 }
 data._semPep = _semPep;
+data._controle = _controle;
 data._headerLinha = headerIdx + 1;
+if (_controle) console.log('[mapa] '+(utdLabel||'?')+': '+_controle+' linha(s) de controle da planilha descartada(s).');
 data._ignoradas = _ignoradas;
 if (_ignoradas) console.warn('[mapa] '+(utdLabel||'?')+': '+_ignoradas+' linha(s) com dados ficaram de fora por não ter PEP OBRA (cabeçalho na linha '+(headerIdx+1)+').');
 // Detecta o mês declarado no topo da aba (ex.: "JUN/26"), olhando as linhas-título
@@ -4596,8 +4619,9 @@ function mapaMesclarObras(guardadas, lidas) {
     if (deAntes) novo._DE_LEITURA_ANTERIOR = '1'; else delete novo._DE_LEITURA_ANTERIOR;
     mapa[k] = novo;
   }
-  (guardadas||[]).forEach(function(o){ por(o, true); });
-  (lidas||[]).forEach(function(o){ por(o, false); });   // a leitura de agora vence
+  // o acumulado pode ter marcador guardado de antes desta correção: limpa
+  (guardadas||[]).forEach(function(o){ if (!mapaLinhaDeControle(o)) por(o, true); });
+  (lidas||[]).forEach(function(o){ if (!mapaLinhaDeControle(o)) por(o, false); });   // a leitura de agora vence
   return ordem.map(function(k){ return mapa[k]; });
 }
 function mapaSemMarca(lista) {
