@@ -2,7 +2,17 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<script src="mariua-auth.js"></script>
+<!-- TRAVA DE ACESSO — não remova. Esconde a página ANTES de qualquer script e só
+     libera se o mariua-auth.js tiver realmente carregado. Se o arquivo faltar,
+     a tela fica bloqueada em vez de abrir sem login. -->
+<script>(function(){var h=document.documentElement;h.className+=' mariua-check';
+var s=document.createElement('style');s.id='mariua-lock';
+s.textContent='html.mariua-check body>*{visibility:hidden!important}#mariua-ovl,#mariua-ovl *{visibility:visible!important}';
+(document.head||h).appendChild(s);
+setTimeout(function(){if(window.__MARIUA_AUTH__)return;
+h.className=h.className.replace(/\bmariua-check\b/,'');
+var d=document.body||h;d.innerHTML='<div style="font-family:Barlow,system-ui,sans-serif;max-width:420px;margin:14vh auto;padding:26px;border:2px solid #fed7d7;border-radius:14px;background:#fff5f5;text-align:center;color:#742a2a"><div style="font-size:1.05rem;font-weight:900;margin-bottom:8px">Login não carregou</div><div style="font-size:.85rem;font-weight:600;line-height:1.5">O arquivo <b>mariua-auth.js</b> não foi encontrado nesta pasta. Sem ele o sistema não libera o acesso.</div><button onclick="location.reload()" style="margin-top:16px;padding:10px 22px;border:none;border-radius:9px;background:#c53030;color:#fff;font-family:Barlow,sans-serif;font-weight:800;cursor:pointer">Recarregar</button></div>';},8000);})();</script>
+<script src="mariua-auth.js?v=2"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Mariuá - Sistema de Obras</title>
 <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;600;700;800;900&display=swap" rel="stylesheet">
@@ -519,6 +529,34 @@ body.sm-collapsed .sm-side:hover .sm-group-head{justify-content:flex-start;paddi
 .kpi-lbl{font-size:.74rem;font-weight:700;color:#64748b;margin-top:5px;text-transform:uppercase;letter-spacing:.4px}
 @media(max-width:560px){ .kpi-grid{grid-template-columns:1fr 1fr;gap:8px} .kpi{padding:14px} .kpi-num{font-size:1.4rem} }
 </style>
+<style>
+/* ── Tela inicial: busca, cor por card, seção vazia ───────────────────── */
+.lx-find{display:flex;align-items:center;gap:10px;background:#fff;border:1px solid #e6ebee;
+  border-radius:12px;padding:0 14px;height:46px;margin:0 0 4px;transition:border-color .16s,box-shadow .16s}
+.lx-find:focus-within{border-color:#0d7377;box-shadow:0 4px 16px rgba(13,115,119,.10)}
+.lx-find .ti{font-size:19px;color:#94a3b8;flex-shrink:0}
+.lx-find input{flex:1;border:none;outline:none;background:none;font-family:'Barlow',sans-serif;
+  font-size:.92rem;font-weight:600;color:#1f2a35;min-width:0}
+.lx-find input::placeholder{color:#a9b4bf;font-weight:600}
+.lx-find button{border:none;background:none;cursor:pointer;color:#94a3b8;display:none;padding:4px;line-height:1}
+.lx-find button:hover{color:#c53030}
+.lx-find.tem-texto button{display:block}
+
+/* cor de destaque por card */
+.lx-ic{background:var(--cbg,#eef6f5);color:var(--cc,#0d7377)}
+.lx-card:hover{border-color:var(--cc,#0d7377);box-shadow:0 8px 22px rgba(13,115,119,.10)}
+.lx-card:hover .lx-ic{background:var(--cc,#0d7377);color:#fff}
+.lx-card:hover .lx-tit{color:var(--cc,#0d7377)}
+.lx-tit{display:flex;align-items:center;gap:7px}
+.lx-lock{font-size:.58rem;font-weight:800;letter-spacing:.8px;text-transform:uppercase;
+  color:#8b6f2b;background:#fdf6e3;border:1px solid #f0e2b8;border-radius:5px;padding:1px 6px}
+
+.lx-vazio{display:flex;flex-direction:column;align-items:center;gap:8px;padding:46px 20px;
+  color:#a9b4bf;font-size:.88rem;font-weight:700}
+.lx-vazio .ti{font-size:34px}
+.lx-sec[hidden]{display:none}
+@media(max-width:560px){ .lx-find{height:42px} }
+</style>
 </head>
 <body class="sm-collapsed">
 <script>try{if(localStorage.getItem("mariua_menu")==="aberto")document.body.classList.remove("sm-collapsed");}catch(e){}</script>
@@ -537,6 +575,10 @@ body.sm-collapsed .sm-side:hover .sm-group-head{justify-content:flex-start;paddi
         <span class="db-dot"></span>
         <span id="db-text">Sistema Online</span>
       </div>
+      <button id="user-avatar" onclick="if(window.mariuaPerfil)window.mariuaPerfil()" title="Quem está usando"
+        style="display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;margin-left:6px;border-radius:50%;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.35);color:#fff;cursor:pointer;flex-shrink:0;padding:0;">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="currentColor"><path d="M12 12c2.5 0 4.5-2 4.5-4.5S14.5 3 12 3 7.5 5 7.5 7.5 9.5 12 12 12zm0 2.2c-3 0-9 1.5-9 4.5V21h18v-2.3c0-3-6-4.5-9-4.5z"/></svg>
+      </button>
     </div>
   </div>
 </div>
@@ -550,34 +592,143 @@ body.sm-collapsed .sm-side:hover .sm-group-head{justify-content:flex-start;paddi
 
 <!-- HOME -->
 <div class="lx">
+
   <div class="lx-head">
     <div>
-      <div class="lx-hello" id="greeting-text">Bem-vindo ao Sistema de Obras</div>
-      <div class="lx-sub">Mariuá · Construção e Energia</div>
+      <div class="lx-hello" id="greeting-text">Sistema de Obras</div>
+      <div class="lx-sub" id="greeting-sub">Mariuá · Construção e Energia</div>
     </div>
     <div class="stats-strip" id="statsStrip" style="display:none;">
-      <div class="stat-pill"><span class="stat-dot" style="background:#38a169;"></span><span id="stat-online">1 online</span></div>
+      <div class="stat-pill"><span class="stat-dot" style="background:#38a169;"></span><span id="stat-online">Sistema online</span></div>
       <div class="stat-pill"><span class="stat-dot" style="background:#e69020;"></span><span id="stat-date"></span></div>
     </div>
   </div>
 
+  <!-- INDICADORES -->
   <div class="kpi-grid">
-    <a class="kpi" href="turno.html" style="--kc:#0d7377;--kbg:#eef6f5">
+    <a class="kpi" href="turno.html" data-tela="turno" style="--kc:#0d7377;--kbg:#eef6f5">
       <span class="kpi-ic"><i class="ti ti-clipboard-check"></i></span>
       <span class="kpi-main"><span class="kpi-num loading" id="kpi-turnos">—</span><span class="kpi-lbl">Turnos abertos</span></span>
     </a>
-    <a class="kpi" href="rdo.html" style="--kc:#2b6cb0;--kbg:#eaf2fb">
+    <a class="kpi" href="rdo.html" data-tela="rdo" style="--kc:#2b6cb0;--kbg:#eaf2fb">
       <span class="kpi-ic"><i class="ti ti-file-description"></i></span>
       <span class="kpi-main"><span class="kpi-num loading" id="kpi-rdos">—</span><span class="kpi-lbl">RDOs lançados</span></span>
     </a>
-    <a class="kpi" href="vencimento_cursos.html" style="--kc:#c53030;--kbg:#fdecec">
+    <a class="kpi" href="vencimento_cursos.html" data-tela="cursos" style="--kc:#c53030;--kbg:#fdecec">
       <span class="kpi-ic"><i class="ti ti-certificate"></i></span>
       <span class="kpi-main"><span class="kpi-num loading" id="kpi-cursos">—</span><span class="kpi-lbl">Cursos vencidos</span></span>
     </a>
-    <a class="kpi" href="brigada.html" style="--kc:#c05621;--kbg:#fdefe4">
+    <a class="kpi" href="brigada.html" data-tela="brigada" style="--kc:#c05621;--kbg:#fdefe4">
       <span class="kpi-ic"><i class="ti ti-flame"></i></span>
       <span class="kpi-main"><span class="kpi-num loading" id="kpi-extintores">—</span><span class="kpi-lbl">Extintores a vencer</span></span>
     </a>
+  </div>
+
+  <!-- BUSCA -->
+  <div class="lx-find">
+    <i class="ti ti-search"></i>
+    <input id="lx-busca" placeholder="Buscar tela — ex.: mapa, extintor, RDO, poste" autocomplete="off" spellcheck="false">
+    <button type="button" id="lx-limpa" title="Limpar"><i class="ti ti-x"></i></button>
+  </div>
+
+  <!-- ATALHOS -->
+  <div class="lx-sec" data-sec>
+    <div class="lx-sec-tit">Operação diária</div>
+    <div class="lx-grid">
+      <a class="lx-card" href="turno.html" data-tela="turno" data-busca="turno equipe abertura efetivo presenca" style="--cc:#0d7377;--cbg:#eef6f5">
+        <span class="lx-ic"><i class="ti ti-clipboard-check"></i></span>
+        <span class="lx-tx"><span class="lx-tit">Turno</span><span class="lx-desc">Abertura e efetivo do dia</span></span>
+      </a>
+      <a class="lx-card" href="rdo.html" data-tela="rdo" data-busca="rdo apr relatorio diario atividade" style="--cc:#2b6cb0;--cbg:#eaf2fb">
+        <span class="lx-ic"><i class="ti ti-file-description"></i></span>
+        <span class="lx-tx"><span class="lx-tit">RDO</span><span class="lx-desc">Lançamento do relatório diário</span></span>
+      </a>
+      <a class="lx-card" href="prog.html" data-tela="prog" data-busca="programacao agenda dia obra equipe" style="--cc:#6b46c1;--cbg:#f3effd">
+        <span class="lx-ic"><i class="ti ti-calendar-event"></i></span>
+        <span class="lx-tx"><span class="lx-tit">Programação</span><span class="lx-desc">Obras programadas por equipe</span></span>
+      </a>
+      <a class="lx-card" href="projeçao.html" data-tela="projecao" data-busca="projecao pda meta previsao producao" style="--cc:#b7791f;--cbg:#fdf6e3">
+        <span class="lx-ic"><i class="ti ti-trending-up"></i></span>
+        <span class="lx-tx"><span class="lx-tit">Projeção · PDA</span><span class="lx-desc">Previsão de produção</span></span>
+      </a>
+    </div>
+  </div>
+
+  <div class="lx-sec" data-sec>
+    <div class="lx-sec-tit">Obras</div>
+    <div class="lx-grid">
+      <a class="lx-card" href="mapa.html" data-tela="mapa" data-busca="mapa obra localizacao coordenada rota gps" style="--cc:#38a169;--cbg:#eefaf1">
+        <span class="lx-ic"><i class="ti ti-map-pin"></i></span>
+        <span class="lx-tx"><span class="lx-tit">Mapa de obras</span><span class="lx-desc">Localização, rota e status</span></span>
+      </a>
+      <a class="lx-card" href="estagios.html" data-tela="estagios" data-busca="estagio obra andamento etapa" style="--cc:#0d7377;--cbg:#eef6f5">
+        <span class="lx-ic"><i class="ti ti-stack-2"></i></span>
+        <span class="lx-tx"><span class="lx-tit">Estágios de obras</span><span class="lx-desc">Andamento por etapa</span></span>
+      </a>
+      <a class="lx-card" href="comp.html" data-tela="comp" data-busca="comparador poste comparativo mes diferenca" style="--cc:#2b6cb0;--cbg:#eaf2fb">
+        <span class="lx-ic"><i class="ti ti-git-compare"></i></span>
+        <span class="lx-tx"><span class="lx-tit">Comparador de postes</span><span class="lx-desc">Diferenças entre medições</span></span>
+      </a>
+      <a class="lx-card" href="neoex.html" data-tela="neoex" data-busca="neoex apontamento planilha gpm rene material" style="--cc:#805ad5;--cbg:#f4effd">
+        <span class="lx-ic"><i class="ti ti-file-spreadsheet"></i></span>
+        <span class="lx-tx"><span class="lx-tit">NEOEX</span><span class="lx-desc">Apontamento × planilha</span></span>
+      </a>
+      <a class="lx-card" href="cadastro_obra.html" data-tela="obra" data-busca="cadastro obra nova pep carteira" style="--cc:#c05621;--cbg:#fdefe4">
+        <span class="lx-ic"><i class="ti ti-file-plus"></i></span>
+        <span class="lx-tx"><span class="lx-tit">Cadastro de obra</span><span class="lx-desc">Incluir obra na carteira</span></span>
+      </a>
+    </div>
+  </div>
+
+  <div class="lx-sec" data-sec>
+    <div class="lx-sec-tit">Cadastros e acessos</div>
+    <div class="lx-grid">
+      <a class="lx-card" href="equipes.html" data-tela="equipes" data-busca="equipe encarregado funcionario matricula cadastro" style="--cc:#0d7377;--cbg:#eef6f5">
+        <span class="lx-ic"><i class="ti ti-users"></i></span>
+        <span class="lx-tx"><span class="lx-tit">Cadastro de equipes</span><span class="lx-desc">Equipes, funções e encarregados</span></span>
+      </a>
+      <a class="lx-card" href="permissoes.html" data-tela="permissoes" data-busca="permissao tela usuario acesso sistema" style="--cc:#2b6cb0;--cbg:#eaf2fb">
+        <span class="lx-ic"><i class="ti ti-shield-lock"></i></span>
+        <span class="lx-tx"><span class="lx-tit">Telas × usuários</span><span class="lx-desc">Acessos por função e base</span></span>
+      </a>
+    </div>
+  </div>
+
+  <div class="lx-sec" data-sec>
+    <div class="lx-sec-tit">SESMT</div>
+    <div class="lx-grid">
+      <a class="lx-card" href="vencimento_cursos.html" data-tela="cursos" data-busca="curso certificado treinamento nr vencimento sesmt" style="--cc:#c53030;--cbg:#fdecec">
+        <span class="lx-ic"><i class="ti ti-certificate"></i></span>
+        <span class="lx-tx"><span class="lx-tit">Vencimento de cursos</span><span class="lx-desc">Certificados e reciclagens</span></span>
+      </a>
+      <a class="lx-card" href="ensaios.html" data-tela="ensaios" data-busca="ensaio eletrico luva epi teste sesmt" style="--cc:#38a169;--cbg:#eefaf1">
+        <span class="lx-ic"><i class="ti ti-shield-check"></i></span>
+        <span class="lx-tx"><span class="lx-tit">Ensaios</span><span class="lx-desc">Controle de ensaios de EPI</span></span>
+      </a>
+      <a class="lx-card" href="brigada.html" data-tela="brigada" data-busca="brigada extintor incendio hidrante recarga" style="--cc:#c05621;--cbg:#fdefe4">
+        <span class="lx-ic"><i class="ti ti-flame"></i></span>
+        <span class="lx-tx"><span class="lx-tit">Brigada</span><span class="lx-desc">Extintores e hidrantes</span></span>
+      </a>
+    </div>
+  </div>
+
+  <div class="lx-sec" data-sec>
+    <div class="lx-sec-tit">Gestão</div>
+    <div class="lx-grid">
+      <a class="lx-card" href="valores.html" data-tela="valores" data-busca="financeiro valor custo fornecedor lancamento" style="--cc:#276749;--cbg:#eefaf1">
+        <span class="lx-ic"><i class="ti ti-report-money"></i></span>
+        <span class="lx-tx"><span class="lx-tit">Financeiro <span class="lx-lock">gestor</span></span><span class="lx-desc">Valores e fornecedores</span></span>
+      </a>
+      <a class="lx-card" href="admin.html" data-tela="admin" data-busca="admin usuario permissao cadastro gestor sistema" style="--cc:#553c9a;--cbg:#f3effd">
+        <span class="lx-ic"><i class="ti ti-settings"></i></span>
+        <span class="lx-tx"><span class="lx-tit">Admin <span class="lx-lock">gestor</span></span><span class="lx-desc">Usuários, telas e cadastros</span></span>
+      </a>
+    </div>
+  </div>
+
+  <div id="lx-vazio" class="lx-vazio" style="display:none">
+    <i class="ti ti-mood-empty"></i>
+    <span id="lx-vazio-tx">Nenhuma tela encontrada.</span>
   </div>
 
 </div>
@@ -602,11 +753,30 @@ body.sm-collapsed .sm-side:hover .sm-group-head{justify-content:flex-start;paddi
   document.getElementById('statsStrip').style.display='flex';
 })();
 
-// Greeting
+// Saudação com o nome de quem entrou (o mariua-auth.js publica window.MARIUA_USER)
 (function(){
-  var h=new Date().getHours();
-  var gr=h<12?'Bom dia':h<18?'Boa tarde':'Boa noite';
-  document.getElementById('greeting-text').textContent = gr+' · Sistema de Obras Mariuá';
+  var el=document.getElementById('greeting-text');
+  var sub=document.getElementById('greeting-sub');
+  function primeiroNome(n){
+    n=String(n||'').trim();
+    if(!n) return '';
+    if(n.indexOf('@')>0) n=n.split('@')[0].replace(/[._-]+/g,' ');
+    var p=n.split(/\s+/)[0];
+    return p.charAt(0).toUpperCase()+p.slice(1).toLowerCase();
+  }
+  function pinta(){
+    var h=new Date().getHours();
+    var gr=h<12?'Bom dia':h<18?'Boa tarde':'Boa noite';
+    var u=window.MARIUA_USER;
+    var nome=u?primeiroNome(u.nome||u.email):'';
+    el.textContent = nome ? (gr+', '+nome) : (gr+' · Sistema de Obras');
+    if(sub && u){
+      var qtd = u.gestor ? 'acesso total' : ((u.telas||[]).length + ((u.telas||[]).length===1?' tela liberada':' telas liberadas'));
+      sub.textContent = 'Mariuá · Construção e Energia · ' + qtd;
+    }
+  }
+  pinta();
+  var n=0, t=setInterval(function(){ pinta(); if(window.MARIUA_USER||++n>20) clearInterval(t); },350);
 })();
 
 
@@ -644,6 +814,77 @@ window.smGroupToggle = function(head){ var g=head.parentNode; if(g) g.classList.
   get('rdo_atual').then(function(v){ set('kpi-rdos',(v&&v.lancou)?Object.keys(v.lancou).length:0); });
   get('sesmt_cursos').then(function(v){ var n=0; if(v&&Array.isArray(v.dados)){ v.dados.forEach(function(p){ var c=p.certificados||{}; Object.keys(c).forEach(function(k){ var d=dias(c[k]); if(d!==null&&d<0) n++; }); }); } set('kpi-cursos',n); });
   get('sesmt_brigada').then(function(v){ var n=0; if(v&&Array.isArray(v.dados)){ v.dados.forEach(function(d){ var a=d.recp||'',b=d.hidp||''; var prox=(a&&b)?(dias(a)<=dias(b)?a:b):(a||b||''); var dd=dias(prox); if(dd!==null&&dd<=30) n++; }); } set('kpi-extintores',n); });
+})();
+</script>
+<script>
+/* ── Tela inicial: busca nos atalhos e seções que se escondem sozinhas ──
+   Um card só aparece se (a) casa com a busca e (b) a pessoa tem a tela.
+   A permissão vem do mariua-auth.js (mariuaTemTela); enquanto o login não
+   resolve, mostra tudo — a própria guarda esconde o que não pode. */
+(function(){
+  var cx   = document.getElementById('lx-busca');
+  var box  = document.getElementById('lx-limpa');
+  var find = cx ? cx.parentNode : null;
+  var vazio= document.getElementById('lx-vazio');
+  var vtx  = document.getElementById('lx-vazio-tx');
+  var cards= [].slice.call(document.querySelectorAll('.lx-card'));
+  var kpis = [].slice.call(document.querySelectorAll('.kpi[data-tela]'));
+  var secs = [].slice.call(document.querySelectorAll('.lx-sec[data-sec]'));
+
+  function semAcento(t){
+    return String(t||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  }
+  function pode(tela){
+    if(!tela) return true;
+    if(window.MARIUA_USER && typeof window.mariuaTemTela==='function') return window.mariuaTemTela(tela);
+    return true; // login ainda resolvendo
+  }
+  function atualiza(){
+    var q = semAcento(cx?cx.value:'').trim();
+    if(find) find.classList.toggle('tem-texto', !!q);
+    var visiveis = 0;
+    cards.forEach(function(c){
+      var ok = pode(c.getAttribute('data-tela'));
+      if(ok && q){
+        var alvo = semAcento(c.textContent + ' ' + (c.getAttribute('data-busca')||''));
+        ok = alvo.indexOf(q) >= 0;
+      }
+      c.style.display = ok ? '' : 'none';
+      if(ok) visiveis++;
+    });
+    // KPI só aparece se a tela dele estiver liberada
+    kpis.forEach(function(k){
+      k.style.display = pode(k.getAttribute('data-tela')) ? '' : 'none';
+    });
+    // Indicadores: escondidos durante a busca e quando nenhum está liberado
+    var grid = document.querySelector('.kpi-grid');
+    if(grid){
+      var temKpi = kpis.some(function(k){ return k.style.display !== 'none'; });
+      grid.style.display = (!q && temKpi) ? '' : 'none';
+    }
+    // seção sem nenhum card visível desaparece junto com o título
+    secs.forEach(function(sec){
+      var algum = [].slice.call(sec.querySelectorAll('.lx-card')).some(function(c){ return c.style.display!=='none'; });
+      sec.hidden = !algum;
+    });
+    if(vazio){
+      vazio.style.display = visiveis ? 'none' : 'flex';
+      if(vtx) vtx.textContent = q ? 'Nenhuma tela encontrada para “'+(cx.value.trim())+'”.'
+                                  : 'Você ainda não tem nenhuma tela liberada. Fale com o administrador.';
+    }
+  }
+  if(cx){
+    cx.addEventListener('input', atualiza);
+    cx.addEventListener('keydown', function(e){ if(e.key==='Escape'){ cx.value=''; atualiza(); cx.blur(); } });
+  }
+  if(box) box.addEventListener('click', function(){ cx.value=''; atualiza(); cx.focus(); });
+  // atalho: "/" foca a busca
+  document.addEventListener('keydown', function(e){
+    if(e.key==='/' && document.activeElement!==cx){ e.preventDefault(); if(cx) cx.focus(); }
+  });
+  atualiza();
+  // reaplica enquanto o login resolve
+  var n=0, t=setInterval(function(){ atualiza(); if(window.MARIUA_USER||++n>20) clearInterval(t); }, 350);
 })();
 </script>
 </body>
