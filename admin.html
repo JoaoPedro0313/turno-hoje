@@ -452,8 +452,21 @@ body.sm-collapsed .sm-side:hover .sm-group-head{justify-content:flex-start;paddi
         <!-- ── SOLICITAÇÕES ───────────────────────────────────────────── -->
         <section class="ad-sec" data-sec="solic" hidden>
           <div class="adminbox" id="box-solicitacoes" style="max-width:none;">
-            <h2>Solicitações de cadastro <span id="sol-badge" style="font-size:.7rem;background:#f0a500;color:#fff;border-radius:20px;padding:2px 10px;margin-left:6px;"></span></h2>
-            <p>Pessoas que se cadastraram pelo site e aguardam liberação.</p>
+            <div class="ad-cab">
+              <div>
+                <h2 style="margin:0">Solicitações de cadastro <span id="sol-badge" style="font-size:.7rem;background:#f0a500;color:#fff;border-radius:20px;padding:2px 10px;margin-left:6px;"></span></h2>
+                <p style="margin:2px 0 0">Pessoas que se cadastraram pelo site. “Liberar” apenas carrega os dados no formulário — a conta só existe depois de <b>Criar usuário</b>.</p>
+              </div>
+              <div class="ad-cab-r">
+                <select id="sol-filtro" onchange="carregarSolicitacoes()"
+                  style="margin:0;padding:9px 12px;border:1.5px solid #cbd5e1;border-radius:10px;font-size:.86rem;font-family:inherit;">
+                  <option value="pendente">Pendentes</option>
+                  <option value="liberado">Marcadas como liberadas</option>
+                  <option value="recusado">Recusadas</option>
+                  <option value="">Todas</option>
+                </select>
+              </div>
+            </div>
             <div id="sol-lista"></div>
           </div>
         </section>
@@ -688,8 +701,22 @@ async function criarUsuario(){
   if(!email || senha.length<6){ m.className='amsg err'; m.textContent='Preencha e-mail e uma senha de pelo menos 6 caracteres.'; return; }
   m.className='amsg'; m.textContent='Criando…';
   const {data,error}=await sb.rpc('admin_criar_usuario',{p_email:email,p_senha:senha,p_nome:nome||null,p_gestor:gestor,p_telefone:tel||null,p_vigencia:vig,p_matricula:mat||null});
-  if(error){ m.className='amsg err'; m.textContent='Erro: '+error.message; return; }
+  if(error){
+    m.className='amsg err';
+    m.textContent='Erro: '+error.message
+      + (window._solicAtual ? ' — a solicitação continua PENDENTE na lista, nada foi perdido.' : '');
+    return;
+  }
   m.className='amsg ok'; m.textContent='✅ Usuário criado! Ele já pode entrar com esse e-mail e senha.';
+  // Só agora a solicitação sai da lista de pendentes — a conta existe.
+  if(window._solicAtual && window._solicAtual.id){
+    var _s=window._solicAtual; window._solicAtual=null;
+    try{
+      await sb.from('solicitacoes').update({status:'liberado'}).eq('id',_s.id);
+      await definirContratoUsuario([_s.nome, nome], [_s.contrato]);
+    }catch(e){ console.error('[solicitacao] não foi possível concluir:',e); }
+    carregarSolicitacoes();
+  }
   $('u-nome').value=''; $('u-email').value=''; $('u-senha').value=''; $('u-tel').value=''; $('u-vig').value='';
   $('u-mat').value=''; $('u-func-busca').value=''; $('u-func-atual').textContent='';
   carregarGestores();
@@ -954,53 +981,91 @@ async function enviarSolicitacao(){
 function escHtml(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 async function carregarSolicitacoes(){
   try{
-    const {data,error}=await sb.from('solicitacoes').select('*').eq('status','pendente').order('criado_em',{ascending:true});
+    var filtro=($('sol-filtro')||{value:'pendente'}).value;
+    var q=sb.from('solicitacoes').select('*');
+    if(filtro) q=q.eq('status',filtro);
+    const {data,error}=await q.order('criado_em',{ascending:true});
     const box=$('box-solicitacoes'), lista=$('sol-lista'), badge=$('sol-badge');
-    if(error){ return; }
+    if(box)box.style.display='block';
+    if(error){
+      if(lista)lista.innerHTML='<div class="ad-vazio" style="display:block;color:#c53030">Sem acesso à tabela de solicitações: '+escHtml(error.message)+'</div>';
+      return;
+    }
+    // o contador e o alerta da aba contam SÓ as pendentes
+    if(filtro==='pendente' && badge) badge.textContent = (data&&data.length) ? data.length : '';
     if(!data||!data.length){
-      if(box)box.style.display='block';
-      if(badge)badge.textContent='';
-      if(lista)lista.innerHTML='<div class="ad-vazio" style="display:block">Nenhuma solicitação pendente.</div>';
+      if(lista)lista.innerHTML='<div class="ad-vazio" style="display:block">Nada aqui'
+        + (filtro==='pendente' ? ' — nenhuma solicitação pendente.' : ' nesta situação.') + '</div>';
       if(typeof adResumo==='function') adResumo();
       return;
     }
-    if(box)box.style.display='block';
-    if(badge)badge.textContent=data.length;
     lista.innerHTML=data.map(function(s){
-      return '<div style="border:1px solid #e6ecf3;border-radius:10px;padding:12px 14px;margin-top:10px;background:#fff;">'
+      var st=(s.status||'pendente');
+      var cor = st==='pendente' ? '#b7791f' : st==='liberado' ? '#276749' : '#c53030';
+      var fundo= st==='pendente' ? '#fffaf0' : st==='liberado' ? '#f0fff4' : '#fff5f5';
+      var acoes = st==='pendente'
+        ? '<button class="btn add" onclick="liberarSolic(\''+s.id+'\')">Carregar no formulário</button>'
+          +'<button class="btn out" onclick="recusarSolic(\''+s.id+'\')">✕ Recusar</button>'
+        : '<button class="btn add" onclick="liberarSolic(\''+s.id+'\')">Carregar no formulário</button>'
+          +'<button class="btn ghost" onclick="voltarSolic(\''+s.id+'\')">↩ Voltar para pendente</button>';
+      return '<div style="border:1px solid #e6ecf3;border-left:4px solid '+cor+';border-radius:10px;padding:12px 14px;margin-top:10px;background:'+fundo+';">'
         +'<div style="display:flex;flex-wrap:wrap;gap:14px;align-items:center;">'
-        +'<div style="flex:1;min-width:200px;"><div style="font-weight:800;color:#16202e;">'+escHtml(s.nome)+'</div>'
+        +'<div style="flex:1;min-width:200px;">'
+        +'<div style="font-weight:800;color:#16202e;">'+escHtml(s.nome)
+        +' <span style="font-size:.64rem;font-weight:900;letter-spacing:.8px;text-transform:uppercase;color:'+cor+';">· '+escHtml(st)+'</span></div>'
         +'<div style="font-size:.74rem;color:#64748b;">✉️ '+escHtml(s.email)+' · 🆔 '+escHtml(s.matricula)+'</div>'
         +'<div style="font-size:.74rem;color:#64748b;">🧰 '+escHtml(s.funcao||'—')+' · 🏢 '+escHtml(s.base||'—')+'</div></div>'
         +'<div style="display:flex;flex-direction:column;gap:2px;"><label style="font-size:.62rem;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;">Contrato</label>'
-        +'<select id="sol-ct-'+s.id+'" style="min-width:150px;">'
+        +'<select id="sol-ct-'+s.id+'" style="min-width:150px;margin:0;">'
         +'<option value="ba"'+(baseState(s.base)==='ba'?' selected':'')+'>OBRAS - BA</option>'
         +'<option value="mg"'+(baseState(s.base)==='mg'?' selected':'')+'>CON_MANUT - MG</option>'
         +'<option value="se"'+(baseState(s.base)==='se'?' selected':'')+'>OBRAS - SE</option>'
         +'</select></div>'
-        +'<button class="btn add" onclick="liberarSolic(\''+s.id+'\')">✅ Liberar</button>'
-        +'<button class="btn out" onclick="recusarSolic(\''+s.id+'\')">✕ Recusar</button>'
+        +acoes
         +'</div></div>';
     }).join('');
-  }catch(e){}
+    if(typeof adResumo==='function') adResumo();
+  }catch(e){ console.error('[carregarSolicitacoes]',e); }
 }
+// devolve para a fila quem foi marcado como liberado/recusado sem a conta existir
+async function voltarSolic(id){
+  try{
+    const {error}=await sb.from('solicitacoes').update({status:'pendente'}).eq('id',id);
+    if(error){ alert('Não foi possível: '+error.message); return; }
+    carregarSolicitacoes();
+  }catch(e){ alert('Falha ao voltar a solicitação.'); }
+}
+
 async function liberarSolic(id){
   try{
     const {data}=await sb.from('solicitacoes').select('*').eq('id',id).single();
-    if(data){
-      // pré-preenche o formulário de criar usuário
-      if($('u-nome')) $('u-nome').value=data.nome||'';
-      if($('u-email')) $('u-email').value=data.email||'';
-      if($('u-mat')) $('u-mat').value=data.matricula||'';
-      if($('u-msg')) $('u-msg').textContent='Dados de "'+(data.nome||'')+'" carregados — defina a senha e clique em Criar usuário. (Função: '+(data.funcao||'—')+' · Base: '+(data.base||'—')+')';
-      await sb.from('solicitacoes').update({status:'liberado'}).eq('id',id);
-      var ct=$('sol-ct-'+id); var contratoState=ct?ct.value:baseState(data.base);
-      await definirContratoUsuario([data.nome], [contratoState]);
-      carregarSolicitacoes();
-      var box=document.querySelector('.adminbox h2'); if(box) box.scrollIntoView({behavior:'smooth',block:'center'});
+    if(!data) return;
+    // guarda a solicitação em andamento: ela só sai da lista de pendentes
+    // DEPOIS que o usuário for criado de fato (ver criarUsuario()).
+    var ct=$('sol-ct-'+id);
+    window._solicAtual = { id:id, contrato: ct?ct.value:baseState(data.base), nome:data.nome||'' };
+    // leva para a aba de usuários e ABRE o painel de criação
+    if(typeof adSecao==='function'){
+      var abaUsuarios=document.querySelector('.ad-tab');
+      adSecao('usuarios', abaUsuarios);
     }
-  }catch(e){}
+    if(typeof adNovo==='function') adNovo(true);
+    if($('u-nome')) $('u-nome').value=data.nome||'';
+    if($('u-email')) $('u-email').value=data.email||'';
+    if($('u-mat')) $('u-mat').value=data.matricula||'';
+    if($('u-func-atual')) $('u-func-atual').textContent = data.matricula?('Matrícula '+data.matricula):'';
+    if($('u-msg')){
+      $('u-msg').className='amsg';
+      $('u-msg').textContent='Dados de "'+(data.nome||'')+'" carregados. Defina a senha e clique em Criar usuário. '
+        +'A solicitação só sai da lista de pendentes quando a conta for criada. '
+        +'(Função: '+(data.funcao||'—')+' · Base: '+(data.base||'—')+')';
+    }
+    var b=document.getElementById('box-novo');
+    if(b) b.scrollIntoView({behavior:'smooth',block:'center'});
+    var sen=$('u-senha'); if(sen) setTimeout(function(){ sen.focus(); },350);
+  }catch(e){ console.error('[liberarSolic]',e); }
 }
+
 async function recusarSolic(id){
   if(!confirm('Recusar esta solicitação?')) return;
   try{ await sb.from('solicitacoes').update({status:'recusado'}).eq('id',id); carregarSolicitacoes(); }catch(e){}
