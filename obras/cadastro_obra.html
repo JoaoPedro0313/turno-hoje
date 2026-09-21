@@ -107,6 +107,121 @@ body.sm-collapsed .sm-side:hover .sm-top{justify-content:flex-start;padding:12px
 body.sm-collapsed .sm-side:hover .sm-item{justify-content:flex-start;padding:9px 11px}
 body.sm-collapsed .sm-side:hover .sm-group-head{justify-content:flex-start;padding:9px 11px}
 </style>
+<style>
+/* ══ CADASTRO DE OBRA — layout ═══════════════════════════════════════════ */
+.co-wrap{max-width:1180px;margin:0 auto;padding:22px 24px 70px}
+
+/* cabeçalho + trilha dos passos */
+.co-head{display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap;margin-bottom:20px}
+.co-head h1{margin:0;font-size:1.5rem;font-weight:900;color:#12343b;letter-spacing:-.4px}
+.co-head p{margin:4px 0 0;font-size:.85rem;color:#7c8b95;font-weight:600}
+.co-passos{display:flex;align-items:center;gap:6px}
+.co-passo{display:flex;align-items:center;gap:8px;background:#fff;border:1px solid #e6ebee;
+  border-radius:24px;padding:7px 15px 7px 8px;transition:all .18s}
+.co-passo .n{width:24px;height:24px;border-radius:50%;background:#eef2f4;color:#9aa7b1;
+  display:flex;align-items:center;justify-content:center;font-size:.76rem;font-weight:900;flex-shrink:0}
+.co-passo .t{font-size:.78rem;font-weight:800;color:#9aa7b1;white-space:nowrap}
+.co-passo.ativo{border-color:#0d7377;box-shadow:0 3px 12px rgba(13,115,119,.12)}
+.co-passo.ativo .n{background:#0d7377;color:#fff}
+.co-passo.ativo .t{color:#0d7377}
+.co-passo.feito .n{background:#38a169;color:#fff}
+.co-passo.feito .t{color:#2f6f4f}
+@media(max-width:760px){ .co-passos{width:100%} .co-passo .t{display:none} .co-passo{padding:7px} }
+
+/* cartões */
+.co-card{background:#fff;border:1px solid #e6ebee;border-radius:15px;margin-bottom:16px;overflow:hidden}
+.co-card-h{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;flex-wrap:wrap;
+  padding:15px 18px;background:#fbfcfd;border-bottom:1px solid #eef2f4}
+.co-card-t{display:flex;align-items:flex-start;gap:12px;min-width:0;flex:1 1 260px}
+.co-card-h>.co-bt,.co-card-h>.co-acoes{margin-left:auto;flex:0 0 auto}
+.co-num{width:28px;height:28px;border-radius:9px;background:#0d7377;color:#fff;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;font-size:.86rem;font-weight:900}
+.co-card-t b{display:block;font-size:.95rem;font-weight:900;color:#12343b}
+.co-card-t small{display:block;font-size:.74rem;color:#8b99a4;font-weight:600;margin-top:2px}
+.co-card-b{padding:18px}
+.co-ver{background:#f0fafa;color:#0d7377;border:1px solid #c7e7e6;border-radius:6px;
+  padding:2px 7px;font-size:.62rem;font-weight:800;margin-left:6px;vertical-align:2px}
+.co-cnt{color:#8b99a4;font-weight:700;font-size:.82rem}
+
+/* botões */
+.co-bt{border:1.5px solid transparent;border-radius:9px;padding:8px 14px;cursor:pointer;
+  font-family:'Barlow',sans-serif;font-size:.78rem;font-weight:800;white-space:nowrap;transition:all .15s}
+.co-bt.ghost{background:#fff;border-color:#dbe3e8;color:#0d7377}
+.co-bt.ghost:hover{border-color:#0d7377;background:#f0fafa}
+.co-bt.teal{background:#0d7377;color:#fff}
+.co-bt.teal:hover{background:#0b5e62}
+.co-bt.danger{background:#fff;border-color:#f3d2d2;color:#c53030}
+.co-bt.danger:hover{background:#c53030;color:#fff;border-color:#c53030}
+.co-bt.baixar{background:linear-gradient(135deg,#f05a1a,#ff7a3d);color:#fff;padding:10px 20px;
+  font-size:.84rem;box-shadow:0 6px 16px rgba(240,90,26,.26)}
+.co-bt.baixar:hover{filter:brightness(1.05)}
+.co-bt.baixar:disabled{background:#e6ebee;color:#a9b4bf;box-shadow:none;cursor:not-allowed;filter:none}
+.co-acoes{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.co-copiar{display:inline-flex;align-items:center;gap:6px;padding-left:7px;border-left:1px solid #e0e7eb}
+.co-copiar select{padding:8px 10px;border:1.5px solid #dbe3e8;border-radius:9px;background:#fff;
+  font-family:'Barlow',sans-serif;font-size:.76rem;font-weight:700;color:#64748b;cursor:pointer;max-width:170px}
+
+/* campos e chips */
+.co-campo{margin-bottom:16px}
+.co-campo:last-child{margin-bottom:0}
+.co-campo-inline{display:flex;align-items:center;gap:10px;margin-bottom:0;flex-wrap:wrap}
+.co-lbl{display:block;font-size:.66rem;font-weight:800;color:#9aa7b1;letter-spacing:1.3px;
+  text-transform:uppercase;margin-bottom:7px}
+.co-campo-inline .co-lbl{margin-bottom:0}
+.co-chips{display:flex;flex-wrap:wrap;gap:7px}
+
+/* painel de configuração */
+.co-config{margin-top:4px;padding:16px;background:#f8fafb;border:1px dashed #d8e2e6;border-radius:12px}
+.co-form{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:4px 16px;align-items:end}
+.co-f{min-width:0}
+.co-f-full{grid-column:1/-1}
+.co-f label{display:block;font-size:.72rem;font-weight:800;color:#64748b;margin-bottom:5px}
+.co-f label em{color:#9aa7b1;font-weight:600;font-style:normal}
+.co-f input{width:100%;box-sizing:border-box;padding:9px 12px;border:1.5px solid #dbe3e8;border-radius:9px;
+  font-family:'Barlow',sans-serif;font-size:.84rem;font-weight:700;color:#12343b;outline:none;margin:0}
+.co-f input:focus{border-color:#0d7377;box-shadow:0 0 0 3px rgba(13,115,119,.12)}
+.co-f-bt{display:flex;align-items:flex-end}
+.co-dica{margin:12px 0 0;font-size:.72rem;color:#8b99a4;font-weight:600;line-height:1.5}
+.co-dica code{background:#eef2f4;border-radius:4px;padding:1px 5px;font-size:.92em}
+
+/* opções do passo 2 */
+.co-opcoes{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;
+  padding-bottom:14px;border-bottom:1px solid #eef2f4;margin-bottom:16px}
+.co-checks{display:flex;gap:16px;flex-wrap:wrap}
+.co-check{display:inline-flex;align-items:center;gap:7px;font-size:.76rem;font-weight:700;color:#64748b;cursor:pointer}
+.co-check input{width:16px;height:16px;accent-color:#0d7377;cursor:pointer;margin:0}
+
+/* nota explicativa recolhível */
+.co-nota{margin-top:16px;padding-top:14px;border-top:1px solid #eef2f4;font-size:.75rem;color:#8b99a4}
+.co-nota summary{cursor:pointer;font-weight:800;color:#0d7377;font-size:.76rem}
+.co-nota p{margin:8px 0 0;line-height:1.55;font-weight:600}
+
+/* status */
+.co-status{margin-top:16px;font-size:.78rem;font-weight:700;color:#8b99a4;line-height:1.5}
+.co-status:empty{margin:0}
+
+/* prévia */
+.co-preview{overflow:auto;max-height:440px;border:1px solid #eef2f4;border-radius:11px;
+  font-size:.74rem;color:#8b99a4}
+.co-preview:not(:has(table)){padding:34px;text-align:center;font-weight:700}
+.co-preview table{margin:0!important}
+.co-preview thead tr{position:sticky;top:0;z-index:2}
+.co-preview th{font-size:.64rem!important;letter-spacing:.8px;text-transform:uppercase;
+  border-bottom:1.5px solid #c7e7e6}
+.co-preview tbody tr:nth-child(even){background:#fcfdfd}
+.co-preview tbody tr:hover{background:#f0fafa}
+
+@media(max-width:620px){
+  .co-wrap{padding:16px 13px 56px}
+  .co-head h1{font-size:1.22rem}
+  .co-card-b{padding:14px}
+  .co-card-h{padding:13px 14px}
+  .co-acoes{width:100%}
+  .co-acoes .co-bt,.co-copiar{flex:1}
+  .co-copiar{padding-left:0;border-left:none}
+  .co-bt.baixar{width:100%}
+}
+</style>
 </head>
 <body class="sm-collapsed">
 <script>try{if(localStorage.getItem("mariua_menu")==="aberto")document.body.classList.remove("sm-collapsed");}catch(e){}</script>
@@ -131,80 +246,122 @@ body.sm-collapsed .sm-side:hover .sm-group-head{justify-content:flex-start;paddi
 </aside>
 <script src="../nav.js?v=1"></script>
 
-<div class="wrap">
+<div class="wrap co-wrap">
 
-  <div style="background:linear-gradient(135deg,#0b5e62,#0d7377,#14a085);border-radius:14px;padding:16px 20px;margin-bottom:14px;">
-    <div style="color:#fff;font-size:1.15rem;font-weight:800;letter-spacing:.3px;">Cadastro de Obra</div>
-    <div style="color:rgba(255,255,255,.85);font-size:.82rem;">Puxa a carteira do Google e converte para o modelo de importação (55 colunas).</div>
+  <!-- CABEÇALHO -->
+  <div class="co-head">
+    <div class="co-head-tx">
+      <h1>Cadastro de Obra</h1>
+      <p>Puxa a carteira do Google e converte para o modelo de importação — 55 colunas.</p>
+    </div>
+    <div class="co-passos" id="co-passos">
+      <div class="co-passo ativo" data-passo="1"><span class="n">1</span><span class="t">Carteira</span></div>
+      <div class="co-passo" data-passo="2"><span class="n">2</span><span class="t">Constantes</span></div>
+      <div class="co-passo" data-passo="3"><span class="n">3</span><span class="t">Exportar</span></div>
+    </div>
   </div>
 
-  <div style="background:#fff;border:1px solid #e6ecf3;border-radius:14px;padding:16px;margin-bottom:14px;">
-    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:12px;">
-      <div style="font-size:.78rem;font-weight:800;color:#0d7377;text-transform:uppercase;letter-spacing:.5px;">1 · Carteira — escolha o mês</div>
-      <button onclick="coToggleConfig()" style="font-size:.72rem;font-weight:700;color:#64748b;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:8px;padding:5px 10px;cursor:pointer;">⚙️ Configurar abas</button>
-    </div>
-
-    <input type="hidden" id="co-mes">
-    <input type="hidden" id="co-base">
-    <div style="font-size:.68rem;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px;">Base</div>
-    <div id="co-base-btns" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;"></div>
-    <div style="font-size:.68rem;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px;">Mês</div>
-    <div id="co-mes-btns" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
-
-    <div id="co-config" style="display:none;margin-top:14px;padding-top:12px;border-top:1px dashed #e6ecf3;">
-      <label style="font-size:.72rem;font-weight:700;color:#64748b;">Link ou ID da planilha <span style="color:#94a3b8;">(da base selecionada)</span></label>
-      <input id="co-link" value="https://docs.google.com/spreadsheets/d/14ImbZb8-OCBp78jDtd0QFkSLrMG5vXA7tzrM-x6KQVo/edit?gid=1847275425" style="width:100%;padding:8px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:.8rem;margin:3px 0 8px;">
-      <div style="display:flex;gap:8px;align-items:end;flex-wrap:wrap;">
-        <div><label style="font-size:.72rem;font-weight:700;color:#64748b;">Aba (gid) do mês selecionado</label><br><input id="co-gid" style="padding:8px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:.8rem;width:150px;"></div>
-        <button onclick="coSalvarAba()" style="padding:9px 12px;background:#eef4f4;color:#0d7377;border:1px solid #cfe3e2;border-radius:8px;font-weight:800;font-size:.78rem;cursor:pointer;">💾 Salvar aba do mês</button>
+  <!-- ══ 1 · CARTEIRA ══ -->
+  <section class="co-card" data-card="1">
+    <header class="co-card-h">
+      <div class="co-card-t"><span class="co-num">1</span>
+        <div><b>Carteira</b><small>Escolha a base e o mês a importar</small></div>
       </div>
-      <div style="font-size:.68rem;color:#94a3b8;margin-top:6px;">Abra a aba do mês na planilha, copie o número do <code>gid</code> da URL, cole aqui e salve. Fica salvo — depois é só clicar no botão do mês.</div>
+      <button class="co-bt ghost" onclick="coToggleConfig()">⚙️ Configurar abas</button>
+    </header>
+
+    <div class="co-card-b">
+      <input type="hidden" id="co-mes">
+      <input type="hidden" id="co-base">
+
+      <div class="co-campo">
+        <span class="co-lbl">Base</span>
+        <div id="co-base-btns" class="co-chips"></div>
+      </div>
+
+      <div class="co-campo">
+        <span class="co-lbl">Mês</span>
+        <div id="co-mes-btns" class="co-chips"></div>
+      </div>
+
+      <div id="co-config" class="co-config" style="display:none">
+        <div class="co-form">
+          <div class="co-f co-f-full">
+            <label for="co-link">Link ou ID da planilha <em>(da base selecionada)</em></label>
+            <input id="co-link" value="https://docs.google.com/spreadsheets/d/14ImbZb8-OCBp78jDtd0QFkSLrMG5vXA7tzrM-x6KQVo/edit?gid=1847275425">
+          </div>
+          <div class="co-f">
+            <label for="co-gid">Aba (gid) do mês selecionado</label>
+            <input id="co-gid" inputmode="numeric" placeholder="ex.: 1847275425">
+          </div>
+          <div class="co-f co-f-bt">
+            <button class="co-bt teal" onclick="coSalvarAba()">💾 Salvar aba do mês</button>
+          </div>
+        </div>
+        <p class="co-dica">Abra a aba do mês na planilha, copie o número do <code>gid</code> da URL, cole aqui e salve. Fica guardado — depois é só clicar no botão do mês.</p>
+      </div>
+
+      <div id="co-status" class="co-status"></div>
     </div>
+  </section>
 
-    <div id="co-status" style="font-size:.76rem;font-weight:700;color:#94a3b8;margin-top:12px;"></div>
-  </div>
-
-  <div style="background:#fff;border:1px solid #e6ecf3;border-radius:14px;padding:16px;margin-bottom:14px;">
+  <!-- ══ 2 · CONSTANTES ══ -->
+  <section class="co-card" data-card="2">
     <input type="hidden" id="co-estado" value="ba">
-
-    <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:12px;">
-      <div>
-        <div style="font-size:.78rem;font-weight:800;color:#0d7377;text-transform:uppercase;letter-spacing:.5px;">2 · Constantes do arquivo <span style="background:#eef4f4;color:#0d7377;border:1px solid #cfe3e2;border-radius:6px;padding:2px 7px;font-size:.62rem;margin-left:6px;">v8 · 10/09</span></div>
-        <div style="font-size:.7rem;color:#94a3b8;font-weight:700;margin-top:3px;">Base <span id="co-const-base" style="color:#0d7377;">—</span> <span id="co-const-count"></span></div>
+    <header class="co-card-h">
+      <div class="co-card-t"><span class="co-num">2</span>
+        <div><b>Constantes do arquivo <span class="co-ver">v8 · 10/09</span></b>
+          <small>Base <span id="co-const-base">—</span> <span id="co-const-count"></span></small></div>
       </div>
-      <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
-        <button onclick="coToggleConst()" id="co-const-toggle" style="padding:8px 13px;background:#f8fafc;color:#0d7377;border:1.5px solid #cfe3e2;border-radius:8px;font-family:inherit;font-weight:800;font-size:.76rem;cursor:pointer;">⚙️ Editar constantes</button>
-        <select id="co-copiar-de" style="padding:8px 9px;border:1.5px solid #e2e8f0;border-radius:8px;font-family:inherit;font-weight:700;font-size:.75rem;color:#64748b;background:#fff;cursor:pointer;"></select>
-        <button onclick="coCopiarDe()" style="padding:8px 12px;background:#f8fafc;color:#0d7377;border:1.5px solid #cfe3e2;border-radius:8px;font-family:inherit;font-weight:800;font-size:.76rem;cursor:pointer;">Copiar</button>
-        <button onclick="coSalvarConstantes()" style="padding:8px 14px;background:#0d7377;color:#fff;border:0;border-radius:8px;font-family:inherit;font-weight:800;font-size:.78rem;cursor:pointer;">💾 Salvar e aplicar</button>
-        <button onclick="coLimparConstantes()" style="padding:8px 12px;background:#fff;color:#c53030;border:1.5px solid #f3d2d2;border-radius:8px;font-family:inherit;font-weight:800;font-size:.76rem;cursor:pointer;">🧹 Limpar</button>
+      <div class="co-acoes">
+        <button id="co-const-toggle" class="co-bt ghost" onclick="coToggleConst()">⚙️ Editar constantes</button>
+        <span class="co-copiar">
+          <select id="co-copiar-de"></select>
+          <button class="co-bt ghost" onclick="coCopiarDe()">Copiar</button>
+        </span>
+        <button class="co-bt teal" onclick="coSalvarConstantes()">💾 Salvar e aplicar</button>
+        <button class="co-bt danger" onclick="coLimparConstantes()">🧹 Limpar</button>
       </div>
-    </div>
+    </header>
 
-    <div id="co-const-box" style="display:none;">
-    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding-bottom:12px;border-bottom:1px solid #eef2f7;margin-bottom:12px;">
-      <span style="font-size:.66rem;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;">Estado</span>
-      <div id="co-estado-btns" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
-      <label style="display:inline-flex;align-items:center;gap:6px;margin-left:auto;font-size:.71rem;font-weight:700;color:#64748b;cursor:pointer;"><input type="checkbox" id="co-so-preenchidas" onchange="coPopularConstantes()" style="width:15px;height:15px;accent-color:#0d7377;cursor:pointer;"> Mostrar só preenchidas</label>
-      <label style="display:inline-flex;align-items:center;gap:6px;font-size:.71rem;font-weight:700;color:#64748b;cursor:pointer;"><input type="checkbox" id="co-auto-baixar" checked style="width:15px;height:15px;accent-color:#0d7377;cursor:pointer;"> Baixar CSV ao salvar</label>
-      <label style="display:inline-flex;align-items:center;gap:6px;font-size:.71rem;font-weight:700;color:#64748b;cursor:pointer;" title="Marcado: cada obra sai com o status que está na carteira. Desmarcado: todas saem com o STATUS* do card 2."><input type="checkbox" id="co-status-planilha" onchange="coStatusPlanilhaMudou()" style="width:15px;height:15px;accent-color:#0d7377;cursor:pointer;"> Manter status da carteira</label>
-    </div>
+    <div id="co-const-box" class="co-card-b" style="display:none">
+      <div class="co-opcoes">
+        <div class="co-campo co-campo-inline">
+          <span class="co-lbl">Estado</span>
+          <div id="co-estado-btns" class="co-chips"></div>
+        </div>
+        <div class="co-checks">
+          <label class="co-check"><input type="checkbox" id="co-so-preenchidas" onchange="coPopularConstantes()"> Só preenchidas</label>
+          <label class="co-check"><input type="checkbox" id="co-auto-baixar" checked> Baixar CSV ao salvar</label>
+          <label class="co-check" title="Marcado: cada obra sai com o status que está na carteira. Desmarcado: todas saem com o STATUS* definido aqui."><input type="checkbox" id="co-status-planilha" onchange="coStatusPlanilhaMudou()"> Manter status da carteira</label>
+        </div>
+      </div>
 
-    <div id="co-const-grupos"></div>
+      <div id="co-const-grupos"></div>
 
-    <div style="font-size:.67rem;color:#94a3b8;margin-top:12px;padding-top:10px;border-top:1px solid #eef2f7;">
-      Cada base guarda o seu próprio conjunto: ao trocar de base no card 1, estes campos mudam junto. · Vindos da carteira, não editáveis aqui: <b>Projeto, Título, Município, Responsável, Supervisor, Postes, Latitude, Longitude</b> · Centro de serviço = sigla do estado + município · Status: por padrão o <b>STATUS*</b> do card 2 vale para todas as obras; marque “Manter status da carteira” para cada obra sair com o status da planilha.
+      <details class="co-nota">
+        <summary>Como estes campos funcionam</summary>
+        <p>Cada base guarda o seu próprio conjunto: ao trocar de base no passo 1, estes campos mudam junto.</p>
+        <p><b>Vindos da carteira, não editáveis aqui:</b> Projeto, Título, Município, Responsável, Supervisor, Postes, Latitude, Longitude.</p>
+        <p><b>Centro de serviço:</b> sigla do estado + município.</p>
+        <p><b>Status:</b> por padrão o <b>STATUS*</b> definido aqui vale para todas as obras. Marque “Manter status da carteira” para cada obra sair com o status da planilha.</p>
+      </details>
     </div>
-    </div>
-  </div>
+  </section>
 
-  <div style="background:#fff;border:1px solid #e6ecf3;border-radius:14px;padding:16px;">
-    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px;">
-      <div style="font-size:.78rem;font-weight:800;color:#0d7377;text-transform:uppercase;letter-spacing:.5px;">3 · Prévia e exportação <span id="co-count" style="color:#94a3b8;"></span></div>
-      <button id="co-baixar" onclick="coBaixar()" disabled style="padding:9px 16px;background:#0d7377;color:#fff;border:0;border-radius:8px;font-weight:800;font-size:.82rem;cursor:pointer;opacity:.5;">⬇️ Baixar CSV (modelo)</button>
+  <!-- ══ 3 · PRÉVIA E EXPORTAÇÃO ══ -->
+  <section class="co-card" data-card="3">
+    <header class="co-card-h">
+      <div class="co-card-t"><span class="co-num">3</span>
+        <div><b>Prévia e exportação <span id="co-count" class="co-cnt"></span></b>
+          <small>Confira as primeiras linhas antes de gerar o arquivo</small></div>
+      </div>
+      <button id="co-baixar" class="co-bt baixar" onclick="coBaixar()" disabled>⬇️ Baixar CSV (modelo)</button>
+    </header>
+    <div class="co-card-b">
+      <div id="co-preview" class="co-preview">Carregue a carteira para ver a prévia.</div>
     </div>
-    <div id="co-preview" style="overflow-x:auto;font-size:.74rem;color:#94a3b8;">Carregue a carteira para ver a prévia.</div>
-  </div>
+  </section>
 
 </div>
 
@@ -705,5 +862,30 @@ coCarregarConstantes().then(function(){ coCarregarMapa(); });
 })();
 </script>
 <script>window.addEventListener("load",function(){var _t=window.smToggle;if(typeof _t==="function"){window.smToggle=function(){_t();try{localStorage.setItem("mariua_menu",document.body.classList.contains("sm-collapsed")?"recolhido":"aberto");}catch(e){}};}});</script>
+<script>
+/* Trilha dos passos: acompanha o que já foi feito, sem tocar na lógica.
+   Passo 1 conclui quando a carteira carrega (o botão de baixar destrava);
+   passo 2 fica ativo em seguida; passo 3 conclui quando há prévia na tela. */
+(function(){
+  function marca(){
+    var carregou = !!(document.getElementById('co-baixar') && !document.getElementById('co-baixar').disabled);
+    var temPrevia = !!document.querySelector('#co-preview table');
+    var p = {};
+    document.querySelectorAll('.co-passo').forEach(function(e){ p[e.dataset.passo]=e; });
+    function set(n, cls){ if(p[n]){ p[n].className='co-passo'+(cls?' '+cls:''); } }
+    if(!carregou){ set(1,'ativo'); set(2); set(3); return; }
+    set(1,'feito');
+    set(2, temPrevia ? 'feito' : 'ativo');
+    set(3, temPrevia ? 'ativo' : '');
+  }
+  marca();
+  ['co-preview','co-status'].forEach(function(id){
+    var el=document.getElementById(id);
+    if(el && window.MutationObserver) new MutationObserver(marca).observe(el,{childList:true,subtree:true,characterData:true});
+  });
+  var bt=document.getElementById('co-baixar');
+  if(bt && window.MutationObserver) new MutationObserver(marca).observe(bt,{attributes:true,attributeFilter:['disabled']});
+})();
+</script>
 </body>
 </html>
