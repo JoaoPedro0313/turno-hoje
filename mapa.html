@@ -3578,14 +3578,39 @@ function mapaParseCoord(s) {
     if (coords) return coords.lat;
     return null;
   }
-  // Replace comma decimal separator
-  v = v.replace(',', '.');
-  // Handle "S -11.3" or "W -41.5" prefixes (sometimes exported this way)
-  v = v.replace(/^[NSWEnswe]\s*/, '');
-  // Handle degree symbol: "11.30°" -> "11.30"
-  v = v.replace(/°.*$/, '');
-  const n = parseFloat(v);
-  if (isNaN(n)) return null;
+  // Hemisferio escrito por letra (S / O / W = negativo). Aceita antes ou depois.
+  const _letras = v.replace(/[^A-Za-zÀ-ú]/g,'').toUpperCase();
+  const _negPorLetra = /^(S|O|W|SUL|OESTE|WEST|SOUTH)/.test(_letras);
+  // Graus-minutos-segundos: 11°25'19.8"S, 11 25 19.8 S, 11:25:19.8
+  const dms = v.match(/(-?\d{1,3})\s*[°º:\s]\s*(\d{1,2})\s*['’′:\s]\s*(\d{1,2}(?:[.,]\d+)?)/);
+  if (dms) {
+    const g = Math.abs(parseFloat(dms[1]));
+    const m = parseFloat(dms[2]);
+    const sg = parseFloat(String(dms[3]).replace(',','.'));
+    if (!isNaN(g) && !isNaN(m) && !isNaN(sg)) {
+      let dec = g + m/60 + sg/3600;
+      if (parseFloat(dms[1]) < 0 || _negPorLetra) dec = -dec;
+      return dec;
+    }
+  }
+  // Graus + minutos decimais: 11°25.33'S
+  const dm = v.match(/(-?\d{1,3})\s*[°º]\s*(\d{1,2}(?:[.,]\d+)?)\s*['’′]?/);
+  if (dm) {
+    const g = Math.abs(parseFloat(dm[1]));
+    const m = parseFloat(String(dm[2]).replace(',','.'));
+    if (!isNaN(g) && !isNaN(m)) {
+      let dec = g + m/60;
+      if (parseFloat(dm[1]) < 0 || _negPorLetra) dec = -dec;
+      return dec;
+    }
+  }
+  // Decimal: pega o PRIMEIRO numero da celula. Resolve "-11,4221 / -41,1234"
+  // (par na mesma celula) e a virgula decimal em qualquer posicao.
+  const tok = v.replace(/[°º]/g,' ').match(/-?\d+(?:[.,]\d+)?/);
+  if (!tok) return null;
+  const n0 = parseFloat(tok[0].replace(',','.'));
+  if (isNaN(n0)) return null;
+  const n = (_negPorLetra && n0 > 0) ? -n0 : n0;
   // Coordenada sem ponto decimal (ex.: "-11422167" = -11.422167): reescala
   // dividindo por 10 até cair numa faixa de grau plausível (Brasil: |lat|<=34, |lon|<=74).
   let nn = n, guard = 0;
@@ -3624,11 +3649,19 @@ document.head.appendChild(s);
 }
 function compParseCSVText(text, utdLabel) {
 const rows = Papa.parse(text.replace(/^\uFEFF/,''), { skipEmptyLines: true }).data;
+// Normaliza a celula do cabecalho: maiuscula, sem acento, sem quebra de linha,
+// sem espaco duplo. Assim 'PEP  OBRA', 'PEP OBRA\n(NOTA)' e 'Pep Obra' sao iguais.
+const _hNorm = c => String(c==null?'':c).toUpperCase()
+  .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+  .replace(/\s+/g,' ').trim();
 let headerIdx = -1;
-for (let i=0; i<Math.min(rows.length,10); i++) {
-const r = rows[i].map(c=>String(c).trim().toUpperCase());
-if ((r.some(c=>c==='NOTA') && r.some(c=>c.includes('PEP'))) ||
-(r.some(c=>c==='PEP OBRA') && (r.some(c=>c==='STATUS DA OBRA') || r.some(c=>c==='OBS STATUS')))) { headerIdx=i; break; }
+// AMPLIADO: procura o cabecalho nas primeiras 60 linhas (antes eram 10). Abas com
+// varias linhas de titulo/logo em cima faziam a aba INTEIRA ser descartada.
+for (let i=0; i<Math.min(rows.length,60); i++) {
+const r = (rows[i]||[]).map(_hNorm);
+const temPep = r.some(c=>c==='PEP' || c==='PEP OBRA' || c.startsWith('PEP OBRA') || (c.includes('PEP') && c.length<=20));
+const temApoio = r.some(c=>c==='NOTA' || c.includes('STATUS') || c.includes('MUNICIPIO') || c.includes('LATITUDE'));
+if (temPep && temApoio) { headerIdx=i; break; }
 }
 if (headerIdx===-1) return null;
 const headers = rows[headerIdx].map(c => {
@@ -3638,16 +3671,29 @@ const headers = rows[headerIdx].map(c => {
   h = h.split('\n')[0].trim();
   // Remove espaços duplos
   h = h.replace(/\s+/g, ' ');
+  // Apelidos: qualquer variacao de PEP ('PEP', 'PEP OBRA (NOTA)', 'PEP DA OBRA')
+  // passa a valer como 'PEP OBRA', que e a chave usada no resto do sistema.
+  const hs = h.normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  if (hs === 'PEP' || hs.startsWith('PEP OBRA') || hs === 'PEP DA OBRA' || hs === 'PEP/NOTA') h = 'PEP OBRA';
   return h;
 });
 const data = [];
+let _ignoradas = 0;
 for (let i=headerIdx+1; i<rows.length; i++) {
 const row = rows[i];
 if (!row.some(c=>String(c).trim())) continue;
 const obj = { _UTD: utdLabel||'' };
-headers.forEach((h,idx) => { obj[h] = String(row[idx]||'').trim(); });
-if (obj['PEP OBRA']) data.push(obj);
+headers.forEach((h,idx) => { if (h && (obj[h]===undefined || obj[h]==='')) obj[h] = String(row[idx]||'').trim(); });
+// Linha valida: tem PEP OU (tem titulo E alguma coordenada). Antes, toda linha sem
+// PEP era jogada fora sem aviso — obras reais com a celula do PEP vazia desapareciam.
+const _temPep = !!obj['PEP OBRA'];
+const _tit = obj['TÍTULO'] || obj['TITULO'] || '';
+const _lat = obj['LATITUDE'] || obj['LATITUDE SUL'] || obj['LAT'] || '';
+if (_temPep || (_tit && _lat)) data.push(obj);
+else if (row.filter(c=>String(c).trim()).length >= 3) _ignoradas++;
 }
+data._ignoradas = _ignoradas;
+if (_ignoradas) console.warn('[mapa] '+(utdLabel||'?')+': '+_ignoradas+' linha(s) com dados foram ignoradas por nao ter PEP nem titulo+coordenada.');
 // Detecta o mês declarado no topo da aba (ex.: "JUN/26"), olhando as linhas-título
 // que ficam ANTES do cabeçalho (PEP OBRA). Usado para validar se a aba bate com o mês.
 try {
@@ -4535,6 +4581,14 @@ function mapaCarregarMes(ano, mes) {
       let dataIrc = compParseCSVText(textIrc, 'IRECÊ') || [];
       let dataSer = textSer ? (compParseCSVText(textSer, 'SERRINHA') || []) : [];
       if (urlSer && !dataSer.length) console.warn('[mapaCarregarMes] Serrinha sem dados reconhecidos em', label);
+      // Quantas linhas com dados cada aba descartou (sem PEP e sem titulo+coordenada)
+      window._mapaIgnoradas = (dataJac._ignoradas||0) + (dataIrc._ignoradas||0) + (dataSer._ignoradas||0);
+      // Aba que nem cabecalho teve: avisa em vez de sumir calada
+      window._mapaAbasVazias = [
+        (urlJac && !dataJac.length) ? 'Jacobina' : null,
+        (urlIrc && !dataIrc.length) ? 'Irecê' : null,
+        (urlSer && !dataSer.length) ? 'Serrinha' : null
+      ].filter(Boolean);
       if (!dataJac.length && !dataIrc.length && !dataSer.length) throw new Error('Nenhum dado reconhecido nas planilhas — verifique o compartilhamento (deve ser "Qualquer pessoa com o link")');
       clearTimeout(_mesFlagTimeout); // sucesso — cancela o timeout de segurança
       // Verifica o mês REAL declarado em cada aba (célula do topo, ex.: "JUN/26").
@@ -5022,7 +5076,12 @@ mapaData = bancoDB.map(obj => {
     lon = -lon;
   }
   // Também corrige lat positiva no Brasil (deveria ser negativa, exceto região norte)
-  if (lat !== null && lat > 6) {
+  // Latitude positiva entre 6 e 34: e o sinal "-" que faltou na planilha
+  // (Bahia fica entre -8 e -19). Antes so avisava e a obra caia no oceano.
+  if (lat !== null && lat > 6 && lat <= 34) {
+    console.warn('[MAPA] Auto-corrigindo latitude positiva:', lat, '→', -lat);
+    lat = -lat;
+  } else if (lat !== null && lat > 34) {
     console.warn('[MAPA] Lat fora do Brasil:', lat);
   }
   // Fallback: link em coluna dedicada
@@ -5046,7 +5105,8 @@ mapaData = bancoDB.map(obj => {
       if (coords) { _latFromLink = coords.lat; _lonFromLink = coords.lon; _linkRaw = String(_anyLink); }
     }
   }
-  return { pep:obj['PEP OBRA']||'', titulo:obj['TÍTULO']||obj['TITULO']||'', status:obj['STATUS DA OBRA']||obj['OBS STATUS']||'', mun:obj['MUNICIPIO']||obj['MUNICÍPIO']||'', utd:obj['_UTD']||'', lat, lon, cava:obj['CAVA REALIZADA']||'', postR:obj['POSTES  REALIZADO']||obj['POSTES REALIZADO']||'', postI:obj['POSTES  À IMPLANTA']||obj['POSTES À IMPLANTA']||'', enc:obj['ENCARREGADO']||'', pes:mapaPesDeObra(obj), mes:mesFromObra(obj)||'', temCoord:lat!==null&&lon!==null, latLink:_latFromLink, lonLink:_lonFromLink, linkUrl:_linkRaw };
+  return { pep:obj['PEP OBRA']||'', titulo:obj['TÍTULO']||obj['TITULO']||'', status:obj['STATUS DA OBRA']||obj['OBS STATUS']||'', mun:obj['MUNICIPIO']||obj['MUNICÍPIO']||'', utd:obj['_UTD']||'', lat, lon, cava:obj['CAVA REALIZADA']||'', postR:obj['POSTES  REALIZADO']||obj['POSTES REALIZADO']||'', postI:obj['POSTES  À IMPLANTA']||obj['POSTES À IMPLANTA']||'', enc:obj['ENCARREGADO']||'', pes:mapaPesDeObra(obj), mes:mesFromObra(obj)||'', temCoord:lat!==null&&lon!==null, latLink:_latFromLink, lonLink:_lonFromLink, linkUrl:_linkRaw,
+    latRaw:String(_latVal==null?'':_latVal), lonRaw:String(_lonVal==null?'':_lonVal) };
 });
 const comCoord = mapaData.filter(d=>d.temCoord).length;
 const semCoord = mapaData.length - comCoord;
@@ -5074,7 +5134,8 @@ if (mt) {
         mun:obj['MUNICIPIO']||obj['MUNICÍPIO']||'', utd:obj['_UTD']||'', lat:lat2, lon:lon2,
         cava:obj['CAVA REALIZADA']||'', postR:obj['POSTES  REALIZADO']||obj['POSTES REALIZADO']||'',
         postI:obj['POSTES  À IMPLANTA']||obj['POSTES À IMPLANTA']||'', enc:obj['ENCARREGADO']||'',
-        pes:mapaPesDeObra(obj), mes:mesFromObra(obj)||'', temCoord:lat2!==null&&lon2!==null, latLink:null, lonLink:null, linkUrl:null };
+        pes:mapaPesDeObra(obj), mes:mesFromObra(obj)||'', temCoord:lat2!==null&&lon2!==null, latLink:null, lonLink:null, linkUrl:null,
+        latRaw:String(latVal==null?'':latVal), lonRaw:String(lonVal==null?'':lonVal) };
     });
     const comCoord2 = mapaData.filter(d=>d.temCoord).length;
     const colsFound = bancoDB.length > 0 ? Object.keys(bancoDB[0]).join(', ') : '—';
@@ -5187,10 +5248,24 @@ const mkUTD = (label, key, count, idSuffix) => {
 const isActive = mapaUTDFiltro===key;
 return `<button id="mapa-utd-btn-${idSuffix}" onclick="mapaSetUTD('${key}')" style="padding:8px 20px;border-radius:10px;border:2px solid ${isActive?'#0d7377':'#e2e8f0'};background:${isActive?'#0d7377':'#fff'};font-family:'Barlow',sans-serif;font-size:0.82rem;font-weight:800;cursor:pointer;color:${isActive?'#fff':'#555'};transition:all 0.15s;white-space:nowrap;">${label} <span style="opacity:0.75;font-size:0.72rem;">(${count})</span></button>`;
 };
-utdBar.innerHTML = mkUTD('🗺️ Todas','TODAS',withCoord.length,'TODAS')
-  + mkUTD('📍 Irecê','IRECÊ',withCoord.filter(d=>d.utd==='IRECÊ').length,'IRECE')
-  + mkUTD('📍 Jacobina','JACOBINA',withCoord.filter(d=>d.utd==='JACOBINA').length,'JACOBINA')
-  + mkUTD('📍 Serrinha','SERRINHA',withCoord.filter(d=>d.utd==='SERRINHA').length,'SERRINHA');
+// Conta tambem o TOTAL lido da planilha (com e sem coordenada). Antes o botao
+// mostrava so as com coordenada, o que dava a impressao de obra faltando.
+const _tot = k => k==='TODAS' ? mapaData.length : mapaData.filter(d=>d.utd===k).length;
+const mkUTD2 = (label, key, idSuffix) => {
+  const com = key==='TODAS' ? withCoord.length : withCoord.filter(d=>d.utd===key).length;
+  const tot = _tot(key);
+  const txt = com===tot ? String(com) : (com+' de '+tot);
+  return mkUTD(label, key, txt, idSuffix);
+};
+utdBar.innerHTML = mkUTD2('🗺️ Todas','TODAS','TODAS')
+  + mkUTD2('📍 Irecê','IRECÊ','IRECE')
+  + mkUTD2('📍 Jacobina','JACOBINA','JACOBINA')
+  + mkUTD2('📍 Serrinha','SERRINHA','SERRINHA');
+const _semC = mapaData.length - withCoord.length;
+const _ign = window._mapaIgnoradas || 0;
+if (_semC > 0 || _ign > 0) {
+  utdBar.innerHTML += `<button onclick="mapaMostrarSemCoord()" style="padding:8px 18px;border-radius:10px;border:2px solid #f6ad55;background:#fffaf0;font-family:'Barlow',sans-serif;font-size:0.8rem;font-weight:800;cursor:pointer;color:#c05621;white-space:nowrap;" title="Ver as obras que a planilha trouxe mas o mapa nao consegue plotar">⚠️ ${_semC} sem coordenada${_ign?' · '+_ign+' linha(s) ignorada(s)':''}</button>`;
+}
 }
 // --- Barra de meses baseada em GSHEETS_MESES (carrega aba da planilha por mês) ---
 const mesBar = document.getElementById('mapa-mes-bar');
@@ -5255,6 +5330,57 @@ mkStatus('Todos','TODOS',base.length);
 const sep = document.createElement('span'); sep.style.cssText='border-left:1.5px solid #e2e8f0;height:18px;align-self:center;margin:0 2px;'; bar.appendChild(sep);
 Object.entries(statusCount).sort((a,b)=>b[1]-a[1]).forEach(([s,c]) => mkStatus(s,s,c,mapaGetCor(s)+'44'));
 }
+// ── Painel: obras que vieram da planilha mas NAO aparecem no mapa ────────────
+// Motivo quase sempre: celula de latitude/longitude vazia ou em formato que o
+// mapa nao le. Aqui da pra ver exatamente o que esta escrito na celula.
+window.mapaMostrarSemCoord = function() {
+  const sem = (mapaData||[]).filter(d => !d.temCoord);
+  const ign = window._mapaIgnoradas || 0;
+  const vazias = window._mapaAbasVazias || [];
+  let ov = document.getElementById('mapa-semcoord-overlay');
+  if (!ov) {
+    ov = document.createElement('div');
+    ov.id = 'mapa-semcoord-overlay';
+    ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:4000;display:flex;align-items:center;justify-content:center;padding:16px;';
+    ov.onclick = function(e){ if (e.target===ov) ov.style.display='none'; };
+    document.body.appendChild(ov);
+  }
+  ov.style.display = 'flex';
+  const linhas = sem.map(d => `<tr style="border-bottom:1px solid #edf0f2;">
+    <td style="padding:7px 10px;font-weight:800;color:#1a365d;white-space:nowrap;">${esc(d.pep||'—')}</td>
+    <td style="padding:7px 10px;">${esc(d.titulo||'—')}</td>
+    <td style="padding:7px 10px;white-space:nowrap;">${esc(d.mun||'—')}</td>
+    <td style="padding:7px 10px;white-space:nowrap;">${esc(d.utd||'—')}</td>
+    <td style="padding:7px 10px;font-family:monospace;color:#c05621;">${esc(d.latRaw||'(vazio)')} | ${esc(d.lonRaw||'(vazio)')}</td>
+  </tr>`).join('');
+  const csv = 'PEP;TITULO;MUNICIPIO;UTD;LATITUDE;LONGITUDE\n' + sem.map(d =>
+    [d.pep,d.titulo,d.mun,d.utd,d.latRaw,d.lonRaw].map(x=>String(x||'').replace(/;/g,',')).join(';')).join('\n');
+  window._mapaSemCoordCSV = csv;
+  ov.innerHTML = `<div style="background:#fff;border-radius:16px;max-width:1000px;width:100%;max-height:86vh;display:flex;flex-direction:column;overflow:hidden;font-family:'Barlow',sans-serif;">
+    <div style="padding:16px 22px;background:linear-gradient(135deg,#c05621,#dd6b20);color:#fff;display:flex;align-items:center;justify-content:space-between;gap:10px;">
+      <div>
+        <div style="font-size:1rem;font-weight:800;">⚠️ Obras que não entram no mapa</div>
+        <div style="font-size:0.74rem;opacity:0.9;margin-top:2px;">${sem.length} sem coordenada válida${ign?' · '+ign+' linha(s) da planilha ignoradas (sem PEP e sem título+coordenada)':''}${vazias.length?' · aba sem dados: '+vazias.join(', '):''}</div>
+      </div>
+      <button onclick="document.getElementById('mapa-semcoord-overlay').style.display='none'" style="background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);color:#fff;width:34px;height:34px;border-radius:10px;cursor:pointer;font-weight:800;">✕</button>
+    </div>
+    <div style="padding:10px 22px;background:#fffaf0;border-bottom:1px solid #fbd38d;font-size:0.76rem;color:#7b341e;font-weight:600;">
+      A coluna da direita mostra o que está escrito na célula de LATITUDE | LONGITUDE da planilha. Célula vazia, texto ("a confirmar", "—") ou número truncado não plotam.
+      <button onclick="navigator.clipboard&&navigator.clipboard.writeText(window._mapaSemCoordCSV)" style="margin-left:8px;padding:4px 12px;background:#c05621;color:#fff;border:none;border-radius:6px;font-family:'Barlow',sans-serif;font-size:0.7rem;font-weight:800;cursor:pointer;">📋 Copiar lista</button>
+    </div>
+    <div style="overflow:auto;flex:1;">
+      ${sem.length ? `<table style="width:100%;border-collapse:collapse;font-size:0.78rem;">
+        <thead><tr style="background:#f8fafc;position:sticky;top:0;">
+          <th style="padding:9px 10px;text-align:left;font-size:0.66rem;letter-spacing:1px;color:#888;">PEP</th>
+          <th style="padding:9px 10px;text-align:left;font-size:0.66rem;letter-spacing:1px;color:#888;">TÍTULO</th>
+          <th style="padding:9px 10px;text-align:left;font-size:0.66rem;letter-spacing:1px;color:#888;">MUNICÍPIO</th>
+          <th style="padding:9px 10px;text-align:left;font-size:0.66rem;letter-spacing:1px;color:#888;">UTD</th>
+          <th style="padding:9px 10px;text-align:left;font-size:0.66rem;letter-spacing:1px;color:#888;">CÉLULA LAT | LON</th>
+        </tr></thead><tbody>${linhas}</tbody></table>`
+      : '<div style="padding:40px;text-align:center;color:#888;font-weight:600;">Todas as obras lidas têm coordenada válida.</div>'}
+    </div>
+  </div>`;
+};
 function mapaFiltrar() {
   if (!mapaMap || !mapaLayerGroup) return;
 if (!mapaMap || !mapaLayerGroup) return;
