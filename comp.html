@@ -327,7 +327,7 @@ body.sm-collapsed .sm-side:hover .sm-group-head{justify-content:flex-start;paddi
   <header class="mod-head">
     <div>
       <h1>Postes das obras</h1>
-      <p class="mod-sub" id="sub">Carteiras de Jacobina e Irecê</p>
+      <p class="mod-sub" id="sub">Carteiras de Jacobina, Irecê e Serrinha</p>
     </div>
     <div class="acts">
       <button class="act primary" id="btn" onclick="rodar()">Verificar agora</button>
@@ -411,7 +411,11 @@ const KEY_EVENT = 'comp_postes_eventos'; // registro permanente: o que mudou, em
 const SHEET_JAC = 'https://docs.google.com/spreadsheets/d/142gvn8pNgJGTGDkidCfuOWMHJ2OCKpJd_FQU8zeo0x8/export?format=csv&gid=';
 const SHEET_IRC = 'https://docs.google.com/spreadsheets/d/14ImbZb8-OCBp78jDtd0QFkSLrMG5vXA7tzrM-x6KQVo/export?format=csv&gid=';
 const MESES_NOME = ['','JAN','FEV','MAR','ABR','MAI','JUN','JUL','AGO','SET','OUT','NOV','DEZ'];
-const MESES = [
+/* Meses fixos (os seis primeiros de 2026). Os seguintes — e a UTD de
+   Serrinha — vêm do Supabase, da mesma linha `meses_extras` que o mapa usa.
+   Antes esta lista era fixa e parava em junho: a tela seguia conferindo abas
+   que ninguém mais alimentava, então o histórico congelou em julho. */
+let MESES = [
   { ano:2026, mes:1, jac:'310661297',  irc:'1816810936' },
   { ano:2026, mes:2, jac:'1111886256', irc:'420931092'  },
   { ano:2026, mes:3, jac:'624598081',  irc:'534264140'  },
@@ -419,6 +423,32 @@ const MESES = [
   { ano:2026, mes:5, jac:'1209313517', irc:'663282613'  },
   { ano:2026, mes:6, jac:'557360701',  irc:'1842405101' },
 ];
+let MESES_CARREGADOS = false;
+async function carregarMesesDoBanco(){
+  if (MESES_CARREGADOS) return;
+  try{
+    const r = await fetch(SUPA_URL + '/rest/v1/turno_data?select=value&key=eq.meses_extras&limit=1',
+      { headers: SUPA_HEADERS });
+    const d = r.ok ? await r.json() : [];
+    const extras = (d && d[0] && Array.isArray(d[0].value)) ? d[0].value : [];
+    extras.forEach(e=>{
+      if(!e || !e.ano || !e.mes) return;
+      const ja = MESES.find(m=>m.ano===e.ano && m.mes===e.mes);
+      const gj = e.gidJacobina!=null ? String(e.gidJacobina) : null;
+      const gi = e.gidIrece!=null ? String(e.gidIrece) : null;
+      if(ja){
+        if(gj && !ja.jac) ja.jac = gj;
+        if(gi && !ja.irc) ja.irc = gi;
+        if(e.urlSerrinha && !ja.serUrl) ja.serUrl = e.urlSerrinha;
+      } else {
+        MESES.push({ ano:e.ano, mes:e.mes, jac:gj, irc:gi, serUrl:e.urlSerrinha||null });
+      }
+    });
+    MESES.sort((a,b)=> (a.ano*12+a.mes)-(b.ano*12+b.mes));
+    MESES_CARREGADOS = true;
+    console.log('[postes] meses conferidos:', MESES.map(m=>MESES_NOME[m.mes]+'/'+String(m.ano).slice(-2)).join(', '));
+  }catch(e){ console.warn('[postes] não deu para ler meses_extras:', e.message); }
+}
 
 let ULTIMA_LISTA = [];     // obras lidas agora, já com .ultimaAlt / .eventos
 let EVENTOS = [];          // registro completo de atualizações (mais antigo → mais novo)
@@ -575,16 +605,22 @@ async function rodar(){
   btn.disabled = true; btn.textContent='Conferindo…'; showErr('');
   try{
     // busca TODOS os meses (mais recente primeiro → vence na dedup)
+    await carregarMesesDoBanco();
     const dedup = {};
     const ordenados = MESES.slice().sort((a,b)=> (b.ano*12+b.mes)-(a.ano*12+a.mes));
     let semPostes=[], headersVistos='', falhas=[];
     for(const m of ordenados){
       const lbl = MESES_NOME[m.mes]+'/'+String(m.ano).slice(-2);
       btn.textContent='Conferindo '+lbl+'…';
-      for(const [base,gid,utd] of [[SHEET_JAC,m.jac,'JACOBINA'],[SHEET_IRC,m.irc,'IRECÊ']]){
-        if(!gid) continue;
+      // Serrinha vem como URL completa (o cadastro de meses guarda assim);
+      // Jacobina e Irecê vêm como gid, colado na planilha fixa de cada uma.
+      const fontes = [[SHEET_JAC+(m.jac||''), m.jac, 'JACOBINA'],
+                      [SHEET_IRC+(m.irc||''), m.irc, 'IRECÊ'],
+                      [m.serUrl||'',          m.serUrl, 'SERRINHA']];
+      for(const [url,tem,utd] of fontes){
+        if(!tem) continue;
         try{
-          const txt = await buscarCSV(base+gid);
+          const txt = await buscarCSV(url);
           const res = parseCarteira(txt, utd);
           if(res.obras.length){
             const temPostes = res.obras.some(o=>o.postes!==null);
@@ -670,7 +706,14 @@ async function rodar(){
 
     // ---------- cabeçalho e régua de números ----------
     const sub=document.getElementById('sub');
-    if(sub) sub.textContent = lista.length+' obras nas carteiras de Jacobina e Irecê, conferidas às '+hhmm(agora);
+    if(sub){
+      const utds = [...new Set(lista.map(o=>o.utd).filter(Boolean))];
+      const meses = MESES.slice().sort((a,b)=>(a.ano*12+a.mes)-(b.ano*12+b.mes))
+        .map(m=>MESES_NOME[m.mes]+'/'+String(m.ano).slice(-2));
+      sub.textContent = lista.length+' obras · '+(utds.length?utds.join(', '):'nenhuma UTD')
+        +' · '+(meses.length? meses[0]+' a '+meses[meses.length-1] : 'sem meses')
+        +' · conferidas às '+hhmm(agora);
+    }
 
     const evHoje = EVENTOS.filter(e=>hojeKey(e.ts)===hojeKey());
     const ev7d   = EVENTOS.filter(e=>diasAtras(e.ts)<=7);
