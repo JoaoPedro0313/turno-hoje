@@ -3,16 +3,19 @@
 <head>
 <meta charset="UTF-8">
 <!-- TRAVA DE ACESSO — não remova. Esconde a página ANTES de qualquer script e só
-     libera se o mariua-auth.js tiver realmente carregado. Se o arquivo faltar,
-     a tela fica bloqueada em vez de abrir sem login. -->
+     libera se o mariua-auth.js tiver realmente carregado. Procura o arquivo na
+     pasta da página e, se não achar, um e dois níveis acima (telas em subpasta).
+     Se não existir em lugar nenhum, a tela trava com aviso em vez de abrir. -->
 <script>(function(){var h=document.documentElement;h.className+=' mariua-check';
 var s=document.createElement('style');s.id='mariua-lock';
 s.textContent='html.mariua-check body>*{visibility:hidden!important}#mariua-ovl,#mariua-ovl *{visibility:visible!important}';
 (document.head||h).appendChild(s);
+var caminhos=['mariua-auth.js?v=3','../mariua-auth.js?v=3','../../mariua-auth.js?v=3'];
+(function carrega(i){if(i>=caminhos.length)return;var t=document.createElement('script');t.src=caminhos[i];
+t.onerror=function(){carrega(i+1);};(document.head||h).appendChild(t);})(0);
 setTimeout(function(){if(window.__MARIUA_AUTH__)return;
 h.className=h.className.replace(/\bmariua-check\b/,'');
-var d=document.body||h;d.innerHTML='<div style="font-family:Barlow,system-ui,sans-serif;max-width:420px;margin:14vh auto;padding:26px;border:2px solid #fed7d7;border-radius:14px;background:#fff5f5;text-align:center;color:#742a2a"><div style="font-size:1.05rem;font-weight:900;margin-bottom:8px">Login não carregou</div><div style="font-size:.85rem;font-weight:600;line-height:1.5">O arquivo <b>mariua-auth.js</b> não foi encontrado nesta pasta. Sem ele o sistema não libera o acesso.</div><button onclick="location.reload()" style="margin-top:16px;padding:10px 22px;border:none;border-radius:9px;background:#c53030;color:#fff;font-family:Barlow,sans-serif;font-weight:800;cursor:pointer">Recarregar</button></div>';},8000);})();</script>
-<script src="mariua-auth.js?v=2"></script>
+var d=document.body||h;d.innerHTML='<div style="font-family:Barlow,system-ui,sans-serif;max-width:430px;margin:14vh auto;padding:26px;border:2px solid #fed7d7;border-radius:14px;background:#fff5f5;text-align:center;color:#742a2a"><div style="font-size:1.05rem;font-weight:900;margin-bottom:8px">Login não carregou</div><div style="font-size:.85rem;font-weight:600;line-height:1.5">O arquivo <b>mariua-auth.js</b> não foi encontrado nesta pasta nem nos dois níveis acima. Sem ele o sistema não libera o acesso.</div><button onclick="location.reload()" style="margin-top:16px;padding:10px 22px;border:none;border-radius:9px;background:#c53030;color:#fff;font-family:Barlow,sans-serif;font-weight:800;cursor:pointer">Recarregar</button></div>';},9000);})();</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
@@ -796,6 +799,16 @@ function esc(s) {
   return d.innerHTML;
 }
 
+/* Rota alternativa de leitura. O gviz exporta só as linhas VISÍVEIS, então um
+   filtro básico na aba apaga obras do mapa. O endpoint /export costuma trazer a
+   aba inteira, ignorando o filtro — mas em algumas redes ele redireciona para
+   googleusercontent.com e falha (foi por isso que o sistema usa gviz).
+   Use o botão "Ler sem filtro" no mapa para testar na sua rede. */
+const GSHEETS_EXPORT = {
+  JACOBINA: 'https://docs.google.com/spreadsheets/d/142gvn8pNgJGTGDkidCfuOWMHJ2OCKpJd_FQU8zeo0x8/export?format=csv&gid=',
+  IRECE:    'https://docs.google.com/spreadsheets/d/14ImbZb8-OCBp78jDtd0QFkSLrMG5vXA7tzrM-x6KQVo/export?format=csv&gid='
+};
+window._mapaSemFiltro = false;   // true = usa a rota /export
 const GSHEETS_BASE = {
   // gviz/tq?tqx=out:csv entrega o CSV DIRETO do docs.google.com, sem o redirect
   // para googleusercontent.com (que estava falhando com ERR_CONNECTION_CLOSED em algumas redes).
@@ -1083,16 +1096,18 @@ if (row.key==='obras_base') {
 // Se o usuário está visualizando um mês específico das planilhas,
 // atualiza apenas o cache local sem sobrescrever bancoDB
 // Bloqueia reload do banco se usuário está vendo planilhas (independente do mês)
-const _viewingSheetsMes = window._mapaViewingSheets || window._mapaMesDoSheets ||
-  (window.mapaMesAtivo && (function(){
-    var now = new Date();
-    return !(mapaMesAtivo.ano === now.getFullYear() && mapaMesAtivo.mes === (now.getMonth()+1));
-  })());
+// CORRIGIDO: antes havia uma exceção para o mês ATUAL — se o mês na tela era o
+// mês corrente, a sincronização em segundo plano trocava bancoDB pelo banco
+// CUMULATIVO (obras de vários meses somadas) e a contagem do mapa mudava sozinha.
+// O banco não é equivalente ao mês da planilha em nenhum caso, então qualquer
+// mês aberto agora bloqueia a troca.
+const _viewingSheetsMes = window._mapaViewingSheets || window._mapaMesDoSheets || !!window.mapaMesAtivo;
 if (_viewingSheetsMes) {
-  // Salva no localStorage para quando voltar ao mês atual
+  // guarda no cache local para quando o usuário voltar ao banco, sem tocar
+  // em bancoDB nem em bancoDBInfo (o título mostra o mês que está na tela)
   try { lsSet('obras_base', row.value); } catch(e2) {}
-  bancoDBInfo = row.value.info || null;
-  compUpdateBaseUI();
+  console.log('[mapa] obras_base recebido do banco e IGNORADO: a tela mostra o mês',
+    window.mapaMesAtivo ? (mapaMesAtivo.mes+'/'+mapaMesAtivo.ano) : '(planilha)');
 } else {
   bancoDB     = row.value.data || null;
   bancoDBInfo = row.value.info || null;
@@ -3672,7 +3687,9 @@ for (let i=0; i<Math.min(rows.length,60); i++) {
 const r = (rows[i]||[]).map(_hNorm);
 const temPep = r.some(c=>c==='PEP' || c==='PEP OBRA' || c.startsWith('PEP OBRA') || (c.includes('PEP') && c.length<=20));
 const temApoio = r.some(c=>c==='NOTA' || c.includes('STATUS') || c.includes('MUNICIPIO') || c.includes('LATITUDE'));
-if (temPep && temApoio) { headerIdx=i; break; }
+// linha de título que só menciona "PEP" não é cabeçalho: exige 4+ colunas
+const temColunas = r.filter(c=>c).length >= 4;
+if (temPep && temApoio && temColunas) { headerIdx=i; break; }
 }
 if (headerIdx===-1) return null;
 const headers = rows[headerIdx].map(c => {
@@ -3690,21 +3707,45 @@ const headers = rows[headerIdx].map(c => {
 });
 const data = [];
 let _ignoradas = 0;
+const _semPep = [];
 for (let i=headerIdx+1; i<rows.length; i++) {
 const row = rows[i];
 if (!row.some(c=>String(c).trim())) continue;
 const obj = { _UTD: utdLabel||'' };
 headers.forEach((h,idx) => { if (h && (obj[h]===undefined || obj[h]==='')) obj[h] = String(row[idx]||'').trim(); });
-// Linha valida: tem PEP OU (tem titulo E alguma coordenada). Antes, toda linha sem
-// PEP era jogada fora sem aviso — obras reais com a celula do PEP vazia desapareciam.
-const _temPep = !!obj['PEP OBRA'];
-const _tit = obj['TÍTULO'] || obj['TITULO'] || '';
-const _lat = obj['LATITUDE'] || obj['LATITUDE SUL'] || obj['LAT'] || '';
-if (_temPep || (_tit && _lat)) data.push(obj);
-else if (row.filter(c=>String(c).trim()).length >= 3) _ignoradas++;
+// REGRA: obra é linha com PEP OBRA. Eu cheguei a aceitar linha sem PEP que
+// tivesse título + latitude, para recuperar obra com a célula do PEP vazia —
+// mas isso inflou a contagem (Serrinha saltou de 14 para 65, pegando linha que
+// não é obra). Voltou a exigir PEP; o que fica de fora vai para o painel de
+// diagnóstico, para você decidir caso a caso em vez de o sistema adivinhar.
+if (obj['PEP OBRA']) { data.push(obj); continue; }
+// Sem PEP: ainda pode ser obra — a aba de Serrinha, por exemplo, tem obra com
+// a coluna do PEP em branco. Aceita quando há título e (município ou
+// coordenada), e descarta o que é claramente linha de soma/legenda.
+const _tit = (obj['TÍTULO'] || obj['TITULO'] || '').trim();
+const _mun = (obj['MUNICIPIO'] || obj['MUNICÍPIO'] || '').trim();
+const _lat = (obj['LATITUDE'] || obj['LATITUDE SUL'] || obj['LAT'] || '').trim();
+const _ehSoma = /^(TOTAL|TOTAIS|SUBTOTAL|SOMA|GERAL|M[ÉE]DIA|LEGENDA)\b/i.test(_tit)
+             || /^(TOTAL|TOTAIS|SUBTOTAL|SOMA)\b/i.test(_mun);
+if (_tit && (_mun || _lat) && !_ehSoma) { obj['_SEM_PEP'] = '1'; data.push(obj); continue; }
+const _preenchidas = row.filter(c=>String(c).trim()).length;
+if (_preenchidas >= 3) {
+  _ignoradas++;
+  if (_semPep.length < 300) _semPep.push({
+    utd: utdLabel||'',
+    linha: i+1,
+    titulo: obj['TÍTULO'] || obj['TITULO'] || '',
+    mun: obj['MUNICIPIO'] || obj['MUNICÍPIO'] || '',
+    lat: obj['LATITUDE'] || obj['LATITUDE SUL'] || obj['LAT'] || '',
+    celulas: _preenchidas,
+    amostra: row.filter(c=>String(c).trim()).slice(0,4).join(' | ').slice(0,90)
+  });
 }
+}
+data._semPep = _semPep;
+data._headerLinha = headerIdx + 1;
 data._ignoradas = _ignoradas;
-if (_ignoradas) console.warn('[mapa] '+(utdLabel||'?')+': '+_ignoradas+' linha(s) com dados foram ignoradas por nao ter PEP nem titulo+coordenada.');
+if (_ignoradas) console.warn('[mapa] '+(utdLabel||'?')+': '+_ignoradas+' linha(s) com dados ficaram de fora por não ter PEP OBRA (cabeçalho na linha '+(headerIdx+1)+').');
 // Detecta o mês declarado no topo da aba (ex.: "JUN/26"), olhando as linhas-título
 // que ficam ANTES do cabeçalho (PEP OBRA). Usado para validar se a aba bate com o mês.
 try {
@@ -4528,6 +4569,43 @@ const p = n => String(n).padStart(2,'0');
 return p(d.getDate()) + '/' + p(d.getMonth()+1) + ' às ' + p(d.getHours()) + ':' + p(d.getMinutes());
 } catch(e) { return '?'; }
 }
+/* ═══ ACÚMULO DE OBRAS ═══════════════════════════════════════════════════════
+   O mapa deixou de substituir os dados a cada leitura: ele MESCLA. Toda obra
+   já vista fica guardada na cópia do mês; a leitura nova atualiza o que existe
+   e acrescenta o que apareceu. Assim, filtro aplicado na aba, linha escondida
+   ou falha parcial de leitura não apagam obra do mapa.
+   Para descartar o acumulado e ficar só com a planilha: mapaResincronizar(). */
+function mapaChaveObra(o) {
+  if (!o) return '';
+  var pep = String(o['PEP OBRA']||'').trim().toUpperCase();
+  if (pep) return 'PEP:' + pep;
+  var t  = String(o['TÍTULO']||o['TITULO']||'').trim().toUpperCase().replace(/\s+/g,' ');
+  var m  = String(o['MUNICIPIO']||o['MUNICÍPIO']||'').trim().toUpperCase();
+  var la = String(o['LATITUDE']||o['LATITUDE SUL']||o['LAT']||'').trim();
+  var lo = String(o['LONGITUDE']||o['LONGITUDE OESTE']||o['LON']||'').trim();
+  return 'S:' + (o._UTD||'') + '|' + t + '|' + m + '|' + la + '|' + lo;
+}
+function mapaMesclarObras(guardadas, lidas) {
+  var mapa = {}, ordem = [];
+  function por(o, deAntes) {
+    var k = mapaChaveObra(o);
+    if (!k) return;
+    if (!(k in mapa)) ordem.push(k);
+    var novo = {};
+    for (var p in o) if (Object.prototype.hasOwnProperty.call(o,p)) novo[p] = o[p];
+    if (deAntes) novo._DE_LEITURA_ANTERIOR = '1'; else delete novo._DE_LEITURA_ANTERIOR;
+    mapa[k] = novo;
+  }
+  (guardadas||[]).forEach(function(o){ por(o, true); });
+  (lidas||[]).forEach(function(o){ por(o, false); });   // a leitura de agora vence
+  return ordem.map(function(k){ return mapa[k]; });
+}
+function mapaSemMarca(lista) {
+  return (lista||[]).map(function(o){
+    var c = {}; for (var p in o) if (Object.prototype.hasOwnProperty.call(o,p)) c[p]=o[p];
+    delete c._DE_LEITURA_ANTERIOR; return c;
+  });
+}
 function mapaCarregarMes(ano, mes) {
   const entry = GSHEETS_MESES.find(e => e.ano===ano && e.mes===mes);
   if (!entry) return;
@@ -4549,9 +4627,11 @@ function mapaCarregarMes(ano, mes) {
     console.warn('[mapa] Entrada do mês sem GIDs/abas:', entry);
     return;
   }
-  const urlJac = entry.gidJacobina ? GSHEETS_BASE.JACOBINA + entry.gidJacobina
+  const _baseJac = window._mapaSemFiltro ? GSHEETS_EXPORT.JACOBINA : GSHEETS_BASE.JACOBINA;
+  const _baseIrc = window._mapaSemFiltro ? GSHEETS_EXPORT.IRECE    : GSHEETS_BASE.IRECE;
+  const urlJac = entry.gidJacobina ? _baseJac + entry.gidJacobina
                : entry.sheetJacobina ? GSHEETS_SHEETBASE.JACOBINA + encodeURIComponent(entry.sheetJacobina) : null;
-  const urlIrc = entry.gidIrece ? GSHEETS_BASE.IRECE + entry.gidIrece
+  const urlIrc = entry.gidIrece ? _baseIrc + entry.gidIrece
                : entry.sheetIrece ? GSHEETS_SHEETBASE.IRECE + encodeURIComponent(entry.sheetIrece) : null;
   const urlSer = entry.urlSerrinha || null;
 
@@ -4594,6 +4674,8 @@ function mapaCarregarMes(ano, mes) {
       if (urlSer && !dataSer.length) console.warn('[mapaCarregarMes] Serrinha sem dados reconhecidos em', label);
       // Quantas linhas com dados cada aba descartou (sem PEP e sem titulo+coordenada)
       window._mapaIgnoradas = (dataJac._ignoradas||0) + (dataIrc._ignoradas||0) + (dataSer._ignoradas||0);
+      window._mapaSemPep = [].concat(dataJac._semPep||[], dataIrc._semPep||[], dataSer._semPep||[]);
+      window._mapaHeaderLinhas = { Jacobina: dataJac._headerLinha, 'Irecê': dataIrc._headerLinha, Serrinha: dataSer._headerLinha };
       // Aba que nem cabecalho teve: avisa em vez de sumir calada
       window._mapaAbasVazias = [
         (urlJac && !dataJac.length) ? 'Jacobina' : null,
@@ -4615,6 +4697,29 @@ function mapaCarregarMes(ano, mes) {
       window._mapaAvisoMes = avisosMes.length
         ? ('⚠️ '+avisosMes.join(' · ')+' — exibindo só o que é de '+label)
         : '';
+      // ── MESCLA COM O QUE JÁ FOI VISTO ────────────────────────────────────
+      // Obra que já apareceu não sai do mapa por causa de filtro na aba,
+      // linha escondida ou leitura parcial. A leitura de agora manda nos
+      // dados de cada obra; o que não veio agora permanece, marcado.
+      let _ausentes = 0;
+      if (!window._mapaResincronizando) {
+        try {
+          const _copia = await mapaMesLerCopia(ano, mes);
+          if (_copia) {
+            dataJac = mapaMesclarObras(_copia.jac, dataJac);
+            dataIrc = mapaMesclarObras(_copia.irc, dataIrc);
+            dataSer = mapaMesclarObras(_copia.ser, dataSer);
+            _ausentes = [].concat(dataJac, dataIrc, dataSer)
+              .filter(function(o){ return o._DE_LEITURA_ANTERIOR === '1'; }).length;
+            if (_ausentes) console.log('[mapa] '+_ausentes+' obra(s) mantida(s) de leituras anteriores '
+              + '(não vieram na planilha agora) — cópia de ' + mapaMesQuando(_copia.salvo_em));
+          }
+        } catch(e) { console.warn('[mapa] não deu para mesclar com a cópia:', e.message); }
+      } else {
+        console.warn('[mapa] ressincronizando: descartando o acumulado e usando só a planilha.');
+      }
+      window._mapaAusentes = _ausentes;
+
       // Substitui bancoDB temporariamente com dados deste mês
       bancoDB = [...dataJac, ...dataIrc, ...dataSer];
       const pad = n => String(n).padStart(2,'0');
@@ -4627,15 +4732,19 @@ function mapaCarregarMes(ano, mes) {
       // CORRIGIDO: sinaliza que esta é a chamada interna (não deve ser bloqueada pela flag)
       window._mapaCarregarMesInterno = true;
       mapaCarregarDoBanco();
-      // guarda a cópia deste mês sem travar a tela
-      mapaMesSalvarCopia(ano, mes, label, dataJac, dataIrc, dataSer);
+      // guarda o acumulado do mês (sem a marca interna)
+      mapaMesSalvarCopia(ano, mes, label, mapaSemMarca(dataJac), mapaSemMarca(dataIrc), mapaSemMarca(dataSer));
+      window._mapaResincronizando = false;
       // e alimenta o catálogo leve que a programação usa na busca de PEP
       mapaCatalogoAlimentar(dataJac, dataIrc, dataSer, label);
+
       // Se alguma aba estava em outro mês, mostra o aviso no título (após o render)
       if (window._mapaAvisoMes) {
         setTimeout(function(){
           const t = document.getElementById('mapa-titulo');
-          if (t) { t.textContent = window._mapaAvisoMes; t.style.color = '#b7791f'; }
+          if (!t) return;
+          t.style.color = '#b7791f';
+          t.textContent = window._mapaAvisoMes;
         }, 60);
       }
     } catch(e) {
@@ -4670,6 +4779,34 @@ function mapaCarregarMes(ano, mes) {
     }
   });
 }
+// Mostra no console todas as vezes que o mapa foi remontado e com quantas obras.
+window.mapaHistorico = function() {
+  var h = window._mapaHist || [];
+  if (!h.length) { console.log('[mapa] nenhum carregamento registrado ainda.'); return h; }
+  console.table(h);
+  var dif = h.filter(function(r,i){ return i>0 && h[i-1].total!==r.total; });
+  if (dif.length) console.warn('[mapa] a contagem mudou '+dif.length+' vez(es) nesta sessão.');
+  else console.log('[mapa] a contagem não mudou nesta sessão.');
+  return h;
+};
+/* Descarta o acumulado do mês e fica só com o que a planilha tem agora.
+   Use quando obras foram removidas de propósito da aba. */
+window.mapaResincronizar = function() {
+  if (!mapaMesAtivo) { alert('Abra um mês primeiro.'); return; }
+  var n = window._mapaAusentes || 0;
+  if (!confirm('Ressincronizar com a planilha?\n\n'
+    + (n ? n + ' obra(s) que hoje só existem no histórico serão REMOVIDAS do mapa.\n\n' : '')
+    + 'O mapa passa a mostrar exatamente o que está na aba agora.')) return;
+  window._mapaResincronizando = true;
+  mapaCarregarMes(mapaMesAtivo.ano, mapaMesAtivo.mes);
+};
+/* Relê o mês ativo pela rota /export, que normalmente ignora o filtro da aba. */
+window.mapaLerSemFiltro = function() {
+  if (!mapaMesAtivo) { alert('Abra um mês primeiro.'); return; }
+  window._mapaSemFiltro = !window._mapaSemFiltro;
+  console.log('[mapa] rota de leitura:', window._mapaSemFiltro ? '/export (ignora filtro)' : 'gviz (respeita filtro)');
+  mapaCarregarMes(mapaMesAtivo.ano, mapaMesAtivo.mes);
+};
 window.mapaVoltarAoBanco = function() {
   window._mapaViewingSheets = false;
   window._mapaMesDoSheets = false;
@@ -5160,10 +5297,37 @@ if (mt) {
       mt.style.color = '#c05621';
     }
   } else {
-    mt.textContent = '🗄️ '+mapaData.length+' obras ('+comCoord+' com coord · '+semCoord+' sem coord)'+(info.updatedAt?' · '+info.updatedAt:'');
+    const _aus = window._mapaAusentes || 0;
+    mt.textContent = '🗄️ '+mapaData.length+' obras ('+comCoord+' com coord · '+semCoord+' sem coord)'
+      +(info.updatedAt?' · '+info.updatedAt:'')
+      +(_aus?' · '+_aus+' do histórico':'');
     mt.style.color = '#1a365d';
   }
 }
+// ── REGISTRO DE CONTAGEM ────────────────────────────────────────────────────
+// Toda vez que o mapa é remontado, guarda quantas obras entraram e de onde
+// vieram. Se o número mudar sem o usuário pedir, fica registrado quem mudou.
+// No console: mapaHistorico()
+try {
+  window._mapaHist = window._mapaHist || [];
+  const _reg = {
+    hora: new Date().toLocaleTimeString('pt-BR'),
+    fonte: window.mapaMesAtivo ? ((MESES_PT[mapaMesAtivo.mes]||mapaMesAtivo.mes)+'/'+String(mapaMesAtivo.ano).slice(-2)+' (planilha)') : 'banco cumulativo',
+    total: mapaData.length,
+    comCoord: mapaData.filter(d=>d.temCoord).length,
+    utds: (bancoDBInfo&&bancoDBInfo.utds) ? bancoDBInfo.utds.join(' · ') : '—',
+    aviso: window._mapaAvisoMes || ''
+  };
+  const _ant = window._mapaHist[window._mapaHist.length-1];
+  window._mapaHist.push(_reg);
+  if (_ant && _ant.total !== _reg.total) {
+    console.warn('[mapa] A CONTAGEM MUDOU: '+_ant.total+' → '+_reg.total+' obras'
+      + ' | antes: '+_ant.fonte+' | agora: '+_reg.fonte
+      + (_reg.aviso ? ' | aviso: '+_reg.aviso : ''));
+  } else {
+    console.log('[mapa] '+_reg.total+' obras ('+_reg.comCoord+' com coord) · '+_reg.fonte);
+  }
+} catch(e) {}
 const ms = document.getElementById('mapa-stats-bar'); if (ms) ms.style.display='';
 const ml = document.getElementById('mapa-legenda'); if (ml) ml.style.display='flex';
 const pageMapa = document.getElementById('page-mapa');
@@ -5272,6 +5436,10 @@ utdBar.innerHTML = mkUTD2('🗺️ Todas','TODAS','TODAS')
   + mkUTD2('📍 Irecê','IRECÊ','IRECE')
   + mkUTD2('📍 Jacobina','JACOBINA','JACOBINA')
   + mkUTD2('📍 Serrinha','SERRINHA','SERRINHA');
+const _aus2 = window._mapaAusentes || 0;
+if (_aus2 > 0) {
+  utdBar.innerHTML += `<button onclick="mapaResincronizar()" style="padding:8px 16px;border-radius:10px;border:2px dashed #cbd5e1;background:#f8fafc;font-family:'Barlow',sans-serif;font-size:0.78rem;font-weight:800;cursor:pointer;color:#64748b;white-space:nowrap;" title="Obras que o mapa guardou antes e não vieram na leitura de agora. Clique para descartar o histórico e ficar só com a planilha.">🕘 ${_aus2} do histórico</button>`;
+}
 const _semC = mapaData.length - withCoord.length;
 const _ign = window._mapaIgnoradas || 0;
 if (_semC > 0 || _ign > 0) {
@@ -5364,6 +5532,13 @@ window.mapaMostrarSemCoord = function() {
     <td style="padding:7px 10px;white-space:nowrap;">${esc(d.utd||'—')}</td>
     <td style="padding:7px 10px;font-family:monospace;color:#c05621;">${esc(d.latRaw||'(vazio)')} | ${esc(d.lonRaw||'(vazio)')}</td>
   </tr>`).join('');
+  const semPep = window._mapaSemPep || [];
+  const linhasSemPep = semPep.map(r => `<tr style="border-bottom:1px solid #edf0f2;">
+    <td style="padding:7px 10px;font-weight:800;color:#c05621;white-space:nowrap;">${esc(r.utd)} · linha ${r.linha}</td>
+    <td style="padding:7px 10px;">${esc(r.titulo||'—')}</td>
+    <td style="padding:7px 10px;white-space:nowrap;">${esc(r.mun||'—')}</td>
+    <td style="padding:7px 10px;font-family:monospace;font-size:0.72rem;color:#718096;">${esc(r.amostra)}</td>
+  </tr>`).join('');
   const csv = 'PEP;TITULO;MUNICIPIO;UTD;LATITUDE;LONGITUDE\n' + sem.map(d =>
     [d.pep,d.titulo,d.mun,d.utd,d.latRaw,d.lonRaw].map(x=>String(x||'').replace(/;/g,',')).join(';')).join('\n');
   window._mapaSemCoordCSV = csv;
@@ -5371,7 +5546,7 @@ window.mapaMostrarSemCoord = function() {
     <div style="padding:16px 22px;background:linear-gradient(135deg,#c05621,#dd6b20);color:#fff;display:flex;align-items:center;justify-content:space-between;gap:10px;">
       <div>
         <div style="font-size:1rem;font-weight:800;">⚠️ Obras que não entram no mapa</div>
-        <div style="font-size:0.74rem;opacity:0.9;margin-top:2px;">${sem.length} sem coordenada válida${ign?' · '+ign+' linha(s) da planilha ignoradas (sem PEP e sem título+coordenada)':''}${vazias.length?' · aba sem dados: '+vazias.join(', '):''}</div>
+        <div style="font-size:0.74rem;opacity:0.9;margin-top:2px;">${sem.length} sem coordenada válida${ign?' · '+ign+' linha(s) sem PEP OBRA (listadas abaixo)':''}${vazias.length?' · aba sem dados: '+vazias.join(', '):''}</div>
       </div>
       <button onclick="document.getElementById('mapa-semcoord-overlay').style.display='none'" style="background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);color:#fff;width:34px;height:34px;border-radius:10px;cursor:pointer;font-weight:800;">✕</button>
     </div>
@@ -5389,6 +5564,21 @@ window.mapaMostrarSemCoord = function() {
           <th style="padding:9px 10px;text-align:left;font-size:0.66rem;letter-spacing:1px;color:#888;">CÉLULA LAT | LON</th>
         </tr></thead><tbody>${linhas}</tbody></table>`
       : '<div style="padding:40px;text-align:center;color:#888;font-weight:600;">Todas as obras lidas têm coordenada válida.</div>'}
+
+      ${semPep.length ? `<div style="padding:16px 22px 6px;">
+        <div style="font-size:0.8rem;font-weight:800;color:#7b341e;margin-bottom:4px;">📄 ${semPep.length} linha(s) sem PEP OBRA — não entraram na contagem</div>
+        <div style="font-size:0.74rem;color:#7c8b95;font-weight:600;line-height:1.5;">
+          Obra é linha com PEP. Estas têm conteúdo mas a célula do PEP está vazia: podem ser subtotal, legenda, continuação de uma obra acima — ou obra de verdade com o PEP esquecido.
+          Se alguma for obra, preencha o PEP na planilha e ela entra no mapa.
+          Cabeçalho localizado em: ${esc(Object.keys(window._mapaHeaderLinhas||{}).map(k=>k+' linha '+((window._mapaHeaderLinhas||{})[k]||'?')).join(' · '))}.
+        </div></div>
+        <table style="width:100%;border-collapse:collapse;font-size:0.78rem;">
+          <thead><tr style="background:#f8fafc;">
+            <th style="padding:9px 10px;text-align:left;font-size:0.66rem;letter-spacing:1px;color:#888;">ONDE</th>
+            <th style="padding:9px 10px;text-align:left;font-size:0.66rem;letter-spacing:1px;color:#888;">TÍTULO</th>
+            <th style="padding:9px 10px;text-align:left;font-size:0.66rem;letter-spacing:1px;color:#888;">MUNICÍPIO</th>
+            <th style="padding:9px 10px;text-align:left;font-size:0.66rem;letter-spacing:1px;color:#888;">PRIMEIRAS CÉLULAS DA LINHA</th>
+          </tr></thead><tbody>${linhasSemPep}</tbody></table>` : ''}
     </div>
   </div>`;
 };
