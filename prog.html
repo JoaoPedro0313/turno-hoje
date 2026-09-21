@@ -20,16 +20,24 @@
 </script>
 <meta charset="UTF-8">
 <!-- TRAVA DE ACESSO — não remova. Esconde a página ANTES de qualquer script e só
-     libera se o mariua-auth.js tiver realmente carregado. Se o arquivo faltar,
-     a tela fica bloqueada em vez de abrir sem login. -->
+     libera se o mariua-auth.js tiver realmente carregado. Procura na pasta da
+     página e, se não achar, um e dois níveis acima (telas dentro de /obras).
+     Não confia só no onerror: alguns servidores devolvem 200 com uma página de
+     erro em vez de 404, e nesse caso o script "carrega" sem valer nada. Por
+     isso, depois de cada tentativa, confere se a guarda realmente subiu. -->
 <script>(function(){var h=document.documentElement;h.className+=' mariua-check';
 var s=document.createElement('style');s.id='mariua-lock';
 s.textContent='html.mariua-check body>*{visibility:hidden!important}#mariua-ovl,#mariua-ovl *{visibility:visible!important}';
 (document.head||h).appendChild(s);
+var V='v=4',caminhos=['mariua-auth.js?'+V,'../mariua-auth.js?'+V,'../../mariua-auth.js?'+V],tentados=[];
+(function carrega(i){if(i>=caminhos.length)return;
+var t=document.createElement('script');t.src=caminhos[i];tentados.push(caminhos[i]);
+t.onload=t.onerror=function(){if(!window.__MARIUA_AUTH__)carrega(i+1);};
+(document.head||h).appendChild(t);})(0);
 setTimeout(function(){if(window.__MARIUA_AUTH__)return;
 h.className=h.className.replace(/\bmariua-check\b/,'');
-var d=document.body||h;d.innerHTML='<div style="font-family:Barlow,system-ui,sans-serif;max-width:420px;margin:14vh auto;padding:26px;border:2px solid #fed7d7;border-radius:14px;background:#fff5f5;text-align:center;color:#742a2a"><div style="font-size:1.05rem;font-weight:900;margin-bottom:8px">Login não carregou</div><div style="font-size:.85rem;font-weight:600;line-height:1.5">O arquivo <b>mariua-auth.js</b> não foi encontrado nesta pasta. Sem ele o sistema não libera o acesso.</div><button onclick="location.reload()" style="margin-top:16px;padding:10px 22px;border:none;border-radius:9px;background:#c53030;color:#fff;font-family:Barlow,sans-serif;font-weight:800;cursor:pointer">Recarregar</button></div>';},8000);})();</script>
-<script src="mariua-auth.js?v=2"></script>
+var base=location.href.replace(/[^\/]*$/,'');
+var d=document.body||h;d.innerHTML='<div style="font-family:Barlow,system-ui,sans-serif;max-width:520px;margin:12vh auto;padding:26px;border:2px solid #fed7d7;border-radius:14px;background:#fff5f5;color:#742a2a"><div style="font-size:1.05rem;font-weight:900;margin-bottom:8px;text-align:center">Login não carregou</div><div style="font-size:.85rem;font-weight:600;line-height:1.55">O arquivo <b>mariua-auth.js</b> não respondeu em nenhum destes endereços:</div><div style="font-family:monospace;font-size:.74rem;background:#fff;border:1px solid #fed7d7;border-radius:8px;padding:10px 12px;margin:10px 0;word-break:break-all">'+tentados.map(function(c){return base+c;}).join('<br>')+'</div><div style="font-size:.8rem;font-weight:600;line-height:1.5">Confira se o arquivo está na raiz do site e recarregue com <b>Ctrl+Shift+R</b>.</div><button onclick="location.reload()" style="margin-top:16px;width:100%;padding:10px 22px;border:none;border-radius:9px;background:#c53030;color:#fff;font-family:Barlow,sans-serif;font-weight:800;cursor:pointer">Recarregar</button></div>';},9000);})();</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <!-- SEGURANÇA: Content Security Policy — limita fontes de scripts, estilos e conexões -->
 <meta http-equiv="Content-Security-Policy"
@@ -3808,10 +3816,38 @@ const mc = document.getElementById('mapa-container');
 if (mc) mc.scrollIntoView({behavior:'smooth',block:'center'});
 }
 let mapaProgLayerGroup = null;
+/* Data do dia no formato do <input type="date">. Usa a data LOCAL: com
+   toISOString() o horário de Brasília viraria o dia seguinte depois das 21h. */
+function mapaProgHojeISO() {
+  const d = new Date(), p = n => String(n).padStart(2,'0');
+  return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate());
+}
+window.mapaProgTodasDatas = false;
+/* CORRIGIDO: o campo de data começava vazio e "vazio" significava SEM FILTRO —
+   a tabela trazia os registros de todos os dias enquanto o subtítulo dizia
+   "para hoje". Agora vazio significa HOJE, e ver tudo é uma escolha explícita. */
+function mapaProgDataEfetiva() {
+  if (window.mapaProgTodasDatas) return '';
+  const el = document.getElementById('mapa-prog-date');
+  const hoje = mapaProgHojeISO();
+  if (el && !el.value) el.value = hoje;   // mostra no campo a data que está valendo
+  return (el && el.value) ? el.value : hoje;
+}
+window.mapaProgVerTodas = function(todas) {
+  window.mapaProgTodasDatas = !!todas;
+  const el = document.getElementById('mapa-prog-date');
+  if (el && todas) el.value = '';
+  if (el && !todas) el.value = mapaProgHojeISO();
+  const bt = document.getElementById('mapa-prog-btn-todas');
+  if (bt) {
+    bt.textContent = todas ? '📅 Voltar para hoje' : '🗓️ Ver todas as datas';
+    bt.style.background = todas ? '#6b46c1' : 'rgba(255,255,255,0.15)';
+  }
+  mapaProgRender();
+};
 function mapaProgGetFiltrados() {
-const dateInput = document.getElementById('mapa-prog-date');
 const encInput = document.getElementById('mapa-prog-enc');
-const dataFiltro = dateInput ? dateInput.value : '';
+const dataFiltro = mapaProgDataEfetiva();
 const encFiltro = encInput ? encInput.value : '';
 let regs = progRegistros || [];
 if (dataFiltro) regs = regs.filter(r => r.data===dataFiltro);
@@ -3832,8 +3868,7 @@ const regs = mapaProgGetFiltrados();
 const encSel = document.getElementById('mapa-prog-enc');
 if (encSel) {
 const encAtual = encSel.value;
-const dateInput = document.getElementById('mapa-prog-date');
-const dataFiltro = dateInput ? dateInput.value : '';
+const dataFiltro = mapaProgDataEfetiva();
 const todosRegs = dataFiltro ? (progRegistros||[]).filter(r=>r.data===dataFiltro) : (progRegistros||[]);
 const encs = [...new Set(todosRegs.map(r=>r.encarregado).filter(Boolean))].sort();
 encSel.innerHTML = '<option value="">Todos encarregados</option>' +
@@ -3841,9 +3876,12 @@ encs.map(e=>`<option value="${e}" ${e===encAtual?'selected':''}>${e}</option>`).
 }
 const sub = document.getElementById('mapa-prog-sub');
 if (sub) {
-const dateInput = document.getElementById('mapa-prog-date');
-const d = dateInput && dateInput.value ? dateInput.value.split('-').reverse().join('/') : 'hoje';
-sub.textContent = `${regs.length} registro${regs.length!==1?'s':''} para ${d}`;
+const dataFiltro = mapaProgDataEfetiva();
+const hoje = mapaProgHojeISO();
+const d = !dataFiltro ? 'todas as datas'
+        : (dataFiltro===hoje ? 'hoje ('+dataFiltro.split('-').reverse().join('/')+')'
+                             : dataFiltro.split('-').reverse().join('/'));
+sub.textContent = `${regs.length} registro${regs.length!==1?'s':''} · ${d}`;
 }
 const cardsEl = document.getElementById('mapa-prog-cards');
 if (cardsEl) {
