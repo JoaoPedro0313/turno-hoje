@@ -222,6 +222,49 @@ body.sm-collapsed .sm-side:hover .sm-group-head{justify-content:flex-start;paddi
   .co-bt.baixar{width:100%}
 }
 </style>
+<style>
+/* ══ LARGURA TOTAL ═══════════════════════════════════════════════════════
+   A tela deixou de ter coluna centrada de 1180px: os cartões usam toda a
+   largura disponível, e os campos de constantes e a prévia se espalham. */
+.co-wrap{max-width:none;margin:0;padding:18px 26px 40px}
+@media(min-width:2200px){ .co-wrap{max-width:2100px;margin:0 auto} }
+
+/* passo 1: base e mês na mesma linha */
+.co-topo{display:grid;grid-template-columns:auto minmax(0,1fr);gap:16px 28px;align-items:start}
+.co-topo .co-campo{margin-bottom:0}
+.co-campo-cresce{min-width:0}
+.co-topo .co-campo:first-child{padding-right:26px;border-right:1px solid #eef2f4}
+@media(max-width:900px){
+  .co-topo{grid-template-columns:1fr;gap:14px}
+  .co-topo .co-campo:first-child{padding-right:0;border-right:none;
+    padding-bottom:14px;border-bottom:1px solid #eef2f4}
+}
+
+/* configuração e status ocupam a linha inteira */
+.co-config{margin-top:16px}
+.co-form{grid-template-columns:minmax(320px,2fr) minmax(170px,1fr) auto}
+@media(max-width:820px){ .co-form{grid-template-columns:1fr} }
+
+/* constantes: mais colunas quando há espaço (vence o style inline gerado) */
+#co-const-grupos > div > div[style*="grid"]{
+  grid-template-columns:repeat(auto-fit,minmax(196px,1fr))!important;
+  gap:10px 14px!important;
+}
+#co-const-grupos > div{margin-bottom:18px!important}
+
+/* prévia: passa a ser a área alta da tela, com rolagem própria */
+.co-preview{max-height:calc(100vh - 300px);min-height:360px}
+@media(max-width:820px){ .co-preview{max-height:60vh;min-height:260px} }
+
+/* cabeçalhos com mais respiro na horizontal */
+.co-card-h{padding:14px 22px}
+.co-card-b{padding:18px 22px}
+@media(max-width:620px){
+  .co-wrap{padding:14px 12px 40px}
+  .co-card-h{padding:13px 14px}
+  .co-card-b{padding:14px}
+}
+</style>
 </head>
 <body class="sm-collapsed">
 <script>try{if(localStorage.getItem("mariua_menu")==="aberto")document.body.classList.remove("sm-collapsed");}catch(e){}</script>
@@ -274,14 +317,15 @@ body.sm-collapsed .sm-side:hover .sm-group-head{justify-content:flex-start;paddi
       <input type="hidden" id="co-mes">
       <input type="hidden" id="co-base">
 
-      <div class="co-campo">
-        <span class="co-lbl">Base</span>
-        <div id="co-base-btns" class="co-chips"></div>
-      </div>
-
-      <div class="co-campo">
-        <span class="co-lbl">Mês</span>
-        <div id="co-mes-btns" class="co-chips"></div>
+      <div class="co-topo">
+        <div class="co-campo">
+          <span class="co-lbl">Base</span>
+          <div id="co-base-btns" class="co-chips"></div>
+        </div>
+        <div class="co-campo co-campo-cresce">
+          <span class="co-lbl">Mês</span>
+          <div id="co-mes-btns" class="co-chips"></div>
+        </div>
       </div>
 
       <div id="co-config" class="co-config" style="display:none">
