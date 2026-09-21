@@ -34,6 +34,8 @@
   .who{font-size:.8rem;opacity:.95}
   .btn{padding:8px 14px;border:0;border-radius:9px;font-weight:800;cursor:pointer;font-size:.85rem}
   .btn.add{background:var(--teal);color:#fff}.btn.out{background:rgba(255,255,255,.2);color:#fff}
+  #pane-admin .btn.out{background:#fff5f5;color:#c53030;border:1.5px solid #fbd5d5}
+  #pane-admin .btn.out:hover{background:#c53030;color:#fff;border-color:#c53030}
   table{width:100%;border-collapse:collapse;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 10px rgba(0,0,0,.06)}
   th,td{padding:11px 12px;text-align:left;font-size:.9rem;border-bottom:1px solid #eef2f7}
   th{background:#f8fafc;font-size:.72rem;text-transform:uppercase;color:#64748b}
@@ -199,6 +201,94 @@ body.sm-collapsed .sm-side:hover .sm-top{justify-content:flex-start;padding:12px
 body.sm-collapsed .sm-side:hover .sm-item{justify-content:flex-start;padding:9px 11px}
 body.sm-collapsed .sm-side:hover .sm-group-head{justify-content:flex-start;padding:9px 11px}
 </style>
+<style>
+/* ══ Painel de administração — layout ═════════════════════════════════════ */
+#app-view .wrap{max-width:1420px;margin:0 auto;padding:16px 22px 60px}
+
+/* barra da página */
+.ad-bar{position:sticky;top:52px;z-index:80;display:flex;align-items:center;justify-content:space-between;
+  gap:14px;flex-wrap:wrap;background:#fff;border-bottom:1px solid #e3eaee;padding:12px 22px;
+  box-shadow:0 2px 10px rgba(0,0,0,.05)}
+.ad-bar-l{display:flex;align-items:baseline;gap:10px;min-width:0}
+.ad-tt{font-size:1.06rem;font-weight:900;color:#12343b;letter-spacing:-.2px}
+.ad-st{font-size:.72rem;font-weight:700;color:#9aa7b1;letter-spacing:.6px;text-transform:uppercase}
+.ad-bar-r{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.ad-who{font-size:.78rem;font-weight:800;color:#0d7377;background:#f0fafa;border:1px solid #c7e7e6;
+  border-radius:20px;padding:5px 13px;max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ad-volta{font-size:.78rem;font-weight:800;color:#7c8b95;text-decoration:none}
+.ad-volta:hover{color:#0d7377}
+.ad-out{border:1.5px solid #f0d0c4;background:#fff7f3;color:#c05621;border-radius:9px;padding:7px 15px;
+  font-family:'Barlow',sans-serif;font-size:.78rem;font-weight:800;cursor:pointer}
+.ad-out:hover{background:#c05621;color:#fff;border-color:#c05621}
+
+/* resumo */
+.ad-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:16px 0 18px}
+.ad-kpi{background:#fff;border:1px solid #e6ebee;border-radius:13px;padding:14px 16px;border-left:4px solid #0d7377}
+.ad-kpi.ok{border-left-color:#38a169}.ad-kpi.gest{border-left-color:#6b46c1}.ad-kpi.pend{border-left-color:#f0a500}
+.ad-kpi .k-val{font-size:1.7rem;font-weight:900;color:#12343b;line-height:1}
+.ad-kpi .k-lbl{font-size:.68rem;font-weight:800;color:#9aa7b1;letter-spacing:1.3px;text-transform:uppercase;margin-top:5px}
+
+/* abas internas */
+.ad-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px;border-bottom:2px solid #e6ebee}
+.ad-tab{position:relative;border:none;background:none;padding:10px 16px;cursor:pointer;
+  font-family:'Barlow',sans-serif;font-size:.86rem;font-weight:800;color:#8b99a4;
+  border-bottom:3px solid transparent;margin-bottom:-2px}
+.ad-tab:hover{color:#0d7377}
+.ad-tab.ativa{color:#0d7377;border-bottom-color:#f05a1a}
+.ad-pin{display:inline-block;background:#f0a500;color:#fff;border-radius:20px;
+  font-size:.66rem;font-weight:900;padding:1px 8px;margin-left:5px;vertical-align:1px}
+
+/* cartões */
+#pane-admin{display:block}
+.adminbox{max-width:none;border:1px solid #e6ebee;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.adminbox h2{font-size:1rem}
+
+/* cabeçalho da lista */
+.ad-cab{display:flex;align-items:flex-end;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:14px}
+.ad-cab-r{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.ad-busca{position:relative}
+.ad-busca input{width:270px;max-width:100%;margin:0;padding:9px 30px 9px 13px;font-size:.86rem;border-radius:10px}
+.ad-busca button{position:absolute;right:4px;top:50%;transform:translateY(-50%);border:none;background:none;
+  color:#b6c1c9;cursor:pointer;font-size:.8rem;padding:5px 7px}
+.ad-busca button:hover{color:#c53030}
+.btn.ghost{background:#fff;border:1.5px solid #dbe3e8;color:#7c8b95}
+.btn.ghost:hover{border-color:#c05621;color:#c05621}
+
+/* formulário de criação em grade */
+.ad-novo{border-left:4px solid #f05a1a}
+.ad-form{display:grid;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));gap:2px 16px}
+.ad-f{min-width:0}
+.ad-f2{grid-column:1/-1}
+.adminbox .ad-f label{margin-top:6px}
+.adminbox .ad-f input{margin:5px 0 10px}
+.ad-chk{margin:8px 0 4px}
+.ad-acoes{display:flex;gap:9px;flex-wrap:wrap;margin-top:12px}
+
+/* tabela */
+.ad-tw{overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid #eef2f4;border-radius:11px}
+.ad-tw table{box-shadow:none;border-radius:0;margin:0}
+.ad-tw thead th{position:sticky;top:0;background:#f7fafb;z-index:2;white-space:nowrap;
+  font-size:.66rem;letter-spacing:1.1px;border-bottom:1.5px solid #e6ebee}
+.ad-tw tbody tr:nth-child(even){background:#fcfdfd}
+.ad-tw tbody tr:hover{background:#f0fafa}
+.ad-tw td{font-size:.85rem;vertical-align:middle}
+.ad-vazio{padding:26px;text-align:center;color:#a9b4bf;font-size:.85rem;font-weight:700}
+@media(max-width:1100px){ .ad-tw .col-min{display:none} .ad-tw td.col-min{display:none} }
+@media(max-width:620px){
+  .ad-bar{top:52px;padding:10px 14px}
+  #app-view .wrap{padding:14px 12px 50px}
+  .ad-busca input{width:100%}
+  .ad-cab-r{width:100%}
+  .ad-cab-r .btn{flex:1}
+}
+
+/* cards da central de cadastros */
+.ad-cc{border:1px solid #e6ebee;border-radius:12px;padding:15px 16px;background:#fff;transition:border-color .15s}
+.ad-cc:hover{border-color:#0d7377}
+.ad-cc-t{font-size:.94rem;font-weight:800;color:#0d7377;display:flex;align-items:center;gap:8px}
+.ad-cc-d{font-size:.71rem;color:#7c8b95;margin:5px 0 9px;line-height:1.45}
+.ad-cc-s{font-size:.72rem;font-weight:800;color:#9aa7b1;margin-bottom:9px}
+</style>
 </head>
 <body class="sm-collapsed">
 <script>try{if(localStorage.getItem("mariua_menu")==="aberto")document.body.classList.remove("sm-collapsed");}catch(e){}</script>
@@ -260,86 +350,152 @@ body.sm-collapsed .sm-side:hover .sm-group-head{justify-content:flex-start;paddi
 
   <!-- ===== APP (ADMIN) ===== -->
   <div id="app-view" style="display:none">
-    <header>
-      <b>⚙️ Admin</b>
-      <div style="display:flex;align-items:center;gap:12px">
-        <span class="who" id="who"></span>
-        <button class="btn out" onclick="sair()">Sair</button>
+
+    <!-- barra da página -->
+    <div class="ad-bar">
+      <div class="ad-bar-l">
+        <span class="ad-tt">Administração</span>
+        <span class="ad-st">usuários, acessos e cadastros</span>
       </div>
-    </header>
+      <div class="ad-bar-r">
+        <span class="ad-who" id="who"></span>
+        <a class="ad-volta" href="index.html">← Sistema</a>
+        <button class="ad-out" onclick="sair()">Sair</button>
+      </div>
+    </div>
+
     <div class="wrap">
+
+      <!-- resumo -->
+      <div class="ad-kpis">
+        <div class="ad-kpi"><div class="k-val" id="ad-k-tot">—</div><div class="k-lbl">Usuários</div></div>
+        <div class="ad-kpi ok"><div class="k-val" id="ad-k-ativos">—</div><div class="k-lbl">Ativos</div></div>
+        <div class="ad-kpi gest"><div class="k-val" id="ad-k-gest">—</div><div class="k-lbl">Gestores</div></div>
+        <div class="ad-kpi pend"><div class="k-val" id="ad-k-sol">—</div><div class="k-lbl">Solicitações</div></div>
+      </div>
+
+      <!-- abas -->
+      <div class="ad-tabs">
+        <button class="ad-tab ativa" onclick="adSecao('usuarios',this)">Usuários</button>
+        <button class="ad-tab" onclick="adSecao('solic',this)">Solicitações <span class="ad-pin" id="ad-pin-sol" style="display:none"></span></button>
+        <button class="ad-tab" onclick="adSecao('cadastros',this)">Central de cadastros</button>
+      </div>
+
       <div id="pane-admin">
-        <div class="adminbox" id="box-solicitacoes" style="display:none;max-width:none;border:2px solid #f0a500;">
-          <h2>📋 Solicitações de cadastro <span id="sol-badge" style="font-size:.7rem;background:#f0a500;color:#fff;border-radius:20px;padding:2px 10px;margin-left:6px;"></span></h2>
-          <p>Pessoas que se cadastraram pelo site e aguardam liberação.</p>
-          <div id="sol-lista"></div>
-        </div>
-        <div class="adminbox">
-          <h2>Criar novo usuário</h2>
-          <p>Crie um login (e-mail + senha) para outra pessoa acessar o sistema.</p>
-          <label>Nome</label><input id="u-nome" placeholder="Nome da pessoa">
-          <label>E-mail</label><input id="u-email" type="email" placeholder="email@dominio.com">
-          <label>Matrícula (funcionário)</label>
-          <input id="u-mat" placeholder="ex.: 27680">
-          <input id="u-func-busca" placeholder="🔍 buscar funcionário por nome…" list="u-func-list" oninput="buscarFuncU(this.value)" onchange="escolherFuncU(this.value)" style="margin-top:6px;">
-          <datalist id="u-func-list"></datalist>
-          <div id="u-func-atual" style="font-size:.72rem;color:#0d7377;font-weight:700;margin-top:2px;min-height:14px;"></div>
-          <label>Senha</label><input id="u-senha" type="password" placeholder="mínimo 6 caracteres">
-          <label>Telefone</label><input id="u-tel" placeholder="(00) 00000-0000">
-          <label>Vigência (opcional)</label><input id="u-vig" type="date">
-          <label class="chk"><input id="u-gestor" type="checkbox" checked> Pode ver o Financeiro (gestor)</label>
-          <button class="btn add" onclick="criarUsuario()">Criar usuário</button>
-          <div id="u-msg" class="amsg"></div>
-        </div>
-        <div class="adminbox" style="max-width:none;">
-          <h2>Gerenciamento de usuários</h2>
-          <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;">
-            <table class="utbl">
-              <thead><tr>
-                <th>Ações</th><th>Cód.</th><th>Nome</th><th>Matrícula</th>
-                <th>Data de inclusão</th><th>E-mail</th><th>Telefone</th>
-                <th>Vigência</th><th>Situação</th>
-              </tr></thead>
-              <tbody id="gest-list"><tr><td colspan="9" style="text-align:center;color:#aaa;padding:18px;">Carregando…</td></tr></tbody>
-            </table>
-            <datalist id="link-func-list"></datalist>
+
+        <!-- ── USUÁRIOS ───────────────────────────────────────────────── -->
+        <section class="ad-sec" data-sec="usuarios">
+
+          <!-- painel de criação: fechado por padrão -->
+          <div class="adminbox ad-novo" id="box-novo" style="display:none">
+            <h2>Criar novo usuário</h2>
+            <p>Crie um login (e-mail + senha) para outra pessoa acessar o sistema.</p>
+            <div class="ad-form">
+              <div class="ad-f"><label>Nome</label><input id="u-nome" placeholder="Nome da pessoa"></div>
+              <div class="ad-f"><label>E-mail</label><input id="u-email" type="email" placeholder="email@dominio.com"></div>
+              <div class="ad-f"><label>Senha</label><input id="u-senha" type="password" placeholder="mínimo 6 caracteres"></div>
+              <div class="ad-f"><label>Telefone</label><input id="u-tel" placeholder="(00) 00000-0000"></div>
+              <div class="ad-f"><label>Vigência (opcional)</label><input id="u-vig" type="date"></div>
+              <div class="ad-f"><label>Matrícula (funcionário)</label><input id="u-mat" placeholder="ex.: 27680"></div>
+              <div class="ad-f ad-f2">
+                <label>Buscar funcionário pelo nome</label>
+                <input id="u-func-busca" placeholder="🔍 digite o nome para localizar a matrícula…" list="u-func-list"
+                  oninput="buscarFuncU(this.value)" onchange="escolherFuncU(this.value)">
+                <datalist id="u-func-list"></datalist>
+                <div id="u-func-atual" style="font-size:.72rem;color:#0d7377;font-weight:700;margin-top:4px;min-height:14px;"></div>
+              </div>
+            </div>
+            <label class="chk ad-chk"><input id="u-gestor" type="checkbox" checked> Pode ver o Financeiro (gestor)</label>
+            <div class="ad-acoes">
+              <button class="btn add" onclick="criarUsuario()">Criar usuário</button>
+              <button class="btn ghost" onclick="adNovo(false)">Cancelar</button>
+            </div>
+            <div id="u-msg" class="amsg"></div>
           </div>
-        </div>
 
-        <div class="adminbox" style="max-width:none;">
-          <h2>🗂️ Central de Cadastros</h2>
-          <p>Atualize os cadastros por importação de planilha (.csv). Cada card mostra o status atual e substitui a base ao importar.</p>
-          <div id="cc-cards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin-top:8px;">
-
-            <div style="border:1px solid #e6ecf3;border-radius:12px;padding:14px 16px;background:#fff;">
-              <div style="font-size:.95rem;font-weight:800;color:#0d7377;display:flex;align-items:center;gap:8px;">👥 Equipes</div>
-              <div style="font-size:.72rem;color:#64748b;margin:4px 0 8px;">Chave <code>funcionario_equipe</code> · matrícula, equipe, função, tipo, encarregado</div>
-              <div id="cc-eq-status" style="font-size:.72rem;font-weight:700;color:#94a3b8;margin-bottom:8px;">verificando…</div>
-              <input type="file" id="cc-eq-file" accept=".csv,.txt" style="display:none;" onchange="ccImport('equipe',this.files[0])">
-              <button class="btn add" style="width:100%;" onclick="document.getElementById('cc-eq-file').click()">📤 Importar equipes</button>
-              <div id="cc-eq-msg" class="amsg" style="margin-top:8px;"></div>
+          <!-- lista -->
+          <div class="adminbox" style="max-width:none;">
+            <div class="ad-cab">
+              <div>
+                <h2 style="margin:0">Gerenciamento de usuários</h2>
+                <p style="margin:2px 0 0">Clique no lápis para editar acessos e telas liberadas.</p>
+              </div>
+              <div class="ad-cab-r">
+                <div class="ad-busca">
+                  <input id="ad-q" placeholder="Filtrar por nome, e-mail ou matrícula…" oninput="adFiltra()" autocomplete="off">
+                  <button type="button" id="ad-q-x" onclick="document.getElementById('ad-q').value='';adFiltra()" title="Limpar">✕</button>
+                </div>
+                <button class="btn add" id="ad-bt-novo" onclick="adNovo(true)">+ Novo usuário</button>
+              </div>
             </div>
-
-            <div style="border:1px solid #e6ecf3;border-radius:12px;padding:14px 16px;background:#fff;">
-              <div style="font-size:.95rem;font-weight:800;color:#0d7377;display:flex;align-items:center;gap:8px;">🧑‍🔧 Usuários (funcionários)</div>
-              <div style="font-size:.72rem;color:#64748b;margin:4px 0 8px;">Tabela <code>funcionarios</code> · matrícula, nome, situação, apoio, carro</div>
-              <div id="cc-fu-status" style="font-size:.72rem;font-weight:700;color:#94a3b8;margin-bottom:8px;">verificando…</div>
-              <input type="file" id="cc-fu-file" accept=".csv,.txt" style="display:none;" onchange="ccImport('func',this.files[0])">
-              <button class="btn add" style="width:100%;" onclick="document.getElementById('cc-fu-file').click()">📤 Importar funcionários</button>
-              <div id="cc-fu-msg" class="amsg" style="margin-top:8px;"></div>
+            <div class="ad-tw">
+              <table class="utbl">
+                <thead><tr>
+                  <th style="width:74px">Ações</th>
+                  <th class="col-min">Cód.</th>
+                  <th>Nome</th>
+                  <th>Matrícula</th>
+                  <th class="col-min">Inclusão</th>
+                  <th>E-mail</th>
+                  <th class="col-min">Telefone</th>
+                  <th class="col-min">Vigência</th>
+                  <th>Situação</th>
+                </tr></thead>
+                <tbody id="gest-list"><tr><td colspan="9" style="text-align:center;color:#aaa;padding:18px;">Carregando…</td></tr></tbody>
+              </table>
+              <datalist id="link-func-list"></datalist>
             </div>
-
-            <div style="border:1px solid #e6ecf3;border-radius:12px;padding:14px 16px;background:#fff;">
-              <div style="font-size:.95rem;font-weight:800;color:#0d7377;display:flex;align-items:center;gap:8px;">📲 Usuário PDA</div>
-              <div style="font-size:.72rem;color:#64748b;margin:4px 0 8px;">Chave <code>funcionario_pda</code> · matrícula, nome, situação, aparelho, carrega placa</div>
-              <div id="cc-pda-status" style="font-size:.72rem;font-weight:700;color:#94a3b8;margin-bottom:8px;">verificando…</div>
-              <input type="file" id="cc-pda-file" accept=".csv,.txt" style="display:none;" onchange="ccImport('pda',this.files[0])">
-              <button class="btn add" style="width:100%;" onclick="document.getElementById('cc-pda-file').click()">📤 Importar usuário PDA</button>
-              <div id="cc-pda-msg" class="amsg" style="margin-top:8px;"></div>
-            </div>
-
+            <div id="ad-vazio" class="ad-vazio" style="display:none">Nenhum usuário corresponde ao filtro.</div>
           </div>
-        </div>
+        </section>
+
+        <!-- ── SOLICITAÇÕES ───────────────────────────────────────────── -->
+        <section class="ad-sec" data-sec="solic" hidden>
+          <div class="adminbox" id="box-solicitacoes" style="max-width:none;">
+            <h2>Solicitações de cadastro <span id="sol-badge" style="font-size:.7rem;background:#f0a500;color:#fff;border-radius:20px;padding:2px 10px;margin-left:6px;"></span></h2>
+            <p>Pessoas que se cadastraram pelo site e aguardam liberação.</p>
+            <div id="sol-lista"></div>
+          </div>
+        </section>
+
+        <!-- ── CENTRAL DE CADASTROS ───────────────────────────────────── -->
+        <section class="ad-sec" data-sec="cadastros" hidden>
+          <div class="adminbox" style="max-width:none;">
+            <h2>Central de cadastros</h2>
+            <p>Atualize as bases por importação de planilha (.csv). Cada card mostra o status atual e <b>substitui</b> a base ao importar.</p>
+            <div id="cc-cards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin-top:8px;">
+
+              <div class="ad-cc">
+                <div class="ad-cc-t">👥 Equipes</div>
+                <div class="ad-cc-d">Chave <code>funcionario_equipe</code> · matrícula, equipe, função, tipo, encarregado</div>
+                <div id="cc-eq-status" class="ad-cc-s">verificando…</div>
+                <input type="file" id="cc-eq-file" accept=".csv,.txt" style="display:none;" onchange="ccImport('equipe',this.files[0])">
+                <button class="btn add" style="width:100%;" onclick="document.getElementById('cc-eq-file').click()">📤 Importar equipes</button>
+                <div id="cc-eq-msg" class="amsg" style="margin-top:8px;"></div>
+              </div>
+
+              <div class="ad-cc">
+                <div class="ad-cc-t">🧑‍🔧 Funcionários</div>
+                <div class="ad-cc-d">Tabela <code>funcionarios</code> · matrícula, nome, situação, apoio, carro</div>
+                <div id="cc-fu-status" class="ad-cc-s">verificando…</div>
+                <input type="file" id="cc-fu-file" accept=".csv,.txt" style="display:none;" onchange="ccImport('func',this.files[0])">
+                <button class="btn add" style="width:100%;" onclick="document.getElementById('cc-fu-file').click()">📤 Importar funcionários</button>
+                <div id="cc-fu-msg" class="amsg" style="margin-top:8px;"></div>
+              </div>
+
+              <div class="ad-cc">
+                <div class="ad-cc-t">📲 Usuário PDA</div>
+                <div class="ad-cc-d">Chave <code>funcionario_pda</code> · matrícula, nome, situação, aparelho, carrega placa</div>
+                <div id="cc-pda-status" class="ad-cc-s">verificando…</div>
+                <input type="file" id="cc-pda-file" accept=".csv,.txt" style="display:none;" onchange="ccImport('pda',this.files[0])">
+                <button class="btn add" style="width:100%;" onclick="document.getElementById('cc-pda-file').click()">📤 Importar usuário PDA</button>
+                <div id="cc-pda-msg" class="amsg" style="margin-top:8px;"></div>
+              </div>
+
+            </div>
+          </div>
+        </section>
+
       </div>
     </div>
   </div>
@@ -801,7 +957,13 @@ async function carregarSolicitacoes(){
     const {data,error}=await sb.from('solicitacoes').select('*').eq('status','pendente').order('criado_em',{ascending:true});
     const box=$('box-solicitacoes'), lista=$('sol-lista'), badge=$('sol-badge');
     if(error){ return; }
-    if(!data||!data.length){ if(box)box.style.display='none'; return; }
+    if(!data||!data.length){
+      if(box)box.style.display='block';
+      if(badge)badge.textContent='';
+      if(lista)lista.innerHTML='<div class="ad-vazio" style="display:block">Nenhuma solicitação pendente.</div>';
+      if(typeof adResumo==='function') adResumo();
+      return;
+    }
     if(box)box.style.display='block';
     if(badge)badge.textContent=data.length;
     lista.innerHTML=data.map(function(s){
@@ -970,5 +1132,65 @@ function ccImport(tipo,file){
 })();
 </script>
 <script>window.addEventListener("load",function(){var _t=window.smToggle;if(typeof _t==="function"){window.smToggle=function(){_t();try{localStorage.setItem("mariua_menu",document.body.classList.contains("sm-collapsed")?"recolhido":"aberto");}catch(e){}};}});</script>
+<script>
+/* ══ Painel de administração — comportamento do layout ══════════════════════
+   Abas internas, painel de criação que abre/fecha, filtro da tabela e o
+   resumo do topo. Não altera nenhuma chamada ao banco. */
+function adSecao(qual, bt){
+  document.querySelectorAll('.ad-sec').forEach(function(s){ s.hidden = s.dataset.sec !== qual; });
+  document.querySelectorAll('.ad-tab').forEach(function(t){ t.classList.remove('ativa'); });
+  if(bt) bt.classList.add('ativa');
+  if(qual!=='usuarios') adNovo(false);
+}
+function adNovo(abrir){
+  var b=document.getElementById('box-novo'); if(!b) return;
+  b.style.display = abrir ? '' : 'none';
+  var bt=document.getElementById('ad-bt-novo'); if(bt) bt.style.display = abrir ? 'none' : '';
+  if(abrir){ b.scrollIntoView({behavior:'smooth',block:'nearest'}); var n=document.getElementById('u-nome'); if(n) setTimeout(function(){n.focus();},220); }
+}
+function adSemAcento(t){ return String(t||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,''); }
+function adFiltra(){
+  var q=adSemAcento((document.getElementById('ad-q')||{value:''}).value).trim();
+  var linhas=document.querySelectorAll('#gest-list tr');
+  var vis=0, reais=0;
+  linhas.forEach(function(tr){
+    if(tr.querySelector('td[colspan]')) return;   // linha de aviso, não é usuário
+    reais++;
+    var ok = !q || adSemAcento(tr.textContent).indexOf(q)>=0;
+    tr.style.display = ok ? '' : 'none';
+    if(ok) vis++;
+  });
+  var v=document.getElementById('ad-vazio');
+  if(v) v.style.display = (reais && !vis) ? 'block' : 'none';
+}
+function adResumo(){
+  var us = window.USERS || [];
+  var g = function(id,v){ var e=document.getElementById(id); if(e) e.textContent=v; };
+  if(us.length || document.querySelector('#gest-list tr td:not([colspan])')){
+    g('ad-k-tot', us.length);
+    g('ad-k-ativos', us.filter(function(u){return u.ativo;}).length);
+    g('ad-k-gest', us.filter(function(u){return u.gestor;}).length);
+  }
+  // solicitações: aproveita o contador que a própria tela já preenche
+  var b=document.getElementById('sol-badge');
+  var n=parseInt(String(b&&b.textContent||'').replace(/\D/g,''),10);
+  if(!isNaN(n)){
+    g('ad-k-sol', n);
+    var pin=document.getElementById('ad-pin-sol');
+    if(pin){ pin.textContent=n; pin.style.display = n>0 ? 'inline-block' : 'none'; }
+  } else g('ad-k-sol','0');
+}
+// depois que a lista carrega, atualiza resumo e reaplica o filtro
+(function(){
+  var alvo=document.getElementById('gest-list');
+  if(!alvo || !window.MutationObserver) return;
+  new MutationObserver(function(){ adResumo(); adFiltra(); }).observe(alvo,{childList:true});
+})();
+(function(){
+  var sb2=document.getElementById('sol-badge');
+  if(!sb2 || !window.MutationObserver) return;
+  new MutationObserver(adResumo).observe(sb2,{childList:true,characterData:true,subtree:true});
+})();
+</script>
 </body>
 </html>
