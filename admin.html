@@ -97,14 +97,15 @@
   .u-sw::after{content:'';position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#fff;transition:left .15s;box-shadow:0 1px 3px rgba(0,0,0,.3)}
   .u-sw.on::after{left:20px}
   /* Modal editar usuário */
-  .uovl{display:none;position:fixed;inset:0;background:rgba(10,20,30,.6);z-index:600;align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(3px)}
+  .uovl{display:none;position:fixed;inset:0;background:rgba(10,20,30,.6);z-index:600;align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(3px);overflow-y:auto;-webkit-overflow-scrolling:touch}
   .uovl.open{display:flex}
-  .ubox{background:#fff;border-radius:16px;width:100%;max-width:720px;box-shadow:0 24px 70px rgba(0,0,0,.28);overflow:hidden}
-  .ubox-h{background:linear-gradient(135deg,#0b5e62,#0d7377);padding:14px 20px;color:#fff;font-weight:800;display:flex;align-items:center;justify-content:space-between}
-  .ubox-b{padding:18px 22px;display:grid;grid-template-columns:1fr 1fr;gap:2px 20px}
+  .ubox{background:#fff;border-radius:16px;width:100%;max-width:720px;box-shadow:0 24px 70px rgba(0,0,0,.28);overflow:hidden;display:flex;flex-direction:column;max-height:calc(100vh - 32px);max-height:calc(100dvh - 32px)}
+  .ubox-h{background:linear-gradient(135deg,#0b5e62,#0d7377);padding:14px 20px;color:#fff;font-weight:800;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+  .ubox-b{padding:18px 22px;display:grid;grid-template-columns:1fr 1fr;gap:2px 20px;align-content:start;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;min-height:0}
   .ubox-b .fg{display:flex;flex-direction:column;min-width:0}
   .ubox-b .fg-full{grid-column:1 / -1}
-  @media(max-width:560px){ .ubox-b{grid-template-columns:1fr} }
+  .ubox-save{position:sticky;bottom:0;background:#fff;margin:6px -22px -18px;padding:8px 22px 14px;border-top:1px solid #eef2f7;box-shadow:0 -8px 14px rgba(255,255,255,.95);z-index:2}
+  @media(max-width:560px){ .ubox-b{grid-template-columns:1fr} .uovl{padding:8px} .ubox{max-height:calc(100vh - 16px);max-height:calc(100dvh - 16px)} }
   .ubox-b label{display:block;font-size:.7rem;font-weight:800;color:#64748b;text-transform:uppercase;letter-spacing:.5px;margin:10px 0 4px}
   .ubox-b input{width:100%;padding:9px 12px;border:1.5px solid #e2e8f0;border-radius:9px;font-family:'Barlow',sans-serif;font-size:.9rem;box-sizing:border-box}
   .ubox-b .chk{display:flex;align-items:center;gap:8px;margin-top:12px;font-weight:700;color:#334155;font-size:.88rem}
@@ -559,14 +560,17 @@ body.sm-collapsed .sm-side:hover .sm-group-head{justify-content:flex-start;paddi
             <span style="font-weight:600;color:#94a3b8;font-size:.72rem;">(gestor vê todas, independente do que estiver marcado)</span>
           </label>
           <div id="ed-telas" style="margin-top:4px;"></div>
-          <div style="display:flex;gap:10px;margin-top:6px;">
+          <div style="display:flex;gap:10px;margin-top:6px;flex-wrap:wrap;">
             <button type="button" onclick="edTelasTodas(true)" style="background:none;border:none;color:#0d7377;font-weight:800;font-size:.72rem;cursor:pointer;padding:0;">marcar todas</button>
             <button type="button" onclick="edTelasTodas(false)" style="background:none;border:none;color:#94a3b8;font-weight:800;font-size:.72rem;cursor:pointer;padding:0;">desmarcar todas</button>
+            <span style="color:#cbd5e1;">|</span>
+            <button type="button" onclick="edTelasAbrirTodos(true)" style="background:none;border:none;color:#0d7377;font-weight:800;font-size:.72rem;cursor:pointer;padding:0;">expandir tudo</button>
+            <button type="button" onclick="edTelasAbrirTodos(false)" style="background:none;border:none;color:#94a3b8;font-weight:800;font-size:.72rem;cursor:pointer;padding:0;">recolher tudo</button>
           </div>
         </div>
-        <div class="fg-full">
-          <div id="ed-msg" style="font-size:.78rem;font-weight:700;min-height:16px;margin-top:10px;"></div>
-          <button class="btn add" style="width:100%;margin-top:6px;" onclick="salvarEdicao()">Salvar alterações</button>
+        <div class="fg-full ubox-save">
+          <div id="ed-msg" style="font-size:.78rem;font-weight:700;min-height:16px;"></div>
+          <button class="btn add" style="width:100%;margin-top:4px;" onclick="salvarEdicao()">Salvar alterações</button>
         </div>
       </div>
     </div>
@@ -819,8 +823,16 @@ function editarUsuario(email){
   $('ed-titulo').textContent=u.matricula||u.email;
   $('ed-msg').textContent='';
   $('user-edit-ovl').classList.add('open');
+  var _b=document.querySelector('#user-edit-ovl .ubox-b'); if(_b) _b.scrollTop=0;
 }
 function fecharEdicao(){ $('user-edit-ovl').classList.remove('open'); }
+// fecha com ESC ou clique fora da caixa
+document.addEventListener('keydown',function(e){
+  if(e.key==='Escape'&&$('user-edit-ovl')&&$('user-edit-ovl').classList.contains('open')) fecharEdicao();
+});
+document.addEventListener('click',function(e){
+  if(e.target&&e.target.id==='user-edit-ovl') fecharEdicao();
+});
 // busca de funcionário para vincular
 window.FUNC_CACHE={};
 let _funcT;
@@ -969,6 +981,9 @@ function edTelasGrupo(i,on,ev){
 function edTelasAbrir(i,ev){
   if(ev&&ev.target&&ev.target.tagName==='BUTTON') return;
   var el=$('tl-grp-'+i); if(el) el.classList.toggle('closed');
+}
+function edTelasAbrirTodos(on){
+  document.querySelectorAll('.tl-grp').forEach(function(g){ g.classList.toggle('closed',!on); });
 }
 function edTelasTodas(on){ document.querySelectorAll('.ed-tl').forEach(function(cb){ cb.checked=!!on; }); edTelasContTodos(); }
 function edTelasSelecionadas(){
