@@ -109,6 +109,20 @@
   .ubox-b input{width:100%;padding:9px 12px;border:1.5px solid #e2e8f0;border-radius:9px;font-family:'Barlow',sans-serif;font-size:.9rem;box-sizing:border-box}
   .ubox-b .chk{display:flex;align-items:center;gap:8px;margin-top:12px;font-weight:700;color:#334155;font-size:.88rem}
   .ubox-b .chk input{width:auto}
+  /* Telas liberadas — subpastas */
+  .tl-grp{border:1.5px solid #e2e8f0;border-radius:11px;margin-top:8px;overflow:hidden;background:#fbfdfe}
+  .tl-grp-h{display:flex;align-items:center;gap:8px;padding:7px 11px;background:#f1f5f9;border-bottom:1px solid #e2e8f0;cursor:pointer;-webkit-user-select:none;user-select:none}
+  .tl-grp.closed .tl-grp-h{border-bottom:0}
+  .tl-ar{color:#94a3b8;font-size:.6rem;flex-shrink:0;transition:transform .15s;display:inline-block}
+  .tl-grp.closed .tl-ar{transform:rotate(-90deg)}
+  .tl-grp.closed .tl-grp-g{display:none}
+  .tl-grp-t{font-size:.7rem;font-weight:800;color:#0d7377;text-transform:uppercase;letter-spacing:.5px;flex:1;min-width:0}
+  .tl-cnt{font-size:.58rem;font-weight:800;color:#64748b;background:#e2e8f0;border-radius:20px;padding:2px 8px;flex-shrink:0}
+  .tl-cnt.full{background:#d0f0ee;color:#0d7377}
+  .tl-grp-a{background:none;border:none;color:#0d7377;font-weight:800;font-size:.64rem;cursor:pointer;padding:2px 3px;text-transform:uppercase;letter-spacing:.3px;flex-shrink:0}
+  .tl-grp-a.off{color:#94a3b8}
+  .tl-grp-g{display:grid;grid-template-columns:repeat(auto-fit,minmax(185px,1fr));gap:0 14px;padding:3px 12px 9px}
+  .ubox-b .tl-grp-g .chk{margin:8px 0 0;font-size:.86rem}
   .amsg{font-size:.85rem;font-weight:700;margin-top:10px;min-height:18px}
   .amsg.err{color:#c53030}.amsg.ok{color:#276749}
   .gest-row{display:flex;align-items:center;justify-content:space-between;padding:9px 4px;border-bottom:1px solid #eef2f7;font-size:.88rem}
@@ -544,7 +558,7 @@ body.sm-collapsed .sm-side:hover .sm-group-head{justify-content:flex-start;paddi
           <label>Telas liberadas
             <span style="font-weight:600;color:#94a3b8;font-size:.72rem;">(gestor vê todas, independente do que estiver marcado)</span>
           </label>
-          <div id="ed-telas" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:2px 14px;margin-top:4px;"></div>
+          <div id="ed-telas" style="margin-top:4px;"></div>
           <div style="display:flex;gap:10px;margin-top:6px;">
             <button type="button" onclick="edTelasTodas(true)" style="background:none;border:none;color:#0d7377;font-weight:800;font-size:.72rem;cursor:pointer;padding:0;">marcar todas</button>
             <button type="button" onclick="edTelasTodas(false)" style="background:none;border:none;color:#94a3b8;font-weight:800;font-size:.72rem;cursor:pointer;padding:0;">desmarcar todas</button>
@@ -887,6 +901,29 @@ var TELAS_SISTEMA = [
   { id:'valores',    nome:'Financeiro (só gestor)' },
   { id:'admin',      nome:'Admin (só gestor)' }
 ];
+
+/* Subpastas: só organizam a tela do admin. Os ids continuam sendo gravados
+   numa lista única em usuario_telas, então o mariua-auth.js não muda nada.
+   Tela que não estiver em nenhum grupo cai automaticamente em "Outras telas". */
+var TELAS_GRUPOS = [
+  { nome:'Operação diária',   telas:['turno','rdo','prog','neoex'] },
+  { nome:'Obras',             telas:['mapa','estagios','projecao','comp'] },
+  { nome:'Cadastros',         telas:['obra','equipes'] },
+  { nome:'Segurança · SESMT', telas:['cursos','ensaios','brigada'] },
+  { nome:'Gestão / sistema',  telas:['permissoes','valores','admin'] }
+];
+function telasPorGrupo(){
+  var byId={}, usados={};
+  TELAS_SISTEMA.forEach(function(t){ byId[t.id]=t; });
+  var out=TELAS_GRUPOS.map(function(g){
+    var itens=[];
+    (g.telas||[]).forEach(function(id){ if(byId[id]&&!usados[id]){ itens.push(byId[id]); usados[id]=1; } });
+    return { nome:g.nome, itens:itens };
+  }).filter(function(g){ return g.itens.length>0; });
+  var sobra=TELAS_SISTEMA.filter(function(t){ return !usados[t.id]; });
+  if(sobra.length) out.push({ nome:'Outras telas', itens:sobra });
+  return out;
+}
 var USUARIO_TELAS = {};
 async function carregarTelasUsuarios(){
   try{
@@ -898,12 +935,42 @@ async function carregarTelasUsuarios(){
 function edTelasRender(marcadas){
   var box=$('ed-telas'); if(!box) return;
   marcadas=Array.isArray(marcadas)?marcadas:[];
-  box.innerHTML=TELAS_SISTEMA.map(function(t){
-    return '<label class="chk"><input type="checkbox" class="ed-tl" value="'+t.id+'"'
-      +(marcadas.indexOf(t.id)>=0?' checked':'')+'> '+escapeHtml(t.nome)+'</label>';
+  box.innerHTML=telasPorGrupo().map(function(g,i){
+    var n=g.itens.filter(function(t){ return marcadas.indexOf(t.id)>=0; }).length;
+    return '<div class="tl-grp" id="tl-grp-'+i+'">'
+      +'<div class="tl-grp-h" onclick="edTelasAbrir('+i+',event)">'
+        +'<span class="tl-ar">&#9660;</span>'
+        +'<span class="tl-grp-t">'+escapeHtml(g.nome)+'</span>'
+        +'<span class="tl-cnt'+(n===g.itens.length?' full':'')+'" id="tl-cnt-'+i+'">'+n+'/'+g.itens.length+'</span>'
+        +'<button type="button" class="tl-grp-a" onclick="edTelasGrupo('+i+',true,event)">todas</button>'
+        +'<button type="button" class="tl-grp-a off" onclick="edTelasGrupo('+i+',false,event)">nenhuma</button>'
+      +'</div>'
+      +'<div class="tl-grp-g">'
+      + g.itens.map(function(t){
+          return '<label class="chk"><input type="checkbox" class="ed-tl" data-g="'+i+'" value="'+t.id+'"'
+            +(marcadas.indexOf(t.id)>=0?' checked':'')+' onchange="edTelasCont('+i+')"> '+escapeHtml(t.nome)+'</label>';
+        }).join('')
+      +'</div></div>';
   }).join('');
 }
-function edTelasTodas(on){ document.querySelectorAll('.ed-tl').forEach(function(cb){ cb.checked=!!on; }); }
+function edTelasCont(i){
+  var cbs=document.querySelectorAll('.ed-tl[data-g="'+i+'"]'), n=0;
+  cbs.forEach(function(cb){ if(cb.checked) n++; });
+  var el=$('tl-cnt-'+i); if(!el) return;
+  el.textContent=n+'/'+cbs.length;
+  el.className='tl-cnt'+(cbs.length&&n===cbs.length?' full':'');
+}
+function edTelasContTodos(){ document.querySelectorAll('.tl-grp').forEach(function(_,i){ edTelasCont(i); }); }
+function edTelasGrupo(i,on,ev){
+  if(ev) ev.stopPropagation();
+  document.querySelectorAll('.ed-tl[data-g="'+i+'"]').forEach(function(cb){ cb.checked=!!on; });
+  edTelasCont(i);
+}
+function edTelasAbrir(i,ev){
+  if(ev&&ev.target&&ev.target.tagName==='BUTTON') return;
+  var el=$('tl-grp-'+i); if(el) el.classList.toggle('closed');
+}
+function edTelasTodas(on){ document.querySelectorAll('.ed-tl').forEach(function(cb){ cb.checked=!!on; }); edTelasContTodos(); }
 function edTelasSelecionadas(){
   var out=[]; document.querySelectorAll('.ed-tl').forEach(function(cb){ if(cb.checked) out.push(cb.value); });
   return out;
