@@ -433,7 +433,8 @@ body.sm-collapsed .sm-side:hover .sm-group-head{justify-content:flex-start;paddi
         <p>Cada base guarda o seu próprio conjunto: ao trocar de base no passo 1, estes campos mudam junto.</p>
         <p><b>Vindos da carteira, não editáveis aqui:</b> Projeto, Título, Município, Responsável, Supervisor, Postes, Latitude, Longitude.</p>
         <p><b>Centro de serviço:</b> sigla do estado + município.</p>
-        <p><b>Base Aracaju (arquivo do lote):</b> Projeto = Obra; Título = “Tipo Obra - Município”; Prazo Regulado vai para <code>data_prazo_venc</code>. O arquivo não tem responsável nem supervisor, então nessa base eles são definidos aqui. Todas as obras do arquivo entram, sem o filtro de Execução/Programada.</p>
+        <p><b>Contrato por base:</b> Irecê, Jacobina e Serrinha são sempre OBRAS - BA; Aracaju é sempre OBRAS-SE. Nelas o estado fica travado e Contrato, Tipo de obra, Tipo de serviço e Processo vêm do contrato. Em Feira o estado é escolhido aqui.</p>
+        <p><b>Base Aracaju (arquivo do lote):</b> Projeto = Obra; Título = “Tipo Obra - Município”; Prazo Regulado vai para <code>data_prazo_venc</code>. O arquivo não tem responsável nem supervisor, então nessa base eles são definidos aqui (responsável padrão: RAFAEL BERNARDO MAGALHAES). Todas as obras do arquivo entram, sem o filtro de Execução/Programada.</p>
         <p><b>Status:</b> por padrão o <b>STATUS*</b> definido aqui vale para todas as obras. Marque “Manter status da carteira” para cada obra sair com o status da planilha.</p>
       </details>
     </div>
@@ -480,15 +481,19 @@ var CO_ESTADO_DEF={
 function coEstado(){ return document.getElementById('co-estado').value || 'ba'; }
 function coPopularEstados(){
   var box=document.getElementById('co-estado-btns'); if(!box) return;
-  var sel=coEstado();
+  var sel=coEstado(), def=coBaseDef(), fixo=!!(def.uf&&CO_ESTADO_DEF[def.uf]);
   box.innerHTML=Object.keys(CO_ESTADO_DEF).map(function(uf){
-    var d=CO_ESTADO_DEF[uf], ativo=(uf===sel);
+    var d=CO_ESTADO_DEF[uf], ativo=(uf===sel), bloq=(fixo && !ativo);
     var bg=ativo?'#0d7377':'#f8fafc', cor=ativo?'#fff':'#0d7377', bd=ativo?'#0d7377':'#cfe3e2';
-    return '<button onclick="coSelecionarEstado(\''+uf+'\')" style="padding:8px 16px;border-radius:9px;border:1.5px solid '+bd+';background:'+bg+';color:'+cor+';font-family:inherit;font-weight:800;font-size:.78rem;cursor:pointer;">'+d.sigla+' — '+d.nome+'</button>';
-  }).join('');
+    return '<button onclick="coSelecionarEstado(\''+uf+'\')"'+(bloq?' disabled title="'+def.nome+' é sempre '+CO_ESTADO_DEF[def.uf].contrato+'"':'')+' style="padding:8px 16px;border-radius:9px;border:1.5px solid '+bd+';background:'+bg+';color:'+cor+';font-family:inherit;font-weight:800;font-size:.78rem;cursor:'+(bloq?'not-allowed;opacity:.4':'pointer')+';">'+d.sigla+' — '+d.nome+'</button>';
+  }).join('')
+  + (fixo?'<span style="align-self:center;margin-left:4px;font-size:.72rem;font-weight:700;color:#8b99a4;">🔒 '+def.nome+' é contrato '+CO_ESTADO_DEF[def.uf].contrato+'</span>':'');
 }
 function coSelecionarEstado(uf){
+  var def=coBaseDef();
+  if(def.uf && uf!==def.uf) return;          // base com contrato fixo: estado não muda
   document.getElementById('co-estado').value=uf;
+  if(!def.uf) CO_ESTADO_BASE[coBaseId()]=uf; // Feira & cia.: guarda o estado da base
   var d=CO_ESTADO_DEF[uf]||{}, C=coConstAtual();
   C['Contrato*']=d.contrato||'';
   C['TIPO DE OBRA*']=d.tipoObra||'';
@@ -529,8 +534,23 @@ var CO_MESES=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Ago
 var CO_ANO=2026;
 // bases disponíveis
 // uf = estado aplicado ao escolher a base · fonte:'arquivo' = carteira vem de upload (.xlsx/.csv), não do Google
-var CO_BASES=[{id:'irc',nome:'Irecê',uf:'ba'},{id:'jac',nome:'Jacobina',uf:'ba'},{id:'fsa',nome:'Feira',uf:'ba'},{id:'srr',nome:'Serrinha',uf:'ba'},
-              {id:'aju',nome:'Aracaju',uf:'se',fonte:'arquivo'}];
+// uf = contrato fixo da base: Irecê, Jacobina e Serrinha são OBRAS - BA; Aracaju é OBRAS-SE.
+//      Nessas bases o estado trava e Contrato / Tipo de obra / Tipo de serviço / Processo vêm do contrato.
+//      Sem uf (Feira): o estado é escolhido no card 2 e fica guardado para a base.
+// padrao = constantes que a base já traz preenchidas (dá pra trocar no card 2)
+var CO_BASES=[{id:'irc',nome:'Irecê',uf:'ba'},{id:'jac',nome:'Jacobina',uf:'ba'},{id:'fsa',nome:'Feira'},{id:'srr',nome:'Serrinha',uf:'ba'},
+              {id:'aju',nome:'Aracaju',uf:'se',fonte:'arquivo', padrao:{'RESPONSAVEL*':'RAFAEL BERNARDO MAGALHAES'}}];
+var CO_ESTADO_BASE={};   // estado escolhido nas bases sem contrato fixo: { fsa:'ba' }
+// campos travados pelo contrato fixo da base ({} se a base não tem contrato fixo)
+function coContratoFixo(id){
+  var def=coBaseDef(id), e=def.uf&&CO_ESTADO_DEF[def.uf], fx={};
+  if(!e) return fx;
+  fx['Contrato*']=e.contrato||'';
+  fx['TIPO DE OBRA*']=e.tipoObra||'';
+  fx['TIPO SERVICO*']=e.tipoServico||'';
+  fx['PROCESSO']=e.processo||'';      // BA não tem processo: fica vazio
+  return fx;
+}
 var CO_ARQ={};    // { baseId: { nome, hora, linhas:[[...]] } } — arquivo enviado nesta sessão
 function coBaseDef(id){ id=id||coBaseId(); for(var i=0;i<CO_BASES.length;i++){ if(CO_BASES[i].id===id) return CO_BASES[i]; } return {}; }
 function coBaseArquivo(id){ return coBaseDef(id).fonte==='arquivo'; }
@@ -557,7 +577,9 @@ function coPopularBases(){
 function coSelecionarBase(id){
   document.getElementById('co-base').value=id; CO_BASE=id;
   var def=coBaseDef(id);
-  if(def.uf && CO_ESTADO_DEF[def.uf]){ document.getElementById('co-estado').value=def.uf; coPopularEstados(); }
+  var uf=def.uf || CO_ESTADO_BASE[id] || 'ba';
+  if(CO_ESTADO_DEF[uf]){ document.getElementById('co-estado').value=uf; }
+  coPopularEstados();
   var d=coBaseObj();
   document.getElementById('co-link').value=d.link||'';
   coModoFonte();
@@ -951,15 +973,29 @@ var CO_GRUPOS=[
 
 function coConstPadrao(){
   var d=CO_ESTADO_DEF[coEstado()]||{};
-  return {'Contrato*':d.contrato||'', 'TIPO DE OBRA*':d.tipoObra||'', 'TIPO SERVICO*':d.tipoServico||'',
+  var C={'Contrato*':d.contrato||'', 'TIPO DE OBRA*':d.tipoObra||'', 'TIPO SERVICO*':d.tipoServico||'',
           'PROCESSO':d.processo||'', 'NATUREZA OBRAS':'RURAL', 'STATUS*':'Em Execução',
           'OBRIGA VISTORIA':'NÃO', 'DATA_RECEBIMENTO*':coDataHoje()};
+  var p=coBaseDef().padrao||{};
+  Object.keys(p).forEach(function(k){ C[k]=p[k]; });
+  return C;
+}
+// ao carregar as constantes salvas: preenche o padrão da base onde o campo estiver vazio
+function coAplicarPadroesBases(){
+  CO_BASES.forEach(function(b){
+    var C=CO_CONST_BASES[b.id]; if(!C) return;
+    var p=b.padrao||{}, fx=coContratoFixo(b.id);
+    Object.keys(p).forEach(function(k){ if(!String(C[k]||'').trim()) C[k]=p[k]; });
+    Object.keys(fx).forEach(function(k){ C[k]=fx[k]; });
+  });
 }
 // constantes da base selecionada agora
 function coConstAtual(){
   var b=coBaseId();
   if(!CO_CONST_BASES[b]) CO_CONST_BASES[b]=coConstPadrao();
-  return CO_CONST_BASES[b];
+  var C=CO_CONST_BASES[b], fx=coContratoFixo(b);
+  Object.keys(fx).forEach(function(k){ C[k]=fx[k]; });
+  return C;
 }
 // base por arquivo (lote): responsável/supervisor não vêm no arquivo -> viram constantes; o prazo regulado vem do arquivo
 function coCamposCarteira(){
@@ -1060,11 +1096,13 @@ function coPopularConstantes(){
       var obrig=/\*$/.test(h);
       var val=(C[h]||'').replace(/"/g,'&quot;');
       var cheio=(C[h]||'').trim()!=='';
+      var travado=Object.prototype.hasOwnProperty.call(coContratoFixo(),h);
       return '<div>'
         + '<label style="font-size:.66rem;font-weight:800;color:'+(obrig?'#0d7377':'#64748b')+';display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:3px;" title="'+h+'">'+h+'</label>'
         + '<input data-col="'+h+'" oninput="coConstMudou(this)" value="'+val+'"'
         + (ehData?' placeholder="dd/mm/aaaa"':'')
-        + ' style="width:100%;padding:7px 9px;border:1.5px solid '+(cheio?'#bfe0dd':'#e2e8f0')+';border-radius:7px;font-size:.77rem;font-family:inherit;background:'+(cheio?'#f6fdfc':'#fff')+';">'
+        + (travado?' readonly title="Definido pelo contrato da base '+coNomeBase(coBaseId())+'"':'')
+        + ' style="width:100%;padding:7px 9px;border:1.5px solid '+(travado?'#e2e8f0':(cheio?'#bfe0dd':'#e2e8f0'))+';border-radius:7px;font-size:.77rem;font-family:inherit;background:'+(travado?'#f1f5f6;color:#64748b;cursor:not-allowed':(cheio?'#f6fdfc':'#fff'))+';">'
         + '</div>';
     }).join('');
     return '<div style="margin-bottom:14px;">'
@@ -1113,7 +1151,7 @@ function coCopiarDe(){
 
 // ---------- salvar / carregar ----------
 function coSalvarConstantes(){
-  var pacote={ versao:2, bases:CO_CONST_BASES, estado:coEstado(), statusPlanilha:coUsarStatusPlanilha(), quando:new Date().toISOString() };
+  var pacote={ versao:2, bases:CO_CONST_BASES, estado:coEstado(), estados:CO_ESTADO_BASE, statusPlanilha:coUsarStatusPlanilha(), quando:new Date().toISOString() };
   var n=CO_ROWS.length;
   coAplicarConstantes();
   if(n) coPreview();
@@ -1146,6 +1184,7 @@ function coAplicarPacote(pac){
     CO_CONST_BASES[CO_BASE]=C;
   }
   if(pac.estado){ var e=document.getElementById('co-estado'); if(e) e.value=pac.estado; }
+  if(pac.estados && typeof pac.estados==='object') CO_ESTADO_BASE=pac.estados;
   if(typeof pac.statusPlanilha==='boolean'){
     var sp=document.getElementById('co-status-planilha'); if(sp) sp.checked=pac.statusPlanilha;
     try{ localStorage.setItem('cadastro_obra_status_planilha', pac.statusPlanilha?'1':'0'); }catch(e){}
@@ -1160,7 +1199,7 @@ function coCarregarConstantes(){
       if(pac){ coAplicarPacote(pac); try{ localStorage.setItem('cadastro_obra_constantes', JSON.stringify(pac)); }catch(e){} }
     })
     .catch(function(){})
-    .then(function(){ coPopularEstados(); coRestaurarStatusPlanilha(); coPopularConstantes(); coRestaurarPainelConst(); });
+    .then(function(){ coAplicarPadroesBases(); coPopularEstados(); coRestaurarStatusPlanilha(); coPopularConstantes(); coRestaurarPainelConst(); });
 }
 
 function coBaixar(){
