@@ -282,6 +282,21 @@ body.sm-collapsed .sm-side:hover .sm-group-head{justify-content:flex-start;paddi
 .co-busca.tem-texto button{display:block}
 .co-busca-res{font-size:.76rem;font-weight:700;color:#8b99a4}
 @media(max-width:620px){ .co-busca{flex:1 1 100%;max-width:none} }
+
+/* upload da carteira (bases que vêm de arquivo, ex.: Aracaju) */
+.co-arq{display:flex;align-items:center;gap:14px;padding:16px 18px;border:2px dashed #cfe3e2;border-radius:12px;
+  background:#f8fbfb;cursor:pointer;transition:border-color .15s,background .15s}
+.co-arq:hover,.co-arq.sobre{border-color:#0d7377;background:#f0fafa}
+.co-arq:focus-visible{outline:3px solid rgba(13,115,119,.35);outline-offset:2px}
+.co-arq-ic{width:44px;height:44px;border-radius:11px;background:#fff;border:1px solid #dbe3e8;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;font-size:1.25rem}
+.co-arq-tx{flex:1;min-width:0}
+.co-arq-tx b{display:block;font-size:.86rem;font-weight:800;color:#12343b;word-break:break-all}
+.co-arq-tx small{display:block;font-size:.74rem;font-weight:600;color:#8b99a4;margin-top:2px}
+.co-arq.carregado{border-style:solid;border-color:#bfe0dd;background:#f6fdfc}
+.co-arq.carregado .co-arq-tx b{color:#0d7377}
+.co-arq .co-bt{flex-shrink:0;pointer-events:none}
+@media(max-width:620px){ .co-arq{flex-wrap:wrap} .co-arq .co-bt{width:100%;text-align:center} }
 </style>
 </head>
 <body class="sm-collapsed">
@@ -313,7 +328,7 @@ body.sm-collapsed .sm-side:hover .sm-group-head{justify-content:flex-start;paddi
   <div class="co-head">
     <div class="co-head-tx">
       <h1>Cadastro de Obra</h1>
-      <p>Puxa a carteira do Google e converte para o modelo de importação — 55 colunas.</p>
+      <p>Puxa a carteira do Google (ou do arquivo enviado, na base Aracaju) e converte para o modelo de importação — 55 colunas.</p>
     </div>
     <div class="co-passos" id="co-passos">
       <div class="co-passo ativo" data-passo="1"><span class="n">1</span><span class="t">Carteira</span></div>
@@ -328,7 +343,7 @@ body.sm-collapsed .sm-side:hover .sm-group-head{justify-content:flex-start;paddi
       <div class="co-card-t"><span class="co-num">1</span>
         <div><b>Carteira</b><small>Escolha a base e o mês a importar</small></div>
       </div>
-      <button class="co-bt ghost" onclick="coToggleConfig()">⚙️ Configurar abas</button>
+      <button id="co-config-bt" class="co-bt ghost" onclick="coToggleConfig()">⚙️ Configurar abas</button>
     </header>
 
     <div class="co-card-b">
@@ -340,9 +355,21 @@ body.sm-collapsed .sm-side:hover .sm-group-head{justify-content:flex-start;paddi
           <span class="co-lbl">Base</span>
           <div id="co-base-btns" class="co-chips"></div>
         </div>
-        <div class="co-campo co-campo-cresce">
+        <div class="co-campo co-campo-cresce" id="co-campo-mes">
           <span class="co-lbl">Mês</span>
           <div id="co-mes-btns" class="co-chips"></div>
+        </div>
+      </div>
+
+      <!-- base por arquivo (Aracaju): em vez de link/gid do Google, sobe o .xlsx/.csv da carteira -->
+      <div id="co-arquivo" style="display:none">
+        <input type="file" id="co-arq-input" accept=".xlsx,.xls,.xlsm,.csv" hidden onchange="coArquivoEscolhido(this)">
+        <div id="co-arq-zona" class="co-arq" role="button" tabindex="0"
+             onclick="document.getElementById('co-arq-input').click()"
+             onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}">
+          <span class="co-arq-ic">📂</span>
+          <span class="co-arq-tx"><b id="co-arq-nome">Envie o arquivo da carteira</b><small id="co-arq-info">Arraste o .xlsx ou .csv aqui, ou clique para escolher.</small></span>
+          <span class="co-bt ghost" id="co-arq-bt">Escolher arquivo</span>
         </div>
       </div>
 
@@ -406,6 +433,7 @@ body.sm-collapsed .sm-side:hover .sm-group-head{justify-content:flex-start;paddi
         <p>Cada base guarda o seu próprio conjunto: ao trocar de base no passo 1, estes campos mudam junto.</p>
         <p><b>Vindos da carteira, não editáveis aqui:</b> Projeto, Título, Município, Responsável, Supervisor, Postes, Latitude, Longitude.</p>
         <p><b>Centro de serviço:</b> sigla do estado + município.</p>
+        <p><b>Base Aracaju (arquivo do lote):</b> Projeto = Obra; Título = “Tipo Obra - Município”; Prazo Regulado vai para <code>data_prazo_venc</code>. O arquivo não tem responsável nem supervisor, então nessa base eles são definidos aqui. Todas as obras do arquivo entram, sem o filtro de Execução/Programada.</p>
         <p><b>Status:</b> por padrão o <b>STATUS*</b> definido aqui vale para todas as obras. Marque “Manter status da carteira” para cada obra sair com o status da planilha.</p>
       </details>
     </div>
@@ -476,13 +504,14 @@ function coSheetId(link){ var m=(link||'').match(/\/d\/([a-zA-Z0-9_-]{20,})/); r
 function coGid(){ var g=(document.getElementById('co-gid').value||'').trim(); if(g) return g; var m=(document.getElementById('co-link').value||'').match(/[?#&]gid=(\d+)/); return m?m[1]:'0'; }
 
 // parser CSV robusto
-function coParseCSV(text){
+function coParseCSV(text,sep){
+  sep=sep||',';
   var rows=[],i=0,f='',row=[],q=false;
   while(i<text.length){
     var c=text[i];
     if(q){ if(c==='"'){ if(text[i+1]==='"'){f+='"';i+=2;continue;} q=false;i++;continue;} f+=c;i++;continue; }
     if(c==='"'){q=true;i++;continue;}
-    if(c===','){row.push(f);f='';i++;continue;}
+    if(c===sep){row.push(f);f='';i++;continue;}
     if(c==='\n'){row.push(f);rows.push(row);row=[];f='';i++;continue;}
     if(c==='\r'){i++;continue;}
     f+=c;i++;
@@ -499,7 +528,12 @@ var CO_H={'apikey':CO_KEY,'Authorization':'Bearer '+CO_KEY,'Content-Type':'appli
 var CO_MESES=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 var CO_ANO=2026;
 // bases disponíveis
-var CO_BASES=[{id:'irc',nome:'Irecê'},{id:'jac',nome:'Jacobina'},{id:'fsa',nome:'Feira'},{id:'srr',nome:'Serrinha'}];
+// uf = estado aplicado ao escolher a base · fonte:'arquivo' = carteira vem de upload (.xlsx/.csv), não do Google
+var CO_BASES=[{id:'irc',nome:'Irecê',uf:'ba'},{id:'jac',nome:'Jacobina',uf:'ba'},{id:'fsa',nome:'Feira',uf:'ba'},{id:'srr',nome:'Serrinha',uf:'ba'},
+              {id:'aju',nome:'Aracaju',uf:'se',fonte:'arquivo'}];
+var CO_ARQ={};    // { baseId: { nome, hora, linhas:[[...]] } } — arquivo enviado nesta sessão
+function coBaseDef(id){ id=id||coBaseId(); for(var i=0;i<CO_BASES.length;i++){ if(CO_BASES[i].id===id) return CO_BASES[i]; } return {}; }
+function coBaseArquivo(id){ return coBaseDef(id).fonte==='arquivo'; }
 var CO_DATA={};   // { baseId: { link:'', meses:{ 'YYYY-MM': gid } } }
 var CO_BASE='irc';
 
@@ -512,7 +546,7 @@ function coPopularBases(){
   var box=document.getElementById('co-base-btns'); if(!box) return;
   var sel=coBaseId();
   box.innerHTML=CO_BASES.map(function(b){
-    var d=CO_DATA[b.id]||{}; var tem=d.link && Object.keys(d.meses||{}).length;
+    var d=CO_DATA[b.id]||{}; var tem=b.fonte==='arquivo' || (d.link && Object.keys(d.meses||{}).length);
     var ativo=(b.id===sel);
     var bg=ativo?'#0d7377':(tem?'#eef4f4':'#f8fafc');
     var cor=ativo?'#fff':(tem?'#0d7377':'#94a3b8');
@@ -522,13 +556,22 @@ function coPopularBases(){
 }
 function coSelecionarBase(id){
   document.getElementById('co-base').value=id; CO_BASE=id;
+  var def=coBaseDef(id);
+  if(def.uf && CO_ESTADO_DEF[def.uf]){ document.getElementById('co-estado').value=def.uf; coPopularEstados(); }
   var d=coBaseObj();
   document.getElementById('co-link').value=d.link||'';
+  coModoFonte();
   coPopularBases(); coPopularMeses();
   coPopularConstantes();   // cada base tem o seu conjunto de constantes
+  if(coBaseArquivo(id)){
+    var arq=CO_ARQ[id];
+    if(arq){ coProcessarLinhas(arq.linhas, arq.nome); }
+    else { coLimparObras(); coSt('Base '+coNomeBase(id)+': envie o arquivo da carteira para carregar as obras.','#64748b'); }
+    return;
+  }
   var k=coMesKey(); var gid=(d.meses||{})[k];
   if(gid){ document.getElementById('co-gid').value=gid; coCarregar(); }
-  else { coSt('Base '+coNomeBase(id)+' selecionada. Escolha o mês.','#64748b'); }
+  else { coLimparObras(); coSt('Base '+coNomeBase(id)+' selecionada. Escolha o mês.','#64748b'); }
 }
 function coNomeBase(id){ for(var i=0;i<CO_BASES.length;i++){ if(CO_BASES[i].id===id) return CO_BASES[i].nome; } return id; }
 
@@ -610,21 +653,35 @@ function coCarregar(){
 function coRemapear(){ if(CO_LAST_TXT) coProcessar(CO_LAST_TXT); }
 function coProcessar(txt){
     CO_LAST_TXT=txt;
-    var rows=coParseCSV(txt);
-    // acha a linha de cabeçalho (contém PEP OBRA e TÍTULO/MUNICIPIO)
-    var hi=-1;
-    for(var k=0;k<Math.min(rows.length,15);k++){
-      var lin=rows[k].map(coNorm);
-      if(lin.indexOf('PEP OBRA')>=0 || (lin.indexOf('TITULO')>=0 && lin.indexOf('MUNICIPIO')>=0)){ hi=k; break; }
+    return coProcessarLinhas(coParseCSV(txt));
+}
+// acha a linha de cabeçalho nas 15 primeiras e diz qual o formato:
+//  'carteira' = carteira do Google (PEP OBRA / TÍTULO / MUNICIPIO)
+//  'lote'     = arquivo de lote (Obra / Tipo Obra / MUNICIPIO / STATUS...), ex.: Aracaju
+function coAcharCabecalho(rows){
+  for(var k=0;k<Math.min(rows.length,15);k++){
+    var lin=(rows[k]||[]).map(coNorm);
+    if(lin.indexOf('PEP OBRA')>=0 || (lin.indexOf('TITULO')>=0 && lin.indexOf('MUNICIPIO')>=0)) return {idx:k, formato:'carteira'};
+    if(lin.indexOf('OBRA')>=0 && lin.indexOf('MUNICIPIO')>=0) return {idx:k, formato:'lote'};
+  }
+  return {idx:-1, formato:''};
+}
+// rows = grade [[celula,...],...] vinda do CSV do Google ou do arquivo enviado
+function coProcessarLinhas(rows, nomeArquivo){
+    var cab=coAcharCabecalho(rows), hi=cab.idx;
+    if(hi<0){
+      if(nomeArquivo) coSt('❌ Não encontrei o cabeçalho em "'+nomeArquivo+'". O arquivo precisa ter as colunas OBRA e MUNICIPIO (lote) ou PEP OBRA / TÍTULO / MUNICIPIO (carteira) nas 15 primeiras linhas.','#c53030');
+      else coSt('❌ Não encontrei o cabeçalho da carteira (PEP OBRA / TÍTULO / MUNICIPIO). Confira a aba (gid) e se a planilha está compartilhada como "qualquer pessoa com o link".','#c53030');
+      return false;
     }
-    if(hi<0){ coSt('❌ Não encontrei o cabeçalho da carteira (PEP OBRA / TÍTULO / MUNICIPIO). Confira a aba (gid) e se a planilha está compartilhada como "qualquer pessoa com o link".','#c53030'); return; }
+    if(cab.formato==='lote') return coProcessarLote(rows, hi, nomeArquivo);
     var hdr=rows[hi].map(coNorm);
     function col(nomes){ for(var n=0;n<nomes.length;n++){ var idx=hdr.indexOf(nomes[n]); if(idx>=0) return idx; } return -1; }
     function colLike(palavras){ for(var c=0;c<hdr.length;c++){ var ok=true; for(var w=0;w<palavras.length;w++){ if(hdr[c].indexOf(palavras[w])<0){ ok=false; break; } } if(ok) return c; } return -1; }
     var cPep=col(['PEP OBRA','PEP']), cTit=col(['TITULO']), cMun=col(['MUNICIPIO']), cSup=col(['SUPERVISOR']),
         cPost=col(['POSTES PREVISTOS','POSTES PREVISTO']), cLat=col(['LATITUDE']), cLon=col(['LONGITUDE']), cStat=col(['STATUS DA OBRA','STATUS']);
     if(cPost<0) cPost=colLike(['POSTES','PREVIST']);
-    if(cPep<0){ coSt('❌ Coluna PEP OBRA não encontrada.','#c53030'); return; }
+    if(cPep<0){ coSt('❌ Coluna PEP OBRA não encontrada.','#c53030'); return false; }
 
     var out=[]; var foraFiltro=0; var foraDet={};
     for(var r=hi+1;r<rows.length;r++){
@@ -659,7 +716,165 @@ function coProcessar(txt){
     var b=document.getElementById('co-baixar'); b.disabled=false; b.style.opacity='1';
     coAplicarConstantes();
     coPreview();
+    return true;
 }
+
+// ===== formato lote (arquivo enviado, ex.: Lote_parcial_11-2026_MARIUA.xlsx) =====
+// Obra -> Projeto* · Tipo Obra + Município -> Título · STATUS -> status da carteira
+// Prazo Regulado -> data_prazo_venc · Lote Previsto só entra no resumo
+// Todas as obras do arquivo entram (o lote já é a seleção do mês): sem filtro de Execução/Programada.
+function coProcessarLote(rows, hi, nomeArquivo){
+    var hdr=rows[hi].map(coNorm);
+    function col(nomes){ for(var n=0;n<nomes.length;n++){ var idx=hdr.indexOf(nomes[n]); if(idx>=0) return idx; } return -1; }
+    var cObra=col(['OBRA','PEP OBRA','PEP']), cTipo=col(['TIPO OBRA','TIPO DE OBRA']), cMun=col(['MUNICIPIO']),
+        cStat=col(['STATUS','STATUS DA OBRA']), cPrazo=col(['PRAZO REGULADO']), cLote=col(['LOTE PREVISTO','LOTE']);
+    var out=[], vistos={}, repetidas=0, porLote={}, muns={};
+    for(var r=hi+1;r<rows.length;r++){
+      var row=rows[r]||[];
+      var obra=coUmaLinha(row[cObra]).replace(/\.0+$/,'');
+      if(!/\d{5,}/.test(obra)) continue;               // pula linhas vazias / totais
+      if(vistos[obra]){ repetidas++; continue; } vistos[obra]=1;
+      var mun=coUmaLinha(cMun>=0?row[cMun]:'');
+      var tipo=coUmaLinha(cTipo>=0?row[cTipo]:'');
+      var reg={};
+      reg['Projeto*']=obra;
+      reg['Titulo da obra*']=[tipo,mun].filter(Boolean).join(' - ').toUpperCase();
+      reg['Municipio*']=mun;
+      reg['_statusDaPlanilha']=coUmaLinha(cStat>=0?row[cStat]:'');
+      reg['data_prazo_venc']=coDataCelula(cPrazo>=0?row[cPrazo]:'');
+      var lote=coDataCelula(cLote>=0?row[cLote]:'');
+      var lk=/^\d{2}\/\d{2}\/\d{4}$/.test(lote)?lote.slice(3):(lote||'sem lote');
+      porLote[lk]=(porLote[lk]||0)+1;
+      if(mun) muns[mun]=1;
+      out.push(reg);
+    }
+    var nomeTx=nomeArquivo?' em "'+nomeArquivo+'"':'';
+    if(cObra<0 || !out.length){ coSt('❌ Achei o cabeçalho'+nomeTx+', mas nenhuma linha com número de obra na coluna OBRA.','#c53030'); return false; }
+
+    CO_ROWS=out;
+    document.getElementById('co-count').textContent='· '+out.length+' obras';
+    var b=document.getElementById('co-baixar'); b.disabled=false; b.style.opacity='1';
+    coAplicarConstantes();
+    coPreview();
+
+    function _mes(k){ var m=k.match(/^(\d{2})\/(\d{4})$/); return m?(CO_MESES[(+m[1])-1]||'').slice(0,3).toLowerCase()+'/'+m[2]:k; }
+    var loteTx=Object.keys(porLote).sort(function(a,b){return porLote[b]-porLote[a];}).map(function(k){return _mes(k)+' ('+porLote[k]+')';}).join(', ');
+    var falta=CO_HEADERS.filter(function(h){ return /\*$/.test(h) && CO_ROWS.some(function(reg){ return !String(reg[h]||'').trim(); }); });
+    coSt('✅ '+out.length+' obras carregadas'+(nomeArquivo?' de "'+nomeArquivo+'"':'')
+      +' · '+Object.keys(muns).length+' municípios · lote previsto: '+loteTx
+      +(repetidas?' · '+repetidas+' obra(s) repetida(s) ignorada(s)':'')
+      +(falta.length?' · ⚠️ falta preencher nas constantes: '+falta.join(', '):''),
+      falta.length?'#b9821c':'#0d7377');
+    return true;
+}
+
+// célula de data: número serial do Excel, texto dd/mm/aaaa ou aaaa-mm-dd -> dd/mm/aaaa
+function coDataCelula(v){
+  var t=coUmaLinha(v); if(!t) return '';
+  if(/^\d+(\.\d+)?$/.test(t)){
+    var n=parseFloat(t);
+    if(n>20000 && n<80000){ var d=new Date((Math.floor(n)-25569)*86400000);
+      return ('0'+d.getUTCDate()).slice(-2)+'/'+('0'+(d.getUTCMonth()+1)).slice(-2)+'/'+d.getUTCFullYear(); }
+    return t;
+  }
+  var m=t.match(/^(\d{4})-(\d{2})-(\d{2})/); if(m) return m[3]+'/'+m[2]+'/'+m[1];
+  return t;
+}
+
+function coLimparObras(){
+  CO_ROWS=[];
+  var c=document.getElementById('co-count'); if(c) c.textContent='';
+  var b=document.getElementById('co-baixar'); if(b) b.disabled=true;
+  coPreview();
+}
+
+// ===== upload da carteira (bases com fonte:'arquivo') =====
+function coModoFonte(){
+  var arq=coBaseArquivo();
+  function mostra(id,v){ var el=document.getElementById(id); if(el) el.style.display=v?'':'none'; }
+  mostra('co-arquivo', arq); mostra('co-campo-mes', !arq); mostra('co-config-bt', !arq);
+  if(arq){ var cfg=document.getElementById('co-config'); if(cfg) cfg.style.display='none'; }
+  coArqRotulo();
+}
+function coArqRotulo(){
+  var z=document.getElementById('co-arq-zona'); if(!z) return;
+  var a=CO_ARQ[coBaseId()];
+  z.classList.toggle('carregado', !!a);
+  document.getElementById('co-arq-nome').textContent = a ? a.nome : 'Envie o arquivo da carteira';
+  document.getElementById('co-arq-info').textContent = a ? ('Carregado às '+a.hora+'. Arraste outro arquivo aqui ou clique para trocar.')
+                                                         : 'Arraste o .xlsx ou .csv aqui, ou clique para escolher.';
+  document.getElementById('co-arq-bt').textContent = a ? 'Trocar arquivo' : 'Escolher arquivo';
+}
+function coArquivoEscolhido(inp){ var f=inp.files&&inp.files[0]; inp.value=''; if(f) coLerArquivo(f); }
+function coLerArquivo(f){
+  var base=coBaseId(), nome=f.name||'arquivo';
+  var ext=((nome.match(/\.([a-z0-9]+)$/i)||[])[1]||'').toLowerCase();
+  if(['xlsx','xls','xlsm','csv'].indexOf(ext)<0){ coSt('❌ "'+nome+'" não é uma planilha. Envie um arquivo .xlsx, .xls ou .csv.','#c53030'); return; }
+  coSt('Lendo "'+nome+'"...','#64748b');
+  (ext==='csv' ? coLerCSVArquivo(f) : coLerPlanilha(f)).then(function(linhas){
+    if(coBaseId()!==base) return;          // trocou de base enquanto lia
+    if(coProcessarLinhas(linhas, nome)){
+      var h=new Date();
+      CO_ARQ[base]={nome:nome, hora:('0'+h.getHours()).slice(-2)+':'+('0'+h.getMinutes()).slice(-2), linhas:linhas};
+      coArqRotulo();
+    }
+  }).catch(function(e){ coSt('❌ Não consegui ler "'+nome+'": '+((e&&e.message)||e)+'.','#c53030'); });
+}
+function coLerBuffer(f){
+  return new Promise(function(ok,falha){ var r=new FileReader(); r.onload=function(){ ok(r.result); }; r.onerror=function(){ falha(new Error('falha ao ler o arquivo')); }; r.readAsArrayBuffer(f); });
+}
+function coLerCSVArquivo(f){
+  return coLerBuffer(f).then(function(buf){
+    var txt;
+    try{ txt=new TextDecoder('utf-8',{fatal:true}).decode(buf); }catch(e){ txt=new TextDecoder('windows-1252').decode(buf); }  // CSV salvo pelo Excel
+    txt=txt.replace(/^\ufeff/,'');
+    var amostra=txt.slice(0,3000);
+    var sep=(amostra.split(';').length>amostra.split(',').length)?';':',';
+    return coParseCSV(txt,sep);
+  });
+}
+// leitor de Excel (SheetJS), carregado só quando alguém sobe um .xlsx
+var CO_XLSX_URLS=['https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js','https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js'];
+var coXlsxPromessa=null;
+function coCarregarXLSX(){
+  if(window.XLSX) return Promise.resolve(window.XLSX);
+  if(coXlsxPromessa) return coXlsxPromessa;
+  coXlsxPromessa=new Promise(function(ok,falha){
+    (function tenta(i){
+      if(i>=CO_XLSX_URLS.length){ coXlsxPromessa=null; falha(new Error('o leitor de Excel não carregou (sem internet?). Salve a planilha como CSV e envie de novo')); return; }
+      var s=document.createElement('script'); s.src=CO_XLSX_URLS[i];
+      s.onload=function(){ if(window.XLSX) ok(window.XLSX); else tenta(i+1); };
+      s.onerror=function(){ tenta(i+1); };
+      document.head.appendChild(s);
+    })(0);
+  });
+  return coXlsxPromessa;
+}
+function coLerPlanilha(f){
+  return Promise.all([coCarregarXLSX(), coLerBuffer(f)]).then(function(res){
+    var X=res[0], wb=X.read(new Uint8Array(res[1]),{type:'array'});
+    function grade(nome){
+      return X.utils.sheet_to_json(wb.Sheets[nome],{header:1,raw:true,defval:''})
+        .map(function(r){ return r.map(function(v){ return v==null?'':String(v); }); });
+    }
+    // usa a primeira aba que tiver um cabeçalho reconhecível
+    for(var i=0;i<wb.SheetNames.length;i++){ var g=grade(wb.SheetNames[i]); if(coAcharCabecalho(g).idx>=0) return g; }
+    return grade(wb.SheetNames[0]);
+  });
+}
+// arrastar e soltar: vale em qualquer ponto da página quando a base é por arquivo
+(function(){
+  var z=document.getElementById('co-arq-zona');
+  function temArquivo(e){ var t=e.dataTransfer&&e.dataTransfer.types; return !!t && Array.prototype.indexOf.call(t,'Files')>=0; }
+  window.addEventListener('dragover',function(e){ if(coBaseArquivo() && temArquivo(e)){ e.preventDefault(); if(z) z.classList.add('sobre'); } });
+  window.addEventListener('dragleave',function(e){ if(z && (!e.relatedTarget || e.relatedTarget===document.documentElement)) z.classList.remove('sobre'); });
+  window.addEventListener('drop',function(e){
+    if(z) z.classList.remove('sobre');
+    if(!coBaseArquivo() || !temArquivo(e)) return;
+    e.preventDefault();
+    var f=e.dataTransfer.files&&e.dataTransfer.files[0]; if(f) coLerArquivo(f);
+  });
+})();
 
 // celula da carteira com varias linhas (ex.: 5 coordenadas empilhadas) -> so a primeira
 function coUmaLinha(v){
@@ -674,7 +889,9 @@ function coBuscaNorm(t){
   return String(t==null?'':t).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
 }
 function coPreview(){
-  var cols=['Projeto*','Titulo da obra*','Municipio*','RESPONSAVEL*','CENTRO SERVICO','TIPO SERVICO*','NATUREZA OBRAS','Postes','LATITUDE','LONGITUDE','STATUS*'];
+  var cols=coBaseArquivo()
+    ? ['Projeto*','Titulo da obra*','Municipio*','RESPONSAVEL*','CENTRO SERVICO','TIPO SERVICO*','NATUREZA OBRAS','data_prazo_venc','STATUS*']
+    : ['Projeto*','Titulo da obra*','Municipio*','RESPONSAVEL*','CENTRO SERVICO','TIPO SERVICO*','NATUREZA OBRAS','Postes','LATITUDE','LONGITUDE','STATUS*'];
   var cx=document.getElementById('co-busca');
   var q=coBuscaNorm(cx?cx.value:'').trim();
   var termos=q?q.split(/\s+/):[];
@@ -724,6 +941,7 @@ var CO_CAMPOS_CARTEIRA=['Projeto*','Titulo da obra*','Municipio*','RESPONSAVEL*'
 
 // grupos do painel (o resto cai em "Outros campos")
 var CO_GRUPOS=[
+  {nome:'Responsáveis', cols:['RESPONSAVEL*','SUPERVISOR']},   // só aparece nas bases por arquivo (o lote não traz)
   {nome:'Contrato e serviço', cols:['Contrato*','TIPO DE OBRA*','TIPO SERVICO*','NATUREZA OBRAS','STATUS*','OBRIGA VISTORIA','PROCESSO','origem','tipo_prioridade']},
   {nome:'Datas', cols:['DATA_RECEBIMENTO*','DATA_PREVISTO_RECEBIMENTO','DATA_PREVISAO_INICIO','DATA_PREVISAO_FIM','data_inicio','data_aceite','data_prazo_venc','data_limite_vist']},
   {nome:'Local e identificação', cols:['ENDEREÇO','Bairro','CEP','REFERENCIA','OS','MEDIDOR','fiscal_concessionaria','Interessado','OBSERVACAO']},
@@ -743,8 +961,14 @@ function coConstAtual(){
   if(!CO_CONST_BASES[b]) CO_CONST_BASES[b]=coConstPadrao();
   return CO_CONST_BASES[b];
 }
+// base por arquivo (lote): responsável/supervisor não vêm no arquivo -> viram constantes; o prazo regulado vem do arquivo
+function coCamposCarteira(){
+  if(!coBaseArquivo()) return CO_CAMPOS_CARTEIRA;
+  return CO_CAMPOS_CARTEIRA.filter(function(h){ return h!=='RESPONSAVEL*' && h!=='SUPERVISOR'; }).concat(['data_prazo_venc']);
+}
 function coColunasConst(){
-  return CO_HEADERS.filter(function(h){ return CO_CAMPOS_CARTEIRA.indexOf(h)<0; });
+  var cart=coCamposCarteira();
+  return CO_HEADERS.filter(function(h){ return cart.indexOf(h)<0; });
 }
 
 // ---------- status: carteira ou card 2 ----------
@@ -823,8 +1047,9 @@ function coPopularConstantes(){
 
   // monta a lista de grupos + os campos que sobraram
   var usados={}; CO_GRUPOS.forEach(function(g){ g.cols.forEach(function(c){ usados[c]=1; }); });
-  var sobra=coColunasConst().filter(function(h){ return !usados[h]; });
-  var grupos=CO_GRUPOS.map(function(g){ return {nome:g.nome, cols:g.cols.filter(function(c){ return CO_HEADERS.indexOf(c)>=0; })}; });
+  var editaveis=coColunasConst();
+  var sobra=editaveis.filter(function(h){ return !usados[h]; });
+  var grupos=CO_GRUPOS.map(function(g){ return {nome:g.nome, cols:g.cols.filter(function(c){ return editaveis.indexOf(c)>=0; })}; });
   if(sobra.length) grupos.push({nome:'Outros campos', cols:sobra});
 
   box.innerHTML=grupos.map(function(g){
@@ -947,7 +1172,9 @@ function coBaixar(){
     linhas.push(CO_HEADERS.map(function(h){ var v=(reg[h]==null?'':String(reg[h])); if(v.indexOf(sep)>=0||v.indexOf('"')>=0||v.indexOf('\n')>=0){ v='"'+v.replace(/"/g,'""')+'"'; } return v; }).join(sep));
   });
   var blob=new Blob(['\ufeff'+linhas.join('\r\n')],{type:'text/csv;charset=utf-8'});
-  var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='importar_obras_'+coGid()+'.csv'; a.click();
+  var nomeCsv='importar_obras_'+coGid()+'.csv';
+  if(coBaseArquivo()){ var arq=CO_ARQ[coBaseId()]; nomeCsv='importar_obras_'+coBaseId()+'_'+((arq&&arq.nome)||'arquivo').replace(/\.[^.]+$/,'').replace(/[^\w\-]+/g,'_')+'.csv'; }
+  var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=nomeCsv; a.click();
 }
 
 // estados + mapa de bases/meses
