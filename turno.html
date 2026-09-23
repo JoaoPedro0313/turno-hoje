@@ -509,24 +509,13 @@ const GSHEETS = {
 };
 // URLs do Sheets resolvidas estaticamente por gsheetsGetURL()
 function todayDate() { const d=new Date(); const p=n=>String(n).padStart(2,'0'); return p(d.getDate())+'/'+p(d.getMonth()+1)+'/'+d.getFullYear(); }
+// Sem equipes fixas: quem abriu vem do arquivo de turno e a lista de equipes vem
+// só do Cadastro de Equipes (quem não abriu = equipe do cadastro que não abriu).
 const DEFAULTS = {
 date: todayDate(),
-ok: ['ALAN-IRC','ALEX-IRC','ANDRE-JAC','CAIQUE-JAC','CLEBSON-JAC','DANILO-IRC','DIOGO-JAC','DOUGLAS-JAC','EDILSON-IRC','EDMILSON-IRC','ELIEZER-IRC','EMERSON-JAC','ENES-IRC','ESMERALDO-IRC','FABIANO-JAC','FELIPE-IRC','GABRIEL-IRC','GIORLAN-IRC','JAILSON-IRC','JAILTON-JAC','JARBAS-IRC','JOAO-JAC','MARCOS-IRC','PATRICIO-JAC','RIAN-IRC','ROMERO-IRC','TIAGO-IRC','UBERDAN-IRC','VALMIR-JAC','VANILSON-IRC','WILIAN-IRC'],
+ok: [],
 justif: [],
-falta: [
-  // BA
-  'ERONILSON-JAC','GERALDO-JAC','JAIR-JAC','LUIZ-JAC',
-  'MAURIVALDO-JAC','MENEZES-IRC','MURILO-JAC','REVERTON-IRC',
-  'RODRIGO-JAC','UELTON-JAC','VAGNO-IRC','WASHINGTON-IRC','WESLEY-IRC',
-  // MG
-  'RAIMUNDO-PA','LEVY-PA','GILVANDRO-PA','RICHARD-PA','FABRICIO-PA','OTAVIO-PA','LUIZCF-PA','DOUGLAS-PA','SIDNEI-PA',
-  'CRISTIANO-ITA','LEANDRO-ITA','RAFAEL-ITA','JULIANO-ITA','CLAYTON-ITA',
-  // SE
-  'ADRIANO-AJU','ADAO-AJU','FELIPE-AJU','FRANCISCO-AJU','FRANCINALDO-AJU',
-  'GILMAR-AJU','JEAN-AJU','JOSEFERNANDO-AJU','JOSENILTON-AJU','JOSEROBERTO-AJU',
-  'LUAN-AJU','ROBSON-AJU','RODRIGOARAUJO-AJU','RODRIGOJESUS-AJU',
-  'VALDEMAR-AJU','WILSON-AJU'
-]
+falta: []
 };
 let teams = { ok: [...DEFAULTS.ok], justif: [], falta: [...DEFAULTS.falta] };
 let currentDate = DEFAULTS.date;
@@ -629,7 +618,7 @@ if (row.key==='turno') {
 const v = row.value;
 // Normaliza nomes completos para codigos curtos (compatibilidade com estados antigos salvos)
 const norm = arr => (arr||[]).map(n => toDisplayName(typeof n==='string'?n:(n.name||''))).filter(Boolean);
-teams.ok    = (v.ok    && v.ok.length)    ? [...new Set(norm(v.ok))]    : DEFAULTS.ok;
+teams.ok    = (v.ok    && v.ok.length)    ? [...new Set(norm(v.ok))]    : [...DEFAULTS.ok];
 // CORRIGIDO: Array.isArray garante que justif=[] (vazio) seja aplicado corretamente
 teams.justif = Array.isArray(v.justif) ? v.justif : [];
 currentDate = v.date || DEFAULTS.date;
@@ -1253,9 +1242,10 @@ function turnoSetCentro(id) {
 }
 
 // Filtra lista de equipes por estado + filial + centro de custo ativos
-function filterByStateAndBase(arr) {
+function filterByStateAndBase(arr, incluirForaDoCadastro) {
   return arr.filter(n => {
     const name = typeof n === 'string' ? n : (n.name || '');
+    if (!incluirForaDoCadastro && !cadNaLista(name)) return false;   // só equipes do Cadastro de Equipes
     const st = teamState(name);
     if (turnoAllowedStates && turnoAllowedStates.indexOf(st) < 0) return false;
     if (turnoStateFilter !== 'todos' && st !== turnoStateFilter) return false;
@@ -1265,12 +1255,13 @@ function filterByStateAndBase(arr) {
   });
 }
 // Mantém alias usado no turnoHistExibir já existente
-function filterByBase(arr) { return filterByStateAndBase(arr); }
+// (histórico: mostra o dia como foi registrado, mesmo equipe que depois saiu do Cadastro)
+function filterByBase(arr) { return filterByStateAndBase(arr, true); }
 
 function updateBaseCounts() {
   const el = document.getElementById('turno-base-counts');
   if (!el) return;
-  const all = [...teams.ok];
+  const all = teams.ok.filter(cadNaLista);
   const ba = all.filter(n=>teamState(n)==='ba').length;
   const mg = all.filter(n=>teamState(n)==='mg').length;
   const se = all.filter(n=>teamState(n)==='se').length;
@@ -1296,7 +1287,7 @@ buildGridFalta('falta-grid', faltaFilt);
 document.getElementById('ok-count').textContent    = okFilt.length;
 document.getElementById('justif-count').textContent = justifFilt.length;
 document.getElementById('falta-count').textContent  = faltaFilt.length;
-const total = teams.ok.length + teams.justif.length + faltaFiltrada.length;
+const total = teams.ok.filter(cadNaLista).length + teams.justif.filter(cadNaLista).length + faltaFiltrada.filter(cadNaLista).length;
 // título fixo SISTEMA DE OBRAS
 const _pageSub = document.getElementById('page-sub'); if (_pageSub) _pageSub.textContent = 'Relatorio: ' + currentDate;
 const _dateInput = document.getElementById('date-input'); if (_dateInput) _dateInput.value = currentDate;
@@ -1403,6 +1394,7 @@ const input = document.getElementById('new-name');
 const name  = input.value.trim().toUpperCase();
 const obs   = document.getElementById('new-obs').value.trim();
 if (!name) { showMsg('Informe o nome da equipe.','error'); return; }
+if (CAD_FONTE_OK && !cadNaLista(name)) { showMsg(name + ' não está no Cadastro de Equipes. Cadastre lá e ela aparece aqui sozinha.','error'); return; }
 if (allNames().includes(name)) { showMsg(name + ' ja esta na lista.','error'); return; }
 if (selectedStatus==='justif') teams.justif.push({name,obs});
 else teams[selectedStatus].push(name);
@@ -1450,7 +1442,7 @@ const all = [
 ...teams.ok.map(n=>({n,s:'ok',obs:''})),
 ...teams.justif.map(t=>({n:t.name,s:'justif',obs:t.obs})),
 ...teams.falta.map(n=>({n,s:'falta',obs:''}))
-].filter(t=>!q||t.n.includes(q)).sort((a,b)=>a.n.localeCompare(b.n));
+].filter(t=>(!q||t.n.includes(q)) && cadNaLista(t.n)).sort((a,b)=>a.n.localeCompare(b.n));
 if (!all.length) { el.innerHTML='<div style="padding:16px;text-align:center;color:#bbb;font-size:0.82rem;">Nenhuma equipe encontrada</div>'; return; }
 const labels = {ok:'OK',justif:'JUSTIF.',falta:'FALTA'};
 all.forEach(function(item) {
@@ -1593,7 +1585,10 @@ if (!el) return;
 el.textContent=text; el.className='msg '+type;
 clearTimeout(el._t); el._t=setTimeout(()=>el.className='msg',5000);
 }
-const EQUIPES_ATIVAS = [
+// EQUIPES_LEGADO: lista antiga, NÃO é mais fonte de equipes. Serve só para manter os
+// mesmos códigos de antes (histórico) e como reserva enquanto o Cadastro de Equipes
+// ainda não carregou neste aparelho (sem banco e sem cache).
+const EQUIPES_LEGADO = [
   // ── BA · IRECÊ ──
   'ESMERALDO-IRC','ENES-IRC','FELIPE-IRC','JAILSON-IRC','JARBAS-IRC','VANILSON-IRC',
   'WILIAN-IRC','EDILSON-IRC','ALEX-IRC','VAGNO-IRC','EDMILSON-IRC','MENEZES-IRC',
@@ -1614,6 +1609,11 @@ const EQUIPES_ATIVAS = [
   'LUAN-AJU','ROBSON-AJU','RODRIGOARAUJO-AJU','RODRIGOJESUS-AJU',
   'VALDEMAR-AJU','WILSON-AJU'
 ];
+// Lista ativa: assim que o Cadastro de Equipes carrega (cache ou banco), passa a ser
+// EXATAMENTE a lista do cadastro (ver cadAplicar). Até lá, reserva = lista antiga.
+const EQUIPES_ATIVAS = EQUIPES_LEGADO.slice();
+var CAD_FONTE_OK = false;  // true quando a lista ativa veio do Cadastro de Equipes
+var CAD_SET = null;        // códigos do cadastro (normalizados) para filtrar a tela
 // Mapeamento CON_MNT-XX (formato sistema externo) → código interno
 const CON_MNT_MAP = {
   'CON_MNT-01':'RAIMUNDO-PA','CON_MNT-02':'LEVY-PA',
@@ -1830,12 +1830,38 @@ function cadUtdDaLinha(q, fallback) {
 function cadAtivaEquivalente(code) {
   const alvo = cadSquash(code);
   if (!alvo) return '';
-  for (let i=0;i<EQUIPES_ATIVAS.length;i++) {
-    const e = EQUIPES_ATIVAS[i];
-    if (cadSquash(e) === alvo) return e;
-    if (cadSquash(toDisplayName(e)) === alvo) return e;
+  const listas = [EQUIPES_ATIVAS, EQUIPES_LEGADO];
+  for (let l=0;l<listas.length;l++) {
+    for (let i=0;i<listas[l].length;i++) {
+      const e = listas[l][i];
+      if (cadSquash(e) === alvo) return e;
+      if (cadSquash(toDisplayName(e)) === alvo) return e;
+    }
   }
   return '';
+}
+// A equipe está no Cadastro de Equipes? (aceita código interno, CON_MNT, nome antigo)
+// Enquanto o cadastro não carregou, não filtra nada.
+function cadNaLista(n) {
+  if (!CAD_FONTE_OK || !CAD_SET) return true;
+  const nome = typeof n === 'string' ? n : ((n && n.name) || '');
+  if (!nome) return false;
+  return CAD_SET.has(cadSquash(nome)) || CAD_SET.has(cadSquash(toDisplayName(nome)));
+}
+function cadMontarSet() {
+  CAD_SET = new Set();
+  EQUIPES_ATIVAS.forEach(function(c){ CAD_SET.add(cadSquash(c)); CAD_SET.add(cadSquash(toDisplayName(c))); });
+}
+// Equipes que abriram/justificaram no arquivo de turno mas não estão no Cadastro
+function cadForaDoCadastro() {
+  if (!CAD_FONTE_OK) return [];
+  const vistos = new Set(), fora = [];
+  [...(teams.ok||[]), ...(teams.justif||[]).map(function(t){ return t && t.name ? t.name : t; })].forEach(function(n){
+    const d = toDisplayName(n);
+    if (!d || vistos.has(d) || cadNaLista(n)) return;
+    vistos.add(d); fora.push(d);
+  });
+  return fora.sort();
 }
 function cadUTD(txt) {
   const t = cadNorm(txt);
@@ -1844,6 +1870,7 @@ function cadUTD(txt) {
 }
 function cadCodigosConhecidos() {
   const s = new Set(EQUIPES_ATIVAS);
+  EQUIPES_LEGADO.forEach(function(c){ s.add(c); });
   Object.keys(NOME_CURTO).forEach(function(k){ if (NOME_CURTO[k]) s.add(NOME_CURTO[k]); });
   return s;
 }
@@ -1987,6 +2014,19 @@ function cadAplicar(pkg) {
     return foraTurno.indexOf(c) < 0 && (novas.indexOf(c) >= 0 || CAD_CRIADOS.indexOf(c) >= 0);
   });
   try { localStorage.setItem(CAD_LS_MEUS, JSON.stringify(CAD_CRIADOS)); } catch(e) {}
+  // ── o Cadastro é a ÚNICA fonte: a lista ativa vira exatamente a lista dele ──
+  // (quem saiu do cadastro sai daqui, inclusive as equipes da lista antiga do código)
+  const ativasCad = atuais.filter(function(c){ return foraTurno.indexOf(c) < 0; });
+  if (ativasCad.length) {
+    EQUIPES_ATIVAS.filter(function(c){ return ativasCad.indexOf(c) < 0; }).forEach(function(c){
+      if (removidas.indexOf(c) < 0 && antes.has(c)) removidas.push(c);
+    });
+    EQUIPES_ATIVAS.length = 0;
+    ativasCad.forEach(function(c){ if (EQUIPES_ATIVAS.indexOf(c) < 0) EQUIPES_ATIVAS.push(c); });
+    CAD_FONTE_OK = true;
+    cadMontarSet();
+    if (Array.isArray(teams.falta)) teams.falta = teams.falta.filter(cadNaLista);
+  }
   CAD_META = {
     gerente: pkg.gerente || {nome:'',base:''},
     supervisores: Array.isArray(pkg.supervisores) ? pkg.supervisores : [],
@@ -2014,10 +2054,13 @@ function cadPacoteLocal() {
   return lsGet(CAD_DB_KEY);
 }
 // Busca no banco e aplica
+var _cadEmCurso = false;
 async function cadSincronizar(forcar) {
   const agora = Date.now();
+  if (_cadEmCurso) return;
   if (!forcar && agora - _cadLastSync < CAD_MIN_MS) return;
   _cadLastSync = agora;
+  _cadEmCurso = true;
   try {
     const ctrl = new AbortController();
     const tid  = setTimeout(function(){ ctrl.abort(); }, 8000);
@@ -2051,15 +2094,22 @@ async function cadSincronizar(forcar) {
     cadRenderInfo();
   } catch(e) {
     console.warn('[cadastro] falha ao sincronizar:', e.name, e.message);
+  } finally {
+    _cadEmCurso = false;
   }
 }
 // Linha de status na aba Equipes (engrenagem)
 function cadRenderInfo() {
   const el = document.getElementById('cad-sync-info');
   if (!el) return;
-  if (!CAD_META.total) {
-    el.innerHTML = '<b>Cadastro de Equipes</b> · nada carregado ainda. '
-      + '<a href="equipes.html" style="color:#0d7377;font-weight:800;">abrir cadastro</a>';
+  const addCard = document.getElementById('cad-add-card');
+  if (addCard) addCard.style.display = CAD_FONTE_OK ? 'none' : '';
+  if (!CAD_FONTE_OK) {
+    el.innerHTML = '<b>Cadastro de Equipes</b> · ainda não carregou neste aparelho; enquanto isso a lista é a antiga do código. '
+      + '<a href="equipes.html" style="color:#0d7377;font-weight:800;">abrir cadastro</a>'
+      + ' · <span id="cad-sync-now" style="color:#0d7377;font-weight:800;cursor:pointer;">sincronizar agora</span>';
+    const b0 = document.getElementById('cad-sync-now');
+    if (b0) b0.addEventListener('click', function(){ el.innerHTML = 'Sincronizando…'; cadSincronizar(true); });
     return;
   }
   let quando = '';
@@ -2069,18 +2119,41 @@ function cadRenderInfo() {
     return a + (CAD_INFO[k].turno === false ? 0 : (parseInt(CAD_INFO[k].qtd_colab,10)||0));
   }, 0);
   const fora = Object.keys(CAD_INFO).filter(function(k){ return CAD_INFO[k].turno === false; }).length;
-  el.innerHTML = '<b>' + (CAD_META.total - fora) + ' equipe(s)</b> vindas do Cadastro de Equipes'
+  el.innerHTML = '<b>' + (CAD_META.total - fora) + ' equipe(s)</b> no Turno, todas vindas do Cadastro de Equipes'
     + (fora ? ' · ' + fora + ' fora do turno' : '')
     + (colab ? ' · ' + colab + ' colaboradores' : '')
     + (CAD_META.gerente && CAD_META.gerente.base ? ' · ' + CAD_META.gerente.base : '')
     + (quando ? ' · cadastro de ' + quando : '')
+    + ' · <a href="equipes.html" style="color:#0d7377;font-weight:800;">abrir cadastro</a>'
     + ' · <span id="cad-sync-now" style="color:#0d7377;font-weight:800;cursor:pointer;">sincronizar agora</span>';
+  const foraCad = cadForaDoCadastro();
+  if (foraCad.length) {
+    el.innerHTML += '<div style="margin-top:6px;color:#b7791f;">⚠️ ' + foraCad.length
+      + ' equipe(s) do arquivo de turno não estão no Cadastro e não aparecem no Turno: '
+      + foraCad.slice(0,8).map(esc).join(', ') + (foraCad.length > 8 ? '…' : '') + '</div>';
+  }
   const btn = document.getElementById('cad-sync-now');
   if (btn) btn.addEventListener('click', function(){ el.innerHTML = 'Sincronizando…'; cadSincronizar(true); });
 }
 
 // Cache local ja no carregamento: a lista sai certa antes da rede responder
-try { cadAplicar(cadPacoteLocal()); } catch(e) { console.warn('[cadastro] cache local:', e.message); }
+try { cadAplicar(cadPacoteLocal()); cadRecalcularFalta(); } catch(e) { console.warn('[cadastro] cache local:', e.message); }
+
+// Cadastro salvo em outra aba deste navegador (equipes.html grava o cache local): aplica na hora,
+// sem esperar a próxima checagem do banco (que roda a cada poucos segundos).
+window.addEventListener('storage', function(ev){
+  if (ev.key !== CAD_LS_RAW || !ev.newValue) return;
+  try {
+    const pkg = JSON.parse(ev.newValue);
+    if (!pkg || !Array.isArray(pkg.equipes)) return;
+    cadAplicar(pkg);
+    cadRecalcularFalta();
+    try { render(); } catch(e) {}
+    try { if (document.getElementById('manage-list')) renderManageList(); } catch(e) {}
+    cadRenderInfo();
+    setTimeout(function(){ cadSincronizar(true); }, 3000);   // confirma com o banco
+  } catch(e) { console.warn('[cadastro] storage:', e.message); }
+});
 
 // Revalida quando a aba volta ao foco (ex.: usuario cadastrou equipe na outra aba)
 document.addEventListener('visibilitychange', function(){ if (!document.hidden) cadSincronizar(); });
@@ -6200,7 +6273,7 @@ setTimeout(presenceInit, 1500);
         <div id="gear-content-equipes" style="display:none;">
           <div class="gear-section-title" style="color:#0d7377;border-bottom:2px solid #c0e8e5;">👥 Gerenciar Equipes</div>
 
-          <div class="gear-card">
+          <div class="gear-card" id="cad-add-card">
             <div style="font-size:0.72rem;font-weight:800;color:#555;margin-bottom:8px;">Adicionar equipe</div>
             <input id="new-name" type="text" placeholder="Nome (ex: JOAO-JAC)" style="width:100%;box-sizing:border-box;padding:8px 12px;border:1.5px solid #c0e8e5;border-radius:8px;font-family:'Barlow',sans-serif;font-size:0.82rem;font-weight:700;margin-bottom:8px;outline:none;">
             <input id="new-obs" type="text" placeholder="Observação (opcional)" style="width:100%;box-sizing:border-box;padding:8px 12px;border:1.5px solid #c0e8e5;border-radius:8px;font-family:'Barlow',sans-serif;font-size:0.82rem;font-weight:700;margin-bottom:8px;outline:none;">
@@ -6453,11 +6526,26 @@ setTimeout(presenceInit, 1500);
         }
 
         _gearPayloadPendente = payload;
-        _gearShowMsg('✅ Arquivo lido com sucesso. Confira o preview abaixo.', 'success');
+        // conta como a tela vai mostrar: só equipes do Cadastro de Equipes
+        const _jNome = function(t){ return t && t.name ? t.name : t; };
+        const okCad  = payload.ok.filter(cadNaLista);
+        const jCad   = payload.justif.filter(function(t){ return cadNaLista(_jNome(t)); });
+        const okD = new Set(okCad.map(function(n){ return toDisplayName(n); }));
+        const jD  = new Set(jCad.map(function(t){ return toDisplayName(_jNome(t)); }));
+        const faltaCad = CAD_FONTE_OK
+          ? EQUIPES_ATIVAS.filter(function(e){ const d=toDisplayName(e); return !okD.has(d) && !jD.has(d); }).length
+          : payload.falta.length;
+        const foraArq = [...payload.ok, ...payload.justif.map(_jNome)]
+          .filter(function(n){ return !cadNaLista(n); })
+          .map(function(n){ return toDisplayName(n); })
+          .filter(function(n,i,a){ return n && a.indexOf(n) === i; });
+        _gearShowMsg('✅ Arquivo lido com sucesso. Confira o preview abaixo.'
+          + (foraArq.length ? ' ⚠️ ' + foraArq.length + ' equipe(s) do arquivo não estão no Cadastro de Equipes e não vão aparecer: '
+              + foraArq.slice(0,8).join(', ') + (foraArq.length > 8 ? '…' : '') : ''), foraArq.length ? 'warn' : 'success');
 
-        document.getElementById('gear-prev-ok').textContent    = payload.ok.length;
-        document.getElementById('gear-prev-justif').textContent = payload.justif.length;
-        document.getElementById('gear-prev-falta').textContent  = payload.falta.length;
+        document.getElementById('gear-prev-ok').textContent    = okCad.length;
+        document.getElementById('gear-prev-justif').textContent = jCad.length;
+        document.getElementById('gear-prev-falta').textContent  = faltaCad;
         document.getElementById('gear-prev-date').textContent   = payload.date ? '📅 Data: ' + payload.date : '';
         prevEl.style.display = 'block';
       } catch(err) {
@@ -6671,9 +6759,10 @@ setTimeout(presenceInit, 1500);
     if (!el) return;
     el.textContent = txt;
     el.style.display = 'block';
-    el.style.background = tipo === 'success' ? '#d0f0ee' : '#fde8e8';
-    el.style.color      = tipo === 'success' ? '#0d7377' : '#c53030';
-    el.style.borderLeft = '3px solid ' + (tipo === 'success' ? '#0d7377' : '#c53030');
+    const cor = tipo === 'success' ? ['#d0f0ee','#0d7377'] : tipo === 'warn' ? ['#fffbeb','#b7791f'] : ['#fde8e8','#c53030'];
+    el.style.background = cor[0];
+    el.style.color      = cor[1];
+    el.style.borderLeft = '3px solid ' + cor[1];
   }
 
   // ── MODO ESCURO ────────────────────────────────────────
@@ -6973,7 +7062,7 @@ function _doCaptureForBot() {
 // ── Gera imagem apenas com equipes BA para o bot (HTML direto) ───────────────
 function gerarImagemBA() {
   try {
-    function isBA(n) { return n && (n.endsWith('-IRC') || n.endsWith('-JAC')); }
+    function isBA(n) { return n && (n.endsWith('-IRC') || n.endsWith('-JAC')) && cadNaLista(n); }
     const okBA    = [...(teams.ok||[])].filter(isBA).sort();
     const justifBA= [...(teams.justif||[])].filter(function(t){ return isBA(t.name||t); });
     const faltaBA = [...(teams.falta||[])].filter(isBA).sort();
