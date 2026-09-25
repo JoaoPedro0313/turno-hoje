@@ -1,9 +1,12 @@
 /* ============================================================
-   Mariuá — Identidade do dispositivo ("login leve")
-   - Na 1ª vez em QUALQUER página, pergunta o nome (uma vez).
-   - Salva no navegador (vale para todas as telas) e registra no
-     banco (tabela 'dispositivos': aparelho -> nome, datas de acesso).
-   - Nas próximas vezes não pergunta; só registra o último acesso.
+   Mariuá — Identidade do dispositivo ("login leve") · v4
+   - Página com login (mariua-auth.js): NÃO pergunta o nome.
+     Usa o nome da conta que entrou, guarda no aparelho e registra
+     o acesso na tabela 'dispositivos'. Não mexe em window.MARIUA_USER,
+     que é do login (e-mail, telas liberadas, gestor).
+   - Página sem login (tela antiga): como antes — na 1ª vez pergunta
+     o nome, salva no navegador e registra no banco; nas próximas
+     só registra o último acesso.
    ============================================================ */
 (function () {
   'use strict';
@@ -12,6 +15,7 @@
   var H = { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY, 'Content-Type': 'application/json' };
   var LS_USER = 'mariua_user';      // nome salvo
   var LS_DEV = 'mariua_device_id';  // id do aparelho
+  var LS_PRESENCA = 'mariua_presence_name'; // nome mostrado em "quem está online" (Turno)
 
   function lsGet(k){ try { return localStorage.getItem(k); } catch(e){ return null; } }
   function lsSet(k,v){ try { localStorage.setItem(k,v); } catch(e){} }
@@ -38,13 +42,60 @@
     } catch(e){}
   }
 
+  // ── Login (mariua-auth.js) ─────────────────────────────────────────────
+  // A trava de acesso das páginas cria #mariua-lock / html.mariua-check antes de tudo,
+  // e o mariua-auth.js marca window.__MARIUA_AUTH__. Qualquer um deles = página com login.
+  function temLogin(){
+    return !!(window.__MARIUA_AUTH__ || document.getElementById('mariua-lock') ||
+              document.documentElement.classList.contains('mariua-check'));
+  }
+  // Conta que entrou: objeto do mariua-auth.js ({email, nome, gestor, telas}) ou o cache dele na aba
+  function contaLogada(){
+    var u = window.MARIUA_USER;
+    if (u && typeof u === 'object' && (u.email || u.nome)) return u;
+    try { var c = JSON.parse(sessionStorage.getItem('mariua_user_cache') || 'null'); if (c && (c.email || c.nome)) return c; } catch(e){}
+    return null;
+  }
+  // Nome para mostrar. Sem nome no cadastro, o login devolve o começo do e-mail: "joao.silva" -> "Joao Silva"
+  function nomeDaConta(u){
+    var n = String(u.nome || '').trim().replace(/\s+/g,' ');
+    var prefixo = String(u.email || '').split('@')[0];
+    if (!n || n === prefixo) {
+      n = String(prefixo || n).replace(/[._\-+]+/g,' ').replace(/\d+/g,' ').trim().replace(/\s+/g,' ')
+            .toLowerCase().replace(/(^|\s)\S/g, function(c){ return c.toUpperCase(); });
+      if (!n) n = String(u.email || 'Usuário');
+    }
+    return n;
+  }
+  var _contaUsada = '';
+  function usarConta(u){
+    var nome = nomeDaConta(u);
+    var chave = String(u.email || '') + '|' + nome;
+    if (chave === _contaUsada) return;
+    _contaUsada = chave;
+    var anterior = String(lsGet(LS_USER) || '').trim();
+    lsSet(LS_USER, nome);
+    // "quem está online": acompanha o login, a não ser que a pessoa tenha escrito outro nome lá
+    var pres = String(lsGet(LS_PRESENCA) || '').trim();
+    if (!pres || pres === anterior) {
+      if (typeof window.presenceSaveName === 'function') { try { window.presenceSaveName(nome); } catch(e){ lsSet(LS_PRESENCA, nome); } }
+      else lsSet(LS_PRESENCA, nome);
+    }
+    if (anterior !== nome) registrar(deviceId(), nome, !anterior); else registrar(deviceId(), nome, false);
+    fecharModal();
+    document.dispatchEvent(new CustomEvent('mariua:user', { detail: { nome: nome, email: String(u.email || '') } }));
+  }
+  function fecharModal(){ var ov = document.getElementById('mariua-id-ov'); if (ov && ov.parentNode) ov.parentNode.removeChild(ov); }
+
   function expoeNome(nome){
-    // disponibiliza o nome para o resto do sistema
-    try { window.MARIUA_USER = nome; } catch(e){}
+    // disponibiliza o nome para o resto do sistema (só em página sem login:
+    // com login, window.MARIUA_USER é o objeto da conta e não pode ser trocado por texto)
+    try { if (!(window.MARIUA_USER && typeof window.MARIUA_USER === 'object')) window.MARIUA_USER = nome; } catch(e){}
     document.dispatchEvent(new CustomEvent('mariua:user', { detail: { nome: nome } }));
   }
 
   function abrirModal(){
+    if (temLogin()) return;               // com login, quem identifica é a conta
     if (document.getElementById('mariua-id-ov')) return;
     var ov = document.createElement('div');
     ov.id = 'mariua-id-ov';
@@ -89,6 +140,18 @@
   }
 
   function start(){
+    if (temLogin()) {
+      // Espera o login terminar (a pessoa pode estar digitando a senha) e usa a conta.
+      // O cache da aba vale na hora; segue conferindo até o login confirmar a conta.
+      var n = 0;
+      (function esperar(){
+        var u = contaLogada();
+        if (u) usarConta(u);
+        var confirmado = window.MARIUA_USER && typeof window.MARIUA_USER === 'object';
+        if (!confirmado && ++n < 2000) setTimeout(esperar, 600);   // até ~20 min
+      })();
+      return;
+    }
     var nome = lsGet(LS_USER);
     if (nome && nome.trim()) {
       expoeNome(nome.trim());
@@ -102,7 +165,11 @@
   else start();
 
   // permite trocar de identidade depois:  mariuaTrocarUsuario()
-  window.mariuaTrocarUsuario = function(){ try{ localStorage.removeItem(LS_USER); }catch(e){} abrirModal(); };
+  // (com login, trocar de usuário = sair da conta e entrar com outra)
+  window.mariuaTrocarUsuario = function(){
+    if (temLogin()) { if (typeof window.mariuaSair === 'function') window.mariuaSair(); return; }
+    try{ localStorage.removeItem(LS_USER); }catch(e){} abrirModal();
+  };
 
   // avatar clicável -> mostra quem está usando o aparelho e permite trocar
   // abre a configuração disponível na página (varia conforme a tela)
@@ -119,7 +186,10 @@
     if(rm){ rm.style.display='flex'; return; }
   };
 
-  window.mariuaPerfil = function(){
+  // Com login, o cartão de perfil é o do mariua-auth.js (conta, telas liberadas, sair).
+  // Este fica só para página sem login.
+  var perfilLeve = function(){
+    if (temLogin() && window.mariuaPerfil && window.mariuaPerfil !== perfilLeve) { window.mariuaPerfil(); return; }
     var nome = lsGet(LS_USER);
     if(!nome || !nome.trim()){ abrirModal(); return; }
     nome = nome.trim();
@@ -158,4 +228,5 @@
     if(cfg) cfg.onclick = function(){ close(); window.mariuaConfig(); };
     document.getElementById('mariua-perfil-trocar').onclick = function(){ close(); window.mariuaTrocarUsuario(); };
   };
+  if (!(temLogin() && typeof window.mariuaPerfil === 'function')) window.mariuaPerfil = perfilLeve;
 })();
