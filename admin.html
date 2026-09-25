@@ -297,6 +297,22 @@ body.sm-collapsed .sm-side:hover .sm-group-head{justify-content:flex-start;paddi
   .ad-cab-r .btn{flex:1}
 }
 
+/* aba Acessos */
+.ac-filtros input[type=date],.ac-filtros select{width:auto;max-width:100%;margin:0;padding:8px 10px;border:1.5px solid #dbe3e8;border-radius:10px;font-family:inherit;font-size:.82rem;font-weight:700;color:#334155;background:#fff}
+.ac-ate-lbl{font-size:.74rem;font-weight:800;color:#9aa7b1}
+@media(max-width:620px){ .ac-filtros input[type=date]{flex:1} .ac-filtros select{flex:1 1 45%} }
+.ac-resumo{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 12px}
+.ac-chip{background:#f7fafb;border:1px solid #e6ebee;border-radius:20px;padding:5px 12px;font-size:.74rem;font-weight:700;color:#5b6b75}
+.ac-chip b{color:#12343b}
+.ac-chip.on{background:#f0fff4;border-color:#c6f6d5;color:#276749}
+.ac-mail{display:block;font-size:.68rem;color:#94a3b8;font-weight:600}
+.ac-tag{display:inline-block;font-size:.62rem;font-weight:900;letter-spacing:.4px;border-radius:10px;padding:2px 8px;margin-left:6px;vertical-align:1px}
+.ac-tag.blq{background:#fff5f5;color:#c53030;border:1px solid #fed7d7}
+.ac-agora{display:inline-flex;align-items:center;gap:5px;color:#276749;font-weight:800}
+.ac-agora:before{content:'';width:7px;height:7px;border-radius:50%;background:#38d996;box-shadow:0 0 5px #38d996}
+.ac-sql{margin-top:10px;background:#0f172a;color:#e2e8f0;border-radius:10px;padding:12px 14px;font:600 .72rem/1.5 ui-monospace,Consolas,monospace;white-space:pre;overflow:auto;max-height:260px}
+.ac-box{background:#fffaf0;border:1px solid #fbd38d;border-left:4px solid #f0a500;border-radius:10px;padding:12px 14px;margin-bottom:12px;font-size:.82rem;color:#744210;line-height:1.5}
+
 /* cards da central de cadastros */
 .ad-cc{border:1px solid #e6ebee;border-radius:12px;padding:15px 16px;background:#fff;transition:border-color .15s}
 .ad-cc:hover{border-color:#0d7377}
@@ -394,6 +410,7 @@ body.sm-collapsed .sm-side:hover .sm-group-head{justify-content:flex-start;paddi
         <button class="ad-tab ativa" onclick="adSecao('usuarios',this)">Usuários</button>
         <button class="ad-tab" onclick="adSecao('solic',this)">Solicitações <span class="ad-pin" id="ad-pin-sol" style="display:none"></span></button>
         <button class="ad-tab" onclick="adSecao('cadastros',this)">Central de cadastros</button>
+        <button class="ad-tab" onclick="adSecao('acessos',this)">Acessos</button>
       </div>
 
       <div id="pane-admin">
@@ -520,6 +537,42 @@ body.sm-collapsed .sm-side:hover .sm-group-head{justify-content:flex-start;paddi
                 <div id="cc-pda-msg" class="amsg" style="margin-top:8px;"></div>
               </div>
 
+            </div>
+          </div>
+        </section>
+
+        <!-- ── ACESSOS ────────────────────────────────────────────────── -->
+        <section class="ad-sec" data-sec="acessos" hidden>
+          <div class="adminbox" style="max-width:none;">
+            <div class="ad-cab">
+              <div>
+                <h2 style="margin:0">Acessos às telas</h2>
+                <p style="margin:2px 0 0">Quem abriu qual tela e em que horário. <b>Até</b> é o último sinal da tela aberta (atualiza a cada minuto).</p>
+              </div>
+              <div class="ad-cab-r ac-filtros">
+                <input type="date" id="ac-de" onchange="acCarregar()" title="De">
+                <span class="ac-ate-lbl">até</span>
+                <input type="date" id="ac-ate" onchange="acCarregar()" title="Até">
+                <select id="ac-usuario" onchange="acRender()"><option value="">Todos os usuários</option></select>
+                <select id="ac-tela" onchange="acRender()"><option value="">Todas as telas</option></select>
+                <button class="btn ghost" onclick="acCarregar()">↻ Atualizar</button>
+              </div>
+            </div>
+            <div id="ac-resumo" class="ac-resumo"></div>
+            <div id="ac-aviso"></div>
+            <div class="ad-tw">
+              <table class="utbl">
+                <thead><tr>
+                  <th>Data</th>
+                  <th>Entrou</th>
+                  <th>Até</th>
+                  <th>Tempo</th>
+                  <th>Usuário</th>
+                  <th>Tela</th>
+                  <th class="col-min">Aparelho</th>
+                </tr></thead>
+                <tbody id="ac-lista"><tr><td colspan="7" style="text-align:center;color:#aaa;padding:18px;">Carregando…</td></tr></tbody>
+              </table>
             </div>
           </div>
         </section>
@@ -1318,6 +1371,7 @@ function adSecao(qual, bt){
   document.querySelectorAll('.ad-tab').forEach(function(t){ t.classList.remove('ativa'); });
   if(bt) bt.classList.add('ativa');
   if(qual!=='usuarios') adNovo(false);
+  if(typeof acAbrir==='function') acAbrir(qual==='acessos');
 }
 function adNovo(abrir){
   var b=document.getElementById('box-novo'); if(!b) return;
@@ -1368,6 +1422,182 @@ function adResumo(){
   if(!sb2 || !window.MutationObserver) return;
   new MutationObserver(adResumo).observe(sb2,{childList:true,characterData:true,subtree:true});
 })();
+</script>
+<script type="text/plain" id="ac-sql-texto">-- ============================================================================
+--  MARIUÁ · REGISTRO DE ACESSOS
+--  Rode UMA vez no Supabase: SQL Editor → New query → cole tudo → Run.
+--  Cria a tabela que o mariua-auth.js preenche (quem abriu qual tela e quando)
+--  e que o admin.html mostra na aba "Acessos".
+-- ============================================================================
+
+create table if not exists public.acessos (
+  id          uuid primary key default gen_random_uuid(),
+  email       text not null,                 -- login de quem abriu
+  nome        text,                          -- nome da conta no momento
+  tela        text,                          -- id da tela no catálogo (turno, rdo, obra…)
+  tela_nome   text,                          -- nome amigável (Turno, RDO, Cadastro de obra…)
+  arquivo     text,                          -- arquivo aberto (turno.html…)
+  bloqueado   boolean not null default false,-- tentou abrir tela sem permissão
+  aparelho    text,                          -- computador / celular / tablet
+  device_id   text,                          -- id do aparelho (identidade.js)
+  em          timestamptz not null default now(),  -- quando abriu
+  ultimo_em   timestamptz not null default now()   -- último sinal (tela aberta e visível)
+);
+
+create index if not exists acessos_em_idx    on public.acessos (em desc);
+create index if not exists acessos_email_idx on public.acessos (email, em desc);
+
+alter table public.acessos enable row level security;
+
+-- Cada pessoa logada registra só os próprios acessos
+drop policy if exists acessos_inserir on public.acessos;
+create policy acessos_inserir on public.acessos
+  for insert to authenticated
+  with check (lower(email) = lower(auth.jwt() ->> 'email'));
+
+-- …e atualiza o "último sinal" só dos próprios acessos
+drop policy if exists acessos_atualizar on public.acessos;
+create policy acessos_atualizar on public.acessos
+  for update to authenticated
+  using      (lower(email) = lower(auth.jwt() ->> 'email'))
+  with check (lower(email) = lower(auth.jwt() ->> 'email'));
+
+-- Gestor vê tudo; os demais só enxergam as próprias linhas
+-- (necessário para o "último sinal" conseguir atualizar a linha)
+drop policy if exists acessos_ler on public.acessos;
+create policy acessos_ler on public.acessos
+  for select to authenticated
+  using (public.is_gestor() or lower(email) = lower(auth.jwt() ->> 'email'));
+
+-- Ninguém apaga pelo site
+revoke delete on public.acessos from anon, authenticated;
+</script>
+<script>
+/* ══ Aba ACESSOS ════════════════════════════════════════════════════════════
+   Lê a tabela `acessos` (preenchida pelo mariua-auth.js em cada tela aberta).
+   Filtra o período no banco e usuário/tela aqui. Com a aba aberta, atualiza
+   sozinha a cada minuto. */
+var AC_DADOS = [], AC_TIMER = null, AC_LIMITE = 3000;
+function acEsc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
+function acHojeISO(){ var d=new Date(); return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2); }
+function acHora(t){ var d=new Date(t); return ('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2); }
+function acData(t){ var d=new Date(t); return ('0'+d.getDate()).slice(-2)+'/'+('0'+(d.getMonth()+1)).slice(-2); }
+function acDuracao(ms){
+  var m=Math.round(ms/60000);
+  if(m<1) return '< 1 min';
+  if(m<60) return m+' min';
+  var h=Math.floor(m/60), r=m%60; return h+'h'+(r?(' '+('0'+r).slice(-2)+'min'):'');
+}
+function acNomeDe(email, fallback){
+  var u=(window.USERS||[]).find(function(x){ return String(x.email||'').toLowerCase()===String(email||'').toLowerCase(); });
+  return (u && u.nome) || fallback || email;
+}
+function acAbrir(visivel){
+  if(!visivel){ if(AC_TIMER){ clearInterval(AC_TIMER); AC_TIMER=null; } return; }
+  var de=document.getElementById('ac-de'), ate=document.getElementById('ac-ate');
+  if(de && !de.value) de.value=acHojeISO();
+  if(ate && !ate.value) ate.value=acHojeISO();
+  acCarregar();
+  if(!AC_TIMER) AC_TIMER=setInterval(function(){ if(!document.hidden) acCarregar(true); }, 60000);
+}
+async function acCarregar(silencioso){
+  var tb=document.getElementById('ac-lista'), av=document.getElementById('ac-aviso');
+  var de=(document.getElementById('ac-de')||{}).value || acHojeISO();
+  var ate=(document.getElementById('ac-ate')||{}).value || de;
+  if(ate<de){ var x=de; de=ate; ate=x; }
+  var p1=de.split('-'), p2=ate.split('-');
+  var ini=new Date(+p1[0],+p1[1]-1,+p1[2]), fim=new Date(+p2[0],+p2[1]-1,+p2[2]+1); // dias inteiros no horário local
+  if(!silencioso && tb) tb.innerHTML='<tr><td colspan="7" style="text-align:center;color:#aaa;padding:18px;">Carregando…</td></tr>';
+  try{
+    var r=await sb.from('acessos').select('*').gte('em',ini.toISOString()).lt('em',fim.toISOString())
+      .order('em',{ascending:false}).limit(AC_LIMITE);
+    if(r.error) throw r.error;
+    AC_DADOS=r.data||[];
+    if(av) av.innerHTML = AC_DADOS.length>=AC_LIMITE
+      ? '<div class="ac-box">Mostrando os '+AC_LIMITE+' acessos mais recentes do período. Diminua o período para ver o restante.</div>' : '';
+    acMontarFiltros(); acRender();
+  }catch(e){
+    var txt=String((e&&((e.code||'')+' '+(e.message||'')))||e);
+    var semTabela=/PGRST205|42P01|schema cache|does not exist|Could not find the table/i.test(txt);
+    if(tb) tb.innerHTML='<tr><td colspan="7" style="text-align:center;color:#c53030;padding:18px;">'
+      +(semTabela?'A tabela de acessos ainda não existe.':'Não foi possível carregar: '+acEsc(e&&e.message||e))+'</td></tr>';
+    if(av && semTabela){
+      av.innerHTML='<div class="ac-box"><b>Falta criar a tabela de acessos (uma vez só).</b><br>'
+        +'No Supabase, abra <b>SQL Editor → New query</b>, cole o SQL abaixo e clique em <b>Run</b>. '
+        +'A partir daí, cada tela aberta passa a aparecer aqui.'
+        +'<div style="margin-top:8px"><button class="btn add" onclick="acCopiarSQL(this)">📋 Copiar SQL</button></div>'
+        +'<div class="ac-sql">'+acEsc(document.getElementById('ac-sql-texto').textContent)+'</div></div>';
+    }
+    var rs=document.getElementById('ac-resumo'); if(rs) rs.innerHTML='';
+  }
+}
+function acCopiarSQL(bt){
+  var t=document.getElementById('ac-sql-texto').textContent;
+  var ok=function(){ bt.textContent='✅ Copiado'; setTimeout(function(){ bt.textContent='📋 Copiar SQL'; },2000); };
+  if(navigator.clipboard) navigator.clipboard.writeText(t).then(ok,function(){ prompt('Copie o SQL:',t); });
+  else prompt('Copie o SQL:',t);
+}
+function acMontarFiltros(){
+  var su=document.getElementById('ac-usuario'), st=document.getElementById('ac-tela');
+  var selU=su.value, selT=st.value, us={}, ts={};
+  AC_DADOS.forEach(function(a){
+    var em=String(a.email||'').toLowerCase(); if(em) us[em]=acNomeDe(em,a.nome);
+    var tk=a.tela||a.arquivo||''; if(tk) ts[tk]=a.tela_nome||a.arquivo||tk;
+  });
+  su.innerHTML='<option value="">Todos os usuários</option>'+Object.keys(us).sort(function(a,b){return us[a].localeCompare(us[b]);})
+    .map(function(k){ return '<option value="'+acEsc(k)+'">'+acEsc(us[k])+'</option>'; }).join('');
+  st.innerHTML='<option value="">Todas as telas</option>'+Object.keys(ts).sort(function(a,b){return ts[a].localeCompare(ts[b]);})
+    .map(function(k){ return '<option value="'+acEsc(k)+'">'+acEsc(ts[k])+'</option>'; }).join('');
+  if(us[selU]) su.value=selU;
+  if(ts[selT]) st.value=selT;
+}
+function acRender(){
+  var tb=document.getElementById('ac-lista'); if(!tb) return;
+  var fu=(document.getElementById('ac-usuario')||{}).value||'', ft=(document.getElementById('ac-tela')||{}).value||'';
+  var agora=Date.now();
+  var lista=AC_DADOS.filter(function(a){
+    if(fu && String(a.email||'').toLowerCase()!==fu) return false;
+    if(ft && (a.tela||a.arquivo||'')!==ft) return false;
+    return true;
+  });
+  var pessoas={}, telas={}, abertas={};
+  lista.forEach(function(a){
+    var em=String(a.email||'').toLowerCase(); pessoas[em]=1;
+    if(!a.bloqueado){ var tn=a.tela_nome||a.arquivo||'—'; telas[tn]=(telas[tn]||0)+1; }
+    if(!a.bloqueado && agora-new Date(a.ultimo_em).getTime()<3*60000) abertas[em]=1;
+  });
+  var top=Object.keys(telas).sort(function(a,b){return telas[b]-telas[a];})[0];
+  var bloq=lista.filter(function(a){return a.bloqueado;}).length;
+  var np=Object.keys(pessoas).length;
+  var rs=document.getElementById('ac-resumo');
+  if(rs) rs.innerHTML = lista.length
+    ? '<span class="ac-chip"><b>'+lista.length+'</b> acesso'+(lista.length!==1?'s':'')+'</span>'
+      +'<span class="ac-chip"><b>'+np+'</b> usuário'+(np!==1?'s':'')+'</span>'
+      +(top?'<span class="ac-chip">Mais aberta: <b>'+acEsc(top)+'</b> ('+telas[top]+')</span>':'')
+      +'<span class="ac-chip on"><b>'+Object.keys(abertas).length+'</b> com tela aberta agora</span>'
+      +(bloq?'<span class="ac-chip" style="color:#c53030">'+bloq+' tentativa'+(bloq!==1?'s':'')+' sem permissão</span>':'')
+    : '';
+  if(!lista.length){
+    tb.innerHTML='<tr><td colspan="7" style="text-align:center;color:#aaa;padding:18px;">Nenhum acesso registrado '+(fu||ft?'com esse filtro':'neste período')+'.</td></tr>';
+    return;
+  }
+  tb.innerHTML=lista.map(function(a){
+    var ent=new Date(a.em).getTime(), ult=new Date(a.ultimo_em||a.em).getTime();
+    var aberta=!a.bloqueado && agora-ult<3*60000;
+    var ate = a.bloqueado ? '—' : (aberta ? '<span class="ac-agora">agora</span>' : acHora(ult));
+    var tempo = a.bloqueado ? '—' : acDuracao(Math.max(0,ult-ent));
+    var ic = a.aparelho==='celular'?'📱 celular':a.aparelho==='tablet'?'📱 tablet':'💻 computador';
+    return '<tr>'
+      +'<td>'+acData(ent)+'</td>'
+      +'<td><b>'+acHora(ent)+'</b></td>'
+      +'<td>'+ate+'</td>'
+      +'<td>'+tempo+'</td>'
+      +'<td class="u-nome">'+acEsc(acNomeDe(a.email,a.nome))+'<span class="ac-mail">'+acEsc(a.email)+'</span></td>'
+      +'<td>'+acEsc(a.tela_nome||a.arquivo||'—')+(a.bloqueado?'<span class="ac-tag blq">sem permissão</span>':'')+'</td>'
+      +'<td class="col-min">'+ic+'</td>'
+      +'</tr>';
+  }).join('');
+}
 </script>
 </body>
 </html>

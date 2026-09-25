@@ -16,6 +16,10 @@
 
    Onde ficam as permissões: linha `usuario_telas` da tabela turno_data,
    gravada pela tela de admin (Editar usuário → Telas liberadas).
+
+   Registro de acessos: cada tela aberta grava uma linha na tabela `acessos`
+   (quem, qual tela, horário). O admin mostra na aba "Acessos".
+   Crie a tabela uma vez rodando o acessos.sql no SQL Editor do Supabase.
    =========================================================================== */
 (function () {
   'use strict';
@@ -508,11 +512,87 @@
     liberarTela();
   }
 
+
+  // ─── 5b. REGISTRO DE ACESSOS ──────────────────────────────────────────────
+  /* Cada tela aberta vira uma linha na tabela `acessos` do Supabase: quem, qual
+     tela, a que horas entrou e o "último sinal" (atualizado a cada minuto enquanto
+     a tela está aberta e visível). O admin.html mostra isso na aba "Acessos".
+     - Recarregar a mesma tela na mesma aba continua a mesma visita (não duplica).
+     - Voltar depois de mais de 30 min parado conta como nova visita.
+     - Tentativa de abrir tela sem permissão também é registrada (bloqueado = true).
+     - Se a tabela ainda não existir (acessos.sql não rodado), não faz nada. */
+  var ACESSO_SS = 'mariua_acesso_atual';
+  var ACESSO_PAUSA_MS = 30 * 60 * 1000;
+  var ACESSO_SINAL_MS = 60 * 1000;
+  var _acesso = null, _acessoTimer = null, _acessoDesligado = false;
+
+  function novoId() {
+    try { if (window.crypto && crypto.randomUUID) return crypto.randomUUID(); } catch (e) {}
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+      var r = Math.random() * 16 | 0; return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+    });
+  }
+  function tipoAparelho() {
+    var ua = navigator.userAgent || '';
+    return /ipad|tablet/i.test(ua) ? 'tablet' : (/mobile|android|iphone/i.test(ua) ? 'celular' : 'computador');
+  }
+  function acessoFalhou(err) {
+    _acessoDesligado = true; pararSinal();
+    console.warn('[mariua-auth] registro de acessos desligado:', err && (err.message || err.code || err));
+  }
+  function pararSinal() { if (_acessoTimer) clearInterval(_acessoTimer); _acessoTimer = null; }
+  function iniciarSinal() {
+    pararSinal();
+    _acessoTimer = setInterval(function () { if (!document.hidden) sinalAcesso(); }, ACESSO_SINAL_MS);
+  }
+  function guardarAcesso() { try { sessionStorage.setItem(ACESSO_SS, JSON.stringify(_acesso)); } catch (e) {} }
+  function sinalAcesso() {
+    if (!_acesso || !sb || _acessoDesligado) return;
+    var agora = Date.now();
+    if (agora - _acesso.ultimo > ACESSO_PAUSA_MS) {      // ficou parado demais: nova visita
+      pararSinal(); _acesso = null;
+      try { sessionStorage.removeItem(ACESSO_SS); } catch (e) {}
+      registrarAcesso(false);
+      return;
+    }
+    _acesso.ultimo = agora; guardarAcesso();
+    sb.from('acessos').update({ ultimo_em: new Date(agora).toISOString() }).eq('id', _acesso.id)
+      .then(function (r) { if (r && r.error) acessoFalhou(r.error); }, function () {});
+  }
+  function registrarAcesso(bloqueado) {
+    var u = window.MARIUA_USER;
+    if (!u || !u.email || !sb || _acessoDesligado) return;
+    var t = telaDaPagina();
+    var arq = arquivoAtual() || 'index.html';
+    var telaId = t ? t.id : (arq === 'index.html' ? 'inicio' : '');
+    var telaNome = t ? t.nome : (telaId === 'inicio' ? 'Início' : arq);
+    var agora = Date.now();
+    var prev = null;
+    try { prev = JSON.parse(sessionStorage.getItem(ACESSO_SS) || 'null'); } catch (e) {}
+    if (!bloqueado && prev && prev.id && prev.email === u.email && prev.arq === arq && agora - prev.ultimo < ACESSO_PAUSA_MS) {
+      _acesso = prev; sinalAcesso(); iniciarSinal();   // recarregou a mesma tela: mesma visita
+      return;
+    }
+    var dev = null; try { dev = localStorage.getItem('mariua_device_id'); } catch (e) {}
+    var linha = {
+      id: novoId(), email: u.email, nome: u.nome || '', tela: telaId, tela_nome: telaNome,
+      arquivo: arq, bloqueado: !!bloqueado, aparelho: tipoAparelho(), device_id: dev
+    };
+    sb.from('acessos').insert(linha).then(function (r) {
+      if (r && r.error) { acessoFalhou(r.error); return; }
+      if (bloqueado) return;
+      _acesso = { id: linha.id, email: u.email, arq: arq, ultimo: agora };
+      guardarAcesso(); iniciarSinal();
+    }, function () {});
+  }
+  document.addEventListener('visibilitychange', function () { if (_acesso) sinalAcesso(); });
+
   function aplicar() {
     var t = telaDaPagina();
-    if (t && !podeVer(t.id)) { avisoSemAcesso(t.nome); return; }
+    if (t && !podeVer(t.id)) { avisoSemAcesso(t.nome); registrarAcesso(true); return; }
     fecharOvl();
     liberarTela();
+    registrarAcesso(false);
     var passos = 0;
     var navRedesenhado = false;
     var aplicaTudo = function () {
