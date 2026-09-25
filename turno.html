@@ -984,7 +984,8 @@ function turnoHistRender(){
   document.getElementById('justif-count').textContent = filterByBase(d.justif).length;
   document.getElementById('falta-count').textContent = filterByBase(d.falta).length;
   const _psHist = document.getElementById('page-sub'); if (_psHist) _psHist.textContent = 'Histórico: ' + d.data;
-  const total = d.ok.length + d.justif.length + d.falta.length;
+  const _perm = n => !turnoAllowedStates || turnoAllowedStates.indexOf(teamState(typeof n === 'string' ? n : (n && n.name) || '')) >= 0;
+  const total = d.ok.filter(_perm).length + d.justif.filter(_perm).length + d.falta.filter(_perm).length;
   document.getElementById('footer-text').innerHTML =
   'OBRAS - BA &nbsp;|&nbsp; HISTÓRICO &nbsp;|&nbsp; ' + total + ' equipes &nbsp;|&nbsp; ' + d.data;
   if(statusEl){ statusEl.textContent = '✅ ' + d.data + ' — ' + total + ' equipes (' + d.fonte + ')'; statusEl.style.color = '#68d391'; }
@@ -1096,41 +1097,208 @@ const FILIAL_CENTROS = {
 };
 
 // ===== TRAVA DE CONTRATO (ESTADO) POR USUÁRIO — múltiplos contratos =====
-let turnoAllowedStates = null; // null = sem restrição; array = estados permitidos
+// Lê a chave "usuario_contrato" do turno_data e restringe a tela aos estados liberados.
+// Aceita o valor em qualquer formato que o cadastro de usuários salvar:
+//   'se' · 'SE' · 'OBRAS-SE' · 'OBRAS SE' · 'Sergipe' · 'ARACAJU' · ['OBRAS-SE','OBRAS-BA']
+//   'OBRAS-SE, OBRAS-BA' · {se:true, ba:false} · {'OBRAS-SE':true} · {contratos:[...]}
+// (antes só aceitava 'ba'/'mg'/'se' minúsculo; qualquer outra grafia, como 'OBRAS-SE',
+//  era descartada e a trava caía para "sem restrição" — por isso aparecia tudo.)
+// Diagnóstico no console:  turnoTravaDiag()
+let turnoAllowedStates = null; // null = sem restrição; array = estados permitidos ([] = nenhum)
 function turnoNormNome(s){ return (s||'').toString().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase().replace(/\s+/g,' '); }
-function turnoAplicarTravaContrato(states){
-  if(!Array.isArray(states)) states = states ? [states] : [];
-  states = states.filter(function(s){ return ['ba','mg','se'].indexOf(s)>=0; });
-  var sf = document.getElementById('turno-state-filter');
-  if(!states.length || states.length===3){ turnoAllowedStates=null; if(sf) sf.style.display=''; return; }
-  turnoAllowedStates = states;
-  // mostra só os botões de estado permitidos (+ Todos)
-  ['todos','ba','mg','se'].forEach(function(s){
-    var el=document.getElementById('state-btn-'+s);
-    if(el) el.style.display = (s==='todos' || states.indexOf(s)>=0) ? '' : 'none';
-  });
-  if(states.length===1){
-    turnoStateFilter = states[0];
-    if(sf) sf.style.display='none';
-  } else {
-    turnoStateFilter = 'todos'; // "Todos" = todos os contratos do usuário
-    if(sf) sf.style.display='';
+// chave de comparação de usuário: sem acento, sem espaço, maiúscula ("José da Silva" = "JOSEDASILVA")
+function turnoChaveId(s){ return turnoNormNome(s).replace(/[^A-Z0-9@.]/g,''); }
+
+const TRAVA_LS = 'mariua_trava_contrato_v1';
+const TRAVA_CAMPOS_CONTRATO = ['contratos','contrato','estados','estado','states','state','ufs','uf','regioes','regiao','liberados','permissoes'];
+const TRAVA_REGRAS = [
+  ['se', /\b(SE|SERGIPE|ARACAJU|AJU)\b/],
+  ['ba', /\b(BA|BAHIA|IRECE|IRC|JACOBINA|JAC|FEIRA|FSA|SERRINHA|SRR)\b/],
+  ['mg', /\b(MG|MINAS|CONGONHAL|ITAJUBA|ITA|POUSO ALEGRE)\b/]
+];
+
+// Converte o valor salvo em lista de estados ['ba','mg','se']
+function turnoParseEstados(v, d){
+  d = d || 0; var out = [];
+  function add(s){ if (out.indexOf(s) < 0) out.push(s); }
+  if (v == null || d > 4) return out;
+  if (Array.isArray(v)) { v.forEach(function(x){ turnoParseEstados(x, d+1).forEach(add); }); return out; }
+  if (typeof v === 'object') {
+    var achou = false;
+    TRAVA_CAMPOS_CONTRATO.forEach(function(k){ if (v[k] != null) { achou = true; turnoParseEstados(v[k], d+1).forEach(add); } });
+    if (achou) return out;
+    // {se:true, ba:false} ou {'OBRAS-SE':true}
+    Object.keys(v).forEach(function(k){
+      var x = v[k];
+      if (x === true || x === 1 || x === '1' || x === 'true' || x === 'sim' || x === 'SIM') turnoParseEstados(k, d+1).forEach(add);
+    });
+    return out;
   }
-  turnoBaseFilter='todos'; turnoCentroFilter='todos';
-  if(typeof updateBaseFilterButtons==='function') updateBaseFilterButtons();
-  if(typeof updateCentroFilterButtons==='function') updateCentroFilterButtons();
-  if(typeof turnoModoHistorico!=='undefined' && turnoModoHistorico){ if(typeof turnoHistRender==='function') turnoHistRender(); }
-  else if(typeof render==='function') render();
+  var raw = String(v).trim();
+  if (raw === '*') return ['ba','mg','se'];
+  var t = turnoNormNome(raw).replace(/[^A-Z0-9]+/g, ' ').trim();
+  if (!t) return out;
+  if (/\b(TODOS|TODAS|ALL|GERAL)\b/.test(t)) return ['ba','mg','se'];
+  TRAVA_REGRAS.forEach(function(r){ if (r[1].test(t)) add(r[0]); });
+  return out;
 }
-function turnoBuscarTravaUsuario(nome){
-  if(!nome || turnoAllowedStates) return;
+// Parte do valor que representa o(s) contrato(s)
+function turnoValorContrato(v){
+  if (v && typeof v === 'object' && !Array.isArray(v)) {
+    for (var i = 0; i < TRAVA_CAMPOS_CONTRATO.length; i++) { var k = TRAVA_CAMPOS_CONTRATO[i]; if (v[k] != null) return v[k]; }
+  }
+  return v;
+}
+function turnoValorVazio(v){
+  v = turnoValorContrato(v);
+  if (v == null) return true;
+  if (typeof v === 'string') return !v.trim();
+  if (Array.isArray(v)) return !v.length;
+  if (typeof v === 'object') return !Object.keys(v).length;
+  return false;
+}
+// Identificadores do usuário (nome, e-mail, login...) a partir de string ou objeto
+function turnoIdsUsuario(u, d){
+  d = d || 0; var ids = [];
+  function add(x){ if (typeof x !== 'string' && typeof x !== 'number') return; var k = turnoChaveId(x); if (k.length >= 2 && ids.indexOf(k) < 0) ids.push(k); }
+  if (u == null || d > 2) return ids;
+  if (typeof u === 'string' || typeof u === 'number') { add(u); return ids; }
+  if (typeof u !== 'object') return ids;
+  ['nome','name','nomeCompleto','nome_completo','full_name','fullName','displayName','display_name',
+   'email','login','usuario','username','user_name','id','uid'].forEach(function(k){ add(u[k]); });
+  ['user','usuario','perfil','profile','user_metadata','detail'].forEach(function(k){
+    if (u[k] && typeof u[k] === 'object') turnoIdsUsuario(u[k], d+1).forEach(function(i){ if (ids.indexOf(i) < 0) ids.push(i); });
+  });
+  return ids;
+}
+function turnoIdsGlobais(){
+  var ids = [];
+  [window.MARIUA_USER, window.__MARIUA_AUTH__, window.MARIUA_PERFIL].forEach(function(u){
+    turnoIdsUsuario(u).forEach(function(i){ if (ids.indexOf(i) < 0) ids.push(i); });
+  });
+  return ids;
+}
+// Procura o usuário no valor de usuario_contrato (mapa {nome: contratos} ou lista [{nome, contratos}])
+function turnoAcharEntrada(val, ids){
+  if (typeof val === 'string') { try { val = JSON.parse(val); } catch(e) {} }
+  if (val && typeof val === 'object' && !Array.isArray(val)) {
+    if (val.usuarios && typeof val.usuarios === 'object') val = val.usuarios;
+    else if (val.users && typeof val.users === 'object') val = val.users;
+  }
+  var ents = [];
+  if (Array.isArray(val)) {
+    val.forEach(function(it){ if (it && typeof it === 'object') ents.push({ ids: turnoIdsUsuario(it), value: it, chave: it.nome || it.email || '' }); });
+  } else if (val && typeof val === 'object') {
+    Object.keys(val).forEach(function(k){
+      var v = val[k], eIds = [turnoChaveId(k)];
+      if (v && typeof v === 'object' && !Array.isArray(v)) turnoIdsUsuario(v).forEach(function(i){ if (eIds.indexOf(i) < 0) eIds.push(i); });
+      ents.push({ ids: eIds, value: v, chave: k });
+    });
+  }
+  for (var i = 0; i < ents.length; i++) {
+    if (ents[i].ids.some(function(x){ return ids.indexOf(x) >= 0; })) return ents[i];
+  }
+  return null;
+}
+
+// Aplica a trava na tela. estados: null = sem restrição | array de 'ba'/'mg'/'se'
+function turnoDefinirTrava(estados){
+  if (Array.isArray(estados)) estados = estados.filter(function(s){ return ['ba','mg','se'].indexOf(s) >= 0; });
+  if (Array.isArray(estados) && estados.length === 3) estados = null;
+  var antes = JSON.stringify(turnoAllowedStates);
+  turnoAllowedStates = estados ? estados.slice().sort() : null;
+  var mudou = antes !== JSON.stringify(turnoAllowedStates);
+
+  var sf = document.getElementById('turno-state-filter');
+  ['todos','ba','mg','se'].forEach(function(s){
+    var el = document.getElementById('state-btn-'+s);
+    if (el) el.style.display = (!turnoAllowedStates || s === 'todos' || turnoAllowedStates.indexOf(s) >= 0) ? '' : 'none';
+  });
+  var novoEstado;
+  if (!turnoAllowedStates) { novoEstado = mudou ? 'todos' : turnoStateFilter; if (sf) sf.style.display = ''; }
+  else if (turnoAllowedStates.length === 1) { novoEstado = turnoAllowedStates[0]; if (sf) sf.style.display = 'none'; }
+  else { novoEstado = turnoAllowedStates.indexOf(turnoStateFilter) >= 0 ? turnoStateFilter : 'todos'; if (sf) sf.style.display = turnoAllowedStates.length ? '' : 'none'; }
+
+  // Projeção de Postes é só BA (Irecê/Jacobina)
+  var navPosto = document.getElementById('nav-posto');
+  var semBA = turnoAllowedStates && turnoAllowedStates.indexOf('ba') < 0;
+  if (navPosto) navPosto.style.display = semBA ? 'none' : '';
+  var pgPosto = document.getElementById('page-posto');
+  if (semBA && pgPosto && pgPosto.style.display !== 'none' && typeof switchPage === 'function') switchPage('turno');
+
+  if (mudou || novoEstado !== turnoStateFilter) {
+    if (typeof turnoSetState === 'function') turnoSetState(novoEstado); // re-estiliza botões, zera filial/centro e renderiza
+  } else {
+    if (typeof updateBaseFilterButtons === 'function') updateBaseFilterButtons();
+    if (typeof updateCentroFilterButtons === 'function') updateCentroFilterButtons();
+  }
+  if (typeof window.relAplicarTrava === 'function') { try { window.relAplicarTrava(); } catch(e) {} }
+}
+// Compatibilidade: aceita o valor cru (qualquer formato)
+function turnoAplicarTravaContrato(v){
+  if (turnoValorVazio(v)) { turnoDefinirTrava(null); return; }
+  var est = turnoParseEstados(v);
+  if (!est.length) console.error('Trava de contrato: valor não reconhecido', v, '— nenhuma equipe será exibida.');
+  turnoDefinirTrava(est);
+}
+
+var _travaUlt = { chave: '', ts: 0 };
+function turnoBuscarTravaUsuario(fonte){
+  var ids = turnoIdsUsuario(fonte);
+  turnoIdsGlobais().forEach(function(i){ if (ids.indexOf(i) < 0) ids.push(i); });
+  if (!ids.length) return;
+  var chave = ids.slice().sort().join('|');
+  if (chave === _travaUlt.chave && Date.now() - _travaUlt.ts < 15000) return;
+  _travaUlt = { chave: chave, ts: Date.now() };
+
+  // 1) aplica na hora a última trava conhecida deste usuário (evita mostrar tudo enquanto carrega)
+  try {
+    var c = JSON.parse(localStorage.getItem(TRAVA_LS) || 'null');
+    if (c && Array.isArray(c.ids) && c.ids.some(function(i){ return ids.indexOf(i) >= 0; })) turnoDefinirTrava(c.estados);
+  } catch(e) {}
+
+  // 2) busca a trava atual no banco
   fetch(SUPA_URL + '/rest/v1/turno_data?select=value&key=eq.usuario_contrato', { headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY } })
-    .then(function(r){ return r.ok ? r.json() : []; })
-    .then(function(arr){ var map=(arr && arr[0] && arr[0].value) || {}; var v=map[turnoNormNome(nome)]; if(v) turnoAplicarTravaContrato(v); })
-    .catch(function(){});
+    .then(function(r){ if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+    .then(function(arr){
+      if (_travaUlt.chave !== chave) return; // outro usuário entrou enquanto buscava
+      var val = (arr && arr[0]) ? arr[0].value : null;
+      var ent = turnoAcharEntrada(val, ids);
+      var estados = null;
+      if (ent && !turnoValorVazio(ent.value)) {
+        estados = turnoParseEstados(ent.value);
+        if (!estados.length) console.error('Trava de contrato: valor de "' + ent.chave + '" não reconhecido', ent.value, '— nenhuma equipe será exibida.');
+      }
+      try { localStorage.setItem(TRAVA_LS, JSON.stringify({ ids: ids, estados: estados })); } catch(e) {}
+      turnoDefinirTrava(estados);
+    })
+    .catch(function(e){ console.error('Trava de contrato: não consegui ler usuario_contrato —', e.message); });
 }
-document.addEventListener('mariua:user', function(e){ if(e.detail && e.detail.nome) turnoBuscarTravaUsuario(e.detail.nome); });
-window.addEventListener('load', function(){ if(window.MARIUA_USER) turnoBuscarTravaUsuario(window.MARIUA_USER); });
+// Diagnóstico: mostra quem o sistema acha que está logado e o que encontrou no banco
+window.turnoTravaDiag = function(){
+  var ids = turnoIdsGlobais();
+  if (_travaUlt.chave) _travaUlt.chave.split('|').forEach(function(i){ if (ids.indexOf(i) < 0) ids.push(i); });
+  return fetch(SUPA_URL + '/rest/v1/turno_data?select=value&key=eq.usuario_contrato', { headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY } })
+    .then(function(r){ return r.json(); })
+    .then(function(arr){
+      var val = (arr && arr[0]) ? arr[0].value : null;
+      var ent = turnoAcharEntrada(val, ids);
+      console.log('Trava de contrato — usuário identificado como:', ids);
+      console.log('Trava de contrato — usuario_contrato no banco:', val);
+      console.log('Trava de contrato — entrada encontrada:', ent);
+      console.log('Trava de contrato — estados liberados:', ent ? turnoParseEstados(ent.value) : '(sem entrada = sem restrição)');
+      console.log('Trava de contrato — aplicado na tela agora:', turnoAllowedStates);
+      return { ids: ids, entrada: ent, aplicado: turnoAllowedStates };
+    });
+};
+document.addEventListener('mariua:user', function(e){ turnoBuscarTravaUsuario(e && e.detail); });
+// O evento de login pode ter disparado antes deste script: tenta pelos dados globais algumas vezes
+(function(){
+  var n = 0;
+  function tentar(){ turnoBuscarTravaUsuario(null); if (!_travaUlt.chave && ++n < 15) setTimeout(tentar, 1000); }
+  if (document.readyState === 'complete') setTimeout(tentar, 0);
+  else window.addEventListener('load', tentar);
+})();
 
 
 // Configuração das bases por estado
@@ -1265,7 +1433,11 @@ function updateBaseCounts() {
   const ba = all.filter(n=>teamState(n)==='ba').length;
   const mg = all.filter(n=>teamState(n)==='mg').length;
   const se = all.filter(n=>teamState(n)==='se').length;
-  el.textContent = 'BA: ' + ba + ' · MG: ' + mg + ' · SE: ' + se + ' (abriram)';
+  const partes = [];
+  if (!turnoAllowedStates || turnoAllowedStates.indexOf('ba') >= 0) partes.push('BA: ' + ba);
+  if (!turnoAllowedStates || turnoAllowedStates.indexOf('mg') >= 0) partes.push('MG: ' + mg);
+  if (!turnoAllowedStates || turnoAllowedStates.indexOf('se') >= 0) partes.push('SE: ' + se);
+  el.textContent = partes.length ? partes.join(' · ') + ' (abriram)' : '';
 }
 
 function render() {
@@ -1287,7 +1459,8 @@ buildGridFalta('falta-grid', faltaFilt);
 document.getElementById('ok-count').textContent    = okFilt.length;
 document.getElementById('justif-count').textContent = justifFilt.length;
 document.getElementById('falta-count').textContent  = faltaFilt.length;
-const total = teams.ok.filter(cadNaLista).length + teams.justif.filter(cadNaLista).length + faltaFiltrada.filter(cadNaLista).length;
+const _perm = n => !turnoAllowedStates || turnoAllowedStates.indexOf(teamState(typeof n === 'string' ? n : (n && n.name) || '')) >= 0;
+const total = teams.ok.filter(cadNaLista).filter(_perm).length + teams.justif.filter(cadNaLista).filter(_perm).length + faltaFiltrada.filter(cadNaLista).filter(_perm).length;
 // título fixo SISTEMA DE OBRAS
 const _pageSub = document.getElementById('page-sub'); if (_pageSub) _pageSub.textContent = 'Relatorio: ' + currentDate;
 const _dateInput = document.getElementById('date-input'); if (_dateInput) _dateInput.value = currentDate;
@@ -2283,6 +2456,7 @@ input.focus();
 const HASH_PRODUCAO = 'a3f5c36b2e8f6d4a1b9c0e7f2d5a8b3c6e9f1d4a7b0c3e6f9a2d5b8c1e4f7a0'; // SHA-256 placeholder
 let prodUnlocked = false;
 function switchPage(page) {
+if (page==='posto' && turnoAllowedStates && turnoAllowedStates.indexOf('ba') < 0) page = 'turno'; // Postes = só BA
 const _sel = (id, val) => { const el = document.getElementById(id); if (el) el.style.display = val; };
 _sel('page-turno', page==='turno' ? '' : 'none');
 _sel('page-prod',  page==='prod'  ? '' : 'none');
@@ -5662,6 +5836,30 @@ setTimeout(presenceInit, 1500);
     return '';
   }
   const REL_BASE_LABEL = { IRC:'IRECÊ', JAC:'JACOBINA', PA:'CONGONHAL', ITA:'ITAJUBÁ', AJU:'ARACAJU', '':'' };
+  // Trava de contrato do usuário (mesma da tela de turno): só equipes dos estados liberados
+  function relPermitida(e){
+    if (typeof turnoAllowedStates === 'undefined' || !turnoAllowedStates) return true;
+    return turnoAllowedStates.indexOf(teamState(e)) >= 0;
+  }
+  function relEquipes(){ return EQUIPES_ATIVAS.filter(relPermitida); }
+  // Esconde botões de estado/cidade que o usuário não tem liberado
+  function relAplicarTravaBotoes(){
+    if (typeof turnoAllowedStates === 'undefined' || !turnoAllowedStates) return;
+    const A = turnoAllowedStates;
+    const basesDoEstado = { ba:['irc','jac'], mg:['pa','ita'], se:['aju'] };
+    ['ba','mg','se'].forEach(function(st){
+      if (A.indexOf(st) >= 0) return;
+      const b = document.getElementById('re-'+st); if (b) b.style.display = 'none';
+      const sep = document.getElementById('rel-sep-'+st); if (sep) sep.style.display = 'none';
+      basesDoEstado[st].forEach(function(x){ const el = document.getElementById('rf-'+x); if (el) el.style.display = 'none'; });
+    });
+    if (A.length <= 1) { const t = document.getElementById('re-todos'); if (t && t.parentNode) t.parentNode.style.display = 'none'; }
+  }
+  // Chamado quando a trava muda com o relatório aberto
+  window.relAplicarTrava = function(){
+    const modal = document.getElementById('relatorio-modal');
+    if (modal && modal.style.display !== 'none' && relDias && relDias.length) relRenderCorpo(relDias);
+  };
   function relDispName(n){ return n.replace(/-IRC$/,'').replace(/-JAC$/,''); }
   function relGetStatus(payload, nome){
     if(!payload) return 'nodata';
@@ -5792,13 +5990,14 @@ setTimeout(presenceInit, 1500);
     const corpo=document.getElementById('rel-corpo');
     if(!corpo) return;
     corpo.innerHTML=relBuildHTML(dias);
+    relAplicarTravaBotoes();
   }
 
   let _relMatrix={}, _relDias=[], _relRankFalta=[];
 
   function relAtualizarContadores(){
     const estadoBases = relEstado==='todos' ? null : REL_ESTADO_BASES[relEstado];
-    const eqFilt = EQUIPES_ATIVAS.filter(function(e){
+    const eqFilt = relEquipes().filter(function(e){
       const b=relGetBase(e);
       if(estadoBases && !estadoBases.includes(b)) return false;
       if(relBase!=='todas' && b!==relBase) return false;
@@ -5820,7 +6019,7 @@ setTimeout(presenceInit, 1500);
 
   function relBuildHTML(dias){
     _relDias=dias;
-    const eq=EQUIPES_ATIVAS;
+    const eq=relEquipes();
     const matrix={};
     eq.forEach(e=>{ matrix[e]=dias.map(d=>relGetStatus(relDados[relHistKey(d)]||null,e)); });
     _relMatrix=matrix;
@@ -5980,6 +6179,7 @@ setTimeout(presenceInit, 1500);
     if(baSep) baSep.style.display=(e==='todos'||e==='ba')?'':'none';
     if(mgSep) mgSep.style.display=(e==='todos'||e==='mg')?'':'none';
     if(seSep) seSep.style.display=(e==='todos'||e==='se')?'':'none';
+    relAplicarTravaBotoes();
     relFiltrarTabela();
   };
   window.relFiltrarTabela = function(){
