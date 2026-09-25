@@ -698,7 +698,355 @@ const RDO_FILIAL_CONFIG = {
 // Centros de serviço por filial
 const RDO_FILIAL_CENTROS = { irc:['irc'], jac:['jac'], fsa:['fsa','srr'], pa:['pa','ita'], aju:['aju'] };
 
+// ===== TRAVA DE CONTRATO (ESTADO) POR USUÁRIO =====
+// Mesma trava da tela de Turno. Lê turno_data.usuario_contrato, gravada pelo admin.html
+// (Editar usuário → Contratos de acesso), procurando o usuário pelo e-mail de login.
+// Nenhum contrato marcado = vê tudo. Diagnóstico: abra rdo.html#trava
+let rdoAllowedStates = null; // null = sem restrição; array = estados permitidos ([] = nenhum)
+(function(){
+  function ctNormNome(s){ return (s||'').toString().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase().replace(/\s+/g,' '); }
+  // chave de comparação de usuário: sem acento, sem espaço, maiúscula ("José da Silva" = "JOSEDASILVA")
+  function ctChaveId(s){ return ctNormNome(s).replace(/[^A-Z0-9@.]/g,''); }
+
+  const TRAVA_LS = 'mariua_trava_contrato_v1';
+  const TRAVA_CAMPOS_CONTRATO = ['contratos','contrato','estados','estado','states','state','ufs','uf','regioes','regiao','liberados','permissoes'];
+  const TRAVA_REGRAS = [
+    ['se', /\b(SE|SERGIPE|ARACAJU|AJU)\b/],
+    ['ba', /\b(BA|BAHIA|IRECE|IRC|JACOBINA|JAC|FEIRA|FSA|SERRINHA|SRR)\b/],
+    ['mg', /\b(MG|MINAS|CONGONHAL|ITAJUBA|ITA|POUSO ALEGRE)\b/]
+  ];
+
+  // Converte o valor salvo em lista de estados ['ba','mg','se']
+  function ctParseEstados(v, d){
+    d = d || 0; var out = [];
+    function add(s){ if (out.indexOf(s) < 0) out.push(s); }
+    if (v == null || d > 4) return out;
+    if (Array.isArray(v)) { v.forEach(function(x){ ctParseEstados(x, d+1).forEach(add); }); return out; }
+    if (typeof v === 'object') {
+      var achou = false;
+      TRAVA_CAMPOS_CONTRATO.forEach(function(k){ if (v[k] != null) { achou = true; ctParseEstados(v[k], d+1).forEach(add); } });
+      if (achou) return out;
+      // {se:true, ba:false} ou {'OBRAS-SE':true}
+      Object.keys(v).forEach(function(k){
+        var x = v[k];
+        if (x === true || x === 1 || x === '1' || x === 'true' || x === 'sim' || x === 'SIM') ctParseEstados(k, d+1).forEach(add);
+      });
+      return out;
+    }
+    var raw = String(v).trim();
+    if (raw === '*') return ['ba','mg','se'];
+    var t = ctNormNome(raw).replace(/[^A-Z0-9]+/g, ' ').trim();
+    if (!t) return out;
+    if (/\b(TODOS|TODAS|ALL|GERAL)\b/.test(t)) return ['ba','mg','se'];
+    TRAVA_REGRAS.forEach(function(r){ if (r[1].test(t)) add(r[0]); });
+    return out;
+  }
+  // Parte do valor que representa o(s) contrato(s)
+  function ctValorContrato(v){
+    if (v && typeof v === 'object' && !Array.isArray(v)) {
+      for (var i = 0; i < TRAVA_CAMPOS_CONTRATO.length; i++) { var k = TRAVA_CAMPOS_CONTRATO[i]; if (v[k] != null) return v[k]; }
+    }
+    return v;
+  }
+  function ctValorVazio(v){
+    v = ctValorContrato(v);
+    if (v == null) return true;
+    if (typeof v === 'string') return !v.trim();
+    if (Array.isArray(v)) return !v.length;
+    if (typeof v === 'object') return !Object.keys(v).length;
+    return false;
+  }
+  // Identificadores do usuário (nome, e-mail, login...) a partir de string ou objeto
+  function ctIdsUsuario(u, d){
+    d = d || 0; var ids = [];
+    function add(x){ if (typeof x !== 'string' && typeof x !== 'number') return; var k = ctChaveId(x); if (k.length >= 2 && ids.indexOf(k) < 0) ids.push(k); }
+    if (u == null || d > 2) return ids;
+    if (typeof u === 'string' || typeof u === 'number') { add(u); return ids; }
+    if (typeof u !== 'object') return ids;
+    ['nome','name','nomeCompleto','nome_completo','full_name','fullName','displayName','display_name',
+     'email','login','usuario','username','user_name','id','uid'].forEach(function(k){ add(u[k]); });
+    ['user','usuario','perfil','profile','user_metadata','detail'].forEach(function(k){
+      if (u[k] && typeof u[k] === 'object') ctIdsUsuario(u[k], d+1).forEach(function(i){ if (ids.indexOf(i) < 0) ids.push(i); });
+    });
+    return ids;
+  }
+  // Procura o usuário no valor de usuario_contrato (mapa {nome: contratos} ou lista [{nome, contratos}])
+  function ctAcharEntrada(val, ids){
+    if (typeof val === 'string') { try { val = JSON.parse(val); } catch(e) {} }
+    if (val && typeof val === 'object' && !Array.isArray(val)) {
+      if (val.usuarios && typeof val.usuarios === 'object') val = val.usuarios;
+      else if (val.users && typeof val.users === 'object') val = val.users;
+    }
+    var ents = [];
+    if (Array.isArray(val)) {
+      val.forEach(function(it){ if (it && typeof it === 'object') ents.push({ ids: ctIdsUsuario(it), value: it, chave: it.nome || it.email || '' }); });
+    } else if (val && typeof val === 'object') {
+      Object.keys(val).forEach(function(k){
+        var v = val[k], eIds = [ctChaveId(k)];
+        if (v && typeof v === 'object' && !Array.isArray(v)) ctIdsUsuario(v).forEach(function(i){ if (eIds.indexOf(i) < 0) eIds.push(i); });
+        ents.push({ ids: eIds, value: v, chave: k });
+      });
+    }
+    var emails = ids.filter(function(x){ return x.indexOf('@') > 0; });
+    for (var i = 0; i < ents.length; i++) {
+      if (ents[i].ids.some(function(x){ return emails.indexOf(x) >= 0; })) return ents[i];
+    }
+    for (var j = 0; j < ents.length; j++) {
+      if (ents[j].ids.some(function(x){ return ids.indexOf(x) >= 0; })) return ents[j];
+    }
+    return null;
+  }
+
+  var _travaUlt = { chave: '', ts: 0 };
+  var _travaEvento = null;   // último detail do evento mariua:user
+  var _travaDiag = null;     // resultado da última verificação (para o painel #trava)
+  const TRAVA_VERSAO = 'v4';
+
+  // Onde o login pode ter deixado o usuário: evento, variáveis globais, sessão salva no aparelho
+  function ctSessoes(){
+    var s = [];
+    function add(origem, obj){ if (obj != null && obj !== true && obj !== false) s.push({ origem: origem, obj: obj }); }
+    add('login (mariua-auth)', _travaEvento);
+    add('window.MARIUA_USER', window.MARIUA_USER);
+    add('window.__MARIUA_AUTH__', window.__MARIUA_AUTH__);
+    add('window.MARIUA_PERFIL', window.MARIUA_PERFIL);
+    try {
+      for (var i = 0; i < localStorage.length; i++) {
+        var k = localStorage.key(i);
+        if (!/^sb-.*-auth-token$/.test(k) && !/^mariua[_-]?(user|usuario|sess|session|auth|login|perfil|logado)/i.test(k)) continue;
+        var raw = localStorage.getItem(k), obj = raw;
+        try { obj = JSON.parse(raw); } catch(e) {}
+        if (obj && typeof obj === 'object' && obj.currentSession) obj = obj.currentSession;
+        add('localStorage ' + k, obj);
+      }
+    } catch(e) {}
+    try { var uc = sessionStorage.getItem('mariua_user_cache'); if (uc) add('sessionStorage mariua_user_cache', JSON.parse(uc)); } catch(e) {}
+    return s;
+  }
+  function ctIdsGlobais(){
+    var ids = [];
+    ctSessoes().forEach(function(x){ ctIdsUsuario(x.obj).forEach(function(i){ if (ids.indexOf(i) < 0) ids.push(i); }); });
+    return ids;
+  }
+  // Campo de contrato explícito num registro de usuário (não usa 'estado' solto, que pode ser outra coisa)
+  const TRAVA_CAMPOS_FORTES = ['contratos','contrato','contratos_liberados','estados_liberados','estados','ufs','liberados'];
+  function ctCampoContrato(v, d){
+    d = d || 0;
+    if (!v || typeof v !== 'object' || Array.isArray(v) || d > 3) return undefined;
+    for (var i = 0; i < TRAVA_CAMPOS_FORTES.length; i++) { if (v[TRAVA_CAMPOS_FORTES[i]] != null) return v[TRAVA_CAMPOS_FORTES[i]]; }
+    var sub = ['user','usuario','perfil','profile','user_metadata','app_metadata','detail'];
+    for (var j = 0; j < sub.length; j++) { var r = ctCampoContrato(v[sub[j]], d+1); if (r !== undefined) return r; }
+    return undefined;
+  }
+
+  // Decide a trava a partir das linhas do banco + sessão
+  function ctResolverTrava(rows, ids, sessoes){
+    rows = (rows || []).slice().sort(function(a, b){
+      function peso(k){ return k === 'usuario_contrato' ? 0 : /contrato/i.test(k) ? 1 : 2; }
+      return peso(a.key) - peso(b.key);
+    });
+    // 1) chaves de contrato (usuario_contrato e parecidas): vale o que estiver lá
+    for (var i = 0; i < rows.length; i++) {
+      if (!/contrato/i.test(rows[i].key)) continue;
+      var ent = ctAcharEntrada(rows[i].value, ids);
+      if (!ent) continue;
+      var origem = rows[i].key + ' → "' + ent.chave + '"';
+      if (ctValorVazio(ent.value)) return { estados: null, origem: origem, valor: ent.value };
+      return { estados: ctParseEstados(ent.value), origem: origem, valor: ent.value, fechada: true };
+    }
+    // 2) cadastro de usuários (chaves com "usuario"): só se o registro tiver campo de contrato
+    for (var j = 0; j < rows.length; j++) {
+      if (/contrato/i.test(rows[j].key)) continue;
+      var e2 = ctAcharEntrada(rows[j].value, ids);
+      var c2 = e2 ? ctCampoContrato(e2.value) : undefined;
+      if (c2 === undefined) continue;
+      var est2 = ctParseEstados(c2);
+      if (est2.length) return { estados: est2, origem: rows[j].key + ' → "' + e2.chave + '"', valor: c2 };
+    }
+    // 3) dados do próprio login
+    for (var k = 0; k < sessoes.length; k++) {
+      var c3 = ctCampoContrato(sessoes[k].obj);
+      if (c3 === undefined) continue;
+      var est3 = ctParseEstados(c3);
+      if (est3.length) return { estados: est3, origem: sessoes[k].origem, valor: c3 };
+    }
+    return { estados: null, origem: '' };
+  }
+
+  // Lê do banco as chaves que podem ter o contrato do usuário
+  function ctLerChavesTrava(){
+    var h = { headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY } };
+    // usuario_contrato é gravada pelo admin.html (Editar usuário → Contratos de acesso)
+    var exato = SUPA_URL + '/rest/v1/turno_data?select=key,value&key=eq.usuario_contrato';
+    return fetch(exato, h).then(function(r){ if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); });
+  }
+
+  function ctBuscarTravaUsuario(fonte){
+    if (fonte && typeof fonte === 'object') _travaEvento = fonte;
+    var sessoes = ctSessoes();
+    var ids = ctIdsUsuario(fonte);
+    ctIdsGlobais().forEach(function(i){ if (ids.indexOf(i) < 0) ids.push(i); });
+    if (!ids.length) {
+      // sem nome/e-mail, mas o próprio login pode trazer os contratos
+      var r0 = ctResolverTrava([], [], sessoes);
+      _travaDiag = { ids: [], sessoes: sessoes, res: r0, erro: r0.estados ? '' : 'Nenhum usuário logado identificado.' };
+      if (r0.estados) window.rdoDefinirTrava(r0.estados);
+      return Promise.resolve();
+    }
+    var chave = ids.slice().sort().join('|');
+    if (chave === _travaUlt.chave && Date.now() - _travaUlt.ts < 15000) return Promise.resolve();
+    _travaUlt = { chave: chave, ts: Date.now() };
+
+    // 1) aplica na hora a última trava conhecida deste usuário (evita mostrar tudo enquanto carrega)
+    try {
+      var c = JSON.parse(localStorage.getItem(TRAVA_LS) || 'null');
+      if (c && Array.isArray(c.ids) && c.ids.some(function(i){ return ids.indexOf(i) >= 0; })) window.rdoDefinirTrava(c.estados);
+    } catch(e) {}
+
+    // 2) busca a trava atual no banco
+    return ctLerChavesTrava()
+      .then(function(rows){
+        if (_travaUlt.chave !== chave) return; // outro usuário entrou enquanto buscava
+        var res = ctResolverTrava(rows, ids, sessoes);
+        if (res.fechada && !res.estados.length) console.error('Trava de contrato: valor de ' + res.origem + ' não reconhecido', res.valor, '— nenhuma equipe será exibida.');
+        _travaDiag = { ids: ids, sessoes: sessoes, rows: rows, res: res };
+        try { localStorage.setItem(TRAVA_LS, JSON.stringify({ ids: ids, estados: res.estados })); } catch(e) {}
+        window.rdoDefinirTrava(res.estados);
+      })
+      .catch(function(e){
+        _travaDiag = { ids: ids, sessoes: sessoes, erro: 'Não consegui ler o banco: ' + e.message };
+        console.error('Trava de contrato: não consegui ler usuario_contrato —', e.message);
+      });
+  }
+
+  // ── Painel de diagnóstico: abra a página com #trava no fim do endereço (ex.: rdo.html#trava)
+  function ctTravaPainel(){
+    var old = document.getElementById('trava-diag'); if (old) old.remove();
+    var box = document.createElement('div');
+    box.id = 'trava-diag';
+    box.style.cssText = 'position:fixed;top:70px;right:12px;z-index:99999;width:min(460px,calc(100vw - 24px));max-height:calc(100vh - 90px);overflow:auto;background:#fff;color:#1a202c;border:2px solid #0d7377;border-radius:12px;box-shadow:0 12px 40px rgba(0,0,0,.3);font:600 12px/1.45 Barlow,system-ui,sans-serif;padding:14px 16px;';
+    function linha(titulo, valor, cor){
+      var d = document.createElement('div'); d.style.cssText = 'margin:0 0 9px;';
+      var t = document.createElement('div'); t.textContent = titulo; t.style.cssText = 'font-weight:900;font-size:10px;letter-spacing:1px;color:#718096;text-transform:uppercase;';
+      var v = document.createElement('div'); v.textContent = valor; v.style.cssText = 'white-space:pre-wrap;word-break:break-word;color:' + (cor || '#1a202c') + ';';
+      d.appendChild(t); d.appendChild(v); box.appendChild(d);
+    }
+    var head = document.createElement('div'); head.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;';
+    head.innerHTML = '<b style="font-size:14px;color:#0d7377">🔒 Trava de contrato · ' + TRAVA_VERSAO + '</b>';
+    var x = document.createElement('button'); x.textContent = 'Fechar'; x.style.cssText = 'border:none;background:#e53e3e;color:#fff;border-radius:7px;padding:4px 10px;font-weight:800;cursor:pointer;';
+    x.onclick = function(){ box.remove(); try { history.replaceState(null, '', location.pathname + location.search); } catch(e) {} };
+    head.appendChild(x); box.appendChild(head);
+
+    var D = _travaDiag || {};
+    var ses = (D.sessoes || ctSessoes()).map(function(s){ return s.origem + ': ' + (ctIdsUsuario(s.obj).join(', ') || '(sem nome/e-mail)'); });
+    linha('Login encontrado em', ses.length ? ses.join('\n') : 'nenhum lugar', ses.length ? '' : '#c53030');
+    linha('Usuário identificado como', (D.ids && D.ids.length) ? D.ids.join(', ') : 'NÃO IDENTIFICADO', (D.ids && D.ids.length) ? '' : '#c53030');
+    if (D.erro) linha('Erro', D.erro, '#c53030');
+    if (D.rows) {
+      linha('Chaves lidas do banco', D.rows.length ? D.rows.map(function(r){
+        var v = r.value; if (typeof v === 'string') { try { v = JSON.parse(v); } catch(e) {} }
+        var n = Array.isArray(v) ? v.length : (v && typeof v === 'object') ? Object.keys(v).length : 1;
+        return r.key + ' (' + n + ' registro' + (n !== 1 ? 's' : '') + ')';
+      }).join('\n') : 'nenhuma (a chave usuario_contrato não existe ou o banco bloqueou a leitura)', D.rows.length ? '' : '#c53030');
+      var R = D.res || {};
+      if (R.origem) {
+        linha('Contrato encontrado em', R.origem);
+        linha('Valor salvo', JSON.stringify(R.valor));
+      } else {
+        var nomes = [];
+        D.rows.filter(function(r){ return /contrato/i.test(r.key); }).forEach(function(r){
+          var v = r.value; if (typeof v === 'string') { try { v = JSON.parse(v); } catch(e) {} }
+          if (Array.isArray(v)) v.forEach(function(it){ if (it && (it.nome || it.email)) nomes.push(it.nome || it.email); });
+          else if (v && typeof v === 'object') Object.keys(v).forEach(function(k){ nomes.push(k); });
+        });
+        linha('Contrato encontrado em', 'NENHUM — este usuário não está cadastrado com o mesmo nome/e-mail. Por isso vê todas as cidades.', '#c53030');
+        if (nomes.length) linha('Nomes cadastrados na trava', nomes.slice(0, 40).join('\n'));
+      }
+    }
+    linha('Aplicado na tela agora', rdoAllowedStates ? (rdoAllowedStates.length ? rdoAllowedStates.join(', ').toUpperCase() : 'NENHUM ESTADO (valor não reconhecido)') : 'SEM RESTRIÇÃO (todas as cidades)', rdoAllowedStates ? '#276749' : '#c53030');
+    document.body.appendChild(box);
+  }
+  window.rdoTravaDiag = function(){
+    _travaUlt = { chave: '', ts: 0 }; // força nova leitura
+    return ctBuscarTravaUsuario(_travaEvento).then(function(){ ctTravaPainel(); return _travaDiag; });
+  };
+  function ctTravaHash(){
+    if (!/^#trava\b/i.test(location.hash)) return;
+    // espera o login terminar (até ~15 s) para não mostrar "não identificado" à toa
+    var n = 0;
+    (function esperar(){ if (ctIdsGlobais().length || ++n >= 20) window.rdoTravaDiag(); else setTimeout(esperar, 750); })();
+  }
+  window.addEventListener('hashchange', ctTravaHash);
+
+  document.addEventListener('mariua:user', function(e){ ctBuscarTravaUsuario(e && e.detail); });
+  // O mariua-auth.js não dispara evento: ele só preenche window.MARIUA_USER quando o login termina
+  // (depois de carregar o SDK e consultar as permissões). Intercepta essa gravação para aplicar a
+  // trava na mesma hora, em vez de depender de tentativas por tempo.
+  (function(){
+    try {
+      var d = Object.getOwnPropertyDescriptor(window, 'MARIUA_USER');
+      if (d && (d.get || !d.configurable)) return;
+      var atual = window.MARIUA_USER;
+      Object.defineProperty(window, 'MARIUA_USER', {
+        configurable: true, enumerable: true,
+        get: function(){ return atual; },
+        set: function(v){ atual = v; if (v) setTimeout(function(){ ctBuscarTravaUsuario(v); }, 0); }
+      });
+      if (atual) setTimeout(function(){ ctBuscarTravaUsuario(atual); }, 0); // depois do script terminar de carregar
+    } catch(e) {}
+  })();
+  // O evento de login pode ter disparado antes deste script: tenta pelos dados globais algumas vezes
+  (function(){
+    var n = 0;
+    function tentar(){ ctBuscarTravaUsuario(null); if (!_travaUlt.chave && ++n < 15) setTimeout(tentar, 1000); }
+    function iniciar(){ tentar(); ctTravaHash(); }
+    if (document.readyState === 'complete') setTimeout(iniciar, 0);
+    else window.addEventListener('load', iniciar);
+  })();
+
+})();
+
+// Aplica a trava na tela do RDO. estados: null = sem restrição | array de 'ba'/'mg'/'se'
+function rdoDefinirTrava(estados){
+  if (Array.isArray(estados)) estados = estados.filter(function(s){ return ['ba','mg','se'].indexOf(s) >= 0; });
+  if (Array.isArray(estados) && estados.length === 3) estados = null;
+  var antes = JSON.stringify(rdoAllowedStates);
+  rdoAllowedStates = estados ? estados.slice().sort() : null;
+  var mudou = antes !== JSON.stringify(rdoAllowedStates);
+  var A = rdoAllowedStates;
+  // botões de estado: só os liberados; com um estado só, some a escolha inteira
+  ['ba','mg','se'].forEach(function(s){
+    var el = document.getElementById('rdo-state-'+s);
+    if (el) el.style.display = (!A || A.indexOf(s) >= 0) ? '' : 'none';
+  });
+  var umSo = !!(A && A.length <= 1);
+  var bt = document.getElementById('rdo-state-todos');
+  if (bt) {
+    bt.style.display = umSo ? 'none' : '';
+    var lbl = bt.previousElementSibling; if (lbl && lbl.tagName === 'SPAN') lbl.style.display = umSo ? 'none' : '';
+  }
+  var novo;
+  if (!A) novo = mudou ? 'todos' : rdoStateFilter;
+  else if (A.length === 1) novo = A[0];
+  else novo = A.indexOf(rdoStateFilter) >= 0 ? rdoStateFilter : 'todos';
+  if (mudou || novo !== rdoStateFilter) {
+    if (Object.keys(rdoData || {}).length) rdoSetState(novo); // zera filial/centro, remonta botões e renderiza
+    else {
+      // RDO ainda não carregou: só ajusta os filtros (o render vem quando os dados chegarem)
+      rdoStateFilter = novo; rdoBaseFilter = 'todos'; rdoCentroFilter = 'todos';
+      document.querySelectorAll('.rdo-state-btn').forEach(function(btn){ btn.classList.toggle('active', btn.id === 'rdo-state-' + novo); });
+      rdoBuildBaseButtons(); rdoBuildCentroButtons();
+    }
+  } else { rdoBuildBaseButtons(); rdoBuildCentroButtons(); }
+  if (typeof window.relAplicarTrava === 'function') { try { window.relAplicarTrava(); } catch(e) {} }
+}
+window.rdoDefinirTrava = rdoDefinirTrava;
+// equipe pertence a um estado liberado?
+function rdoEstadoPermitido(n){ return !rdoAllowedStates || rdoAllowedStates.indexOf(rdoTeamState(n)) >= 0; }
+
+
 function rdoSetState(s) {
+  if (rdoAllowedStates && s !== 'todos' && rdoAllowedStates.indexOf(s) < 0) return;
   rdoStateFilter = s;
   rdoBaseFilter  = 'todos';
   rdoCentroFilter = 'todos';
@@ -749,7 +1097,7 @@ function rdoBuildCentroButtons() {
   if (rdoBaseFilter !== 'todos') {
     ids = (RDO_FILIAL_CENTROS[rdoBaseFilter] || []).slice();
   } else {
-    const states = rdoStateFilter === 'todos' ? ['ba','mg','se'] : [rdoStateFilter];
+    const states = rdoStateFilter === 'todos' ? (rdoAllowedStates || ['ba','mg','se']) : [rdoStateFilter];
     states.forEach(function(st) { (RDO_BASE_CONFIG[st]||[]).forEach(function(b) { ids.push(b.id); }); });
   }
   ids.forEach(function(id) { c.appendChild(mkBtn(id, RDO_CENTRO_CUSTO[id] || id)); });
@@ -768,7 +1116,7 @@ function rdoBuildBaseButtons() {
     return btn;
   }
   c.appendChild(mkBtn('todos','Todos'));
-  const states = rdoStateFilter === 'todos' ? ['ba','mg','se'] : [rdoStateFilter];
+  const states = rdoStateFilter === 'todos' ? (rdoAllowedStates || ['ba','mg','se']) : [rdoStateFilter];
   states.forEach(function(st) {
     (RDO_FILIAL_CONFIG[st]||[]).forEach(function(b) { c.appendChild(mkBtn(b.id, b.label)); });
   });
@@ -776,6 +1124,7 @@ function rdoBuildBaseButtons() {
 
 function rdoFilter(list) {
   return list.filter(function(n) {
+    if (!rdoEstadoPermitido(n)) return false;   // trava de contrato do usuário
     if (rdoStateFilter !== 'todos' && rdoTeamState(n) !== rdoStateFilter) return false;
     if (rdoBaseFilter  !== 'todos' && rdoTeamFilial(n) !== rdoBaseFilter)  return false;
     if (rdoCentroFilter !== 'todos' && rdoTeamBase(n) !== rdoCentroFilter) return false;
@@ -1301,7 +1650,11 @@ function rdoRender() {
   const mg = lancouSet.filter(function(n){ return rdoTeamState(n)==='mg'; }).length;
   const se = lancouSet.filter(function(n){ return rdoTeamState(n)==='se'; }).length;
   const sc = document.getElementById('rdo-state-counts');
-  if (sc) sc.textContent = lancouSet.length ? 'BA:'+ba+' MG:'+mg+' SE:'+se+' (lançaram)' : '';
+  const _pc = [];
+  if (!rdoAllowedStates || rdoAllowedStates.indexOf('ba') >= 0) _pc.push('BA:'+ba);
+  if (!rdoAllowedStates || rdoAllowedStates.indexOf('mg') >= 0) _pc.push('MG:'+mg);
+  if (!rdoAllowedStates || rdoAllowedStates.indexOf('se') >= 0) _pc.push('SE:'+se);
+  if (sc) sc.textContent = (lancouSet.length && _pc.length) ? _pc.join(' ')+' (lançaram)' : '';
 
   function buildCard(name, type) {
     // type: 'ok' | 'falta' | 'justif'
@@ -1741,6 +2094,24 @@ function rdoFoto() {
   }
   const REL_BASE_LABEL = { IRC:'IRECÊ', JAC:'JACOBINA', PA:'CONGONHAL', ITA:'ITAJUBÁ', AJU:'ARACAJU', '':'' };
   function relDispName(n){ return (typeof rdoDisplayName==='function') ? rdoDisplayName(n) : String(n||''); }
+  // Trava de contrato do usuário: só equipes dos estados liberados
+  function relEquipes(){ return rdoTodasEquipes().filter(rdoEstadoPermitido); }
+  function relAplicarTravaBotoes(){
+    if (!rdoAllowedStates) return;
+    const A = rdoAllowedStates;
+    const basesDoEstado = { ba:['irc','jac'], mg:['pa','ita'], se:['aju'] };
+    ['ba','mg','se'].forEach(function(st){
+      if (A.indexOf(st) >= 0) return;
+      const b = document.getElementById('re-'+st); if (b) b.style.display = 'none';
+      const sep = document.getElementById('rel-sep-'+st); if (sep) sep.style.display = 'none';
+      basesDoEstado[st].forEach(function(x){ const el = document.getElementById('rf-'+x); if (el) el.style.display = 'none'; });
+    });
+    if (A.length <= 1) { const t = document.getElementById('re-todos'); if (t && t.parentNode) t.parentNode.style.display = 'none'; }
+  }
+  window.relAplicarTrava = function(){
+    const modal = document.getElementById('relatorio-modal');
+    if (modal && modal.style.display !== 'none' && relDias && relDias.length) relRenderCorpo(relDias);
+  };
   function relGetStatus(payload, nome){
     if(!payload) return 'nodata';
     const lan = payload.lancou || payload.ok || {};
@@ -1873,13 +2244,14 @@ function rdoFoto() {
     const corpo=document.getElementById('rel-corpo');
     if(!corpo) return;
     corpo.innerHTML=relBuildHTML(dias);
+    relAplicarTravaBotoes();
   }
 
   let _relMatrix={}, _relDias=[], _relRankFalta=[];
 
   function relAtualizarContadores(){
     const estadoBases = relEstado==='todos' ? null : REL_ESTADO_BASES[relEstado];
-    const eqFilt = rdoTodasEquipes().filter(function(e){
+    const eqFilt = relEquipes().filter(function(e){
       const b=relGetBase(e);
       if(estadoBases && !estadoBases.includes(b)) return false;
       if(relBase!=='todas' && b!==relBase) return false;
@@ -1901,7 +2273,7 @@ function rdoFoto() {
 
   function relBuildHTML(dias){
     _relDias=dias;
-    const eq=rdoTodasEquipes();
+    const eq=relEquipes();
     const matrix={};
     eq.forEach(e=>{ matrix[e]=dias.map(d=>relGetStatus(relDados[relHistKey(d)]||null,e)); });
     _relMatrix=matrix;
@@ -2061,6 +2433,7 @@ function rdoFoto() {
     if(baSep) baSep.style.display=(e==='todos'||e==='ba')?'':'none';
     if(mgSep) mgSep.style.display=(e==='todos'||e==='mg')?'':'none';
     if(seSep) seSep.style.display=(e==='todos'||e==='se')?'':'none';
+    relAplicarTravaBotoes();
     relFiltrarTabela();
   };
   window.relFiltrarTabela = function(){
@@ -2216,7 +2589,7 @@ function rdoFoto() {
     const ini=relFmtDate(dias[0]).replace(/\//g,'-');
     const fim=relFmtDate(dias[dias.length-1]).replace(/\//g,'-');
     let csv='Colaborador;Base;'+dias.map(d=>relFmtDate(d)).join(';')+';Presenças;Faltas;Justif.;% Presença\n';
-    rdoTodasEquipes().forEach(eq=>{
+    relEquipes().forEach(eq=>{
       const base=relGetBase(eq);
       const ss=dias.map(d=>relGetStatus(relDados[relHistKey(d)]||null,eq));
       const pres=ss.filter(s=>s==='ok').length;
