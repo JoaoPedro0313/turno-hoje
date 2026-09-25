@@ -731,7 +731,7 @@ async function criarUsuario(){
     var _s=window._solicAtual; window._solicAtual=null;
     try{
       await sb.from('solicitacoes').update({status:'liberado'}).eq('id',_s.id);
-      await definirContratoUsuario([_s.nome, nome], [_s.contrato]);
+      await definirContratoUsuario([_s.nome, nome], [_s.contrato], email);
     }catch(e){ console.error('[solicitacao] não foi possível concluir:',e); }
     carregarSolicitacoes();
   }
@@ -767,6 +767,7 @@ async function carregarGestores(){
   if(error){ el.innerHTML='<tr><td colspan="9" style="color:#c53030;padding:14px;">Sem acesso à lista.</td></tr>'; return; }
   if(!data||!data.length){ el.innerHTML='<tr><td colspan="9" style="color:#aaa;padding:14px;">Ninguém cadastrado.</td></tr>'; return; }
   window.USERS=data;
+  migrarContratosPorEmail(data);
   el.innerHTML=data.map(function(u){
     var sit = u.ativo
       ? '<span class="u-sit on">● Ativo</span>'
@@ -816,7 +817,7 @@ function editarUsuario(email){
   $('ed-tel').value=u.telefone||'';
   $('ed-vig').value=u.data_vigencia||'';
   $('ed-gestor').checked=!!u.gestor;
-  var _cts = USUARIO_CONTRATO[normNomeU(u.func_nome||'')] || USUARIO_CONTRATO[normNomeU(u.nome||'')] || [];
+  var _cts = USUARIO_CONTRATO[chaveEmailContrato(u.email)] || USUARIO_CONTRATO[normNomeU(u.func_nome||'')] || USUARIO_CONTRATO[normNomeU(u.nome||'')] || [];
   if(!Array.isArray(_cts)) _cts = _cts ? [_cts] : [];
   document.querySelectorAll('.ed-ct').forEach(function(cb){ cb.checked = _cts.indexOf(cb.value)>=0; });
   edTelasRender(USUARIO_TELAS[String(u.email||'').trim().toLowerCase()]||[]);
@@ -871,24 +872,53 @@ async function salvarEdicao(){
   // contratos de acesso (grava pelo nome do funcionário e pelo login, pra casar com o login leve)
   var funcNome=($('ed-func-atual').textContent||'').replace(/^✓\s*/,'').trim();
   var cts=[]; document.querySelectorAll('.ed-ct').forEach(function(cb){ if(cb.checked) cts.push(cb.value); });
-  await definirContratoUsuario([funcNome, nome], cts);
+  var okCt = await definirContratoUsuario([funcNome, nome], cts, email);
   await salvarTelasUsuario(email, edTelasSelecionadas());
+  if(!okCt){ msg.style.color='#c53030'; msg.textContent='Os dados foram salvos, mas o CONTRATO não foi gravado no banco. Veja o console (F12) e tente de novo.'; return; }
   fecharEdicao(); carregarGestores();
 }
 var USUARIO_CONTRATO = {};
 async function carregarContratos(){
   try{ var r=await fetch(SUPA_URL+'/rest/v1/turno_data?select=value&key=eq.usuario_contrato',{headers:{apikey:SUPA_KEY,Authorization:'Bearer '+SUPA_KEY}}); var arr=r.ok?await r.json():[]; USUARIO_CONTRATO=(arr&&arr[0]&&arr[0].value)||{}; }catch(e){ USUARIO_CONTRATO={}; }
 }
-async function definirContratoUsuario(nomes, states){
+// Chave do contrato pelo e-mail de login (minúsculo), igual ao usuario_telas
+function chaveEmailContrato(email){ return String(email||'').trim().toLowerCase(); }
+async function lerMapaContrato(){
+  var r=await fetch(SUPA_URL+'/rest/v1/turno_data?select=value&key=eq.usuario_contrato',{headers:{apikey:SUPA_KEY,Authorization:'Bearer '+SUPA_KEY}});
+  if(!r.ok) throw new Error('leitura HTTP '+r.status);
+  var arr=await r.json(); return (arr&&arr[0]&&arr[0].value)||{};
+}
+async function gravarMapaContrato(map){
+  var w=await fetch(SUPA_URL+'/rest/v1/turno_data?on_conflict=key',{method:'POST',headers:{apikey:SUPA_KEY,Authorization:'Bearer '+SUPA_KEY,'Content-Type':'application/json',Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify({key:'usuario_contrato',value:map,updated_at:new Date().toISOString()})});
+  if(!w.ok) throw new Error('gravação HTTP '+w.status);
+  USUARIO_CONTRATO=map;
+}
+// nomes: nome do funcionário e nome do usuário (compatibilidade) · email: login da pessoa
+// Devolve true se gravou; false se o banco recusou.
+async function definirContratoUsuario(nomes, states, email){
   if(!Array.isArray(states)) states = states?[states]:[];
   states = states.filter(function(s){ return ['ba','mg','se'].indexOf(s)>=0; });
   try{
-    var r=await fetch(SUPA_URL+'/rest/v1/turno_data?select=value&key=eq.usuario_contrato',{headers:{apikey:SUPA_KEY,Authorization:'Bearer '+SUPA_KEY}});
-    var arr=r.ok?await r.json():[]; var map=(arr&&arr[0]&&arr[0].value)||{};
-    (nomes||[]).forEach(function(nm){ var k=normNomeU(nm); if(!k)return; if(states.length) map[k]=states; else delete map[k]; });
-    await fetch(SUPA_URL+'/rest/v1/turno_data?on_conflict=key',{method:'POST',headers:{apikey:SUPA_KEY,Authorization:'Bearer '+SUPA_KEY,'Content-Type':'application/json',Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify({key:'usuario_contrato',value:map,updated_at:new Date().toISOString()})});
-    USUARIO_CONTRATO=map;
-  }catch(e){}
+    var map=await lerMapaContrato();
+    var chaves=(nomes||[]).map(normNomeU);
+    var ke=chaveEmailContrato(email); if(ke) chaves.push(ke);
+    chaves.forEach(function(k){ if(!k)return; if(states.length) map[k]=states; else delete map[k]; });
+    await gravarMapaContrato(map);
+    return true;
+  }catch(e){ console.error('[contrato] não foi possível salvar:', e.message); return false; }
+}
+// Usuários antigos só têm o contrato gravado pelo nome. Copia para o e-mail de login,
+// que é o que as telas conseguem identificar. Roda sozinho quando a lista de usuários carrega.
+async function migrarContratosPorEmail(users){
+  try{
+    var map=await lerMapaContrato(), mudou=0;
+    (users||[]).forEach(function(u){
+      var ke=chaveEmailContrato(u.email); if(!ke || map[ke]) return;
+      var v=map[normNomeU(u.func_nome||'')] || map[normNomeU(u.nome||'')];
+      if(v && (!Array.isArray(v) || v.length)){ map[ke]=v; mudou++; }
+    });
+    if(mudou){ await gravarMapaContrato(map); console.log('[contrato] '+mudou+' usuário(s) passaram a ter o contrato pelo e-mail.'); }
+  }catch(e){ console.error('[contrato] migração por e-mail falhou:', e.message); }
 }
 
 /* ===== TELAS LIBERADAS POR USUÁRIO =====

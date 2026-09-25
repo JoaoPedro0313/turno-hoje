@@ -1171,13 +1171,6 @@ function turnoIdsUsuario(u, d){
   });
   return ids;
 }
-function turnoIdsGlobais(){
-  var ids = [];
-  [window.MARIUA_USER, window.__MARIUA_AUTH__, window.MARIUA_PERFIL].forEach(function(u){
-    turnoIdsUsuario(u).forEach(function(i){ if (ids.indexOf(i) < 0) ids.push(i); });
-  });
-  return ids;
-}
 // Procura o usuário no valor de usuario_contrato (mapa {nome: contratos} ou lista [{nome, contratos}])
 function turnoAcharEntrada(val, ids){
   if (typeof val === 'string') { try { val = JSON.parse(val); } catch(e) {} }
@@ -1195,8 +1188,12 @@ function turnoAcharEntrada(val, ids){
       ents.push({ ids: eIds, value: v, chave: k });
     });
   }
+  var emails = ids.filter(function(x){ return x.indexOf('@') > 0; });
   for (var i = 0; i < ents.length; i++) {
-    if (ents[i].ids.some(function(x){ return ids.indexOf(x) >= 0; })) return ents[i];
+    if (ents[i].ids.some(function(x){ return emails.indexOf(x) >= 0; })) return ents[i];
+  }
+  for (var j = 0; j < ents.length; j++) {
+    if (ents[j].ids.some(function(x){ return ids.indexOf(x) >= 0; })) return ents[j];
   }
   return null;
 }
@@ -1243,12 +1240,103 @@ function turnoAplicarTravaContrato(v){
 }
 
 var _travaUlt = { chave: '', ts: 0 };
+var _travaEvento = null;   // último detail do evento mariua:user
+var _travaDiag = null;     // resultado da última verificação (para o painel #trava)
+const TRAVA_VERSAO = 'v4';
+
+// Onde o login pode ter deixado o usuário: evento, variáveis globais, sessão salva no aparelho
+function turnoSessoes(){
+  var s = [];
+  function add(origem, obj){ if (obj != null && obj !== true && obj !== false) s.push({ origem: origem, obj: obj }); }
+  add('evento mariua:user', _travaEvento);
+  add('window.MARIUA_USER', window.MARIUA_USER);
+  add('window.__MARIUA_AUTH__', window.__MARIUA_AUTH__);
+  add('window.MARIUA_PERFIL', window.MARIUA_PERFIL);
+  try {
+    for (var i = 0; i < localStorage.length; i++) {
+      var k = localStorage.key(i);
+      if (!/^sb-.*-auth-token$/.test(k) && !/^mariua[_-]?(user|usuario|sess|session|auth|login|perfil|logado)/i.test(k)) continue;
+      var raw = localStorage.getItem(k), obj = raw;
+      try { obj = JSON.parse(raw); } catch(e) {}
+      if (obj && typeof obj === 'object' && obj.currentSession) obj = obj.currentSession;
+      add('localStorage ' + k, obj);
+    }
+  } catch(e) {}
+  try { var uc = sessionStorage.getItem('mariua_user_cache'); if (uc) add('sessionStorage mariua_user_cache', JSON.parse(uc)); } catch(e) {}
+  return s;
+}
+function turnoIdsGlobais(){
+  var ids = [];
+  turnoSessoes().forEach(function(x){ turnoIdsUsuario(x.obj).forEach(function(i){ if (ids.indexOf(i) < 0) ids.push(i); }); });
+  return ids;
+}
+// Campo de contrato explícito num registro de usuário (não usa 'estado' solto, que pode ser outra coisa)
+const TRAVA_CAMPOS_FORTES = ['contratos','contrato','contratos_liberados','estados_liberados','estados','ufs','liberados'];
+function turnoCampoContrato(v, d){
+  d = d || 0;
+  if (!v || typeof v !== 'object' || Array.isArray(v) || d > 3) return undefined;
+  for (var i = 0; i < TRAVA_CAMPOS_FORTES.length; i++) { if (v[TRAVA_CAMPOS_FORTES[i]] != null) return v[TRAVA_CAMPOS_FORTES[i]]; }
+  var sub = ['user','usuario','perfil','profile','user_metadata','app_metadata','detail'];
+  for (var j = 0; j < sub.length; j++) { var r = turnoCampoContrato(v[sub[j]], d+1); if (r !== undefined) return r; }
+  return undefined;
+}
+
+// Decide a trava a partir das linhas do banco + sessão
+function turnoResolverTrava(rows, ids, sessoes){
+  rows = (rows || []).slice().sort(function(a, b){
+    function peso(k){ return k === 'usuario_contrato' ? 0 : /contrato/i.test(k) ? 1 : 2; }
+    return peso(a.key) - peso(b.key);
+  });
+  // 1) chaves de contrato (usuario_contrato e parecidas): vale o que estiver lá
+  for (var i = 0; i < rows.length; i++) {
+    if (!/contrato/i.test(rows[i].key)) continue;
+    var ent = turnoAcharEntrada(rows[i].value, ids);
+    if (!ent) continue;
+    var origem = rows[i].key + ' → "' + ent.chave + '"';
+    if (turnoValorVazio(ent.value)) return { estados: null, origem: origem, valor: ent.value };
+    return { estados: turnoParseEstados(ent.value), origem: origem, valor: ent.value, fechada: true };
+  }
+  // 2) cadastro de usuários (chaves com "usuario"): só se o registro tiver campo de contrato
+  for (var j = 0; j < rows.length; j++) {
+    if (/contrato/i.test(rows[j].key)) continue;
+    var e2 = turnoAcharEntrada(rows[j].value, ids);
+    var c2 = e2 ? turnoCampoContrato(e2.value) : undefined;
+    if (c2 === undefined) continue;
+    var est2 = turnoParseEstados(c2);
+    if (est2.length) return { estados: est2, origem: rows[j].key + ' → "' + e2.chave + '"', valor: c2 };
+  }
+  // 3) dados do próprio login
+  for (var k = 0; k < sessoes.length; k++) {
+    var c3 = turnoCampoContrato(sessoes[k].obj);
+    if (c3 === undefined) continue;
+    var est3 = turnoParseEstados(c3);
+    if (est3.length) return { estados: est3, origem: sessoes[k].origem, valor: c3 };
+  }
+  return { estados: null, origem: '' };
+}
+
+// Lê do banco as chaves que podem ter o contrato do usuário
+function turnoLerChavesTrava(){
+  var h = { headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY } };
+  // usuario_contrato é gravada pelo admin.html (Editar usuário → Contratos de acesso)
+  var exato = SUPA_URL + '/rest/v1/turno_data?select=key,value&key=eq.usuario_contrato';
+  return fetch(exato, h).then(function(r){ if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); });
+}
+
 function turnoBuscarTravaUsuario(fonte){
+  if (fonte && typeof fonte === 'object') _travaEvento = fonte;
+  var sessoes = turnoSessoes();
   var ids = turnoIdsUsuario(fonte);
   turnoIdsGlobais().forEach(function(i){ if (ids.indexOf(i) < 0) ids.push(i); });
-  if (!ids.length) return;
+  if (!ids.length) {
+    // sem nome/e-mail, mas o próprio login pode trazer os contratos
+    var r0 = turnoResolverTrava([], [], sessoes);
+    _travaDiag = { ids: [], sessoes: sessoes, res: r0, erro: r0.estados ? '' : 'Nenhum usuário logado identificado.' };
+    if (r0.estados) turnoDefinirTrava(r0.estados);
+    return Promise.resolve();
+  }
   var chave = ids.slice().sort().join('|');
-  if (chave === _travaUlt.chave && Date.now() - _travaUlt.ts < 15000) return;
+  if (chave === _travaUlt.chave && Date.now() - _travaUlt.ts < 15000) return Promise.resolve();
   _travaUlt = { chave: chave, ts: Date.now() };
 
   // 1) aplica na hora a última trava conhecida deste usuário (evita mostrar tudo enquanto carrega)
@@ -1258,46 +1346,99 @@ function turnoBuscarTravaUsuario(fonte){
   } catch(e) {}
 
   // 2) busca a trava atual no banco
-  fetch(SUPA_URL + '/rest/v1/turno_data?select=value&key=eq.usuario_contrato', { headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY } })
-    .then(function(r){ if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
-    .then(function(arr){
+  return turnoLerChavesTrava()
+    .then(function(rows){
       if (_travaUlt.chave !== chave) return; // outro usuário entrou enquanto buscava
-      var val = (arr && arr[0]) ? arr[0].value : null;
-      var ent = turnoAcharEntrada(val, ids);
-      var estados = null;
-      if (ent && !turnoValorVazio(ent.value)) {
-        estados = turnoParseEstados(ent.value);
-        if (!estados.length) console.error('Trava de contrato: valor de "' + ent.chave + '" não reconhecido', ent.value, '— nenhuma equipe será exibida.');
-      }
-      try { localStorage.setItem(TRAVA_LS, JSON.stringify({ ids: ids, estados: estados })); } catch(e) {}
-      turnoDefinirTrava(estados);
+      var res = turnoResolverTrava(rows, ids, sessoes);
+      if (res.fechada && !res.estados.length) console.error('Trava de contrato: valor de ' + res.origem + ' não reconhecido', res.valor, '— nenhuma equipe será exibida.');
+      _travaDiag = { ids: ids, sessoes: sessoes, rows: rows, res: res };
+      try { localStorage.setItem(TRAVA_LS, JSON.stringify({ ids: ids, estados: res.estados })); } catch(e) {}
+      turnoDefinirTrava(res.estados);
     })
-    .catch(function(e){ console.error('Trava de contrato: não consegui ler usuario_contrato —', e.message); });
-}
-// Diagnóstico: mostra quem o sistema acha que está logado e o que encontrou no banco
-window.turnoTravaDiag = function(){
-  var ids = turnoIdsGlobais();
-  if (_travaUlt.chave) _travaUlt.chave.split('|').forEach(function(i){ if (ids.indexOf(i) < 0) ids.push(i); });
-  return fetch(SUPA_URL + '/rest/v1/turno_data?select=value&key=eq.usuario_contrato', { headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY } })
-    .then(function(r){ return r.json(); })
-    .then(function(arr){
-      var val = (arr && arr[0]) ? arr[0].value : null;
-      var ent = turnoAcharEntrada(val, ids);
-      console.log('Trava de contrato — usuário identificado como:', ids);
-      console.log('Trava de contrato — usuario_contrato no banco:', val);
-      console.log('Trava de contrato — entrada encontrada:', ent);
-      console.log('Trava de contrato — estados liberados:', ent ? turnoParseEstados(ent.value) : '(sem entrada = sem restrição)');
-      console.log('Trava de contrato — aplicado na tela agora:', turnoAllowedStates);
-      return { ids: ids, entrada: ent, aplicado: turnoAllowedStates };
+    .catch(function(e){
+      _travaDiag = { ids: ids, sessoes: sessoes, erro: 'Não consegui ler o banco: ' + e.message };
+      console.error('Trava de contrato: não consegui ler usuario_contrato —', e.message);
     });
+}
+
+// ── Painel de diagnóstico: abra a página com #trava no fim do endereço (ex.: turno.html#trava)
+function turnoTravaPainel(){
+  var old = document.getElementById('trava-diag'); if (old) old.remove();
+  var box = document.createElement('div');
+  box.id = 'trava-diag';
+  box.style.cssText = 'position:fixed;top:70px;right:12px;z-index:99999;width:min(460px,calc(100vw - 24px));max-height:calc(100vh - 90px);overflow:auto;background:#fff;color:#1a202c;border:2px solid #0d7377;border-radius:12px;box-shadow:0 12px 40px rgba(0,0,0,.3);font:600 12px/1.45 Barlow,system-ui,sans-serif;padding:14px 16px;';
+  function linha(titulo, valor, cor){
+    var d = document.createElement('div'); d.style.cssText = 'margin:0 0 9px;';
+    var t = document.createElement('div'); t.textContent = titulo; t.style.cssText = 'font-weight:900;font-size:10px;letter-spacing:1px;color:#718096;text-transform:uppercase;';
+    var v = document.createElement('div'); v.textContent = valor; v.style.cssText = 'white-space:pre-wrap;word-break:break-word;color:' + (cor || '#1a202c') + ';';
+    d.appendChild(t); d.appendChild(v); box.appendChild(d);
+  }
+  var head = document.createElement('div'); head.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;';
+  head.innerHTML = '<b style="font-size:14px;color:#0d7377">🔒 Trava de contrato · ' + TRAVA_VERSAO + '</b>';
+  var x = document.createElement('button'); x.textContent = 'Fechar'; x.style.cssText = 'border:none;background:#e53e3e;color:#fff;border-radius:7px;padding:4px 10px;font-weight:800;cursor:pointer;';
+  x.onclick = function(){ box.remove(); try { history.replaceState(null, '', location.pathname + location.search); } catch(e) {} };
+  head.appendChild(x); box.appendChild(head);
+
+  var D = _travaDiag || {};
+  var ses = (D.sessoes || turnoSessoes()).map(function(s){ return s.origem + ': ' + (turnoIdsUsuario(s.obj).join(', ') || '(sem nome/e-mail)'); });
+  linha('Login encontrado em', ses.length ? ses.join('\n') : 'nenhum lugar', ses.length ? '' : '#c53030');
+  linha('Usuário identificado como', (D.ids && D.ids.length) ? D.ids.join(', ') : 'NÃO IDENTIFICADO', (D.ids && D.ids.length) ? '' : '#c53030');
+  if (D.erro) linha('Erro', D.erro, '#c53030');
+  if (D.rows) {
+    linha('Chaves lidas do banco', D.rows.length ? D.rows.map(function(r){
+      var v = r.value; if (typeof v === 'string') { try { v = JSON.parse(v); } catch(e) {} }
+      var n = Array.isArray(v) ? v.length : (v && typeof v === 'object') ? Object.keys(v).length : 1;
+      return r.key + ' (' + n + ' registro' + (n !== 1 ? 's' : '') + ')';
+    }).join('\n') : 'nenhuma (a chave usuario_contrato não existe ou o banco bloqueou a leitura)', D.rows.length ? '' : '#c53030');
+    var R = D.res || {};
+    if (R.origem) {
+      linha('Contrato encontrado em', R.origem);
+      linha('Valor salvo', JSON.stringify(R.valor));
+    } else {
+      var nomes = [];
+      D.rows.filter(function(r){ return /contrato/i.test(r.key); }).forEach(function(r){
+        var v = r.value; if (typeof v === 'string') { try { v = JSON.parse(v); } catch(e) {} }
+        if (Array.isArray(v)) v.forEach(function(it){ if (it && (it.nome || it.email)) nomes.push(it.nome || it.email); });
+        else if (v && typeof v === 'object') Object.keys(v).forEach(function(k){ nomes.push(k); });
+      });
+      linha('Contrato encontrado em', 'NENHUM — este usuário não está cadastrado com o mesmo nome/e-mail. Por isso vê todas as cidades.', '#c53030');
+      if (nomes.length) linha('Nomes cadastrados na trava', nomes.slice(0, 40).join('\n'));
+    }
+  }
+  linha('Aplicado na tela agora', turnoAllowedStates ? (turnoAllowedStates.length ? turnoAllowedStates.join(', ').toUpperCase() : 'NENHUM ESTADO (valor não reconhecido)') : 'SEM RESTRIÇÃO (todas as cidades)', turnoAllowedStates ? '#276749' : '#c53030');
+  document.body.appendChild(box);
+}
+window.turnoTravaDiag = function(){
+  _travaUlt = { chave: '', ts: 0 }; // força nova leitura
+  return turnoBuscarTravaUsuario(_travaEvento).then(function(){ turnoTravaPainel(); return _travaDiag; });
 };
+function turnoTravaHash(){ if (/^#trava\b/i.test(location.hash)) setTimeout(function(){ window.turnoTravaDiag(); }, 1500); }
+window.addEventListener('hashchange', turnoTravaHash);
+
 document.addEventListener('mariua:user', function(e){ turnoBuscarTravaUsuario(e && e.detail); });
+// O mariua-auth.js não dispara evento: ele só preenche window.MARIUA_USER quando o login termina
+// (depois de carregar o SDK e consultar as permissões). Intercepta essa gravação para aplicar a
+// trava na mesma hora, em vez de depender de tentativas por tempo.
+(function(){
+  try {
+    var d = Object.getOwnPropertyDescriptor(window, 'MARIUA_USER');
+    if (d && (d.get || !d.configurable)) return;
+    var atual = window.MARIUA_USER;
+    Object.defineProperty(window, 'MARIUA_USER', {
+      configurable: true, enumerable: true,
+      get: function(){ return atual; },
+      set: function(v){ atual = v; if (v) setTimeout(function(){ turnoBuscarTravaUsuario(v); }, 0); }
+    });
+    if (atual) setTimeout(function(){ turnoBuscarTravaUsuario(atual); }, 0); // depois do script terminar de carregar
+  } catch(e) {}
+})();
 // O evento de login pode ter disparado antes deste script: tenta pelos dados globais algumas vezes
 (function(){
   var n = 0;
   function tentar(){ turnoBuscarTravaUsuario(null); if (!_travaUlt.chave && ++n < 15) setTimeout(tentar, 1000); }
-  if (document.readyState === 'complete') setTimeout(tentar, 0);
-  else window.addEventListener('load', tentar);
+  function iniciar(){ tentar(); turnoTravaHash(); }
+  if (document.readyState === 'complete') setTimeout(iniciar, 0);
+  else window.addEventListener('load', iniciar);
 })();
 
 
