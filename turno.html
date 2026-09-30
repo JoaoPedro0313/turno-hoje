@@ -2741,8 +2741,11 @@ const falta = filterByStateAndBase(
 // Label do filtro ativo para o cabeçalho
 const STATE_LABELS = { todos:'TODOS OS ESTADOS', ba:'🟡 BA', mg:'🔵 MG', se:'🟣 SE' };
 const BASE_LABELS  = { todos:'TODAS AS BASES', irc:'IRECÊ', jac:'JACOBINA', fsa:'FEIRA DE SANTANA', srr:'SERRINHA', pa:'CONGONHAL', ita:'ITAJUBÁ', lv:'LINHA VIVA', aju:'ARACAJU' };
-const filtroLabel  = (turnoStateFilter!=='todos'||turnoBaseFilter!=='todos')
-  ? (STATE_LABELS[turnoStateFilter]||turnoStateFilter) + (turnoBaseFilter!=='todos' ? ' · '+(BASE_LABELS[turnoBaseFilter]||turnoBaseFilter) : '')
+// CORRIGIDO: o Centro de Serviço escolhido vale sobre a Filial. A filial Feira de Santana agrupa
+// Feira + Serrinha e Congonhal agrupa Congonhal + Itajubá; antes a legenda mostrava sempre a filial.
+const _localFiltro = turnoCentroFilter !== 'todos' ? turnoCentroFilter : turnoBaseFilter;
+const filtroLabel  = (turnoStateFilter!=='todos'||_localFiltro!=='todos')
+  ? (STATE_LABELS[turnoStateFilter]||turnoStateFilter) + (_localFiltro!=='todos' ? ' · '+(BASE_LABELS[_localFiltro]||_localFiltro) : '')
   : '';
 function buildGrid(list, type) {
 if (!list || list.length===0) return '<div style="padding:12px 16px;color:#aaa;font-size:13px;">Nenhum</div>';
