@@ -1658,7 +1658,7 @@ const g = document.getElementById(id); g.innerHTML = '';
 if (!list.length) { emptyMsg(id); return; }
 list.forEach(name => {
 const d = document.createElement('div'); d.className = 'card';
-d.innerHTML = '<span class="card-name">' + esc(toDisplayName(name)) + '</span><span class="badge ok">OK</span>'; // XSS fix
+d.innerHTML = '<span class="card-name">' + esc(nomeTela(name)) + '</span><span class="badge ok">OK</span>'; // XSS fix
 g.appendChild(d);
 });
 }
@@ -1668,7 +1668,7 @@ if (!list.length) { emptyMsg(id); return; }
 list.forEach(function(t) {
 const d = document.createElement('div'); d.className = 'card justif';
 d.innerHTML = (t.obs ? '<div class="justif-obs">' + esc(t.obs) + '</div>' : '') +
-'<span class="card-name">' + esc(toDisplayName(t.name)) + '</span><span class="badge justif">JUSTIF.</span>'; // XSS fix
+'<span class="card-name">' + esc(nomeTela(t.name)) + '</span><span class="badge justif">JUSTIF.</span>'; // XSS fix
 g.appendChild(d);
 });
 }
@@ -1677,7 +1677,7 @@ const g = document.getElementById(id); g.innerHTML = '';
 if (!list.length) { emptyMsg(id); return; }
 list.forEach(name => {
 const d = document.createElement('div'); d.className = 'card absent';
-d.innerHTML = '<span class="card-name">' + esc(toDisplayName(name)) + '</span><span class="badge falta">FALTA</span>'; // XSS fix
+d.innerHTML = '<span class="card-name">' + esc(nomeTela(name)) + '</span><span class="badge falta">FALTA</span>'; // XSS fix
 g.appendChild(d);
 });
 }
@@ -2136,6 +2136,41 @@ function toDisplayName(name) {
   }
   return NOME_CURTO[up] || name;
 }
+// ── Nome para MOSTRAR (tela, imagens, relatório) ──────────────────────────────
+// Códigos antigos ficaram com o nome composto colado (JOSEFERNANDO-AJU, RODRIGOJESUS-AJU).
+// Aqui o nome é separado usando o nome completo do encarregado: JOSE FERNANDO-AJU, RODRIGO JESUS-AJU.
+// É só aparência: o código interno continua o mesmo nas comparações e no banco.
+let _nomeTelaCache = {};                               // zerado pelo cadAplicar
+function nomeCompletoDoCodigo(code) {
+  try { if (CAD_INFO[code] && CAD_INFO[code].encarregado) return CAD_INFO[code].encarregado; } catch(e) {}
+  const alvo = cadSquash(code);
+  for (const full in NOME_CURTO) if (cadSquash(NOME_CURTO[full]) === alvo) return full;
+  return '';
+}
+function nomeTela(n) {
+  const d = toDisplayName(typeof n === 'string' ? n : ((n && n.name) || ''));
+  if (!d) return d || '';
+  const up = String(d).trim().toUpperCase();
+  if (up in _nomeTelaCache) return _nomeTelaCache[up] || d;
+  let res = '';
+  const suf = cadSufixoUTD(up);
+  const raiz = suf ? up.slice(0, up.length - suf.length - 1) : '';
+  if (suf && /^[A-Z]{6,}$/.test(raiz)) {                // só nome colado, sem espaço nem número
+    const full = nomeCompletoDoCodigo(up);
+    const toks = cadNorm(full).split(' ').filter(Boolean);
+    let achou = null;
+    (function busca(pos, i, acc) {                     // partes do nome completo que, juntas, formam o código
+      if (achou) return;
+      if (pos === raiz.length) { if (acc.length >= 2) achou = acc.slice(); return; }
+      for (let j = i; j < toks.length && !achou; j++) {
+        if (raiz.startsWith(toks[j], pos)) { acc.push(toks[j]); busca(pos + toks[j].length, j + 1, acc); acc.pop(); }
+      }
+    })(0, 0, []);
+    if (achou) res = achou.join(' ') + '-' + suf;
+  }
+  _nomeTelaCache[up] = res;
+  return res || d;
+}
 function getUTD(name) { return name ? (CADASTRO_EQUIPES[name.trim().toUpperCase()] || '') : ''; }
 function utdBadge(name) { return ''; }
 
@@ -2287,6 +2322,7 @@ function cadAplicar(pkg) {
   pkg.equipes.forEach(function(q){ if (q && q.codigo) codigosCad.add(cadSquash(q.codigo)); });
   CAD_INFO = {};
   CAD_REBASE = {};
+  _nomeTelaCache = {};
   pkg.equipes.forEach(function(q) {
     if (!q || !cadNorm(q.encarregado)) return;
     const utd    = cadUtdDaLinha(q, utdBase);
@@ -2771,7 +2807,7 @@ const isLastItem = isLastRow && idx === remainder - 1;
 const colSpan = isLastItem && remainder < cols ? (cols - remainder + 1) : 1;
 const width = (25 * colSpan) + '%';
 if(!item) return `<td style="width:25%;padding:5px 4px;"></td>`;
-const name = typeof item==='string'?item:item.name;
+const name = esc(nomeTela(typeof item==='string'?item:item.name));
 return `<td ${colSpan>1?`colspan="${colSpan}"`:''}style="width:${width};padding:5px 4px;">
 <div style="background:${bg};border-left:3px solid ${badgeBg};border-radius:4px;padding:9px 12px;display:flex;align-items:center;justify-content:space-between;gap:6px;">
 <span style="font-size:12.5px;font-weight:700;color:${namecol};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${name}</span>
@@ -6061,7 +6097,11 @@ setTimeout(presenceInit, 1500);
     const modal = document.getElementById('relatorio-modal');
     if (modal && modal.style.display !== 'none' && relDias && relDias.length) relRenderCorpo(relDias);
   };
-  function relDispName(n){ return n.replace(/-IRC$/,'').replace(/-JAC$/,''); }
+  function relDispName(n){
+    // nome de exibição (EQUIPE LM 05, JOSE FERNANDO-AJU) dos dois lados da comparação
+    var d = (typeof nomeTela === 'function') ? nomeTela(n) : n;
+    return String(d||'').toUpperCase().replace(/-IRC$/,'').replace(/-JAC$/,'');
+  }
   function relGetStatus(payload, nome){
     if(!payload) return 'nodata';
     const okS = new Set((payload.ok||[]).map(n=>typeof n==='string'?relDispName(n.trim().toUpperCase()):'' ));
@@ -8022,6 +8062,7 @@ function gerarImagemBA() {
           var cells = row.map(function(item, idx) {
             if(!item) return '<td style="width:25%;padding:5px 4px;"></td>';
             var n = typeof item==='string'?item:(item.name||'');
+            n = (typeof nomeTela === 'function') ? esc(nomeTela(n)) : n;
             var cs = (last && idx===rem-1 && rem<COLS) ? (COLS-rem+1) : 1;
             var w  = (25*cs)+'%';
             return '<td '+(cs>1?'colspan="'+cs+'"':'')+'style="width:'+w+';padding:5px 4px;"><div style="background:'+bg+';border-left:3px solid '+border+';border-radius:4px;padding:9px 12px;display:flex;align-items:center;justify-content:space-between;gap:6px;"><span style="font-size:12.5px;font-weight:700;color:'+namecol+';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+n+'</span><span style="background:'+badgeBg+';color:#fff;font-size:10px;font-weight:800;padding:2px 7px;border-radius:3px;white-space:nowrap;">'+badgeTxt+'</span></div></td>';

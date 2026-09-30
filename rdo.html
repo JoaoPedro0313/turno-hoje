@@ -1198,7 +1198,31 @@ function rdoDisplayName(n) {
   // turma que mudou de base: o codigo antigo do historico passa a valer pelo novo
   var re = (typeof RDO_CAD_REBASE !== 'undefined') ? RDO_CAD_REBASE[n] : null;
   if (re) return RDO_CONMNT[re] || re;
-  return RDO_CONMNT[n] || n || '';
+  return RDO_CONMNT[n] || rdoNomeEspacado(n) || n || '';
+}
+// Códigos antigos com o nome composto colado (JOSEFERNANDO-AJU): separa usando o nome
+// completo do encarregado (JOSE FERNANDO-AJU). Só para exibir; o código continua o mesmo.
+var _rdoNomeCache = {};                                // zerado pelo rdoCadAplicar
+function rdoNomeEspacado(code) {
+  var up = String(code||'').trim().toUpperCase();
+  if (up in _rdoNomeCache) return _rdoNomeCache[up];
+  var res = '', suf = rdoCadSufixo(up), raiz = suf ? up.slice(0, up.length - suf.length - 1) : '';
+  if (suf && /^[A-Z]{6,}$/.test(raiz)) {
+    var full = '';
+    try { if (RDO_CAD_INFO[up] && RDO_CAD_INFO[up].encarregado) full = RDO_CAD_INFO[up].encarregado; } catch(e) {}
+    if (!full) { var alvo = rdoCadSquash(up); for (var f in RDO_NOME_CODIGO) if (rdoCadSquash(RDO_NOME_CODIGO[f]) === alvo) { full = f; break; } }
+    var toks = rdoCadNorm(full).split(' ').filter(Boolean), achou = null;
+    (function busca(pos, i, acc) {
+      if (achou) return;
+      if (pos === raiz.length) { if (acc.length >= 2) achou = acc.slice(); return; }
+      for (var j = i; j < toks.length && !achou; j++) {
+        if (raiz.indexOf(toks[j], pos) === pos) { acc.push(toks[j]); busca(pos + toks[j].length, j + 1, acc); acc.pop(); }
+      }
+    })(0, 0, []);
+    if (achou) res = achou.join(' ') + '-' + suf;
+  }
+  _rdoNomeCache[up] = res;
+  return res;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -1365,6 +1389,7 @@ function rdoCadAplicar(pkg) {
   const codigosCad = new Set();
   pkg.equipes.forEach(function(q){ if (q && q.codigo) codigosCad.add(rdoCadSquash(q.codigo)); });
   RDO_CAD_INFO = {};
+  _rdoNomeCache = {};
   // RDO_CAD_REBASE nao e limpo: depois da 1a sincronia o nome do encarregado ja
   // aponta para o codigo novo, e sem guardar o de-para o historico antigo se perde
 
