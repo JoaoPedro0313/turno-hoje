@@ -635,8 +635,11 @@ const faltaSet = new Set([
   ...EQUIPES_ATIVAS.filter(e => !okNorm.has(e) && !justifNorm.has(e))
 ]);
 // Remove qualquer um que por algum motivo esteja tambem em ok ou justif
+const _faltaVistos = new Set();
 teams.falta = [...faltaSet].filter(n => {
   const d = toDisplayName(n);
+  if (_faltaVistos.has(d)) return false;
+  _faltaVistos.add(d);
   return !okNorm.has(d) && !justifNorm.has(d);
 });
 }
@@ -957,18 +960,18 @@ function turnoHistExibir(payload, dataFormatada, fonte) {
 const statusEl = document.getElementById('turno-hist-status');
 const modoEl = document.getElementById('turno-hist-modo');
 turnoModoHistorico = true;
-const okTemp = payload.ok || [];
-const justifTemp = payload.justif || [];
+// CORRIGIDO: o mesmo dia pode ter a equipe com o nome antigo e o novo (CON_MNT-xx e EQUIPE LM xx).
+// Cada equipe aparece uma vez só, pela ordem abriu > justificada > não abriu (comparando pelo nome de exibição).
+const _nomeH = x => typeof x === 'string' ? x : ((x && x.name) || '');
+const _vistosH = new Set();
+const _unicoH = x => { const d = toDisplayName(_nomeH(x)); if (!d || _vistosH.has(d)) return false; _vistosH.add(d); return true; };
+const okTemp     = (payload.ok || []).filter(_unicoH);
+const justifTemp = (payload.justif || []).filter(_unicoH);
 const faltaRaw = payload.falta || [];
-// CORRIGIDO: normaliza ambos os lados para evitar bug nome completo vs codigo curto
-const okDispH     = new Set(okTemp.map(n => toDisplayName(n)));
-const justifDispH = new Set(justifTemp.map(t => toDisplayName(t.name)));
+const okDispH     = new Set(okTemp.map(n => toDisplayName(_nomeH(n))));
+const justifDispH = new Set(justifTemp.map(t => toDisplayName(_nomeH(t))));
 // Garante que todos do EQUIPES_ATIVAS que nao estao em ok/justif aparecem em falta
-const faltaSetH = new Set([
-  ...faltaRaw,
-  ...EQUIPES_ATIVAS.filter(e => !okDispH.has(e) && !justifDispH.has(e))
-]);
-const faltaTemp = [...faltaSetH].filter(n => { const d=toDisplayName(n); return !okDispH.has(d)&&!justifDispH.has(d); });
+const faltaTemp = [...faltaRaw, ...EQUIPES_ATIVAS].filter(_unicoH);
 // guarda os dados do dia consultado para re-aplicar o filtro quando ele mudar
 turnoHistDados = { ok: [...okTemp], justif: [...justifTemp], falta: [...faltaTemp], data: dataFormatada, fonte: fonte };
 turnoHistRender();
@@ -1053,9 +1056,7 @@ let turnoBaseFilter  = 'todos'; // 'todos' | irc/jac | pa/ita/lv | aju
 let turnoCentroFilter = 'todos'; // mesmo id de base (irc/jac/pa/ita/aju); centro de custo = região
 
 // Retorna a base (sufixo) de um nome de equipe
-function teamBase(name) {
-  if (!name) return '';
-  const n = (name || '').toUpperCase();
+function teamBaseSufixo(n) {
   if (n.endsWith('-IRC')) return 'irc';
   if (n.endsWith('-JAC')) return 'jac';
   if (n.endsWith('-FSA')) return 'fsa';
@@ -1064,6 +1065,33 @@ function teamBase(name) {
   if (n.endsWith('-PA'))  return 'pa';
   if (n.endsWith('-ITA')) return 'ita';
   return '';
+}
+// CORRIGIDO: a lista de quem abriu turno guarda o nome de EXIBIÇÃO (CON_MNT-11, EQUIPE LM 08…),
+// que não termina em -PA/-ITA. Sem isso as equipes de MG sumiam ao filtrar por estado/filial/centro
+// e o contador mostrava "MG: 0". Aqui o nome de exibição volta para o código interno (CRISTIANO-ITA).
+// Chave para comparar nomes de equipe sem ligar para espaço, hífen, acento ou zero à esquerda:
+// "EQUIPE LM 08", "EQUIPE LM-08" e "EQUIPE LM 8" são a mesma equipe.
+function eqChave(s) { return cadSquash(s).replace(/(^|[^0-9])0+(?=[0-9])/g, '$1'); }
+// Nome de exibição -> código interno. Vale para o nome atual do Cadastro (EQUIPE LM 08, EQUIPE GERADOR 02…)
+// e para a numeração antiga CON_MNT-xx, que continua no histórico salvo.
+let _tbInv = null;                                     // zerado pelo cadAplicar quando os nomes mudam
+function teamBaseCodigoInterno(n) {
+  try {
+    if (!_tbInv) {
+      const inv = {};
+      Object.keys(CON_MNT_MAP).forEach(function(a){ inv[eqChave(a)] = CON_MNT_MAP[a]; });
+      // o histórico foi gravado com a numeração da tela (TURNO_CONMNT original), que vale sobre o CON_MNT_MAP
+      Object.keys(TURNO_CONMNT_ANTIGO).forEach(function(k){ inv[eqChave(TURNO_CONMNT_ANTIGO[k])] = k; });
+      Object.keys(TURNO_CONMNT).forEach(function(k){ inv[eqChave(TURNO_CONMNT[k])] = k; });
+      _tbInv = inv;
+    }
+    return _tbInv[eqChave(n)] || '';
+  } catch(e) { return ''; }                            // mapas ainda não carregados
+}
+function teamBase(name) {
+  if (!name) return '';
+  const n = String(name).trim().toUpperCase();
+  return teamBaseSufixo(n) || teamBaseSufixo(String(teamBaseCodigoInterno(n)).toUpperCase());
 }
 // Retorna o estado de um nome de equipe
 function teamState(name) {
@@ -1948,6 +1976,8 @@ function resolverEquipe(eqRaw, responsavelRaw) {
   if (EQUIPES_ATIVAS.includes(eq)) return eq;
   // 2. Mapeamento CON_MNT
   if (CON_MNT_MAP[eq]) return CON_MNT_MAP[eq];
+  // 2b. Nome atual do Cadastro de Equipes (EQUIPE LM 08, EQUIPE GERADOR 02…), com qualquer grafia
+  if (!cadSufixoUTD(eq)) { const interno = teamBaseCodigoInterno(eq); if (interno) return interno; }
   // 3. Tenta pelo Responsável (nome completo → NOME_CURTO)
   const resp = (responsavelRaw||'').trim().toUpperCase();
   if (resp && NOME_CURTO[resp]) return NOME_CURTO[resp];
@@ -2087,6 +2117,9 @@ const TURNO_CONMNT = {
   'RAFAEL-ITA':'CON_MNT-10','CRISTIANO-ITA':'CON_MNT-11','CLAYTON-ITA':'CON_MNT-12',
   'DOUGLAS-PA':'CON_MNT-LV-01','SIDNEI-PA':'CON_MNT-LV-02'
 };
+// Cópia da numeração CON_MNT como a tela exibia (e gravava no histórico) antes da troca de nomenclatura.
+// O Cadastro substitui os nomes em TURNO_CONMNT; esta cópia não muda, para o histórico continuar legível.
+const TURNO_CONMNT_ANTIGO = Object.assign({}, TURNO_CONMNT);
 function toDisplayName(name) {
   if (!name) return name;
   var up = name.trim().toUpperCase();
@@ -2094,7 +2127,14 @@ function toDisplayName(name) {
   // para o historico salvo no banco continuar apontando para a mesma equipe
   var re = (typeof CAD_REBASE !== 'undefined') ? CAD_REBASE[up] : null;
   if (re) return TURNO_CONMNT[re] || re;
-  return TURNO_CONMNT[up] || NOME_CURTO[up] || name;
+  if (TURNO_CONMNT[up]) return TURNO_CONMNT[up];
+  // numeração antiga (CON_MNT-xx) ou grafia diferente do nome atual (EQUIPE LM-8):
+  // mostra pelo nome atual, para o histórico e o arquivo novo apontarem para a mesma equipe
+  if (!cadSufixoUTD(up)) {
+    const interno = teamBaseCodigoInterno(up);
+    if (interno && TURNO_CONMNT[interno]) return TURNO_CONMNT[interno];
+  }
+  return NOME_CURTO[up] || name;
 }
 function getUTD(name) { return name ? (CADASTRO_EQUIPES[name.trim().toUpperCase()] || '') : ''; }
 function utdBadge(name) { return ''; }
@@ -2312,9 +2352,11 @@ function cadAplicar(pkg) {
     // alimenta os mapas de nome usados por toDisplayName() e getUTD()
     if (utd) CADASTRO_EQUIPES[full] = utd;
     if (codCad || !NOME_CURTO[full]) NOME_CURTO[full] = code;
-    // exibe pelo codigo oficial quando ele nao serve como codigo interno,
-    // sem mexer no que o Turno ja exibia (MG continua em CON_MNT)
-    if (alias && alias !== code && !TURNO_CONMNT[code]) TURNO_CONMNT[code] = alias;
+    // exibe pelo codigo oficial quando ele nao serve como codigo interno.
+    // ATUALIZADO: as equipes de MG mudaram de nomenclatura (CON_MNT-xx -> EQUIPE LM xx…);
+    // o nome do Cadastro agora substitui o antigo. O historico com CON_MNT continua
+    // valendo pelo CON_MNT_MAP (ver toDisplayName / teamBaseCodigoInterno).
+    if (alias && alias !== code && TURNO_CONMNT[code] !== alias) { TURNO_CONMNT[code] = alias; _tbInv = null; }
     if (!ativa) { foraTurno.push(code); return; }
     if (EQUIPES_ATIVAS.indexOf(code) < 0) EQUIPES_ATIVAS.push(code);
   });
@@ -2358,8 +2400,14 @@ function cadRecalcularFalta() {
   const okD = new Set((teams.ok||[]).map(function(n){ return toDisplayName(n); }));
   const jD  = new Set((teams.justif||[]).map(function(t){ return toDisplayName(t && t.name ? t.name : t); }));
   const set = new Set((teams.falta||[]).map(function(n){ return toDisplayName(n); }));
-  EQUIPES_ATIVAS.forEach(function(e){ if (!okD.has(e) && !jD.has(e)) set.add(e); });
-  teams.falta = [...set].filter(function(n){ return !okD.has(n) && !jD.has(n); });
+  EQUIPES_ATIVAS.forEach(function(e){ const d = toDisplayName(e); if (!okD.has(d) && !jD.has(d)) set.add(e); });
+  // uma equipe só uma vez, e fora de FALTA se abriu ou justificou (compara pelo nome de exibição)
+  const vistos = new Set();
+  teams.falta = [...set].filter(function(n){
+    const d = toDisplayName(n);
+    if (okD.has(d) || jD.has(d) || vistos.has(d)) return false;
+    vistos.add(d); return true;
+  });
 }
 // Cache local: primeiro o que a tela de Cadastro deixou, depois o desta tela
 function cadPacoteLocal() {
@@ -6749,7 +6797,9 @@ body.dark #medias-modal .mb-pv.m{color:#fbd38d} body.dark #medias-modal .mb-pv.l
   function mbCodigo(n, inv){
     var s = String((n && typeof n==='object') ? (n.name||'') : (n||'')).trim().toUpperCase();
     if (!s) return '';
-    if (teamBase(s)) return s;                                   // já tem sufixo: base do dia em que foi salvo
+    if (cadSufixoUTD(s)) return s;                               // já tem sufixo: base do dia em que foi salvo
+    var ci = teamBaseCodigoInterno(s);                           // CON_MNT antigo ou nome novo do Cadastro
+    if (ci) return ci;
     try { if (typeof CON_MNT_MAP!=='undefined' && CON_MNT_MAP[s]) return CON_MNT_MAP[s]; } catch(e){}
     if (inv[s]) return inv[s];                                   // código oficial do cadastro (CON_MNT-11…)
     try {

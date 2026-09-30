@@ -560,6 +560,7 @@ box-shadow:0 2px 8px rgba(0,0,0,0.08)}
     onkeydown="if(event.key==='Enter') rdoHistBuscar()">
   <button onclick="if(window.rdoHistBuscar)window.rdoHistBuscar()" style="padding:6px 16px;background:#14a085;color:#fff;border:none;border-radius:8px;font-family:'Barlow',sans-serif;font-size:0.75rem;font-weight:800;cursor:pointer;letter-spacing:0.5px;transition:background 0.15s;" onmouseover="this.style.background='#0d7377'" onmouseout="this.style.background='#14a085'">🔍 BUSCAR</button>
   <button onclick="if(window.rdoHistHoje)window.rdoHistHoje()" style="padding:6px 14px;background:transparent;color:rgba(255,255,255,0.5);border:1.5px solid rgba(255,255,255,0.15);border-radius:8px;font-family:'Barlow',sans-serif;font-size:0.75rem;font-weight:800;cursor:pointer;transition:all 0.15s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,0.5)'">↩ HOJE</button>
+  <button type="button" onclick="if(window.abrirMediasBase)window.abrirMediasBase()" title="Média de apontamentos de RDO em cada base" style="padding:6px 14px;background:#14a085;color:#fff;border:1.5px solid #14a085;border-radius:8px;font-family:'Barlow',sans-serif;font-size:0.75rem;font-weight:800;cursor:pointer;transition:all 0.15s;white-space:nowrap;flex-shrink:0;" onmouseover="this.style.background='#0d7377';this.style.borderColor='#0d7377'" onmouseout="this.style.background='#14a085';this.style.borderColor='#14a085'">📊 Médias por base</button>
   <div id="rdo-hist-status" style="font-size:0.72rem;font-weight:700;color:rgba(255,255,255,0.5);margin-left:4px;"></div>
   <div id="rdo-hist-modo" style="display:none;margin-left:auto;background:#e53e3e22;border:1px solid #e53e3e66;border-radius:8px;padding:4px 12px;font-size:0.72rem;font-weight:800;color:#fc8181;letter-spacing:0.5px;">👁️ MODO LEITURA — DIA ANTERIOR</div>
 </div>
@@ -659,8 +660,8 @@ const RDO_BASE_CONFIG = {
   se: [{id:'aju',label:'🌊 ARACAJU'}]
 };
 
-function rdoTeamBase(n) {
-  if (!n) return '';
+function rdoTeamBaseSufixo(n) {
+  n = String(n||'').toUpperCase();
   if (n.endsWith('-IRC')) return 'irc';
   if (n.endsWith('-JAC')) return 'jac';
   if (n.endsWith('-FSA')) return 'fsa';
@@ -669,6 +670,11 @@ function rdoTeamBase(n) {
   if (n.endsWith('-ITA')) return 'ita';
   if (n.endsWith('-AJU')) return 'aju';
   return '';
+}
+function rdoTeamBase(n) {
+  if (!n) return '';
+  // nome sem sufixo (EQUIPE LM 08, CON_MNT-11): volta para o código interno para saber a base
+  return rdoTeamBaseSufixo(n) || rdoTeamBaseSufixo(rdoCodigoInterno(n));
 }
 function rdoTeamState(n) {
   const b = rdoTeamBase(n);
@@ -1039,6 +1045,7 @@ function rdoDefinirTrava(estados){
     }
   } else { rdoBuildBaseButtons(); rdoBuildCentroButtons(); }
   if (typeof window.relAplicarTrava === 'function') { try { window.relAplicarTrava(); } catch(e) {} }
+  if (typeof window.mbAplicarTrava === 'function') { try { window.mbAplicarTrava(); } catch(e) {} }
 }
 window.rdoDefinirTrava = rdoDefinirTrava;
 // equipe pertence a um estado liberado?
@@ -1146,6 +1153,46 @@ const RDO_CONMNT = {
   'RAFAEL-ITA':'CON_MNT-10','CRISTIANO-ITA':'CON_MNT-11','CLAYTON-ITA':'CON_MNT-12',
   'DOUGLAS-PA':'CON_MNT-LV-01','SIDNEI-PA':'CON_MNT-LV-02'
 };
+// ── Nomenclatura nova de MG (EQUIPE LM 08, EQUIPE GERADOR 02…) ──────────────────
+// O Cadastro de Equipes traz o nome oficial; aqui ele é ligado ao código interno (LEVY-PA…),
+// aceitando grafias diferentes: "EQUIPE LM 08", "EQUIPE LM-08" e "EQUIPE LM 8" são a mesma equipe.
+function rdoEqChave(s) { return rdoCadSquash(s).replace(/(^|[^0-9])0+(?=[0-9])/g, '$1'); }
+var _rdoInv = null;                                    // zerado pelo rdoCadAplicar quando os nomes mudam
+function rdoCodigoInterno(n) {
+  try {
+    if (!_rdoInv) {
+      var inv = {};
+      Object.keys(CON_MNT_MAP_RDO).forEach(function(a){ inv[rdoEqChave(a)] = CON_MNT_MAP_RDO[a]; });
+      Object.keys(RDO_CONMNT).forEach(function(k){ inv[rdoEqChave(RDO_CONMNT[k])] = k; });
+      _rdoInv = inv;
+    }
+    return _rdoInv[rdoEqChave(n)] || '';
+  } catch(e) { return ''; }                            // mapas ainda não carregados
+}
+// Nome da equipe no arquivo -> código interno. Se não reconhecer, mantém o nome.
+function rdoResolverEquipe(n) {
+  var s = String(n||'').trim().toUpperCase();
+  if (!s) return '';
+  if (rdoCadSufixo(s)) return s;                       // já é código interno (ALAN-IRC)
+  if (CON_MNT_MAP_RDO[s]) return CON_MNT_MAP_RDO[s];   // numeração CON_MNT (como já era)
+  return rdoCodigoInterno(s) || s;
+}
+// Dias salvos com o nome novo antes desta correção: junta na equipe certa
+function rdoNormalizarLancou(obj) {
+  if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return obj || {};
+  var out = {};
+  Object.keys(obj).forEach(function(k){
+    var c = rdoResolverEquipe(k) || k, v = Array.isArray(obj[k]) ? obj[k] : [];
+    out[c] = out[c] ? out[c].concat(v) : v.slice();
+  });
+  return out;
+}
+function rdoNormalizarJustif(obj) {
+  if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return obj || {};
+  var out = {};
+  Object.keys(obj).forEach(function(k){ out[rdoResolverEquipe(k) || k] = obj[k]; });
+  return out;
+}
 function rdoDisplayName(n) {
   if (!n) return '';
   // turma que mudou de base: o codigo antigo do historico passa a valer pelo novo
@@ -1374,7 +1421,9 @@ function rdoCadAplicar(pkg) {
     };
     // registra o codigo desta turma: na proxima sincronia ela e reconhecida pelo nome
     if (codCad || !RDO_NOME_CODIGO[full]) RDO_NOME_CODIGO[full] = code;
-    if (alias && alias !== code && !RDO_CONMNT[code]) RDO_CONMNT[code] = alias;
+    // ATUALIZADO: as equipes de MG mudaram de nomenclatura (CON_MNT-xx -> EQUIPE LM xx…);
+    // o nome do Cadastro agora substitui o antigo na tela e passa a ser reconhecido no arquivo
+    if (alias && alias !== code && RDO_CONMNT[code] !== alias) { RDO_CONMNT[code] = alias; _rdoInv = null; }
     if (!entra) { foraRdo.push(code); return; }
     if (RDO_EQUIPES.indexOf(code) < 0) RDO_EQUIPES.push(code);
   });
@@ -1636,6 +1685,8 @@ window.rdoHistBuscar = rdoHistBuscar;
 window.rdoHistHoje = rdoHistHoje;
 
 function rdoRender() {
+  rdoData   = rdoNormalizarLancou(rdoData);
+  rdoJustif = rdoNormalizarJustif(rdoJustif);
   const lancouSet = Object.keys(rdoData);
   const justifSet = Object.keys(rdoJustif||{});
   const TODAS = rdoTodasEquipes();
@@ -1746,8 +1797,8 @@ function rdoImportar(file) {
       for (var i=1; i<lines.length; i++) {
         const cols = lines[i].split(sep).map(function(c){ return c.trim().replace(/^"|"$/g,''); });
         var eqRaw = (cols[iEq]||'').toUpperCase();
-        // CON_MNT mapping
-        var eq = CON_MNT_MAP_RDO[eqRaw] || eqRaw;
+        // CON_MNT e nome novo do Cadastro (EQUIPE LM 08…) -> código interno
+        var eq = rdoResolverEquipe(eqRaw);
         if (!eq) continue;
         var tipo = iTipo >= 0 ? (cols[iTipo]||'').trim() : '';
         if (!rdoData[eq]) rdoData[eq] = [];
@@ -2115,10 +2166,11 @@ function rdoFoto() {
   function relGetStatus(payload, nome){
     if(!payload) return 'nodata';
     const lan = payload.lancou || payload.ok || {};
-    const okS = new Set((Array.isArray(lan)?lan:Object.keys(lan)).map(n=>String(n||'').trim().toUpperCase()));
+    const norm = n => (typeof rdoResolverEquipe === 'function') ? rdoResolverEquipe(n) : String(n||'').trim().toUpperCase();
+    const okS = new Set((Array.isArray(lan)?lan:Object.keys(lan)).map(norm));
     const jus = payload.justif || {};
-    const jS  = new Set((Array.isArray(jus)?jus:Object.keys(jus)).map(n=>String(n||'').trim().toUpperCase()));
-    const d   = String(nome||'').trim().toUpperCase();
+    const jS  = new Set((Array.isArray(jus)?jus:Object.keys(jus)).map(norm));
+    const d   = norm(nome);
     if(okS.has(d)) return 'ok';
     if(jS.has(d)) return 'justif';
     return 'falta';
@@ -2614,4 +2666,524 @@ function rdoFoto() {
 })();
 </script>
 <script>window.addEventListener("load",function(){var _t=window.smToggle;if(typeof _t==="function"){window.smToggle=function(){_t();try{localStorage.setItem("mariua_menu",document.body.classList.contains("sm-collapsed")?"recolhido":"aberto");}catch(e){}};}});</script>
+<!-- ══════════════════════ MÉDIAS DE APONTAMENTOS POR BASE ══════════════════════ -->
+<!-- Aberto pelo botão "📊 Médias por base" na barra CONSULTAR DIA.
+     Lê os dias salvos (rdo_dia_DD-MM-AAAA). Cada linha do consulta_serviços é um
+     apontamento; a tela soma os apontamentos de cada base e divide pelos dias com RDO. -->
+<div id="medias-modal" role="dialog" aria-modal="true" aria-labelledby="mb-titulo">
+  <div class="mb-box">
+    <div class="mb-head">
+      <div class="mb-head-l">
+        <div class="mb-ico" aria-hidden="true">📊</div>
+        <div>
+          <div class="mb-titulo" id="mb-titulo">Médias de apontamentos por base</div>
+          <div class="mb-sub" id="mb-sub">Carregando…</div>
+        </div>
+      </div>
+      <button type="button" class="mb-fechar" id="mb-fechar" onclick="fecharMediasBase()" aria-label="Fechar">✕</button>
+    </div>
+
+    <div class="mb-ctrl">
+      <label class="mb-campo"><span>Período</span>
+        <select id="mb-modo" onchange="mbOnModo()">
+          <option value="ult7">Últimos 7 dias</option>
+          <option value="ult30" selected>Últimos 30 dias</option>
+          <option value="mes">Este mês</option>
+          <option value="mes-passado">Mês passado</option>
+          <option value="personalizado">Personalizado</option>
+        </select>
+      </label>
+      <label class="mb-campo mb-datas" id="mb-g-ini"><span>Início</span><input type="date" id="mb-ini" onchange="mbGerar()"></label>
+      <label class="mb-campo mb-datas" id="mb-g-fim"><span>Fim</span><input type="date" id="mb-fim" onchange="mbGerar()"></label>
+      <label class="mb-check"><input type="checkbox" id="mb-uteis" onchange="mbRender()"> Só dias úteis (seg a sex)</label>
+      <div class="mb-acoes">
+        <button type="button" class="mb-btn" onclick="mbGerar(true)">🔄 Atualizar</button>
+        <button type="button" class="mb-btn sec" onclick="mbExportarCSV()">Exportar CSV</button>
+      </div>
+    </div>
+
+    <div id="mb-corpo" class="mb-corpo"></div>
+  </div>
+</div>
+
+<style>
+/* ── Médias de apontamentos por base (escopo #medias-modal) ── */
+#medias-modal{
+  --mb-fundo:#f0f4f5; --mb-card:#fff; --mb-linha:#e8ecef; --mb-txt:#1a2a3a; --mb-sub:#64748b;
+  --mb-teal:#0d7377; --mb-teal2:#14a085; --mb-red:#e53e3e; --mb-nd:#dde3e8;
+  display:none; position:fixed; inset:0; z-index:1200; background:rgba(10,20,30,.7);
+  backdrop-filter:blur(4px); overflow-y:auto; padding:100px 8px 8px;
+  align-items:flex-start; justify-content:center; font-family:'Barlow',system-ui,sans-serif;
+}
+body.dark #medias-modal{
+  --mb-fundo:#1a1f1d; --mb-card:#222926; --mb-linha:#3a4a44; --mb-txt:#e8f0ec; --mb-sub:#9fb3aa; --mb-nd:#34403b;
+  background:rgba(0,0,10,.8);
+}
+#medias-modal .mb-box{background:var(--mb-fundo);border-radius:16px;width:100%;max-width:1100px;margin:0 auto;
+  box-shadow:0 32px 80px rgba(0,0,0,.35);overflow:hidden;display:flex;flex-direction:column;color:var(--mb-txt)}
+#medias-modal .mb-head{background:linear-gradient(135deg,#0b5e62 0%,#0d7377 50%,#14a085 100%);padding:10px 20px;min-height:60px;
+  display:flex;align-items:center;justify-content:space-between;gap:12px;border-bottom:3px solid #ff6b35}
+#medias-modal .mb-head-l{display:flex;align-items:center;gap:12px;min-width:0}
+#medias-modal .mb-ico{width:36px;height:36px;border-radius:10px;background:rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center;font-size:1.05rem;flex-shrink:0}
+#medias-modal .mb-titulo{font-size:1rem;font-weight:800;color:#fff;letter-spacing:.3px}
+#medias-modal .mb-sub{font-size:.72rem;font-weight:600;color:rgba(255,255,255,.75);margin-top:1px}
+#medias-modal .mb-fechar{background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.25);color:#fff;width:34px;height:34px;border-radius:9px;cursor:pointer;font-size:.9rem;font-weight:800;flex-shrink:0}
+#medias-modal .mb-fechar:hover{background:rgba(255,255,255,.26)}
+
+#medias-modal .mb-ctrl{background:var(--mb-card);padding:12px 20px;display:flex;flex-wrap:wrap;gap:10px 14px;align-items:flex-end;border-bottom:1px solid var(--mb-linha)}
+#medias-modal .mb-campo{display:flex;flex-direction:column;gap:4px}
+#medias-modal .mb-campo span{font-size:.68rem;font-weight:700;color:var(--mb-sub)}
+#medias-modal .mb-campo select,#medias-modal .mb-campo input{padding:8px 10px;border:1.5px solid var(--mb-linha);border-radius:8px;background:var(--mb-fundo);
+  color:var(--mb-txt);font-family:inherit;font-size:.82rem;font-weight:700;outline:none}
+#medias-modal .mb-campo select:focus,#medias-modal .mb-campo input:focus{border-color:var(--mb-teal2)}
+#medias-modal .mb-datas{display:none}
+#medias-modal .mb-check{display:flex;align-items:center;gap:7px;font-size:.78rem;font-weight:700;color:var(--mb-txt);padding:8px 0;cursor:pointer}
+#medias-modal .mb-check input{width:16px;height:16px;accent-color:var(--mb-teal2)}
+#medias-modal .mb-acoes{display:flex;gap:8px;margin-left:auto}
+#medias-modal .mb-btn{padding:9px 16px;border-radius:8px;border:none;background:var(--mb-teal);color:#fff;font-family:inherit;font-size:.78rem;font-weight:800;cursor:pointer;white-space:nowrap}
+#medias-modal .mb-btn:hover{background:#0a5c60}
+#medias-modal .mb-btn.sec{background:transparent;color:var(--mb-teal2);border:1.5px solid var(--mb-teal2)}
+#medias-modal .mb-btn.sec:hover{background:rgba(20,160,133,.1)}
+#medias-modal button:focus-visible,#medias-modal select:focus-visible,#medias-modal input:focus-visible{outline:2px solid #ff6b35;outline-offset:2px}
+
+#medias-modal .mb-corpo{padding:14px 14px 18px}
+#medias-modal .mb-carregando,#medias-modal .mb-vazio{text-align:center;padding:48px 16px;color:var(--mb-sub);font-size:.85rem;font-weight:700}
+#medias-modal .mb-vazio b{display:block;color:var(--mb-txt);font-size:.95rem;margin-bottom:6px}
+#medias-modal .mb-spin{width:32px;height:32px;border:4px solid rgba(20,160,133,.2);border-top-color:var(--mb-teal2);border-radius:50%;animation:mbGiro .7s linear infinite;margin:0 auto 12px}
+@keyframes mbGiro{to{transform:rotate(360deg)}}
+
+/* Resumo geral */
+#medias-modal .mb-geral{background:var(--mb-card);border-radius:12px;padding:14px 18px;margin-bottom:14px;display:flex;flex-wrap:wrap;align-items:center;gap:10px 28px}
+#medias-modal .mb-geral-nome{font-size:.9rem;font-weight:800;margin-right:auto}
+#medias-modal .mb-fig{display:flex;align-items:baseline;gap:6px}
+#medias-modal .mb-fig strong{font-size:1.55rem;font-weight:800;line-height:1;font-variant-numeric:tabular-nums}
+#medias-modal .mb-fig strong.dest{color:var(--mb-teal2)}
+#medias-modal .mb-fig span{font-size:.75rem;font-weight:700;color:var(--mb-sub)}
+
+/* Estado + bases */
+#medias-modal .mb-estado{background:var(--mb-card);border-radius:12px;overflow:hidden;margin-bottom:14px}
+#medias-modal .mb-est-h{display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:11px 16px;background:rgba(13,115,119,.06)}
+#medias-modal .mb-est-nome{font-size:.9rem;font-weight:800}
+#medias-modal .mb-est-media{font-size:.75rem;font-weight:700;color:var(--mb-sub)}
+#medias-modal .mb-est-media b{color:var(--mb-txt)}
+#medias-modal .mb-base{display:grid;grid-template-columns:155px 175px 220px minmax(0,1fr);gap:10px 20px;align-items:center;padding:12px 16px;border-top:1px solid var(--mb-linha)}
+#medias-modal .mb-b-nome{font-size:.86rem;font-weight:800;letter-spacing:.3px}
+#medias-modal .mb-b-nome small{display:block;font-size:.66rem;font-weight:700;color:var(--mb-sub);letter-spacing:0;margin-top:2px}
+#medias-modal .mb-b-media strong{font-size:1.45rem;font-weight:800;line-height:1;font-variant-numeric:tabular-nums;color:var(--mb-teal2)}
+#medias-modal .mb-b-media span{font-size:.72rem;font-weight:700;color:var(--mb-sub);margin-left:4px}
+#medias-modal .mb-b-media small,#medias-modal .mb-b-eq small{display:block;font-size:.68rem;font-weight:700;color:var(--mb-sub);margin-top:3px}
+#medias-modal .mb-b-eq b{font-size:1rem;font-weight:800;font-variant-numeric:tabular-nums}
+#medias-modal .mb-b-eq span{font-size:.72rem;font-weight:700;color:var(--mb-sub);margin-left:3px}
+
+/* Tira dia a dia: altura = apontamentos do dia (em relação ao melhor dia da base) */
+#medias-modal .mb-strip{position:relative;display:flex;align-items:flex-end;gap:2px;height:42px}
+#medias-modal .mb-strip i{flex:1 1 0;min-width:2px;border-radius:2px 2px 0 0;background:var(--mb-teal2);cursor:pointer}
+#medias-modal .mb-strip i.fds{opacity:.55}
+#medias-modal .mb-strip i.zero{height:4px!important;background:var(--mb-red);border-radius:2px}
+#medias-modal .mb-strip i.nd{height:4px!important;background:var(--mb-nd);cursor:default;border-radius:2px}
+#medias-modal .mb-strip i.sel{box-shadow:0 0 0 2px var(--mb-txt)}
+#medias-modal .mb-strip .mb-lmedia{position:absolute;left:0;right:0;border-top:1.5px dashed var(--mb-txt);opacity:.45;pointer-events:none}
+#medias-modal .mb-info{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:5px;min-height:22px;font-size:.68rem;font-weight:700;color:var(--mb-sub)}
+#medias-modal .mb-info b{color:var(--mb-txt)}
+#medias-modal .mb-ver{padding:3px 9px;border-radius:6px;border:1.5px solid var(--mb-teal2);background:transparent;color:var(--mb-teal2);font-family:inherit;font-size:.66rem;font-weight:800;cursor:pointer;white-space:nowrap}
+#medias-modal .mb-ver:hover{background:rgba(20,160,133,.12)}
+
+#medias-modal .mb-nota{font-size:.72rem;font-weight:600;color:var(--mb-sub);line-height:1.5;padding:2px 4px;max-width:78ch}
+#medias-modal .mb-nota p+p{margin-top:6px}
+
+@media (max-width:760px){
+  #medias-modal{padding:64px 6px 6px}
+  #medias-modal .mb-acoes{margin-left:0;width:100%}
+  #medias-modal .mb-acoes .mb-btn{flex:1}
+  #medias-modal .mb-base{grid-template-columns:minmax(0,1fr) auto;gap:8px 12px}
+  #medias-modal .mb-b-media{text-align:right}
+  #medias-modal .mb-b-eq,#medias-modal .mb-b-dias{grid-column:1/-1}
+  #medias-modal .mb-geral{gap:10px 18px}
+  #medias-modal .mb-geral-nome{width:100%}
+}
+</style>
+
+<script>
+// ══════════════════ LÓGICA DAS MÉDIAS DE APONTAMENTOS POR BASE ══════════════════
+(function(){
+  var MB_ESTADOS = [
+    { id:'ba', nome:'Bahia' },
+    { id:'mg', nome:'Minas Gerais' },
+    { id:'se', nome:'Sergipe' }
+  ];
+  var MB_DOW = ['dom','seg','ter','qua','qui','sex','sáb'];
+  var MB_MAX_DIAS = 366;
+  var mbCache = {};     // 'rdo_dia_DD-MM-AAAA' -> payload do dia | null (buscado e não existe)
+  var mbFonte = '';     // 'banco' | 'local'
+  var mbDias = [];      // dias do período (Date às 12h), antes do filtro de dias úteis
+  var mbCortado = false;
+  var mbUltimo = null;  // último cálculo (tira dia a dia e CSV)
+  var mbSeq = 0;        // descarta respostas de buscas antigas
+  var mbOrigemFoco = null;
+
+  // ── utilidades ──
+  function p2(n){ return String(n).padStart(2,'0'); }
+  function dia12(y,m,d){ return new Date(y,m,d,12,0,0); }
+  function ymd(d){ return d.getFullYear()+'-'+p2(d.getMonth()+1)+'-'+p2(d.getDate()); }
+  function dm(d){ return p2(d.getDate())+'/'+p2(d.getMonth()+1); }
+  function dmy(d){ return dm(d)+'/'+d.getFullYear(); }
+  function chave(d){ return 'rdo_dia_'+p2(d.getDate())+'-'+p2(d.getMonth()+1)+'-'+d.getFullYear(); }
+  function deYmd(s){ var p=String(s||'').split('-'); if(p.length!==3) return null; var d=dia12(+p[0],+p[1]-1,+p[2]); return isNaN(d.getTime())?null:d; }
+  function hoje12(){ var h=new Date(); return dia12(h.getFullYear(),h.getMonth(),h.getDate()); }
+  function num(v){ return (Math.round(v*10)/10).toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1}); }
+  function int(v){ return Math.round(v).toLocaleString('pt-BR'); }
+  function h(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+  function mbPeriodo(){
+    var modo = document.getElementById('mb-modo').value;
+    var hj = hoje12(), ini, fim = hj;
+    if (modo==='ult7')            { ini=new Date(hj); ini.setDate(ini.getDate()-6); }
+    else if (modo==='ult30')      { ini=new Date(hj); ini.setDate(ini.getDate()-29); }
+    else if (modo==='mes')        { ini=dia12(hj.getFullYear(),hj.getMonth(),1); }
+    else if (modo==='mes-passado'){ ini=dia12(hj.getFullYear(),hj.getMonth()-1,1); fim=dia12(hj.getFullYear(),hj.getMonth(),0); }
+    else {
+      ini=deYmd(document.getElementById('mb-ini').value);
+      fim=deYmd(document.getElementById('mb-fim').value);
+      if(!ini||!fim) return null;
+      if(fim<ini){ var t=ini; ini=fim; fim=t; }
+    }
+    return { ini:ini, fim:fim };
+  }
+  function mbListaDias(ini,fim){
+    var out=[], c=new Date(ini);
+    while(c<=fim){ out.push(new Date(c)); c.setDate(c.getDate()+1); }
+    return out;
+  }
+
+  // ── leitura dos dias salvos ──
+  function mbParse(v){
+    if (v && typeof v==='string') { try { v=JSON.parse(v); } catch(e){ return null; } }
+    return (v && typeof v==='object' && (v.lancou || v.ok)) ? v : null;
+  }
+  function mbLocal(k){ try { return mbParse(localStorage.getItem(k)); } catch(e){ return null; } }
+
+  async function mbBuscar(keys){
+    var LOTE = 40, lotes = [], tudoOk = true;
+    for (var i=0;i<keys.length;i+=LOTE) lotes.push(keys.slice(i,i+LOTE));
+    var res = await Promise.all(lotes.map(async function(l){
+      var ctl = new AbortController(), t = setTimeout(function(){ ctl.abort(); }, 12000);
+      try {
+        var filtro = l.map(function(k){ return '"'+k+'"'; }).join(',');
+        var r = await fetch(SUPA_URL+'/rest/v1/turno_data?select=key,value&key=in.('+filtro+')',
+          { headers:{ 'apikey':SUPA_KEY, 'Authorization':'Bearer '+SUPA_KEY }, signal:ctl.signal });
+        clearTimeout(t);
+        if (!r.ok) throw new Error('HTTP '+r.status);
+        return { l:l, rows: await r.json() };
+      } catch(err) { clearTimeout(t); return { l:l, erro:err }; }
+    }));
+    res.forEach(function(x){
+      if (x.erro) {
+        tudoOk = false;
+        console.warn('[Medias RDO] Supabase:', x.erro && x.erro.message);
+        x.l.forEach(function(k){ var v=mbLocal(k); if (v) mbCache[k]=v; });   // sem banco: usa o que tiver no aparelho
+        return;
+      }
+      var achou = {};
+      (Array.isArray(x.rows)?x.rows:[]).forEach(function(row){ var v=mbParse(row.value); if (v) { achou[row.key]=1; mbCache[row.key]=v; } });
+      x.l.forEach(function(k){ if (!achou[k]) mbCache[k] = mbLocal(k); });
+    });
+    // RDO do dia atual ainda não salvo no histórico
+    var ta = mbLocal('rdo_atual');
+    if (ta && ta.date) {
+      var pts = String(ta.date).split(' ')[0].split('/');
+      if (pts.length===3) { var kt='rdo_dia_'+p2(pts[0])+'-'+p2(pts[1])+'-'+pts[2]; if (!mbCache[kt]) mbCache[kt]=ta; }
+    }
+    return tudoOk;
+  }
+
+  // ── nome da equipe no arquivo -> código com sufixo de base (ALAN-IRC, RAIMUNDO-PA…) ──
+  function mbInverso(){
+    var inv = {};
+    try { if (typeof RDO_CONMNT!=='undefined') Object.keys(RDO_CONMNT).forEach(function(k){ inv[String(RDO_CONMNT[k]).toUpperCase()] = k; }); } catch(e){}
+    return inv;
+  }
+  function mbCodigo(n, inv){
+    var s = String(n||'').trim().toUpperCase();
+    if (!s) return '';
+    return rdoResolverEquipe(s) || s;                            // código interno, CON_MNT ou nome novo do Cadastro
+  }
+  function mbChaveUnica(c){ try { return (typeof rdoCadSquash==='function') ? rdoCadSquash(c) : c; } catch(e){ return c; } }
+
+  function mbPermitidos(){
+    var A = (typeof rdoAllowedStates!=='undefined') ? rdoAllowedStates : null;
+    return MB_ESTADOS.filter(function(st){ return !A || A.indexOf(st.id)>=0; });
+  }
+  function mbBasesDoEstado(stId){
+    var cfg = (typeof RDO_BASE_CONFIG!=='undefined' && RDO_BASE_CONFIG[stId]) ? RDO_BASE_CONFIG[stId] : [];
+    return cfg.map(function(b){ return { id:b.id, nome:String(b.label||b.id).replace(/^[^A-Za-zÀ-ÿ]+/,'').trim() }; });
+  }
+  // equipes cadastradas hoje em cada base (referência "de N equipes")
+  function mbCadastradas(){
+    var c = {};
+    try {
+      var lista = (typeof RDO_EQUIPES!=='undefined') ? RDO_EQUIPES : [];
+      lista.forEach(function(e){ var b = rdoTeamBase(e); if (b) c[b] = (c[b]||0) + 1; });
+    } catch(e){}
+    return c;
+  }
+
+  // ── cálculo ──
+  function mbCalcular(){
+    var soUteis = document.getElementById('mb-uteis').checked;
+    var dias = mbDias.filter(function(d){ var w=d.getDay(); return !soUteis || (w>=1 && w<=5); });
+    var estados = mbPermitidos();
+    var permit = {}; estados.forEach(function(s){ permit[s.id]=1; });
+    var inv = mbInverso();
+    var semBase = {}, semTipo = 0, diasComReg = 0;
+
+    // por dia: { base: { ap: apontamentos, eq: equipes que lançaram } } | null (sem RDO no dia)
+    var porDia = dias.map(function(d){
+      var p = mbCache[chave(d)];
+      if (!p) return null;
+      diasComReg++;
+      var lan = p.lancou || p.ok || {};
+      var itens = Array.isArray(lan) ? lan.map(function(n){ return [n, null]; })
+                                     : Object.keys(lan).map(function(n){ return [n, lan[n]]; });
+      var eqs = {};
+      itens.forEach(function(it){
+        var c = mbCodigo(it[0], inv); if (!c) return;
+        // cada linha do arquivo é um apontamento; equipe que lançou sem "tipo" preenchido conta 1
+        var q = Array.isArray(it[1]) ? it[1].length : 0;
+        if (!q) { q = 1; semTipo++; }
+        var k = mbChaveUnica(c);
+        if (eqs[k]) eqs[k].q += q; else eqs[k] = { c:c, q:q };
+      });
+      var cont = {};
+      Object.keys(eqs).forEach(function(k){
+        var it = eqs[k], b = rdoTeamBase(it.c);
+        if (!b) { semBase[it.c]=1; return; }
+        if (!permit[rdoTeamState(it.c)]) return;
+        var x = cont[b] || (cont[b] = { ap:0, eq:0 });
+        x.ap += it.q; x.eq++;
+      });
+      return cont;
+    });
+
+    function agregar(ids){
+      var a = { dias:diasComReg, ap:0, eq:0, serie:[], max:0 };
+      porDia.forEach(function(c){
+        if (!c) { a.serie.push(null); return; }
+        var ap=0, eq=0;
+        ids.forEach(function(b){ var x=c[b]; if (x) { ap+=x.ap; eq+=x.eq; } });
+        a.ap += ap; a.eq += eq; if (ap > a.max) a.max = ap;
+        a.serie.push({ ap:ap, eq:eq });
+      });
+      a.mAp   = a.dias ? a.ap/a.dias : 0;    // apontamentos por dia
+      a.mEq   = a.dias ? a.eq/a.dias : 0;    // equipes que lançaram por dia
+      a.porEq = a.eq ? a.ap/a.eq : 0;        // apontamentos por equipe que lançou
+      return a;
+    }
+
+    var cad = mbCadastradas(), todasIds = [], grupos = [];
+    estados.forEach(function(st){
+      var bases = mbBasesDoEstado(st.id).map(function(b){
+        var r = agregar([b.id]); r.id=b.id; r.nome=b.nome; r.cad=cad[b.id]||0; return r;
+      }).filter(function(b){ return b.cad>0 || b.ap>0; });
+      if (!bases.length) return;
+      bases.forEach(function(b){ todasIds.push(b.id); });
+      var tot = agregar(bases.map(function(b){ return b.id; }));
+      tot.id = st.id; tot.nome = st.nome; tot.bases = bases;
+      tot.cad = bases.reduce(function(s,b){ return s+b.cad; }, 0);
+      grupos.push(tot);
+    });
+    var geral = agregar(todasIds);
+    geral.cad = grupos.reduce(function(s,g){ return s+g.cad; }, 0);
+    return { dias:dias, soUteis:soUteis, diasComReg:diasComReg, grupos:grupos, geral:geral,
+             semBase:Object.keys(semBase).sort(), semTipo:semTipo, estadosLiberados:estados.length };
+  }
+
+  // ── desenho ──
+  function mbTira(b, dias){
+    var html = '', max = b.max || 1;
+    b.serie.forEach(function(v,i){
+      var d = dias[i], w = d.getDay(), fds = (w===0||w===6) ? ' fds' : '';
+      var quando = MB_DOW[w]+' '+dm(d);
+      if (!v) { html += '<i class="nd" title="'+quando+': sem RDO importado"></i>'; return; }
+      if (!v.ap) { html += '<i class="zero" data-b="'+b.id+'" data-i="'+i+'" title="'+quando+': nenhum apontamento"></i>'; return; }
+      html += '<i class="'+fds.trim()+'" style="height:'+Math.max(8, v.ap/max*100).toFixed(1)+'%" data-b="'+b.id+'" data-i="'+i+'"'
+           +  ' title="'+quando+': '+v.ap+' apontamento'+(v.ap!==1?'s':'')+' · '+v.eq+' equipe'+(v.eq!==1?'s':'')+'"></i>';
+    });
+    if (b.max) html += '<span class="mb-lmedia" style="bottom:'+(b.mAp/max*100).toFixed(1)+'%" title="média: '+num(b.mAp)+' por dia"></span>';
+    return html;
+  }
+  function mbInfoPadrao(dias){
+    if (!dias.length) return '';
+    return '<span>'+dm(dias[0])+'</span><span>'+dm(dias[dias.length-1])+'</span>';
+  }
+  function mbLinhaBase(b, dias){
+    return '<div class="mb-base">'
+      + '<div class="mb-b-nome">'+h(b.nome)+'<small>'+(b.cad ? b.cad+' equipe'+(b.cad!==1?'s':'')+' cadastrada'+(b.cad!==1?'s':'') : 'fora do cadastro')+'</small></div>'
+      + '<div class="mb-b-media"><strong>'+num(b.mAp)+'</strong><span>apontamentos/dia</span><small>'+int(b.ap)+' no período</small></div>'
+      + '<div class="mb-b-eq"><b>'+num(b.porEq)+'</b><span>por equipe que lançou</span>'
+      +   '<small>'+num(b.mEq)+(b.cad?' de '+b.cad:'')+' equipes lançaram por dia</small></div>'
+      + '<div class="mb-b-dias"><div class="mb-strip" aria-hidden="true">'+mbTira(b, dias)+'</div>'
+      +   '<div class="mb-info" id="mb-info-'+b.id+'">'+mbInfoPadrao(dias)+'</div></div>'
+      + '</div>';
+  }
+  function mbVazio(titulo, texto){
+    return '<div class="mb-vazio"><b>'+h(titulo)+'</b>'+h(texto||'')+'</div>';
+  }
+
+  window.mbRender = function(){
+    var corpo = document.getElementById('mb-corpo'), sub = document.getElementById('mb-sub');
+    if (!corpo || !mbDias.length) return;
+    var r = mbCalcular();
+    mbUltimo = r;
+    var ini = mbDias[0], fim = mbDias[mbDias.length-1];
+    var fonte = mbFonte==='local' ? ' · sem conexão, usando dados do aparelho' : '';
+    if (sub) sub.textContent = dmy(ini)+(mbDias.length>1?' a '+dmy(fim):'')+' · '+r.diasComReg+' de '+r.dias.length+' dias com RDO'
+                             + (r.soUteis?' (só dias úteis)':'') + fonte;
+
+    if (!r.estadosLiberados) { corpo.innerHTML = mbVazio('Seu acesso não libera nenhum contrato.', 'Fale com o administrador para liberar o estado.'); return; }
+    if (!r.diasComReg) {
+      corpo.innerHTML = mbVazio('Nenhum dia com RDO importado neste período.', 'Escolha outro período ou suba o consulta_serviços em ⚙️ Configurações.');
+      return;
+    }
+    if (!r.grupos.length) { corpo.innerHTML = mbVazio('Nenhum apontamento das suas bases nos dias deste período.', ''); return; }
+
+    var g = r.geral, varios = r.grupos.length > 1;
+    var html = '<div class="mb-geral">'
+      + '<div class="mb-geral-nome">'+(varios?'Todas as bases':h(r.grupos[0].nome))+'</div>'
+      + '<div class="mb-fig"><strong class="dest">'+num(g.mAp)+'</strong><span>apontamentos por dia</span></div>'
+      + '<div class="mb-fig"><strong>'+num(g.porEq)+'</strong><span>por equipe que lançou</span></div>'
+      + '<div class="mb-fig"><strong>'+num(g.mEq)+'</strong><span>equipes lançaram por dia</span></div>'
+      + '</div>';
+
+    r.grupos.forEach(function(st){
+      html += '<section class="mb-estado"><div class="mb-est-h"><span class="mb-est-nome">'+h(st.nome)+'</span>'
+        + (varios ? '<span class="mb-est-media"><b>'+num(st.mAp)+'</b> apontamentos por dia · <b>'+num(st.porEq)+'</b> por equipe</span>' : '')
+        + '</div>';
+      st.bases.forEach(function(b){ html += mbLinhaBase(b, r.dias); });
+      html += '</section>';
+    });
+
+    html += '<div class="mb-nota"><p>Cada linha do consulta_serviços é um apontamento. Média por dia = apontamentos da base ÷ dias com RDO importado; '
+         +  'dia com RDO em que a base não lançou nada conta como zero (barrinha vermelha). '
+         +  'Cada barrinha é um dia e a linha tracejada marca a média; toque numa barrinha para ver o detalhe. Cinza = dia sem RDO.</p>';
+    if (r.semTipo) html += '<p>'+r.semTipo+' lançamento'+(r.semTipo!==1?'s':'')+' sem o tipo de equipe no arquivo contaram como 1 apontamento cada.</p>';
+    if (mbCortado) html += '<p>O período foi limitado aos últimos '+MB_MAX_DIAS+' dias.</p>';
+    if (r.semBase.length) {
+      var A = (typeof rdoAllowedStates!=='undefined') ? rdoAllowedStates : null;
+      html += '<p>'+r.semBase.length+' equipe'+(r.semBase.length!==1?'s':'')+' sem base identificada ficaram fora das médias'
+           +  (A ? '.' : ': '+h(r.semBase.slice(0,10).join(', '))+(r.semBase.length>10?'…':'')+'.') + '</p>';
+    }
+    html += '</div>';
+    corpo.innerHTML = html;
+  };
+
+  // detalhe do dia ao passar o mouse / tocar numa barrinha
+  function mbMostrarDia(el){
+    if (!el || !mbUltimo || !el.getAttribute('data-i')) return;
+    var i = +el.getAttribute('data-i'), bId = el.getAttribute('data-b');
+    var d = mbUltimo.dias[i], serie = null;
+    mbUltimo.grupos.forEach(function(g){ g.bases.forEach(function(b){ if (b.id===bId) serie=b.serie; }); });
+    var v = serie && serie[i]; if (!d || !v) return;
+    Array.prototype.forEach.call(el.parentNode.querySelectorAll('i.sel'), function(x){ x.classList.remove('sel'); });
+    el.classList.add('sel');
+    var info = document.getElementById('mb-info-'+bId); if (!info) return;
+    info.innerHTML = '<span><b>'+MB_DOW[d.getDay()]+' '+dm(d)+'</b>: '
+      + (v.ap ? v.ap+' apontamento'+(v.ap!==1?'s':'')+' de '+v.eq+' equipe'+(v.eq!==1?'s':'')+' ('+num(v.ap/v.eq)+' por equipe)'
+              : 'nenhum apontamento')
+      + '</span><button type="button" class="mb-ver" data-ver="'+ymd(d)+'">Ver dia</button>';
+  }
+  document.addEventListener('mouseover', function(ev){
+    var t = ev.target; if (t && t.matches && t.matches('#medias-modal .mb-strip i[data-i]')) mbMostrarDia(t);
+  });
+  document.addEventListener('click', function(ev){
+    var t = ev.target; if (!t || !t.closest) return;
+    var bar = t.closest('#medias-modal .mb-strip i[data-i]');
+    if (bar) { mbMostrarDia(bar); return; }
+    var ver = t.closest('#medias-modal .mb-ver');
+    if (ver) {
+      var inp = document.getElementById('rdo-hist-date');
+      if (inp) inp.value = ver.getAttribute('data-ver');
+      window.fecharMediasBase();
+      if (typeof window.rdoHistBuscar==='function') window.rdoHistBuscar();
+    }
+  });
+
+  // ── ações ──
+  window.mbGerar = async function(forcar){
+    var corpo = document.getElementById('mb-corpo');
+    var per = mbPeriodo();
+    if (!per) { mbDias=[]; corpo.innerHTML = mbVazio('Escolha a data de início e a de fim.', ''); return; }
+    var dias = mbListaDias(per.ini, per.fim);
+    mbCortado = dias.length > MB_MAX_DIAS;
+    if (mbCortado) dias = dias.slice(-MB_MAX_DIAS);
+    mbDias = dias;
+    var keys = dias.map(chave);
+    var faltam = forcar ? keys : keys.filter(function(k){ return !(k in mbCache); });
+    var seq = ++mbSeq;
+    if (faltam.length) {
+      corpo.innerHTML = '<div class="mb-carregando"><div class="mb-spin"></div>Buscando '+dias.length+' dia'+(dias.length!==1?'s':'')+' de RDO…</div>';
+      var ok = await mbBuscar(faltam);
+      if (seq !== mbSeq) return;
+      mbFonte = ok ? 'banco' : 'local';
+    }
+    window.mbRender();
+  };
+
+  window.mbOnModo = function(){
+    var pers = document.getElementById('mb-modo').value === 'personalizado';
+    document.getElementById('mb-g-ini').style.display = pers ? 'flex' : 'none';
+    document.getElementById('mb-g-fim').style.display = pers ? 'flex' : 'none';
+    window.mbGerar();
+  };
+
+  window.mbExportarCSV = function(){
+    var r = mbUltimo; if (!r || !r.grupos.length || !mbDias.length) { alert('Nada para exportar neste período.'); return; }
+    var linhas = [
+      'Período;'+dmy(mbDias[0])+' a '+dmy(mbDias[mbDias.length-1])+(r.soUteis?' (só dias úteis)':''),
+      'Dias com RDO;'+r.diasComReg,
+      '',
+      'Estado;Base;Apontamentos no período;Apontamentos por dia;Apontamentos por equipe que lançou;Equipes que lançaram por dia;Equipes cadastradas'
+    ];
+    function lin(est, nome, x){ return [est, nome, x.ap, num(x.mAp), num(x.porEq), num(x.mEq), x.cad].join(';'); }
+    r.grupos.forEach(function(st){
+      st.bases.forEach(function(b){ linhas.push(lin(st.nome, b.nome, b)); });
+      linhas.push(lin(st.nome, 'TOTAL '+st.nome.toUpperCase(), st));
+    });
+    linhas.push(lin('Todos', 'TOTAL GERAL', r.geral));
+    var blob = new Blob(['\uFEFF'+linhas.join('\r\n')], { type:'text/csv;charset=utf-8' });
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'medias_apontamentos_rdo_'+ymd(mbDias[0])+'_a_'+ymd(mbDias[mbDias.length-1])+'.csv';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function(){ URL.revokeObjectURL(a.href); }, 2000);
+  };
+
+  window.abrirMediasBase = function(){
+    var m = document.getElementById('medias-modal'); if (!m) return;
+    mbOrigemFoco = document.activeElement;
+    m.style.display = 'flex';
+    var fim = hoje12(), ini = new Date(fim); ini.setDate(ini.getDate()-29);
+    var ei = document.getElementById('mb-ini'), ef = document.getElementById('mb-fim');
+    if (ei && !ei.value) ei.value = ymd(ini);
+    if (ef && !ef.value) ef.value = ymd(fim);
+    var fb = document.getElementById('mb-fechar'); if (fb) fb.focus();
+    window.mbGerar(true);   // sempre relê o banco ao abrir (pega o RDO de hoje recém-importado)
+  };
+  window.fecharMediasBase = function(){
+    var m = document.getElementById('medias-modal'); if (!m) return;
+    m.style.display = 'none';
+    if (mbOrigemFoco && mbOrigemFoco.focus) { try { mbOrigemFoco.focus(); } catch(e){} }
+  };
+  // trava de contrato mudou com a tela aberta
+  window.mbAplicarTrava = function(){
+    var m = document.getElementById('medias-modal');
+    if (m && m.style.display === 'flex' && mbDias.length) window.mbRender();
+  };
+
+  document.getElementById('medias-modal').addEventListener('click', function(e){ if (e.target === this) window.fecharMediasBase(); });
+  document.addEventListener('keydown', function(e){
+    var m = document.getElementById('medias-modal');
+    if (e.key === 'Escape' && m && m.style.display === 'flex') window.fecharMediasBase();
+  });
+})();
+</script>
 </body></html>
