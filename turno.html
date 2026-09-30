@@ -2743,7 +2743,14 @@ const STATE_LABELS = { todos:'TODOS OS ESTADOS', ba:'🟡 BA', mg:'🔵 MG', se:
 const BASE_LABELS  = { todos:'TODAS AS BASES', irc:'IRECÊ', jac:'JACOBINA', fsa:'FEIRA DE SANTANA', srr:'SERRINHA', pa:'CONGONHAL', ita:'ITAJUBÁ', lv:'LINHA VIVA', aju:'ARACAJU' };
 // CORRIGIDO: o Centro de Serviço escolhido vale sobre a Filial. A filial Feira de Santana agrupa
 // Feira + Serrinha e Congonhal agrupa Congonhal + Itajubá; antes a legenda mostrava sempre a filial.
-const _localFiltro = turnoCentroFilter !== 'todos' ? turnoCentroFilter : turnoBaseFilter;
+let _localFiltro = turnoCentroFilter !== 'todos' ? turnoCentroFilter : turnoBaseFilter;
+// Só a filial escolhida, mas todas as equipes da imagem são de um mesmo centro
+// (ex.: a filial Feira de Santana hoje só tem equipes de Serrinha): a legenda usa o nome desse centro.
+if (turnoCentroFilter === 'todos' && turnoBaseFilter !== 'todos') {
+  const _centros = new Set([...ok, ...justif, ...falta]
+    .map(n => teamBase(typeof n === 'string' ? n : ((n && n.name) || ''))).filter(Boolean));
+  if (_centros.size === 1) _localFiltro = [..._centros][0];
+}
 const filtroLabel  = (turnoStateFilter!=='todos'||_localFiltro!=='todos')
   ? (STATE_LABELS[turnoStateFilter]||turnoStateFilter) + (_localFiltro!=='todos' ? ' · '+(BASE_LABELS[_localFiltro]||_localFiltro) : '')
   : '';
