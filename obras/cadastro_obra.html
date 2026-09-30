@@ -422,7 +422,6 @@ body.sm-collapsed .sm-side:hover .sm-group-head{justify-content:flex-start;paddi
         <div class="co-checks">
           <label class="co-check"><input type="checkbox" id="co-so-preenchidas" onchange="coPopularConstantes()"> Só preenchidas</label>
           <label class="co-check"><input type="checkbox" id="co-auto-baixar" checked> Baixar CSV ao salvar</label>
-          <label class="co-check" title="Marcado: cada obra sai com o status que está na carteira. Desmarcado: todas saem com o STATUS* definido aqui."><input type="checkbox" id="co-status-planilha" onchange="coStatusPlanilhaMudou()"> Manter status da carteira</label>
         </div>
       </div>
 
@@ -435,7 +434,7 @@ body.sm-collapsed .sm-side:hover .sm-group-head{justify-content:flex-start;paddi
         <p><b>Centro de serviço:</b> sigla do estado + município.</p>
         <p><b>Contrato por base:</b> Irecê, Jacobina e Serrinha são sempre OBRAS - BA; Aracaju é sempre OBRAS-SE. Nelas o estado fica travado e Contrato, Tipo de obra, Tipo de serviço e Processo vêm do contrato. Em Feira o estado é escolhido aqui.</p>
         <p><b>Base Aracaju (arquivo do lote):</b> Projeto = Obra; Título = “Tipo Obra - Município”; Prazo Regulado vai para <code>data_prazo_venc</code>. O arquivo não tem responsável nem supervisor, então nessa base eles são definidos aqui (responsável padrão: RAFAEL BERNARDO MAGALHAES). Todas as obras do arquivo entram, sem o filtro de Execução/Programada.</p>
-        <p><b>Status:</b> por padrão o <b>STATUS*</b> definido aqui vale para todas as obras. Marque “Manter status da carteira” para cada obra sair com o status da planilha.</p>
+        <p><b>Status:</b> toda obra sai com <b>STATUS* = Em Execução</b>, fixo em todas as bases. O status da carteira só decide quais obras entram (Em Execução ou Programada).</p>
       </details>
     </div>
   </section>
@@ -471,6 +470,11 @@ body.sm-collapsed .sm-side:hover .sm-group-head{justify-content:flex-start;paddi
 <script>
 var CO_HEADERS = ["Projeto*","Titulo da obra*","Municipio*","Contrato*","TIPO DE OBRA*","NATUREZA OBRAS","CENTRO SERVICO","RESPONSAVEL*","TIPO SERVICO*","DATA_RECEBIMENTO*","DATA_PREVISTO_RECEBIMENTO","OBRIGA VISTORIA","DATA_PREVISAO_INICIO","DATA_PREVISAO_FIM","PROCESSO","STATUS*","OBSERVACAO","Postes","fiscal_concessionaria","LATITUDE","LONGITUDE","MEDIDOR","SUPERVISOR","REFERENCIA","OS","ENDEREÇO","data_inicio","qtd_clientes","Bairro","CEP","Fator K","Interessado","Projeto Investimento","qtd_transformadores","qtd_extensao_bt","qtd_extensao_mt","reserva","lcl","ato_progressivo","lote","contra","descricao_orcamento","valor_orcamento_mao_obra","valor_orcamento_material","tipo_prioridade","psm_aux","sm","plano_manobra","origem","data_aceite","data_prazo_venc","data_limite_vist","valor_previsto_obra","odi","odd"];
 var CO_ROWS = [];
+
+// ===== status fixo =====
+// Toda obra sai com este STATUS*, em todas as bases (não depende da carteira nem do card 2).
+// A carteira continua decidindo QUAIS obras entram (só Em Execução ou Programada).
+var CO_STATUS_FIXO='Em Execução';
 
 // ===== estado -> valores fixos do contrato =====
 var CO_ESTADO_DEF={
@@ -545,6 +549,7 @@ var CO_ESTADO_BASE={};   // estado escolhido nas bases sem contrato fixo: { fsa:
 // campos travados pelo contrato fixo da base ({} se a base não tem contrato fixo)
 function coContratoFixo(id){
   var def=coBaseDef(id), e=def.uf&&CO_ESTADO_DEF[def.uf], fx={};
+  fx['STATUS*']=CO_STATUS_FIXO;       // status fixo em todas as bases, inclusive Feira
   if(!e) return fx;
   fx['Contrato*']=e.contrato||'';
   fx['TIPO DE OBRA*']=e.tipoObra||'';
@@ -1380,8 +1385,7 @@ function coColunasConst(){
 // ---------- status: carteira ou card 2 ----------
 // desmarcado (padrao) = o STATUS* do card 2 manda em todas as obras
 function coUsarStatusPlanilha(){
-  var el=document.getElementById('co-status-planilha');
-  return !!(el && el.checked);
+  return false;   // desativado: o STATUS* é sempre CO_STATUS_FIXO
 }
 function coStatusPlanilhaMudou(){
   try{ localStorage.setItem('cadastro_obra_status_planilha', coUsarStatusPlanilha()?'1':'0'); }catch(e){}
@@ -1402,9 +1406,8 @@ function coAplicarConstantes(){
   var cols=coColunasConst();
   CO_ROWS.forEach(function(reg){
     cols.forEach(function(h){ reg[h]=C[h]||''; });
-    // status: o da planilha manda; a constante e o padrao de quem veio vazio
-    reg['STATUS*']=coUsarStatusPlanilha() ? (reg['_statusDaPlanilha']||C['STATUS*']||'')
-                                          : (C['STATUS*']||reg['_statusDaPlanilha']||'');
+    // status: sempre o fixo (Em Execução). O status da carteira só serve para filtrar quais obras entram.
+    reg['STATUS*']=CO_STATUS_FIXO;
     reg['CENTRO SERVICO']=reg['Municipio*']?(sigla+'-'+reg['Municipio*'].toUpperCase()):'';
     if(!reg['DATA_RECEBIMENTO*']) reg['DATA_RECEBIMENTO*']=coDataHoje();
   });
@@ -1471,7 +1474,7 @@ function coPopularConstantes(){
         + '<label style="font-size:.66rem;font-weight:800;color:'+(obrig?'#0d7377':'#64748b')+';display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:3px;" title="'+h+'">'+h+'</label>'
         + '<input data-col="'+h+'" oninput="coConstMudou(this)" value="'+val+'"'
         + (ehData?' placeholder="dd/mm/aaaa"':'')
-        + (travado?' readonly title="Definido pelo contrato da base '+coNomeBase(coBaseId())+'"':'')
+        + (travado?' readonly title="'+(h==='STATUS*'?'Status fixo: toda obra sai como '+CO_STATUS_FIXO:'Definido pelo contrato da base '+coNomeBase(coBaseId()))+'"':'')
         + ' style="width:100%;padding:7px 9px;border:1.5px solid '+(travado?'#e2e8f0':(cheio?'#bfe0dd':'#e2e8f0'))+';border-radius:7px;font-size:.77rem;font-family:inherit;background:'+(travado?'#f1f5f6;color:#64748b;cursor:not-allowed':(cheio?'#f6fdfc':'#fff'))+';">'
         + '</div>';
     }).join('');
