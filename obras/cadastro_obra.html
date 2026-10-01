@@ -297,6 +297,31 @@ body.sm-collapsed .sm-side:hover .sm-group-head{justify-content:flex-start;paddi
 .co-arq.carregado .co-arq-tx b{color:#0d7377}
 .co-arq .co-bt{flex-shrink:0;pointer-events:none}
 @media(max-width:620px){ .co-arq{flex-wrap:wrap} .co-arq .co-bt{width:100%;text-align:center} }
+
+/* atividades: todos os serviços do contrato em todas as obras */
+.co-ativ{display:flex;align-items:center;gap:12px 14px;flex-wrap:wrap;padding:12px 14px;margin-bottom:14px;
+  border:1.5px solid #c7e7e6;border-radius:12px;background:#f6fdfc;transition:border-color .15s,background .15s}
+.co-ativ.falta{border-color:#f1dbb0;background:#fffaf0}
+.co-ativ.sobre{border-style:dashed;border-color:#0d7377;background:#f0fafa}
+.co-ativ-ic{width:38px;height:38px;border-radius:10px;background:#fff;border:1px solid #dbe3e8;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;font-size:1.05rem}
+.co-ativ-tx{flex:1 1 300px;min-width:0}
+.co-ativ-tx b{display:block;font-size:.84rem;font-weight:800;color:#12343b}
+.co-ativ-tx small{display:block;font-size:.74rem;font-weight:700;color:#0d7377;margin-top:2px;line-height:1.45}
+.co-ativ.falta .co-ativ-tx small{color:#a8701a}
+.co-ativ-qtd{display:inline-flex;align-items:center;gap:7px;font-size:.74rem;font-weight:800;color:#64748b}
+.co-ativ-qtd input{width:62px;box-sizing:border-box;padding:7px 8px;border:1.5px solid #dbe3e8;border-radius:8px;margin:0;
+  font-family:'Barlow',sans-serif;font-size:.8rem;font-weight:800;color:#12343b;text-align:center;outline:none;background:#fff}
+.co-ativ-qtd input:focus{border-color:#0d7377;box-shadow:0 0 0 3px rgba(13,115,119,.12)}
+.co-ativ .co-bt:disabled{opacity:.45;cursor:not-allowed;background:#fff;border-color:#dbe3e8}
+/* modelo teste: 1 obra x todos os serviços */
+.co-ativ-teste{display:inline-flex;align-items:center;gap:7px;padding-left:12px;border-left:1px solid #d5e9e8}
+.co-ativ-teste input{width:118px;box-sizing:border-box;padding:7px 9px;border:1.5px solid #dbe3e8;border-radius:8px;margin:0;
+  font-family:'Barlow',sans-serif;font-size:.8rem;font-weight:800;color:#12343b;outline:none;background:#fff}
+.co-ativ-teste input::placeholder{color:#a9b4bf;font-weight:700}
+.co-ativ-teste input:focus{border-color:#0d7377;box-shadow:0 0 0 3px rgba(13,115,119,.12)}
+@media(max-width:620px){ .co-ativ .co-bt{flex:1 1 auto}
+  .co-ativ-teste{width:100%;padding-left:0;border-left:none} .co-ativ-teste input{flex:1} }
 </style>
 </head>
 <body class="sm-collapsed">
@@ -444,11 +469,28 @@ body.sm-collapsed .sm-side:hover .sm-group-head{justify-content:flex-start;paddi
     <header class="co-card-h">
       <div class="co-card-t"><span class="co-num">3</span>
         <div><b>Prévia e exportação <span id="co-count" class="co-cnt"></span></b>
-          <small>Confira as primeiras linhas antes de gerar o arquivo</small></div>
+          <small>Confira as primeiras linhas antes de gerar os arquivos</small></div>
       </div>
       <button id="co-baixar" class="co-bt baixar" onclick="coBaixar()" disabled>⬇️ Baixar CSV (modelo)</button>
     </header>
     <div class="co-card-b">
+      <div id="co-ativ" class="co-ativ">
+        <span class="co-ativ-ic">🧾</span>
+        <span class="co-ativ-tx"><b>Atividades: todos os serviços em todas as obras</b>
+          <small id="co-ativ-info">Carregando a lista de serviços…</small></span>
+        <label class="co-ativ-qtd" for="co-ativ-qtd" title="Quantidade prevista que vai em cada linha (os serviços permitem executar mais que o previsto)">Quantidade
+          <input id="co-ativ-qtd" value="1" inputmode="decimal" autocomplete="off" onchange="coAtivQtdMudou()"></label>
+        <input type="file" id="co-serv-input" accept=".csv,.xlsx,.xls,.xlsm" hidden onchange="coServEscolhido(this)">
+        <button type="button" class="co-bt ghost" onclick="document.getElementById('co-serv-input').click()" title="Envie a precificação de serviços exportada do sistema (.csv ou .xlsx)">📄 Atualizar lista de serviços</button>
+        <button type="button" id="co-baixar-ativ" class="co-bt ghost" onclick="coBaixarAtividades()" disabled>⬇️ Só atividades</button>
+        <span class="co-ativ-teste">
+          <input id="co-ativ-obra-teste" placeholder="nº da obra" inputmode="numeric" autocomplete="off" spellcheck="false" aria-label="Obra do modelo teste"
+                 title="Obra usada no modelo teste. Em branco = primeira obra da carteira" oninput="coAtivInfo()"
+                 onkeydown="if(event.key==='Enter'){event.preventDefault();coBaixarTeste();}">
+          <button type="button" id="co-baixar-teste" class="co-bt ghost" onclick="coBaixarTeste()" disabled
+                  title="Gera o arquivo de atividades com 1 obra e todos os serviços, para testar a importação antes da carteira completa">🧪 Modelo teste</button>
+        </span>
+      </div>
       <div class="co-busca-bar">
         <div class="co-busca">
           <span class="co-busca-ic">🔎</span>
@@ -1209,6 +1251,8 @@ function coLerArquivo(f){
   if(['xlsx','xls','xlsm','csv'].indexOf(ext)<0){ coSt('❌ "'+nome+'" não é uma planilha. Envie um arquivo .xlsx, .xls ou .csv.','#c53030'); return; }
   coSt('Lendo "'+nome+'"...','#64748b');
   (ext==='csv' ? coLerCSVArquivo(f) : coLerPlanilha(f)).then(function(linhas){
+    // soltou a precificação de serviços em vez da carteira: atualiza a lista de serviços
+    if(coAcharCabecalho(linhas).idx<0 && coServCabecalho(linhas).idx>=0){ coImportarServicos(linhas, nome); return; }
     if(coBaseId()!==base) return;          // trocou de base enquanto lia
     if(coProcessarLinhas(linhas, nome)){
       var h=new Date();
@@ -1324,6 +1368,7 @@ function coPreview(){
       : termos.length ? achadas.length+' de '+CO_ROWS.length+' obras · o CSV continua saindo com todas'
       : CO_ROWS.length+' obras carregadas';
   }
+  coAtivInfo();
 }
 
 
@@ -1447,6 +1492,7 @@ function coContarConst(){
   var n=coColunasConst().filter(function(h){ return (C[h]||'').trim()!==''; }).length;
   var el=document.getElementById('co-const-count');
   if(el) el.innerHTML='· <b style="color:#0d7377;">'+n+'</b> de '+coColunasConst().length+' preenchidas';
+  coAtivInfo();   // o contrato pode ter mudado: troca a lista de serviços
 }
 function coPopularConstantes(){
   var box=document.getElementById('co-const-grupos'); if(!box) return;
@@ -1586,14 +1632,202 @@ function coBaixar(){
     linhas.push(CO_HEADERS.map(function(h){ var v=(reg[h]==null?'':String(reg[h])); if(v.indexOf(sep)>=0||v.indexOf('"')>=0||v.indexOf('\n')>=0){ v='"'+v.replace(/"/g,'""')+'"'; } return v; }).join(sep));
   });
   var blob=new Blob(['\ufeff'+linhas.join('\r\n')],{type:'text/csv;charset=utf-8'});
-  var nomeCsv='importar_obras_'+coGid()+'.csv';
-  if(coBaseArquivo()){ var arq=CO_ARQ[coBaseId()]; nomeCsv='importar_obras_'+coBaseId()+'_'+((arq&&arq.nome)||'arquivo').replace(/\.[^.]+$/,'').replace(/[^\w\-]+/g,'_')+'.csv'; }
+  var nomeCsv='importar_obras_'+coSufixoArquivo()+'.csv';
   var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=nomeCsv; a.click();
+  // junto com as obras: todos os serviços do contrato em todas as obras (modelo_imp_ativ_obra_lote)
+  if(coServLista()) setTimeout(coBaixarAtividades, 400);
 }
+// parte final do nome dos arquivos: gid da aba, ou base + nome do arquivo enviado
+function coSufixoArquivo(){
+  if(coBaseArquivo()){ var arq=CO_ARQ[coBaseId()]; return coBaseId()+'_'+((arq&&arq.nome)||'arquivo').replace(/\.[^.]+$/,'').replace(/[^\w\-]+/g,'_'); }
+  return coGid();
+}
+
+/* ==========================================================================
+   ATIVIDADES  —  todos os serviços do contrato saem em todas as obras
+   Arquivo no formato modelo_imp_ativ_obra_lote:  Projeto;cod_atividade;Quantidade;
+   A lista é por contrato e vem da precificação de serviços exportada do sistema
+   (coluna "Código Serviço"). OBRAS-SE já vem embutida; qualquer contrato pode ser
+   atualizado pelo botão "Atualizar lista de serviços" (salva no navegador e no Supabase).
+   ========================================================================== */
+var CO_SERV_PADRAO={
+  OBRASSE:{contrato:'OBRAS-SE', arquivo:'precificação_serviços_JOAO_ARAUJO_2026-09-30_16-29-39.csv', data:'30/09/2026',
+    codigos:'LMIA60003 LMIA66020 LMIA64220 LMIA64238 LMIA62041 LMIA68017 LMIA62097 LMIA68007 LMIA68010 LMIA62030 LMIA64037 LMIA62066 LMIA62067 LMIA64045 LMIA64046 LMIA60300 LMIA62062 LMIA64055 LMIA64063 LMIA64048 LMIA66061 LMIA62071 LMIA62072 LMIA62073 LMIA60002 LMIA66170 LMIA64093 LMIA64094 LMIA64098 LMIA64043 LMIA64096 LMIA62049 LMIA64084 LMIA64087 LMIA64089 LMIA64204 LMIA64218 LMIA64206 LMIA64222 LMIA64231 LMIA64223 LMIA64232 LMIA64224 LMIA64233 LMIA64225 LMIA64234 LMIA64226 LMIA60005 LMIA60006 LMIA62019 LMIA64212 LMIA66143 LMIA68001 LMIA68026 LMIA68067 LMIB68031 LMIB64024 LMIB64026 LMIB66042 LMIB62010 LMIB62011 LMIB62322 LMIB60060 LMIB60009 LMIB60062 LMIB62224 LMIB62022 LMIB60066 LMIB62266 LMIB66047 LMIC62332 LMIC60031 LMIC0 LMIC64135 LMIC62033 LMIC62246 LMIC62204 LMIC64092 LMIC61600 LMIC61610 LMIC64083 LMIC62138 LMIC62140 LMIC62261 LMIC62262 LMIC66062 LMIC64150 LMIC62069 LMIC60139 LMIC62013 LMIC64090 LMIC64086 LMIC62077 LMIC60030 LMIC66049 LMIC64239 LMIC64228 LMIC62051 LMIC64229 LMIC64230 LMIC64237 LMIC62088 LMIC66007 LMIC66005 LMIC62148 LMIC64097 LMIC60052 LMIC60055 LMIC60045 LMIC60044 LMIC62150 LMIC60047 LMIC60046 LMIC62152 LMIC60049 LMIC60054 LMIC62162 LMIC62321 LMIC60037 LMIC62034 LMIC60023 LMIC64041 LMIC62099 LMIC62061 LMIC62070 LMIC66011 LMIC64176 LMIC64177 LMIC66009 LMIC66010 LMIC64103 LMIC64104 LMIC60161 LMIC60162 LMIC64197 LMIC64201 LMIC64209 LMIC64211 LMID62045 LMID62149 LMID62074 LMID62046 LMID62055 LMID62056 LMID66003 LMID66046 LMIE0 LMIE62121 LMIE62122 LMIE62123 LMIE62124 LMIE62125 LMIE62126 LMIE62128 LMIE62130 LMIE62060 LMIE64009 LMIE62170 LMIE62007 LMIE60059 LMIE60058 LMIE62314 LMIE62250 LMIE62175 LMIE62298 LMIE60040 LMIE60007 LMIE62221 LMIE62223 LMIE60067 LMIE60073 LMIE60076 LMIE60080 LMIE60084 LMIE60088 LMIE60092 LMIE60096 LMIE60100 LMIE60104 LMIE62184 LMIE62020 LMIE62186 LMIE62188 LMIE62190 LMIE62220 LMIE62195 LMIE62200 LMIE62202 LMIE60320 LMIE60330 LMIE60350 LMIE62209 LMIE64082 LMIE62229 LMIE62225 LMIE62036 LMIE62227 LMIE62037 LMIE62231 LMIE62192 LMIE62236 LMIE64134 LMIE62238 LMIE62194 LMIE62197 LMIE60072 LMIE62199 LMIE62205 LMIE62207 LMIE62211 LMIE62213 LMIE62217 LMIE62240 LMIE62242 LMIE62244 LMIE62247 LMIF62132 LMIF62106 LMIF62107 LMIF62108 LMIF62133 LMIF62135 LMIF62137 LMIF62139 LMIF68069 LMIF68070 LMIF68071 LMIF64213 LMIG64079 LMIG64214 LMII60230 LMII60109 LMII60113 LMII62320 LMII64028 LMII62233 LMII68030 LMII60240 LMII60142 LMII62053 LMII66021 LMII66023 LMII66019 LMII60038 LMII62256 LMII62052 LMII62091 LMII62093 LMII62047 LMIJ62001 LMIJ62018 LMIK62054 LMIK62312 LMIL60010 LMIL68042 LMIL64095 LMIL68043 LMIL68077 LMIL60048 LMIL60108 LMIL60111 LMIM60050 LMIM64007 LMIM62021 LMIM62157 LMIM60126 LMIM60127 LMIM60128 LMIM62158 LMIM62080 LMIM60017 LMIN64240 LMIN64198 LMIN64200 LMIN62141 LMIN62110 LMIN64210 LMIN64208 LMIN62143 LMIN64202 LMIN62263 LMIN60026 LMIN68000 LMIO62104 LMIO64075 LMIO64010 LMIO64011 LMIO64012 LMIO60129 LMIO62272 LMIO62174 LMIO64107 LMIO62146 LMIO64174 LMIO60130 LMIO60131 LMIO60132 LMIO60133 LMIO60134 LMIO60135 LMIO62297 LMIO60137 LMIO62222 LMIO60077 LMIO60081 LMIO64069 LMIR64072 LMIR64073 LMIR60153 LMIR60085 LMIR60087 LMIR60034 LMIR60089 LMIR61700 LMIR61710 LMIR60500 LMIR60510 LMIR60091 LMIR60097 LMIR60152 LMIR64053 LMIR60099 LMIR60101 LMIR62301 LMIR60105 LMIR62177 LMIR68050 LMIR64131 LMIR60029 LMIS68098 LMIS68033 LMIS62179 LMIS62002 LMIS60027 LMIS64099 LMIT62006 LMIT60700 LMIT62181 LMIT62003 LMIT62198 LMIT68121 LMIT62193 LMIT68125 LMIT62183 LMIV62212 LMIV60163 LMID67002 LMID67005 LMID67006 LMRA62073 LMRA60002 LMRA64093 LMRA64094 LMRA64098 LMRA64043 LMRA64096 LMRA62049 LMRA64084 LMRA64087 LMRA64089 LMRA64231 LMRA64223 LMRA64232 LMRA64224 LMRA64233 LMRA64225 LMRA64234 LMRA64226 LMRB64024 LMRC60031 LMRC64135 LMRC62033 LMRC66062 LMRC64150 LMRC62069 LMRC60139 LMRC62013 LMRC64090 LMRC64086 LMRC62077 LMRC60030 LMRC64228 LMRC62051 LMRC64229 LMRC64230 LMRC64237 LMRC62088 LMRC66007 LMRC66005 LMRC64097 LMRC60052 LMRC60055 LMRC60047 LMRC60046 LMRC62152 LMRC60049 LMRC60054 LMRC62162 LMRC60023 LMRC64041 LMRC62099 LMRC64197 LMRC64201 LMRC64209 LMRC64211 LMRD62045 LMRD66003 LMRD66046 LMRE62128 LMRE62130 LMRE62170 LMRE62007 LMRE60059 LMRE60058 LMRE62314 LMRE62250 LMRE62175 LMRE62298 LMRE60040 LMRE60007 LMRE62221 LMRE62223 LMRE60067 LMRE60073 LMRE60076 LMRE60080 LMRE60084 LMRE60088 LMRE60092 LMRE60096 LMRE60100 LMRE60104 LMRE62184 LMRE62020 LMRE62186 LMRE62188 LMRE62190 LMRE62220 LMRE62195 LMRE62200 LMRE62202 LMRE60320 LMRE60330 LMRE60350 LMRE62209 LMRE64082 LMRE62229 LMRE62225 LMRE62036 LMRE62227 LMRE62037 LMRE62231 LMRE62192 LMRE62236 LMRE64134 LMRE62238 LMRE62194 LMRE62197 LMRE60072 LMRE62199 LMRE62205 LMRE62207 LMRE62211 LMRE62213 LMRE62217 LMRE62240 LMRE62242 LMRE62244 LMRE62247 LMRF62133 LMRF62135 LMRF62137 LMRF62139 LMRG64079 LMRG64214 LMRI60109 LMRI60113 LMRI60038 LMRI62256 LMRI62052 LMRI62091 LMRI62093 LMRI62047 LMRJ62001 LMRJ62018 LMRL60108 LMRL60111 LMRM60126 LMRM60127 LMRM60128 LMRM62158 LMRM60017 LMRN68000 LMRO62104 LMRO64075 LMRP60129 LMRP62272 LMRP62174 LMRP62146 LMRP62297 LMRP60137 LMRP62222 LMRP60077 LMRP60081 LMRR64069 LMRR60153 LMRR60085 LMRR60087 LMRR60034 LMRR60097 LMRR60152 LMRR60099 LMRR60101 LMRR62301 LMRR60105 LMRS62002 LMRS60027 LMRS64099 LMRT60700 LMRT62181 LMRT62003 LMRT62198 LMRT68121 LMRT62193 LMRT68125 LMRT62183 LMRV62212 LVIA60003 LVIA66020 LVIA64220 LVIA64238 LVIA62041 LVIB68017 LVIC62097 LVIC68007 LVIC68010 LVIC62030 LVIC64037 LVIC62066 LVIC62067 LVIC64045 LVIC64046 LVIC60300 LVIC62062 LVIC64055 LVIC64063 LVIC64048 LVIC66061 LVIC62071 LVIC62072 LVIC62073 LVIC60002 LVIC66170 LVIC64093 LVIC64094 LVIC64098 LVIC64043 LVIC64096 LVIC62049 LVID64084 LVID64087 LVIE64089 LVIE64204 LVIE64218 LVIE64206 LVIE64222 LVIE64231 LVIE64223 LVIE64232 LVIE64224 LVIE64233 LVIE64225 LVIE64234 LVIE64226 LVIE60005 LVIE60006 LVIE62019 LVIE64212 LVIE66143 LVIE68001 LVIE68026 LVIE68067 LVIE68031 LVIE64024 LVIE64026 LVIE66042 LVIE62010 LVIE62011 LVIE62322 LVIE60060 LVIE60009 LVIE60062 LVIE62224 LVIE62022 LVIE60066 LVIE62266 LVIE66047 LVIE62332 LVIE60031 LVIE0 LVIE64135 LVIE62033 LVIE62246 LVIE62204 LVIE64092 LVIE61600 LVIF61610 LVIF64083 LVIF62138 LVIF62140 LVIG62261 LVIG62262 LVII66062 LVII64150 LVII62069 LVII60139 LVII62013 LVIJ64090 LVIJ64086 LVIM62077 LVIM60030 LVIN66049 LVIN64239 LVIN64228 LVIN62051 LVIN64229 LVIO64230 LVIO64237 LVIP62088 LVIP66007 LVIP66005 LVIP62148 LVIP64097 LVIP60052 LVIP60055 LVIP60045 LVIP60044 LVIP62150 LVIR60047 LVIR60046 LVIR62152 LVIR60049 LVIR60054 LVIR62162 LVIS62321 LVIS60037 LVIT62034 LVIV60023 LVIV64041 LVRA64220 LVRA64238 LVRA62041 LVRB68017 LVRC62097 LVRC68007 LVRC68010 LVRC62030 LVRC64037 LVRC62066 LVRC62067 LVRC64045 LVRC64046 LVRC60300 LVRC62062 LVRC64055 LVRC64063 LVRC64048 LVRC62072 LVRC60002 LVRC66170 LVRC64094 LVRC64098 LVRC64043 LVRC64096 LVRC62049 LVRE64206 LVRE64222 LVRE64231 LVRE64223 LVRE64232 LVRE64224 LVRE64233 LVRE64225 LVRE64234 LVRE64226 LVRE60005 LVRE60006 LVRE62019 LVRE64212 LVRE66143 LVRE68001 LVRE68026 LVRE68067 LVRE68031 LVRE64024 LVRE64026 LVRE66042 LVRE62010 LVRE62011 LVRE62322 LVRE60060 LVRE60009 LVRE60062 LVRE62224 LVRE62022 LVRE60066 LVRE62266 LVRE66047 LVRE62332 LVRE60031 LVRE0 LVRE64135 LVRE62033 LVRE62246 LVRE62204 LVRE64092 LVRE61600 LVRF62138 LVRF62140 LVRG62261 LVRG62262 LVRI66062 LVRI64150 LVRI62069 LVRI60139 LVRI62013 LVRJ64090 LVRO64230 LVRO64237 LVRP62088 LVRP66007 LVRP66005 LVRP60052 LVRP60055 LVRP60045 LVRP60044 LVRP62150 LVRR62152 LVRR60049 LVRR60054 LVRR62162 LVRS62321 LVRS60037 LVRT62034 LVRV64041'.split(' ')}
+};
+var CO_SERV={versao:1, qtd:'1', contratos:{}};   // listas enviadas, por contrato: { OBRASBA:{contrato,arquivo,data,codigos:[]} }
+
+function coChaveContrato(c){ return coNorm(c).replace(/[^A-Z0-9]/g,''); }   // 'OBRAS - BA' = 'OBRAS-BA'
+function coContratoAtual(){ return String(coConstAtual()['Contrato*']||'').trim(); }
+function coServLista(contrato){
+  var k=coChaveContrato(contrato===undefined?coContratoAtual():contrato); if(!k) return null;
+  var L=((CO_SERV&&CO_SERV.contratos)||{})[k] || CO_SERV_PADRAO[k];
+  return (L && L.codigos && L.codigos.length) ? L : null;
+}
+function coAtivQtd(){
+  var el=document.getElementById('co-ativ-qtd');
+  var v=String(el?el.value:((CO_SERV&&CO_SERV.qtd)||'1')).replace(/[;\s]/g,'');
+  return v||'1';
+}
+function coAtivProjetos(){   // obras da carteira, sem repetir
+  var vistos={}, out=[];
+  CO_ROWS.forEach(function(r){ var p=String(r['Projeto*']||'').replace(/;/g,'').trim(); if(p && !vistos[p]){ vistos[p]=1; out.push(p); } });
+  return out;
+}
+function coFmtN(n){ return Number(n).toLocaleString('pt-BR'); }
+
+// faixa de atividades do passo 3 + rótulo do botão principal
+function coAtivInfo(){
+  var box=document.getElementById('co-ativ'), info=document.getElementById('co-ativ-info'); if(!box||!info) return;
+  var contrato=coContratoAtual(), L=coServLista(contrato), nObras=coAtivProjetos().length, tx;
+  if(!contrato) tx='Preencha o Contrato* no passo 2 para escolher a lista de serviços.';
+  else if(!L) tx='Sem lista de serviços para o contrato '+contrato+'. Envie a precificação desse contrato para as atividades saírem junto.';
+  else if(!nObras) tx=coFmtN(L.codigos.length)+' serviços do contrato '+contrato+' · carregue a carteira para gerar as linhas';
+  else tx=coFmtN(L.codigos.length)+' serviços do contrato '+contrato+' × '+coFmtN(nObras)+' obras = '+coFmtN(L.codigos.length*nObras)+' linhas';
+  if(L && L.data) tx+=' · lista de '+L.data;
+  info.textContent=tx;
+  info.title=(L&&L.arquivo)?('Lista: '+L.arquivo):'';
+  box.classList.toggle('falta', !L);
+  var bA=document.getElementById('co-baixar-ativ'); if(bA) bA.disabled=!(L && nObras);
+  var tI=document.getElementById('co-ativ-obra-teste'), tB=document.getElementById('co-baixar-teste');
+  if(tI) tI.placeholder=coAtivProjetos()[0]||'nº da obra';
+  if(tB) tB.disabled=!(L && coObraTeste());
+  var bB=document.getElementById('co-baixar'); if(bB) bB.textContent=L?'⬇️ Baixar obras + atividades':'⬇️ Baixar CSV (modelo)';
+}
+
+// monta e baixa o arquivo de atividades: cada obra recebe todos os serviços do contrato
+function coGerarAtividades(projs, nomeArquivo){
+  var L=coServLista(); if(!L || !projs.length) return false;
+  var qtd=coAtivQtd();
+  // igual ao modelo: separador ;, ; no fim da linha, quebra CRLF, sem BOM
+  var partes=['Projeto;cod_atividade;Quantidade;\r\n'];
+  projs.forEach(function(p){
+    partes.push(L.codigos.map(function(c){ return p+';'+c+';'+qtd+';\r\n'; }).join(''));
+  });
+  var blob=new Blob(partes,{type:'text/csv;charset=utf-8'});
+  var a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download=nomeArquivo; a.click();
+  setTimeout(function(){ URL.revokeObjectURL(a.href); },60000);
+  return true;
+}
+function coBaixarAtividades(){
+  var projs=coAtivProjetos();
+  if(!coServLista() || !projs.length){ coAtivInfo(); return false; }
+  return coGerarAtividades(projs, 'importar_atividades_'+coSufixoArquivo()+'.csv');
+}
+// modelo teste: obra digitada (ou a primeira da carteira) x todos os serviços
+function coObraTeste(){
+  var el=document.getElementById('co-ativ-obra-teste');
+  return String(el?el.value:'').replace(/[;\s]/g,'') || coAtivProjetos()[0] || '';
+}
+function coBaixarTeste(){
+  var L=coServLista(), obra=coObraTeste();
+  if(!L || !obra){ coAtivInfo(); return false; }
+  coGerarAtividades([obra], 'modelo_teste_atividades_'+obra.replace(/[^\w\-]+/g,'_')+'.csv');
+  coSt('🧪 Modelo teste gerado: obra '+obra+' × '+coFmtN(L.codigos.length)+' serviços do contrato '+L.contrato
+    +' (quantidade '+coAtivQtd()+'). Importe no sistema: se passar, a carteira completa também passa.','#0d7377');
+  return true;
+}
+
+function coAtivQtdMudou(){
+  var el=document.getElementById('co-ativ-qtd');
+  CO_SERV.qtd=coAtivQtd(); if(el) el.value=CO_SERV.qtd;
+  coSalvarServicos();
+}
+
+// ---------- salvar / carregar as listas ----------
+function coSalvarServicos(){
+  try{ localStorage.setItem('cadastro_obra_servicos', JSON.stringify(CO_SERV)); }catch(e){}
+  return fetch(CO_SUPA+'/rest/v1/turno_data?on_conflict=key',{method:'POST',headers:Object.assign({'Prefer':'resolution=merge-duplicates,return=minimal'},CO_H),
+      body:JSON.stringify({key:'cadastro_obra_servicos',value:CO_SERV,updated_at:new Date().toISOString()})})
+    .then(function(r){ return r.ok; }).catch(function(){ return false; });
+}
+function coAplicarServicos(pac){
+  if(!pac || typeof pac!=='object') return;
+  CO_SERV={versao:1, qtd:String(pac.qtd||'1'), contratos:(pac.contratos && typeof pac.contratos==='object')?pac.contratos:{}};
+}
+function coCarregarServicos(){
+  try{ var lc=localStorage.getItem('cadastro_obra_servicos'); if(lc) coAplicarServicos(JSON.parse(lc)); }catch(e){}
+  return fetch(CO_SUPA+'/rest/v1/turno_data?select=value&key=eq.cadastro_obra_servicos&limit=1',{headers:{apikey:CO_KEY,Authorization:'Bearer '+CO_KEY}})
+    .then(function(r){ return r.ok?r.json():[]; })
+    .then(function(j){
+      var pac=(Array.isArray(j)&&j.length&&j[0].value)?j[0].value:null;
+      if(pac){ coAplicarServicos(pac); try{ localStorage.setItem('cadastro_obra_servicos', JSON.stringify(pac)); }catch(e){} }
+    })
+    .catch(function(){})
+    .then(function(){ var q=document.getElementById('co-ativ-qtd'); if(q) q.value=CO_SERV.qtd||'1'; coAtivInfo(); });
+}
+
+// ---------- importar a precificação de serviços ----------
+function coServCabecalho(rows){
+  for(var k=0;k<Math.min(rows.length,20);k++){
+    var h=(rows[k]||[]).map(coNorm), c=-1;
+    ['CODIGO SERVICO','CODIGO DO SERVICO','COD_ATIVIDADE','COD ATIVIDADE'].some(function(n){ c=h.indexOf(n); return c>=0; });
+    if(c>=0) return {idx:k, cCod:c, cContrato:h.indexOf('CONTRATO'), cFim:h.indexOf('DATA VIGENCIA FINAL')};
+  }
+  return {idx:-1};
+}
+function coDataBR(t){ var m=String(t||'').match(/^(\d{2})\/(\d{2})\/(\d{4})/); return m?new Date(+m[3],+m[2]-1,+m[1]):null; }
+function coImportarServicos(rows, nome){
+  var cab=coServCabecalho(rows);
+  if(cab.idx<0){ coSt('❌ "'+nome+'" não parece a precificação de serviços: não achei a coluna "Código Serviço".','#c53030'); return false; }
+  var hoje=new Date(); hoje.setHours(0,0,0,0);
+  var grupos={}, vencidos=0, contratoBase=coContratoAtual();
+  for(var r=cab.idx+1;r<rows.length;r++){
+    var row=rows[r]||[], cod=coUmaLinha(row[cab.cCod]).replace(/;/g,'');
+    if(!cod) continue;
+    var fim=cab.cFim>=0?coDataBR(coUmaLinha(row[cab.cFim])):null;
+    if(fim && fim<hoje){ vencidos++; continue; }          // vigência encerrada: fica fora
+    var contrato=(cab.cContrato>=0?coUmaLinha(row[cab.cContrato]):'')||contratoBase;
+    var k=coChaveContrato(contrato); if(!k) continue;
+    var g=grupos[k]||(grupos[k]={contrato:contrato, vistos:{}, codigos:[]});
+    if(!g.vistos[cod]){ g.vistos[cod]=1; g.codigos.push(cod); }
+  }
+  var chaves=Object.keys(grupos);
+  if(!chaves.length){
+    coSt('❌ Nenhum serviço válido em "'+nome+'"'+(vencidos?' ('+vencidos+' com vigência encerrada)':'')
+      +(cab.cContrato<0 && !contratoBase?' · o arquivo não tem coluna Contrato e o Contrato* do passo 2 está vazio':'')+'.','#c53030');
+    return false;
+  }
+  var mData=String(nome).match(/(\d{4})-(\d{2})-(\d{2})/), data=mData?(mData[3]+'/'+mData[2]+'/'+mData[1]):coDataHoje();
+  chaves.forEach(function(k){ var g=grupos[k]; CO_SERV.contratos[k]={contrato:g.contrato, arquivo:nome, data:data, codigos:g.codigos}; });
+  var resumo=chaves.map(function(k){ return coFmtN(grupos[k].codigos.length)+' serviços do contrato '+grupos[k].contrato; }).join(', ');
+  var outro=contratoBase && !grupos[coChaveContrato(contratoBase)];
+  coAtivInfo();
+  coSt('Salvando a lista de serviços...','#64748b');
+  coSalvarServicos().then(function(ok){
+    coSt('✅ Lista atualizada: '+resumo+(vencidos?' · '+vencidos+' com vigência encerrada ficaram fora':'')
+      +(outro?' · ⚠️ a base '+coNomeBase(coBaseId())+' usa o contrato '+contratoBase+', que segue com a lista dele':'')
+      +(ok?'':' · salva só neste navegador (o Supabase não respondeu)')+'.', (outro||!ok)?'#b9821c':'#0d7377');
+  });
+  return true;
+}
+function coServEscolhido(inp){ var f=inp.files&&inp.files[0]; inp.value=''; if(f) coLerServicos(f); }
+function coLerServicos(f){
+  var nome=f.name||'arquivo', ext=((nome.match(/\.([a-z0-9]+)$/i)||[])[1]||'').toLowerCase();
+  if(['xlsx','xls','xlsm','csv'].indexOf(ext)<0){ coSt('❌ "'+nome+'" não é uma planilha. Envie a precificação em .csv ou .xlsx.','#c53030'); return; }
+  coSt('Lendo "'+nome+'"...','#64748b');
+  (ext==='csv'?coLerCSVArquivo(f):coLerPlanilha(f))
+    .then(function(linhas){ coImportarServicos(linhas, nome); })
+    .catch(function(e){ coSt('❌ Não consegui ler "'+nome+'": '+((e&&e.message)||e)+'.','#c53030'); });
+}
+// arrastar a precificação em cima da faixa de atividades (não confunde com a carteira)
+(function(){
+  var z=document.getElementById('co-ativ'); if(!z) return;
+  function temArquivo(e){ var t=e.dataTransfer&&e.dataTransfer.types; return !!t && Array.prototype.indexOf.call(t,'Files')>=0; }
+  z.addEventListener('dragover',function(e){
+    if(!temArquivo(e)) return; e.preventDefault(); e.stopPropagation(); z.classList.add('sobre');
+    var cz=document.getElementById('co-arq-zona'); if(cz) cz.classList.remove('sobre');
+  });
+  z.addEventListener('dragleave',function(e){ if(!z.contains(e.relatedTarget)) z.classList.remove('sobre'); });
+  z.addEventListener('drop',function(e){
+    if(!temArquivo(e)) return; e.preventDefault(); e.stopPropagation(); z.classList.remove('sobre');
+    var f=e.dataTransfer.files&&e.dataTransfer.files[0]; if(f) coLerServicos(f);
+  });
+})();
 
 // estados + mapa de bases/meses
 coPopularEstados();
-coCarregarConstantes().then(function(){ coCarregarMapa(); });
+coCarregarConstantes().then(function(){ coCarregarMapa(); coCarregarServicos(); });
 
 </script>
 <script>
