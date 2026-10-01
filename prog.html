@@ -524,6 +524,8 @@ const PROG_ATIVIDADES_BASE = PROG_ATIVIDADES.slice();
     <button onclick="progLayoutCliente()" title="Folha A4 com a logo da Mariuá para mandar ao cliente" style="padding:9px 16px;background:linear-gradient(135deg,#1a365d,#2b6cb0);border:none;border-radius:9px;font-family:'Barlow',sans-serif;font-size:0.75rem;font-weight:800;color:#fff;cursor:pointer;letter-spacing:0.5px;">📤 CLIENTE</button>
     <button onclick="progExportCSV()" style="padding:9px 16px;background:#276749;border:none;border-radius:9px;font-family:'Barlow',sans-serif;font-size:0.75rem;font-weight:800;color:#fff;cursor:pointer;letter-spacing:0.5px;">⬇️ EXCEL</button>
     <button onclick="progExportCSVBotao()" title="Baixar em CSV (abre no Excel, Google Planilhas e qualquer sistema)" style="padding:9px 16px;background:#fff;border:1.5px solid #c6dfd0;border-radius:9px;font-family:'Barlow',sans-serif;font-size:0.75rem;font-weight:800;color:#276749;cursor:pointer;letter-spacing:0.5px;white-space:nowrap;">📄 CSV</button>
+    <button type="button" onclick="progExportAtividadesSistema()" title="Baixar no modelo de importação de atividades do sistema (Projeto;cod_atividade;Quantidade): uma linha por obra e atividade, somando a quantidade prevista do filtro atual" style="padding:9px 16px;background:#fff;border:1.5px solid #c7e7e6;border-radius:9px;font-family:'Barlow',sans-serif;font-size:0.75rem;font-weight:800;color:#0d7377;cursor:pointer;letter-spacing:0.5px;white-space:nowrap;">🧾 MODELO ATIVIDADES</button>
+    <button type="button" onclick="progExportAtividadesTeste()" title="Modelo teste: 1 obra com todas as atividades da lista, quantidade 1, para testar a importação no sistema antes do arquivo de verdade" style="padding:9px 16px;background:#f6fdfc;border:1.5px dashed #9fd6d3;border-radius:9px;font-family:'Barlow',sans-serif;font-size:0.75rem;font-weight:800;color:#0d7377;cursor:pointer;letter-spacing:0.5px;white-space:nowrap;">🧪 MODELO TESTE</button>
     <button type="button" id="prog-btn-hoje" onclick="progFiltroHoje()" title="Mostrar so a programacao de hoje (clique de novo para tirar)" style="padding:9px 16px;background:#f8f5ff;border:1.5px solid #e9d8fd;border-radius:9px;font-family:'Barlow',sans-serif;font-size:0.75rem;font-weight:800;color:#7e3af2;cursor:pointer;letter-spacing:0.5px;white-space:nowrap;">📅 HOJE</button>
     <button type="button" id="prog-btn-filtros" onclick="progToggleFiltros()" style="padding:9px 16px;background:#fff;border:1.5px solid #e0e8f0;border-radius:9px;font-family:'Barlow',sans-serif;font-size:0.75rem;font-weight:800;color:#64748b;cursor:pointer;letter-spacing:0.5px;white-space:nowrap;">🔎 FILTROS</button>
     <span id="prog-list-count" style="font-size:0.72rem;font-weight:800;color:#888;white-space:nowrap;"></span>
@@ -6441,6 +6443,98 @@ progExpBaixar(new Blob(['\uFEFF' + csv], { type:'text/csv;charset=utf-8' }), pro
 function progExportCSVSimples(ordem, motivo){
 progExportCSVArquivo(ordem);
 progToast('⚠️ ' + motivo + ' — baixei em CSV, que abre em colunas do mesmo jeito.', 'error');
+}
+
+// ===== MODELO DE IMPORTACAO DE ATIVIDADES DO SISTEMA =====
+// Mesmo formato do modelo_imp_ativ_obra_lote:  Projeto;cod_atividade;Quantidade;
+// Uma linha por obra + atividade, somando a quantidade prevista de todos os
+// registros do filtro atual (o formato nao tem data). Registro com varias
+// atividades (BA001+BA005) vira uma linha para cada, com a qtd prevista dele.
+// SEM OBRA fica de fora: nao tem projeto para importar.
+function progExportAtividadesSistema(){
+if(!progRegistros || !progRegistros.length){
+progToast('❌ Não há registros para exportar.', 'error');
+return;
+}
+const ordem = progExpOrdenado();
+if(!ordem.length){
+progToast('❌ Nenhum registro no filtro atual. Limpe os filtros e tente de novo.', 'error');
+return;
+}
+const soma = new Map();   // 'PEP|COD' -> { pep, cod, qtd }
+let semObra = 0, semCod = 0;
+ordem.forEach(r => {
+const pep = String(r.pep || '').replace(/;/g, '').trim();
+if(!pep || progNorm(pep) === progNorm(PROG_SEM_OBRA_PEP)){ semObra++; return; }
+const cods = String(r.atividade_cod || '').split('+').map(c => c.replace(/;/g, '').trim()).filter(Boolean);
+if(!cods.length){ semCod++; return; }
+const q = Number(r.qtd_previsto) || 0;
+cods.forEach(c => {
+const k = progNorm(pep) + '|' + progNorm(c);
+const it = soma.get(k) || { pep: pep, cod: c, qtd: 0 };
+it.qtd += q;
+soma.set(k, it);
+});
+});
+if(!soma.size){
+progToast('❌ Nenhum registro com obra e atividade no filtro atual' + (semObra ? ' (' + semObra + ' sem obra)' : '') + '.', 'error');
+return;
+}
+// 2.5 -> 2,5 ; 3 -> 3 (sem zeros sobrando)
+const fmt = n => String(Math.round(n * 1000) / 1000).replace('.', ',');
+const linhas = ['Projeto;cod_atividade;Quantidade;'];
+const obras = new Set();
+let zerados = 0;
+soma.forEach(it => {
+if(!it.qtd) zerados++;
+obras.add(progNorm(it.pep));
+linhas.push(it.pep + ';' + it.cod + ';' + fmt(it.qtd) + ';');
+});
+// igual ao modelo do sistema: sem BOM, sem linha sep=, quebra CRLF, ; no fim da linha
+const nome = progExpNome(ordem, 'csv').replace(/^programacao_/, 'importar_atividades_programacao_');
+progExpBaixar(new Blob([linhas.join('\r\n') + '\r\n'], { type:'text/csv;charset=utf-8' }), nome);
+progToast('✅ ' + soma.size + ' linha(s) de ' + obras.size + ' obra(s) no modelo de atividades.'
++ (semObra ? ' ' + semObra + ' sem obra ficaram fora.' : '')
++ (semCod ? ' ' + semCod + ' sem código de atividade ficaram fora.' : '')
++ (zerados ? ' ⚠️ ' + zerados + ' sem qtd prevista saíram com 0.' : ''), 'success');
+}
+
+// ===== MODELO TESTE: 1 obra x todas as atividades =====
+// Para testar a importacao antes do arquivo de verdade: uma obra com todas as
+// atividades da lista (menos as que nao exigem obra), quantidade 1. Se o sistema
+// aceitar, os codigos das atividades estao certos e o MODELO ATIVIDADES passa.
+function progExportAtividadesTeste(){
+const lista = (typeof PROG_ATIVIDADES !== 'undefined') ? PROG_ATIVIDADES : [];
+const vistos = {}, cods = [];
+let semObra = 0;
+lista.forEach(a => {
+const c = String((a && a.cod) || '').replace(/;/g, '').trim();
+if(!c) return;
+if(typeof progAtivSemObra === 'function' && progAtivSemObra(a)){ semObra++; return; }
+const k = progNorm(c);
+if(vistos[k]) return;
+vistos[k] = true;
+cods.push(c);
+});
+if(!cods.length){
+progToast('❌ A lista de atividades está vazia.', 'error');
+return;
+}
+// obra sugerida: a primeira do filtro atual que tem PEP
+const comObra = progExpOrdenado().find(r => r.pep && progNorm(r.pep) !== progNorm(PROG_SEM_OBRA_PEP));
+const resp = prompt('MODELO TESTE: ' + cods.length + ' atividades, quantidade 1 em cada.\n\nPEP da obra para o teste:', comObra ? comObra.pep : '');
+if(resp === null) return;
+const pep = String(resp).replace(/;/g, '').trim();
+if(!pep){
+progToast('❌ Informe o PEP da obra para gerar o modelo teste.', 'error');
+return;
+}
+// igual ao modelo do sistema: sem BOM, CRLF, ; no fim da linha
+const linhas = ['Projeto;cod_atividade;Quantidade;'].concat(cods.map(c => pep + ';' + c + ';1;'));
+progExpBaixar(new Blob([linhas.join('\r\n') + '\r\n'], { type:'text/csv;charset=utf-8' }),
+'modelo_teste_atividades_' + pep.replace(/[^\w\-]+/g, '_') + '.csv');
+progToast('🧪 Modelo teste: obra ' + pep + ' × ' + cods.length + ' atividades (qtd 1).'
++ (semObra ? ' ' + semObra + ' que não exigem obra ficaram fora.' : ''), 'success');
 }
 
 // ===== LAYOUT DA PROGRAMACAO PARA O CLIENTE =====
