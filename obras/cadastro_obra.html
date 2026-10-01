@@ -432,9 +432,9 @@ body.sm-collapsed .sm-side:hover .sm-group-head{justify-content:flex-start;paddi
         <p>Cada base guarda o seu próprio conjunto: ao trocar de base no passo 1, estes campos mudam junto.</p>
         <p><b>Vindos da carteira, não editáveis aqui:</b> Projeto, Título, Município, Responsável, Supervisor, Postes, Latitude, Longitude.</p>
         <p><b>Centro de serviço:</b> sigla do estado + município.</p>
-        <p><b>Contrato por base:</b> Irecê, Jacobina e Serrinha são sempre OBRAS - BA; Aracaju é sempre OBRAS-SE. Nelas o estado fica travado e Contrato, Tipo de obra, Tipo de serviço e Processo vêm do contrato. Em Feira o estado é escolhido aqui.</p>
+        <p><b>Contrato por base:</b> Irecê, Jacobina e Serrinha são sempre OBRAS - BA; Aracaju é sempre OBRAS-SE. Nelas o estado fica travado e Contrato, Tipo de obra, Tipo de serviço e Processo já vêm preenchidos pelo contrato, mas podem ser editados aqui. Em Feira o estado é escolhido aqui.</p>
         <p><b>Base Aracaju (arquivo do lote):</b> Projeto = Obra; Título = “Tipo Obra - Município”; Prazo Regulado vai para <code>data_prazo_venc</code>. O arquivo não tem responsável nem supervisor, então nessa base eles são definidos aqui (responsável padrão: RAFAEL BERNARDO MAGALHAES). Todas as obras do arquivo entram, sem o filtro de Execução/Programada.</p>
-        <p><b>Status:</b> toda obra sai com <b>STATUS* = Em Execução</b>, fixo em todas as bases. O status da carteira só decide quais obras entram (Em Execução ou Programada).</p>
+        <p><b>Status:</b> toda obra sai com o <b>STATUS*</b> definido aqui (padrão: Em Execução). O status da carteira só decide quais obras entram (Em Execução ou Programada).</p>
       </details>
     </div>
   </section>
@@ -546,10 +546,10 @@ var CO_ANO=2026;
 var CO_BASES=[{id:'irc',nome:'Irecê',uf:'ba'},{id:'jac',nome:'Jacobina',uf:'ba'},{id:'fsa',nome:'Feira'},{id:'srr',nome:'Serrinha',uf:'ba'},
               {id:'aju',nome:'Aracaju',uf:'se',fonte:'arquivo', padrao:{'RESPONSAVEL*':'RAFAEL BERNARDO MAGALHAES'}}];
 var CO_ESTADO_BASE={};   // estado escolhido nas bases sem contrato fixo: { fsa:'ba' }
-// campos travados pelo contrato fixo da base ({} se a base não tem contrato fixo)
+// valores padrão do contrato fixo da base (preenchem o card 2, mas podem ser editados)
 function coContratoFixo(id){
   var def=coBaseDef(id), e=def.uf&&CO_ESTADO_DEF[def.uf], fx={};
-  fx['STATUS*']=CO_STATUS_FIXO;       // status fixo em todas as bases, inclusive Feira
+  fx['STATUS*']=CO_STATUS_FIXO;       // status padrão em todas as bases, inclusive Feira (editável)
   if(!e) return fx;
   fx['Contrato*']=e.contrato||'';
   fx['TIPO DE OBRA*']=e.tipoObra||'';
@@ -1099,7 +1099,7 @@ function coProcessarLinhas(rows, nomeArquivo){
       reg['LONGITUDE']=coUmaLinha(cLon>=0?(row[cLon]||''):'').replace('.',',');
       reg['SUPERVISOR']=(cSup>=0?(row[cSup]||''):'').split(' - ')[0].trim();
       // só obras em Execução ou Programada
-      var _st=coNorm(_stPlan || coConstAtual()['STATUS*'] || '');
+      var _st=coNorm(_stPlan || CO_STATUS_FIXO);
       if(_st.indexOf('EXECUCAO')<0 && _st.indexOf('PROGRAMAD')<0){ foraFiltro++; var _k=_st||'(vazio)'; foraDet[_k]=(foraDet[_k]||0)+1; continue; }
       out.push(reg);
     }
@@ -1361,7 +1361,7 @@ function coAplicarPadroesBases(){
     var C=CO_CONST_BASES[b.id]; if(!C) return;
     var p=b.padrao||{}, fx=coContratoFixo(b.id);
     Object.keys(p).forEach(function(k){ if(!String(C[k]||'').trim()) C[k]=p[k]; });
-    Object.keys(fx).forEach(function(k){ C[k]=fx[k]; });
+    Object.keys(fx).forEach(function(k){ if(!Object.prototype.hasOwnProperty.call(C,k)) C[k]=fx[k]; });   // padrão do contrato, editável
   });
 }
 // constantes da base selecionada agora
@@ -1369,7 +1369,7 @@ function coConstAtual(){
   var b=coBaseId();
   if(!CO_CONST_BASES[b]) CO_CONST_BASES[b]=coConstPadrao();
   var C=CO_CONST_BASES[b], fx=coContratoFixo(b);
-  Object.keys(fx).forEach(function(k){ C[k]=fx[k]; });
+  Object.keys(fx).forEach(function(k){ if(!Object.prototype.hasOwnProperty.call(C,k)) C[k]=fx[k]; });   // padrão do contrato, editável
   return C;
 }
 // base por arquivo (lote): responsável/supervisor não vêm no arquivo -> viram constantes; o prazo regulado vem do arquivo
@@ -1406,8 +1406,8 @@ function coAplicarConstantes(){
   var cols=coColunasConst();
   CO_ROWS.forEach(function(reg){
     cols.forEach(function(h){ reg[h]=C[h]||''; });
-    // status: sempre o fixo (Em Execução). O status da carteira só serve para filtrar quais obras entram.
-    reg['STATUS*']=CO_STATUS_FIXO;
+    // status: o do card 2 (padrão Em Execução). O status da carteira só serve para filtrar quais obras entram.
+    reg['STATUS*']=String(C['STATUS*']||'').trim()||CO_STATUS_FIXO;
     reg['CENTRO SERVICO']=reg['Municipio*']?(sigla+'-'+reg['Municipio*'].toUpperCase()):'';
     if(!reg['DATA_RECEBIMENTO*']) reg['DATA_RECEBIMENTO*']=coDataHoje();
   });
@@ -1469,7 +1469,7 @@ function coPopularConstantes(){
       var obrig=/\*$/.test(h);
       var val=(C[h]||'').replace(/"/g,'&quot;');
       var cheio=(C[h]||'').trim()!=='';
-      var travado=Object.prototype.hasOwnProperty.call(coContratoFixo(),h);
+      var travado=false;   // campos do contrato e status liberados para edição
       return '<div>'
         + '<label style="font-size:.66rem;font-weight:800;color:'+(obrig?'#0d7377':'#64748b')+';display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:3px;" title="'+h+'">'+h+'</label>'
         + '<input data-col="'+h+'" oninput="coConstMudou(this)" value="'+val+'"'
@@ -1491,7 +1491,8 @@ function coPopularConstantes(){
 function coConstMudou(inp){
   var h=inp.getAttribute('data-col'), v=inp.value;
   var C=coConstAtual();
-  if(v.trim()==='') delete C[h]; else C[h]=v;
+  var ehPadraoContrato=Object.prototype.hasOwnProperty.call(coContratoFixo(),h);
+  if(v.trim()==='' && !ehPadraoContrato) delete C[h]; else C[h]=v;
   inp.style.borderColor=v.trim()?'#bfe0dd':'#e2e8f0';
   inp.style.background=v.trim()?'#f6fdfc':'#fff';
   coAplicarEAtualizar('"'+h+'" alterada');
