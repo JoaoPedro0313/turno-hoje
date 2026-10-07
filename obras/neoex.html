@@ -105,7 +105,7 @@ body.sm-collapsed .sm-side:hover .sm-group-head{justify-content:flex-start;paddi
 </style>
 <style id="neoex-layout">
 /* ===== NEOEX: lista de obras + detalhe (opção C) ===== */
-.nx{max-width:1400px}
+.wrap.nx{max-width:none;padding:14px 20px}
 .nx-topo{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
 .nx-titulo{display:flex;align-items:center;gap:12px;min-width:0}
 .nx-ic{width:42px;height:42px;border-radius:12px;background:#0d7377;color:#fff;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0}
@@ -122,7 +122,7 @@ body.sm-collapsed .sm-side:hover .sm-group-head{justify-content:flex-start;paddi
 .nx-card{background:#fff;border:1px solid #e2e8f0;border-radius:14px}
 .nx-vazio{padding:50px 20px;text-align:center;color:#7a8794;font-size:.88rem;font-weight:600}
 .nx-split{display:flex;gap:16px;align-items:flex-start}
-.nx-lista{flex:0 0 400px;max-width:420px;min-width:0;position:sticky;top:66px;max-height:calc(100vh - 82px);display:flex;flex-direction:column;overflow:hidden}
+.nx-lista{flex:0 0 clamp(360px,26vw,480px);max-width:none;min-width:0;position:sticky;top:66px;max-height:calc(100vh - 82px);display:flex;flex-direction:column;overflow:hidden}
 .nx-lista-topo{padding:12px;border-bottom:1px solid #e2e8f0;display:flex;flex-direction:column;gap:10px}
 .nx-busca{display:flex;align-items:center;gap:8px;height:42px;padding:0 12px;border:1.5px solid #cbd5e0;border-radius:10px;background:#fff;color:#5a6878}
 .nx-busca:focus-within{border-color:#0d7377}
