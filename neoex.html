@@ -103,6 +103,109 @@ body.sm-collapsed .sm-side:hover .sm-top{justify-content:flex-start;padding:12px
 body.sm-collapsed .sm-side:hover .sm-item{justify-content:flex-start;padding:9px 11px}
 body.sm-collapsed .sm-side:hover .sm-group-head{justify-content:flex-start;padding:9px 11px}
 </style>
+<style id="neoex-layout">
+/* ===== NEOEX: lista de obras + detalhe (opção C) ===== */
+.wrap.nx{max-width:none;padding:14px 20px}
+.nx-topo{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
+.nx-titulo{display:flex;align-items:center;gap:12px;min-width:0}
+.nx-ic{width:42px;height:42px;border-radius:12px;background:#0d7377;color:#fff;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0}
+.nx-titulo h1{font-size:1.25rem;font-weight:800;color:#1a2a3a;letter-spacing:.3px;margin:0}
+.nx-titulo p{font-size:.8rem;font-weight:600;color:#5a6878;margin-top:2px}
+.nx-acoes{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.nx-status{font-size:.72rem;font-weight:700;color:#3d4b5c;background:#fff;border:1px solid #e2e8f0;padding:6px 12px;border-radius:20px}
+.nx-btn{display:inline-flex;align-items:center;gap:7px;height:40px;padding:0 16px;border:none;border-radius:10px;background:#0d7377;color:#fff;font-family:'Barlow',sans-serif;font-size:.85rem;font-weight:800;cursor:pointer}
+.nx-btn:hover{background:#0a5f62}
+.nx-btn .ti{font-size:18px}
+.nx-btn-sec{background:#fff;color:#3d4b5c;border:1.5px solid #cbd5e0}
+.nx-btn-sec:hover{background:#f0f4f5}
+.nx-msg{margin-bottom:12px;padding:10px 14px;border-radius:10px;font-size:.8rem;font-weight:700}
+.nx-card{background:#fff;border:1px solid #e2e8f0;border-radius:14px}
+.nx-vazio{padding:50px 20px;text-align:center;color:#7a8794;font-size:.88rem;font-weight:600}
+.nx-split{display:flex;gap:16px;align-items:flex-start}
+.nx-lista{flex:0 0 clamp(360px,26vw,480px);max-width:none;min-width:0;position:sticky;top:66px;max-height:calc(100vh - 82px);display:flex;flex-direction:column;overflow:hidden}
+.nx-lista-topo{padding:12px;border-bottom:1px solid #e2e8f0;display:flex;flex-direction:column;gap:10px}
+.nx-busca{display:flex;align-items:center;gap:8px;height:42px;padding:0 12px;border:1.5px solid #cbd5e0;border-radius:10px;background:#fff;color:#5a6878}
+.nx-busca:focus-within{border-color:#0d7377}
+.nx-busca input{flex:1;min-width:0;border:none;outline:none;background:transparent;font-family:'Barlow',sans-serif;font-size:.88rem;font-weight:600;color:#1a2a3a}
+.nx-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+.nx-filtros{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+.nx-fbtn{min-height:40px;padding:4px 8px;border-radius:10px;border:1.5px solid #cbd5e0;background:#fff;color:#3d4b5c;font-family:'Barlow',sans-serif;font-size:.8rem;font-weight:800;cursor:pointer}
+.nx-fbtn b{font-weight:800;opacity:.75}
+.nx-fbtn.on{background:#0d7377;border-color:#0d7377;color:#fff}
+.nx-resumo{font-size:.74rem;font-weight:700;color:#5a6878}
+.nx-itens{overflow-y:auto;flex:1;min-height:120px}
+.nx-item{display:flex;align-items:center;gap:12px;width:100%;text-align:left;padding:11px 14px;border:none;border-bottom:1px solid #edf0f2;background:transparent;font-family:'Barlow',sans-serif;color:#1a2a3a;cursor:pointer}
+.nx-item:hover{background:#f5f8f9}
+.nx-item.on{background:#e8f4f3;box-shadow:inset 0 0 0 2px #0d7377}
+.nx-item:focus-visible{outline:2px solid #0d7377;outline-offset:-2px}
+.nx-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.nx-dot.ok{background:#0d7377}.nx-dot.div{background:#d93025}.nx-dot.fora{background:#2b6cb0}.nx-dot.sem{background:#a0aec0}
+.nx-item-tx{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+.nx-item-pep{font-size:.72rem;font-weight:800;color:#5a6878;letter-spacing:.5px}
+.nx-item-nome{font-size:.86rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.nx-item-res{font-size:.72rem;font-weight:600;color:#5a6878;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.nx-item-mat{font-size:.8rem;font-weight:800;flex-shrink:0}
+.nx-legenda{padding:9px 14px;border-top:1px solid #e2e8f0;font-size:.68rem;font-weight:600;color:#5a6878;background:#f7fafa}
+.nx-detalhe{flex:1;min-width:0;padding:22px 24px;display:flex;flex-direction:column;gap:20px}
+.nx-det-topo{display:flex;flex-wrap:wrap;align-items:flex-start;justify-content:space-between;gap:12px}
+.nx-det-pep{font-size:.8rem;font-weight:800;color:#5a6878;letter-spacing:.5px}
+.nx-det-topo h2{font-size:1.45rem;font-weight:800;line-height:1.2;color:#1a2a3a;margin:2px 0 0}
+.nx-det-mun{font-size:.88rem;font-weight:600;color:#5a6878;margin-top:4px}
+.nx-pill{font-size:.78rem;font-weight:800;padding:6px 12px;border-radius:20px;white-space:nowrap}
+.nx-frase{margin:0;padding:12px 14px;border-radius:10px;font-size:.92rem;font-weight:700}
+.nx-tom.ok{background:#e3f4f1;color:#0b5e62}.nx-tom.div{background:#fdecec;color:#b42318}
+.nx-tom.fora{background:#e6effa;color:#1f5aa0}.nx-tom.sem{background:#edf2f7;color:#3d4b5c}
+.nx-comp{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px}
+.nx-bloco{background:#f7fafa;border:1px solid #e2e8f0;border-radius:12px;padding:16px}
+.nx-bloco-topo{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.nx-h3{font-size:.78rem;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:#5a6878;margin:0}
+.nx-dif{font-size:.8rem;font-weight:800;padding:2px 8px;border-radius:6px;background:#fdecec;color:#b42318}
+.nx-dif.zero{background:#e3f4f1;color:#0b5e62}
+.nx-barras{display:grid;grid-template-columns:52px 1fr 56px;align-items:center;gap:10px;margin-top:14px}
+.nx-barras span{font-size:.8rem;font-weight:700;color:#5a6878}
+.nx-barras strong{font-size:1.1rem;font-weight:800;text-align:right;color:#1a2a3a}
+.nx-barras strong.rene{color:#3d4b5c}
+.nx-trilho{height:14px;border-radius:4px;background:#e2e8f0;overflow:hidden}
+.nx-trilho i{display:block;height:100%;border-radius:4px;background:#0d7377}
+.nx-trilho i.rene{background:#8a97a6}
+.nx-exec{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-top:10px}
+.nx-exec div{border:1px solid #e2e8f0;border-radius:12px;padding:12px 14px}
+.nx-exec strong{display:block;font-size:1.45rem;font-weight:800;color:#1a2a3a}
+.nx-exec span{font-size:.8rem;font-weight:700;color:#5a6878}
+.nx-mat{border-top:1px solid #e2e8f0;padding-top:18px}
+.nx-mat-topo{display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.nx-mat-pct{font-size:1.7rem;font-weight:800}
+.nx-mat-sub{font-size:.8rem;font-weight:700;color:#5a6878}
+.nx-mat-trilho{height:12px;border-radius:6px;background:#e2e8f0;margin-top:8px;overflow:hidden}
+.nx-mat-trilho i{display:block;height:100%;border-radius:6px}
+.nx-tab-wrap{overflow-x:auto;border:1px solid #e2e8f0;border-radius:10px;margin-top:14px}
+.nx-tab{width:100%;border-collapse:collapse;font-size:.78rem;min-width:620px}
+.nx-tab th{padding:9px 10px;text-align:right;font-weight:800;font-size:.68rem;letter-spacing:.5px;text-transform:uppercase;color:#5a6878;background:#f7fafa;border-bottom:1px solid #e2e8f0;white-space:nowrap}
+.nx-tab td{padding:8px 10px;text-align:right;border-bottom:1px solid #edf0f2;color:#3d4b5c}
+.nx-tab tr:last-child td{border-bottom:none}
+.nx-tab .e{text-align:left}.nx-tab .c{text-align:center}
+.nx-tab td.mat{font-weight:600;color:#1a2a3a;text-align:left}
+.nx-tab td.nx-cod{color:#7a8794}
+/* cores do avanço de materiais (100% / 50% ou mais / abaixo de 50%) */
+.nx-av-ok{color:#0b7a5e}.nx-av-meio{color:#a8650b}.nx-av-baixo{color:#c53030}
+.nx-bg-ok{background:#14a085}.nx-bg-meio{background:#f0a500}.nx-bg-baixo{background:#e53e3e}
+/* celular e tela estreita: lista em cima, detalhe embaixo */
+@media (max-width:900px){
+  .nx-split{flex-direction:column}
+  .nx-lista{position:static;flex:none;width:100%;max-width:none;max-height:55vh}
+  .nx-detalhe{width:100%;box-sizing:border-box;padding:18px 16px}
+}
+/* modo escuro: etiquetas translúcidas, como no Turno */
+body.dark .nx-tom.ok,body.dark .nx-dif.zero{background:rgba(20,160,133,.16);color:#5eead4}
+body.dark .nx-tom.div,body.dark .nx-dif{background:rgba(229,62,62,.16);color:#fc8181}
+body.dark .nx-tom.fora{background:rgba(66,153,225,.16);color:#90cdf4}
+body.dark .nx-tom.sem{background:#1a1a1a;color:#b8b8b8}
+body.dark .nx-item.on{background:#0f2622;box-shadow:inset 0 0 0 2px #14a085}
+body.dark .nx-fbtn.on,body.dark .nx-btn:not(.nx-btn-sec),body.dark .nx-ic{background:#14a085;border-color:#14a085;color:#fff}
+body.dark .nx-trilho i:not(.rene){background:#14a085}
+body.dark .nx-dot.ok{background:#14a085}
+body.dark .nx-av-ok{color:#5eead4}body.dark .nx-av-meio{color:#fbd38d}body.dark .nx-av-baixo{color:#fc8181}
+</style>
 </head>
 <body class="sm-collapsed">
 <script>try{if(localStorage.getItem("mariua_menu")==="aberto")document.body.classList.remove("sm-collapsed");}catch(e){}</script>
@@ -125,74 +228,48 @@ body.sm-collapsed .sm-side:hover .sm-group-head{justify-content:flex-start;paddi
   <!-- Menu montado por nav.js — NÃO edite os itens aqui, edite a lista em nav.js -->
   <nav class="sm-nav"><a class="sm-item" href="../index.html"><span class="sm-ic"><i class="ti ti-home"></i></span><span class="sm-tx">Início</span></a></nav>
 </aside>
-<script src="../nav.js?v=2"></script>
+<script src="../nav.js?v=4"></script>
 
-<div class="wrap">
+<div class="wrap nx">
 
-  <div style="background:linear-gradient(135deg,#0b5e62,#0d7377,#14a085);border-radius:14px;padding:16px 20px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
-    <div style="display:flex;align-items:center;gap:12px;">
-      <span style="font-size:1.6rem;">🧪</span>
-      <div>
-        <div style="color:#fff;font-size:1rem;font-weight:800;letter-spacing:0.5px;">NEOEX — APONTAMENTO × PLANILHA</div>
-        <div style="color:rgba(255,255,255,0.75);font-size:0.7rem;font-weight:600;margin-top:2px;">Obras, avanço de materiais (ao vivo) por B- — importe o GPM para comparar covas e postes</div>
+  <div class="nx-topo">
+    <div class="nx-titulo">
+      <div class="nx-ic" aria-hidden="true"><i class="ti ti-box"></i></div>
+      <div style="min-width:0;">
+        <h1>NEOEX · Apontamento × Planilha</h1>
+        <p>Escolha uma obra na lista para ver o que o GPM e a planilha do René dizem dela</p>
       </div>
     </div>
-    <span id="neoex-base-status" style="font-size:0.7rem;font-weight:800;color:#fff;background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);padding:5px 12px;border-radius:20px;">Planilha do René: carregando…</span>
-    <span id="neoex-mat-status" style="font-size:0.7rem;font-weight:800;color:#fff;background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);padding:5px 12px;border-radius:20px;margin-left:8px;">Materiais: carregando…</span>
+    <div class="nx-acoes">
+      <span id="neoex-base-status" class="nx-status">Planilha do René: carregando…</span>
+      <span id="neoex-mat-status" class="nx-status">Materiais: carregando…</span>
+      <button type="button" class="nx-btn nx-btn-sec" onclick="neoexExportCSV()"><i class="ti ti-download"></i> CSV</button>
+      <button type="button" class="nx-btn" id="neoex-import-btn" onclick="document.getElementById('neoex-file').click()"><i class="ti ti-upload"></i> Importar GPM (.csv)</button>
+      <input type="file" id="neoex-file" accept=".csv,.txt" style="display:none;" onchange="neoexImportar(this.files[0]);this.value='';">
+    </div>
   </div>
+  <div id="neoex-import-msg" class="nx-msg" style="display:none;"></div>
 
-  <div style="background:#fff;border-radius:14px;padding:18px 20px;box-shadow:0 2px 12px rgba(0,0,0,0.08);margin-bottom:14px;">
-    <div onclick="document.getElementById('neoex-file').click()" id="neoex-drop"
-      style="border:2px dashed #c0e8e5;border-radius:12px;padding:28px 20px;text-align:center;cursor:pointer;transition:all 0.2s;background:linear-gradient(135deg,#f0fafa,#e8f7f5);">
-      <div style="font-size:2rem;margin-bottom:8px;">📥</div>
-      <div style="font-size:0.9rem;font-weight:800;color:#0d7377;">Clique para importar o relatório de GPM (.csv)</div>
-      <div style="font-size:0.72rem;font-weight:600;color:#888;margin-top:5px;">opcional — apontamento_faturamento (;) para comparar covas/postes</div>
-    </div>
-    <input type="file" id="neoex-file" accept=".csv,.txt" style="display:none;" onchange="neoexImportar(this.files[0])">
-    <div id="neoex-import-msg" style="display:none;margin-top:12px;padding:10px 14px;border-radius:10px;font-size:0.78rem;font-weight:700;text-align:center;"></div>
-  </div>
+  <div id="neoex-carregando" class="nx-card nx-vazio"><i class="ti ti-loader-2" style="font-size:2rem;"></i><div style="margin-top:8px;">Carregando obras e materiais…</div></div>
 
-  <div id="neoex-kpis" style="display:none;gap:10px;flex-wrap:wrap;margin-bottom:14px;"></div>
-
-  <div id="neoex-content" style="display:none;">
-    <div style="background:#fff;border-radius:14px;padding:14px 18px;box-shadow:0 2px 12px rgba(0,0,0,0.08);margin-bottom:12px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
-      <input type="text" id="neoex-search" placeholder="🔍 Buscar B-, obra, município..." oninput="neoexRender()"
-        style="flex:1;min-width:220px;padding:9px 14px;border:1.5px solid #e0e8f0;border-radius:9px;font-family:'Barlow',sans-serif;font-size:0.82rem;font-weight:600;outline:none;">
-      <button id="neoex-fbtn-todos" onclick="neoexSetFiltro('todos')" style="padding:7px 14px;border-radius:8px;border:1.5px solid #0d7377;background:#0d7377;color:#fff;font-family:'Barlow',sans-serif;font-size:0.72rem;font-weight:800;cursor:pointer;">TODOS</button>
-      <button id="neoex-fbtn-div" onclick="neoexSetFiltro('div')" style="padding:7px 14px;border-radius:8px;border:1.5px solid #e2e8f0;background:#fff;color:#666;font-family:'Barlow',sans-serif;font-size:0.72rem;font-weight:800;cursor:pointer;">⚠️ COM DIFERENÇA</button>
-      <button id="neoex-fbtn-ok" onclick="neoexSetFiltro('ok')" style="padding:7px 14px;border-radius:8px;border:1.5px solid #e2e8f0;background:#fff;color:#666;font-family:'Barlow',sans-serif;font-size:0.72rem;font-weight:800;cursor:pointer;">✅ OK</button>
-      <button id="neoex-fbtn-so-gpm" onclick="neoexSetFiltro('so-gpm')" style="padding:7px 14px;border-radius:8px;border:1.5px solid #e2e8f0;background:#fff;color:#666;font-family:'Barlow',sans-serif;font-size:0.72rem;font-weight:800;cursor:pointer;">SÓ NO GPM</button>
-      <button onclick="neoexExportCSV()" style="padding:7px 14px;background:#276749;border:none;border-radius:8px;font-family:'Barlow',sans-serif;font-size:0.72rem;font-weight:800;color:#fff;cursor:pointer;">⬇️ CSV</button>
-    </div>
-
-    <div style="background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.08);">
-      <div style="padding:8px 16px;background:#f0fafa;border-bottom:1px solid #c0e8e5;display:flex;gap:16px;font-size:0.68rem;font-weight:700;color:#666;flex-wrap:wrap;align-items:center;">
-        <span style="display:flex;align-items:center;gap:5px;"><span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:#14a085;"></span>Bate</span>
-        <span style="display:flex;align-items:center;gap:5px;"><span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:#e53e3e;"></span>Diferença previsto × realizado</span>
-        <span style="margin-left:auto;color:#aaa;">GPM = executado no apontamento · René = planilha do mapa</span>
+  <div id="neoex-content" class="nx-split" style="display:none;">
+    <section class="nx-card nx-lista" aria-label="Obras">
+      <div class="nx-lista-topo">
+        <label class="nx-busca"><i class="ti ti-search" aria-hidden="true"></i><span class="nx-sr">Buscar obra</span>
+          <input type="text" id="neoex-search" placeholder="Buscar B-, obra ou município" oninput="neoexRender()"></label>
+        <div class="nx-filtros" role="group" aria-label="Filtrar obras">
+          <button type="button" id="neoex-fbtn-todos" class="nx-fbtn on" aria-pressed="true" onclick="neoexSetFiltro('todos')">Todas <b id="neoex-n-todos"></b></button>
+          <button type="button" id="neoex-fbtn-div" class="nx-fbtn" aria-pressed="false" onclick="neoexSetFiltro('div')">Com diferença <b id="neoex-n-div"></b></button>
+          <button type="button" id="neoex-fbtn-ok" class="nx-fbtn" aria-pressed="false" onclick="neoexSetFiltro('ok')">Sem diferença <b id="neoex-n-ok"></b></button>
+          <button type="button" id="neoex-fbtn-so-gpm" class="nx-fbtn" aria-pressed="false" onclick="neoexSetFiltro('so-gpm')">Fora da planilha <b id="neoex-n-so-gpm"></b></button>
+        </div>
+        <div id="neoex-kpis" class="nx-resumo"></div>
       </div>
-      <div style="overflow-x:auto;">
-        <table style="width:100%;border-collapse:collapse;font-size:0.76rem;">
-          <thead>
-            <tr style="background:linear-gradient(135deg,#0b5e62,#0d7377);color:#fff;">
-              <th style="padding:10px 12px;text-align:left;font-weight:800;white-space:nowrap;">B- / OBRA</th>
-              <th style="padding:10px 8px;text-align:center;font-weight:800;white-space:nowrap;">COVAS<br><span style="font-size:0.6rem;opacity:0.7;">GPM × René</span></th>
-              <th style="padding:10px 8px;text-align:center;font-weight:800;white-space:nowrap;">POSTES<br><span style="font-size:0.6rem;opacity:0.7;">GPM × René</span></th>
-              <th style="padding:10px 8px;text-align:center;font-weight:800;white-space:nowrap;">ESTRUT.<br><span style="font-size:0.6rem;opacity:0.7;">só GPM</span></th>
-              <th style="padding:10px 8px;text-align:center;font-weight:800;white-space:nowrap;">CABO (m)<br><span style="font-size:0.6rem;opacity:0.7;">só GPM</span></th>
-              <th style="padding:10px 8px;text-align:center;font-weight:800;white-space:nowrap;">PODA<br><span style="font-size:0.6rem;opacity:0.7;">só GPM</span></th>
-              <th style="padding:10px 8px;text-align:center;font-weight:800;white-space:nowrap;">LIGAÇÃO<br><span style="font-size:0.6rem;opacity:0.7;">cliente</span></th>
-              <th style="padding:10px 10px;text-align:center;font-weight:800;white-space:nowrap;">MATERIAIS<br><span style="font-size:0.6rem;opacity:0.7;">avanço</span></th>
-            </tr>
-          </thead>
-          <tbody id="neoex-tbody"></tbody>
-        </table>
-      </div>
-      <div id="neoex-empty" style="display:none;text-align:center;padding:50px 20px;color:#aaa;">
-        <div style="font-size:2.4rem;margin-bottom:10px;">📋</div>
-        <div style="font-size:0.88rem;font-weight:600;">Carregando obras e materiais…</div>
-      </div>
-    </div>
+      <div id="neoex-itens" class="nx-itens"></div>
+      <div id="neoex-empty" class="nx-vazio" style="display:none;padding:30px 16px;">Nenhuma obra neste filtro.</div>
+      <div class="nx-legenda">GPM = executado no apontamento · René = planilha do mapa</div>
+    </section>
+    <section id="neoex-detalhe" class="nx-card nx-detalhe" aria-label="Detalhe da obra" aria-live="polite"></section>
   </div>
 
 </div>
@@ -205,7 +282,7 @@ var neoexBanco = null; // obras_base (planilha do René)
 // relógio
 (function(){ function t(){ var d=new Date(); var el=document.getElementById('page-time'); if(el) el.textContent=('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2); } t(); setInterval(t,15000); })();
 </script>
-<script src="neoex.js"></script>
+<script src="neoex.js?v=2"></script>
 
 <script>
 (function(){
