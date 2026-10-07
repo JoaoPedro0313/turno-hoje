@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
+<script>/* tema escuro: esconde a página até o nav.js converter as cores (evita piscar branco) */try{if(localStorage.getItem("mariua_darkmode")==="1"){document.documentElement.classList.add("tema-escuro-carregando");setTimeout(function(){document.documentElement.classList.remove("tema-escuro-carregando")},4000)}}catch(e){}</script><style>html.tema-escuro-carregando{background:#000}html.tema-escuro-carregando body{visibility:hidden}</style>
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
@@ -280,21 +281,6 @@ box-shadow:0 2px 8px rgba(0,0,0,0.08)}
 
 .logo-svg{width:36px;height:36px;flex-shrink:0}
 
-body.dark{background:#1a1f1d;color:#e8f0ec}
-body.dark .section{background:#222926;border-color:#3a4a44}
-body.dark .menu-card{background:#222926;border-color:#3a4a44;color:#e8f0ec}
-body.dark .form-group input,body.dark .form-group select{background:#2a312e;color:#e8f0ec;border-color:#3a4a44}
-body.dark .tab{background:#2a312e;color:#9FE1CB}
-body.dark .tab.active{background:#222926;border-color:#14a085;color:#14a085}
-body.dark .tab-content{background:#222926;border-color:#14a085}
-body.dark .prev-data-box{background:#0d2b21;border-color:#1D9E75}
-body.dark .photo-box{background:#2a312e;border-color:#3a4a44}
-body.dark .cava-item,.dark .poda-item{background:#222926;border-color:#3a4a44}
-body.dark .page-header{background:#222926;border-color:#14a085}
-body.dark 
-body.dark .back-btn{color:#9FE1CB;border-color:#9FE1CB}
-body.dark .info-box{background:#0d2b21;border-color:#1D9E75;color:#9FE1CB}
-
 .page{display:none;min-height:calc(100vh - 56px)}
 .page.active{display:block}
 
@@ -454,6 +440,7 @@ box-shadow:0 2px 8px rgba(0,0,0,0.08)}
 .rdo-base-bar{background:#fff;border-bottom:2px solid #e2e8f0;padding:7px 12px;display:flex;align-items:center;gap:7px;overflow-x:auto;scrollbar-width:none;}
 .rdo-state-btn{flex-shrink:0;padding:4px 14px;border-radius:20px;border:1.5px solid rgba(255,255,255,0.2);background:transparent;color:rgba(255,255,255,0.65);font-family:Barlow,sans-serif;font-size:0.7rem;font-weight:800;cursor:pointer;transition:all .18s;}
 .rdo-state-btn.active{background:#fff;color:#1a2a3a;border-color:#fff;}
+body.dark .rdo-state-btn.active{background:#14a085;color:#fff;border-color:#14a085}
 .rdo-base-btn{flex-shrink:0;padding:5px 14px;border-radius:20px;border:1.5px solid #e2e8f0;background:#f0f4f5;color:#888;font-family:Barlow,sans-serif;font-size:0.72rem;font-weight:800;cursor:pointer;transition:all .18s;}
 .rdo-base-btn.active{background:#0d7377;color:#fff;border-color:#0d7377;}
 .rdo-centro-btn{flex-shrink:0;padding:5px 14px;border-radius:20px;border:1.5px solid #e2e8f0;background:#f0f4f5;color:#888;font-family:Barlow,sans-serif;font-size:0.72rem;font-weight:800;cursor:pointer;transition:all .18s;}
@@ -1986,7 +1973,7 @@ function rdoFoto() {
   <!-- Menu montado por nav.js — NÃO edite os itens aqui, edite a lista em nav.js -->
   <nav class="sm-nav"><a class="sm-item" href="index.html"><span class="sm-ic"><i class="ti ti-home"></i></span><span class="sm-tx">Início</span></a></nav>
 </aside>
-<script src="nav.js?v=1"></script>
+<script src="nav.js?v=2"></script>
 <script>
 (function(){
   function isMobile(){return window.matchMedia('(max-width:780px)').matches;}
@@ -2741,7 +2728,7 @@ function rdoFoto() {
   align-items:flex-start; justify-content:center; font-family:'Barlow',system-ui,sans-serif;
 }
 body.dark #medias-modal{
-  --mb-fundo:#1a1f1d; --mb-card:#222926; --mb-linha:#3a4a44; --mb-txt:#e8f0ec; --mb-sub:#9fb3aa; --mb-nd:#34403b;
+  --mb-fundo:#0a0a0a; --mb-card:#111111; --mb-linha:#262626; --mb-txt:#f2f2f2; --mb-sub:#a0a0a0; --mb-nd:#252525;
   background:rgba(0,0,10,.8);
 }
 #medias-modal .mb-box{background:var(--mb-fundo);border-radius:16px;width:100%;max-width:1100px;margin:0 auto;
