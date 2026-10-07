@@ -130,14 +130,20 @@ var d=document.body||h;d.innerHTML='<div style="font-family:Barlow,system-ui,san
 <style id="dark-mode-css">
 /* ═══════════════════════════════════════════════
    DARK MODE — body.dark
+   Tema "preto total": fundo preto puro (economiza bateria em tela OLED).
+   Todas as cores ficam nas variáveis --e-* logo abaixo; para mudar o
+   tom do modo escuro inteiro, basta trocar os valores delas.
 ═══════════════════════════════════════════════ */
 body.dark {
-  background: #0f1923 !important;
-  color: #e2e8f0 !important;
+  --e-fundo:#000000; --e-painel:#0a0a0a; --e-cartao:#111111; --e-sub:#0b0b0b;
+  --e-elev:#1a1a1a;  --e-elev2:#252525;  --e-linha:#222222;  --e-linha2:#303030;
+  --e-texto:#f2f2f2; --e-texto2:#b8b8b8; --e-rotulo:#8c8c8c; --e-apagado:#5a5a5a;
+  --e-acento:#14a085; --e-acento-txt:#5eead4;
+  background: var(--e-fundo) !important;
+  color: var(--e-texto) !important;
 }
-/* Top bar — mantém gradiente, só ajusta opacidades */
-body.dark .top-bar { box-shadow: 0 2px 20px rgba(0,0,0,0.5); }
-/* Page nav */
+/* Top bar — preta também, mantendo a linha laranja da marca */
+body.dark .top-bar { background: var(--e-painel) !important; box-shadow: 0 2px 20px rgba(0,0,0,0.5); }
 /* page-nav dark mode: já tem fundo escuro, apenas ajusta opacidades */
 body.dark .page-nav { border-bottom-color: rgba(255,255,255,0.04) !important; }
 body.dark .page-nav-btn { color: rgba(255,255,255,0.35) !important; }
@@ -147,96 +153,96 @@ body.dark .page-nav-btn:hover { background: rgba(255,255,255,0.08) !important; c
 body.dark #turno-state-filter,
 body.dark div[style*="background:#fff;border-bottom:2px solid #e2e8f0"],
 body.dark #turno-hist-bar {
-  background: #131e2a !important; border-bottom: 1px solid #1f2c3b !important;
+  background: var(--e-painel) !important; border-bottom: 1px solid var(--e-linha) !important;
 }
-body.dark #turno-hist-bar { border-bottom-color: #2a3b4d !important; }
+body.dark #turno-hist-bar { border-bottom-color: var(--e-linha2) !important; }
 body.dark #turno-state-filter > span:first-child,
-body.dark div[style*="background:#fff;border-bottom:2px solid #e2e8f0"] > span:first-child { color: #7d8da0 !important; }
+body.dark div[style*="background:#fff;border-bottom:2px solid #e2e8f0"] > span:first-child { color: var(--e-rotulo) !important; }
 /* Botões de filtro: todos iguais quando inativos; o selecionado fica verde.
    (o ativo é marcado com aria-pressed="true" pelo JS) */
 body.dark [id^="state-btn-"], body.dark [id^="base-btn-"], body.dark [id^="centro-btn-"] {
-  background: #1a2633 !important; color: #a3b1c2 !important; border-color: #2a3a4c !important;
+  background: var(--e-elev) !important; color: var(--e-texto2) !important; border-color: var(--e-linha2) !important;
 }
 body.dark [id^="state-btn-"]:hover, body.dark [id^="base-btn-"]:hover, body.dark [id^="centro-btn-"]:hover {
-  border-color: #3f5a70 !important; color: #e2e8f0 !important;
+  border-color: color-mix(in srgb, var(--e-acento) 50%, var(--e-linha2)) !important; color: var(--e-texto) !important;
 }
 body.dark [id^="state-btn-"][aria-pressed="true"],
 body.dark [id^="base-btn-"][aria-pressed="true"],
 body.dark [id^="centro-btn-"][aria-pressed="true"] {
-  background: #14a085 !important; color: #fff !important; border-color: #14a085 !important;
+  background: var(--e-acento) !important; color: #fff !important; border-color: var(--e-acento) !important;
 }
-/* Seções */
-body.dark .section { background: #1a2535 !important; border: 1px solid #22303f; box-shadow: none !important; }
-body.dark .section-header.green { background: #0d2320 !important; border-bottom-color: #14584e !important; }
-body.dark .section-header.red   { background: #2a1515 !important; border-bottom-color: #5a2020 !important; }
-body.dark .section-header.orange{ background: #2a2010 !important; border-bottom-color: #5a3a10 !important; }
-body.dark .section-header.blue  { background: #101e2a !important; border-bottom-color: #1e4060 !important; }
-body.dark .section-label { color: #e2e8f0 !important; }
+/* Seções — os tons de verde/vermelho/laranja/azul se misturam com a cor do tema */
+body.dark .section { background: var(--e-cartao) !important; border: 1px solid var(--e-linha); box-shadow: none !important; }
+body.dark .section-header.green { background: color-mix(in srgb, #14a085 14%, var(--e-cartao)) !important; border-bottom-color: color-mix(in srgb, #14a085 38%, var(--e-cartao)) !important; }
+body.dark .section-header.red   { background: color-mix(in srgb, #e53e3e 12%, var(--e-cartao)) !important; border-bottom-color: color-mix(in srgb, #e53e3e 34%, var(--e-cartao)) !important; }
+body.dark .section-header.orange{ background: color-mix(in srgb, #f0a500 12%, var(--e-cartao)) !important; border-bottom-color: color-mix(in srgb, #f0a500 32%, var(--e-cartao)) !important; }
+body.dark .section-header.blue  { background: color-mix(in srgb, #4299e1 12%, var(--e-cartao)) !important; border-bottom-color: color-mix(in srgb, #4299e1 32%, var(--e-cartao)) !important; }
+body.dark .section-label { color: var(--e-texto) !important; }
 body.dark .section-count.green  { color: #5eead4 !important; }
 body.dark .section-count.red    { color: #fc8181 !important; }
 body.dark .section-count.orange { color: #fbd38d !important; }
 /* Cards */
-body.dark .card { border-color: #243044 !important; }
-body.dark .card:hover { background: #1e2d3d !important; }
-body.dark .card.absent { background: #2a1515 !important; }
-body.dark .card.absent:hover { background: #331818 !important; }
-body.dark .card.justif { background: #2a2010 !important; }
-body.dark .card-name { color: #e2e8f0 !important; }
+body.dark .card { border-color: var(--e-linha) !important; }
+body.dark .card:hover { background: var(--e-elev) !important; }
+body.dark .card.absent { background: color-mix(in srgb, #e53e3e 9%, var(--e-cartao)) !important; }
+body.dark .card.absent:hover { background: color-mix(in srgb, #e53e3e 15%, var(--e-cartao)) !important; }
+body.dark .card.justif { background: color-mix(in srgb, #f0a500 9%, var(--e-cartao)) !important; }
+body.dark .card-name { color: var(--e-texto) !important; }
 body.dark .card.absent .card-name { color: #f3c0c0 !important; }
 body.dark .card.justif .card-name { color: #fbd38d !important; }
 /* Footer */
-body.dark .footer { color: #4a5568 !important; }
+body.dark .footer { color: var(--e-apagado) !important; }
 /* Bottom bar */
-body.dark .bottom-bar { background: rgba(15,25,35,0.95) !important; border-top-color: #243044 !important; }
+body.dark .bottom-bar { background: color-mix(in srgb, var(--e-fundo) 95%, transparent) !important; border-top-color: var(--e-linha) !important; }
 /* Modal overlay */
 body.dark .modal-overlay.open,
 body.dark #gear-modal[style*="flex"],
 body.dark #relatorio-modal[style*="flex"] { background: rgba(0,0,10,0.8) !important; }
 /* Modal conteúdo */
-body.dark .modal { background: #1a2535 !important; }
-body.dark .modal-sidebar { background: #141f2e !important; border-right-color: #243044 !important; }
-body.dark .modal-content { background: #1a2535 !important; }
-body.dark .sidebar-item { color: #94a3b8 !important; }
-body.dark .sidebar-item:hover { background: #243044 !important; }
-body.dark .form-input { background: #243044 !important; border-color: #2d4060 !important; color: #e2e8f0 !important; }
-body.dark .team-row { border-bottom-color: #243044 !important; }
-body.dark .team-row:hover { background: #1e2d3d !important; }
-body.dark .team-row-name { color: #e2e8f0 !important; }
-body.dark .team-list { border-color: #2d4060 !important; }
+body.dark .modal { background: var(--e-cartao) !important; }
+body.dark .modal-sidebar { background: var(--e-sub) !important; border-right-color: var(--e-linha) !important; }
+body.dark .modal-content { background: var(--e-cartao) !important; }
+body.dark .sidebar-item { color: var(--e-texto2) !important; }
+body.dark .sidebar-item:hover { background: var(--e-elev2) !important; }
+body.dark .form-input { background: var(--e-elev) !important; border-color: var(--e-linha2) !important; color: var(--e-texto) !important; }
+body.dark .team-row { border-bottom-color: var(--e-linha) !important; }
+body.dark .team-row:hover { background: var(--e-elev) !important; }
+body.dark .team-row-name { color: var(--e-texto) !important; }
+body.dark .team-list { border-color: var(--e-linha2) !important; }
 /* Gear modal */
-body.dark #gear-modal > div { background: #1a2535 !important; }
-body.dark .gear-card { background: #141f2e !important; border-color: #243044 !important; }
-body.dark .gear-tab-btn { color: #94a3b8 !important; }
-body.dark .gear-tab-btn:hover { background: #243044 !important; color: #e2e8f0 !important; }
-body.dark #gear-modal [style*="background:#f8fafc"] { background: #141f2e !important; }
-body.dark #gear-modal [style*="background:#fff"] { background: #1a2535 !important; }
+body.dark #gear-modal > div { background: var(--e-cartao) !important; }
+body.dark .gear-card { background: var(--e-sub) !important; border-color: var(--e-linha) !important; }
+body.dark .gear-tab-btn { color: var(--e-texto2) !important; }
+body.dark .gear-tab-btn:hover { background: var(--e-elev2) !important; color: var(--e-texto) !important; }
+body.dark #gear-modal [style*="background:#f8fafc"] { background: var(--e-sub) !important; }
+body.dark #gear-modal [style*="background:#fff"] { background: var(--e-cartao) !important; }
 /* Relatório de faltas */
-body.dark #relatorio-modal > div { background: #0f1923 !important; }
-body.dark .rel-card { background: #1a2535 !important; box-shadow: 0 2px 8px rgba(0,0,0,0.3) !important; }
-body.dark .rel-stat { background: #1a2535 !important; box-shadow: 0 2px 8px rgba(0,0,0,0.3) !important; }
-body.dark .rel-sv { color: #e2e8f0 !important; }
-body.dark .rel-tbl thead tr { background: #141f2e !important; border-bottom-color: #243044 !important; }
-body.dark .rel-tbl tbody tr { border-bottom-color: #243044 !important; }
-body.dark .rel-tbl tbody tr:hover { background: #1e2d3d !important; }
-body.dark .rel-nm { color: #e2e8f0 !important; }
-body.dark .rel-fb { background: #1e2d3d !important; border-color: #2d4060 !important; color: #94a3b8 !important; }
+body.dark #relatorio-modal > div { background: var(--e-fundo) !important; }
+body.dark .rel-card { background: var(--e-cartao) !important; box-shadow: 0 2px 8px rgba(0,0,0,0.3) !important; }
+body.dark .rel-stat { background: var(--e-cartao) !important; box-shadow: 0 2px 8px rgba(0,0,0,0.3) !important; }
+body.dark .rel-sv { color: var(--e-texto) !important; }
+body.dark .rel-tbl thead tr { background: var(--e-sub) !important; border-bottom-color: var(--e-linha) !important; }
+body.dark .rel-tbl tbody tr { border-bottom-color: var(--e-linha) !important; }
+body.dark .rel-tbl tbody tr:hover { background: var(--e-elev) !important; }
+body.dark .rel-nm { color: var(--e-texto) !important; }
+body.dark .rel-fb { background: var(--e-elev) !important; border-color: var(--e-linha2) !important; color: var(--e-texto2) !important; }
 body.dark .rel-fb:hover { border-color: #c53030 !important; color: #fc8181 !important; }
-body.dark #rel-corpo { background: #0f1923 !important; }
-body.dark #rel-corpo [style*="background:#fff"] { background: #1a2535 !important; }
-body.dark #rel-busca { background: #243044 !important; color: #e2e8f0 !important; border-color: #2d4060 !important; }
+body.dark #rel-corpo { background: var(--e-fundo) !important; }
+body.dark #rel-corpo [style*="background:#fff"] { background: var(--e-cartao) !important; }
+body.dark #rel-busca { background: var(--e-elev) !important; color: var(--e-texto) !important; border-color: var(--e-linha2) !important; }
 /* Presence modal */
-body.dark .presence-box { background: #1a2535 !important; }
-body.dark .presence-body { background: #1a2535 !important; }
-body.dark .presence-user-row { background: #141f2e !important; border-color: #243044 !important; }
-body.dark .presence-user-row.me { background: #0d2320 !important; border-color: #14584e !important; }
+body.dark .presence-box { background: var(--e-cartao) !important; }
+body.dark .presence-body { background: var(--e-cartao) !important; }
+body.dark .presence-user-row { background: var(--e-sub) !important; border-color: var(--e-linha) !important; }
+body.dark .presence-user-row.me { background: color-mix(in srgb, #14a085 14%, var(--e-cartao)) !important; border-color: color-mix(in srgb, #14a085 38%, var(--e-cartao)) !important; }
 /* Inputs gerais */
 body.dark input[type="text"], body.dark input[type="date"], body.dark select {
-  background: #243044 !important; color: #e2e8f0 !important; border-color: #2d4060 !important;
+  background: var(--e-elev) !important; color: var(--e-texto) !important; border-color: var(--e-linha2) !important;
 }
-body.dark input::placeholder { color: #4a6080 !important; }
+body.dark input::placeholder { color: var(--e-apagado) !important; }
 /* Misc */
-body.dark code { background: #243044 !important; color: #90cdf4 !important; }
-body.dark .section-divider { color: #4a5568 !important; border-top-color: #243044 !important; }
+body.dark code { background: var(--e-elev) !important; color: #90cdf4 !important; }
+body.dark .section-divider { color: var(--e-apagado) !important; border-top-color: var(--e-linha) !important; }
 
 /* Etiquetas (OK, FALTA, JUSTIF...): cor translúcida em vez de bloco sólido,
    para dezenas delas lado a lado não pesarem na tela */
@@ -250,22 +256,22 @@ body.dark .badge.aguard { background: rgba(160,174,192,.12) !important; color: #
 html:has(body.dark) { color-scheme: dark; }
 
 /* Menu lateral (montado pelo nav.js) */
-body.dark .sm-side { background: #131e2a; border-right-color: #1f2c3b; box-shadow: 2px 0 12px rgba(0,0,0,.35); }
-body.dark .sm-toggle, body.dark .sm-top { border-bottom-color: #1f2c3b; }
-body.dark .sm-toggle button { background: #1a2633; border-color: #2a3a4c; color: #5eead4; }
-body.dark .sm-toggle button:hover { background: #22303f; }
-body.dark .sm-item, body.dark .sm-group-head { color: #a3b1c2; }
-body.dark .sm-ic { background: #1a2633; }
-body.dark .sm-item:hover, body.dark .sm-group-head:hover { background: #1a2633; color: #e2e8f0; }
-body.dark .sm-item:hover .sm-ic, body.dark .sm-group-head:hover .sm-ic { background: #22303f; }
+body.dark .sm-side { background: var(--e-painel); border-right-color: var(--e-linha); box-shadow: 2px 0 12px rgba(0,0,0,.35); }
+body.dark .sm-toggle, body.dark .sm-top { border-bottom-color: var(--e-linha); }
+body.dark .sm-toggle button { background: var(--e-elev); border-color: var(--e-linha2); color: var(--e-acento-txt); }
+body.dark .sm-toggle button:hover { background: var(--e-elev2); }
+body.dark .sm-item, body.dark .sm-group-head { color: var(--e-texto2); }
+body.dark .sm-ic { background: var(--e-elev); }
+body.dark .sm-item:hover, body.dark .sm-group-head:hover { background: var(--e-elev); color: var(--e-texto); }
+body.dark .sm-item:hover .sm-ic, body.dark .sm-group-head:hover .sm-ic { background: var(--e-elev2); }
 body.dark .sm-item.active, body.dark .sm-item.active:hover {
   background: linear-gradient(135deg,#0d7377,#14a085); color: #fff; box-shadow: 0 4px 12px rgba(0,0,0,.35);
 }
 body.dark .sm-item.active .sm-ic { background: rgba(255,255,255,.18); }
-body.dark .sm-arrow { color: #4d6075; }
-body.dark .sm-group-items { border-left-color: #1f2c3b; }
-body.dark.sm-collapsed .sm-side:hover .sm-group-items { border-left-color: #1f2c3b !important; }
-body.dark .sm-foot { border-top-color: #1f2c3b; color: #4d6075; }
+body.dark .sm-arrow { color: var(--e-apagado); }
+body.dark .sm-group-items { border-left-color: var(--e-linha); }
+body.dark.sm-collapsed .sm-side:hover .sm-group-items { border-left-color: var(--e-linha) !important; }
+body.dark .sm-foot { border-top-color: var(--e-linha); color: var(--e-apagado); }
 </style>
 <style id="sidemenu-css">
 .page-nav{display:none !important;}
