@@ -33,14 +33,6 @@
         ]
       },
       {
-        id: 'sesmt', icone: 'shield-check', texto: 'SESMT',
-        itens: [
-          { href: 'ensaios.html',            icone: 'test-pipe',   texto: 'Ensaios' },
-          { href: 'vencimento_cursos.html',  icone: 'certificate', texto: 'Vencimento Cursos' },
-          { href: 'brigada.html',            icone: 'flame',       texto: 'Brigada' }
-        ]
-      },
-      {
         id: 'financeiro', icone: 'cash', texto: 'Financeiro',
         itens: [
           { href: 'valores.html', icone: 'file-invoice', texto: 'Valores' }
