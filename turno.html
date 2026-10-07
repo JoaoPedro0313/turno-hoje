@@ -142,19 +142,31 @@ body.dark .top-bar { box-shadow: 0 2px 20px rgba(0,0,0,0.5); }
 body.dark .page-nav { border-bottom-color: rgba(255,255,255,0.04) !important; }
 body.dark .page-nav-btn { color: rgba(255,255,255,0.35) !important; }
 body.dark .page-nav-btn:hover { background: rgba(255,255,255,0.08) !important; color: rgba(255,255,255,0.7) !important; }
-/* Filtros estado/base */
-body.dark #turno-state-filter { background: #0d1923 !important; border-bottom-color: #1e3a4a !important; }
-body.dark #turno-base-filter-btns button,
-body.dark [id^="base-btn-"], body.dark [id^="state-btn-"] {
-  background: #1e2d3d !important; color: #94a3b8 !important; border-color: #2d4060 !important;
+/* Filtros (estado, filial, centro de serviço, consultar dia): um painel só,
+   na mesma cor do menu lateral, separado por linhas finas */
+body.dark #turno-state-filter,
+body.dark div[style*="background:#fff;border-bottom:2px solid #e2e8f0"],
+body.dark #turno-hist-bar {
+  background: #131e2a !important; border-bottom: 1px solid #1f2c3b !important;
 }
-body.dark div[style*="background:#fff;border-bottom:2px solid #e2e8f0"] {
-  background: #141f2e !important; border-bottom-color: #1e3a4a !important;
+body.dark #turno-hist-bar { border-bottom-color: #2a3b4d !important; }
+body.dark #turno-state-filter > span:first-child,
+body.dark div[style*="background:#fff;border-bottom:2px solid #e2e8f0"] > span:first-child { color: #7d8da0 !important; }
+/* Botões de filtro: todos iguais quando inativos; o selecionado fica verde.
+   (o ativo é marcado com aria-pressed="true" pelo JS) */
+body.dark [id^="state-btn-"], body.dark [id^="base-btn-"], body.dark [id^="centro-btn-"] {
+  background: #1a2633 !important; color: #a3b1c2 !important; border-color: #2a3a4c !important;
 }
-/* Barra histórico */
-body.dark #turno-hist-bar { background: #0d1923 !important; border-bottom-color: #14a085 !important; }
+body.dark [id^="state-btn-"]:hover, body.dark [id^="base-btn-"]:hover, body.dark [id^="centro-btn-"]:hover {
+  border-color: #3f5a70 !important; color: #e2e8f0 !important;
+}
+body.dark [id^="state-btn-"][aria-pressed="true"],
+body.dark [id^="base-btn-"][aria-pressed="true"],
+body.dark [id^="centro-btn-"][aria-pressed="true"] {
+  background: #14a085 !important; color: #fff !important; border-color: #14a085 !important;
+}
 /* Seções */
-body.dark .section { background: #1a2535 !important; box-shadow: 0 2px 12px rgba(0,0,0,0.4) !important; }
+body.dark .section { background: #1a2535 !important; border: 1px solid #22303f; box-shadow: none !important; }
 body.dark .section-header.green { background: #0d2320 !important; border-bottom-color: #14584e !important; }
 body.dark .section-header.red   { background: #2a1515 !important; border-bottom-color: #5a2020 !important; }
 body.dark .section-header.orange{ background: #2a2010 !important; border-bottom-color: #5a3a10 !important; }
@@ -170,7 +182,7 @@ body.dark .card.absent { background: #2a1515 !important; }
 body.dark .card.absent:hover { background: #331818 !important; }
 body.dark .card.justif { background: #2a2010 !important; }
 body.dark .card-name { color: #e2e8f0 !important; }
-body.dark .card.absent .card-name { color: #fc8181 !important; }
+body.dark .card.absent .card-name { color: #f3c0c0 !important; }
 body.dark .card.justif .card-name { color: #fbd38d !important; }
 /* Footer */
 body.dark .footer { color: #4a5568 !important; }
@@ -225,6 +237,35 @@ body.dark input::placeholder { color: #4a6080 !important; }
 /* Misc */
 body.dark code { background: #243044 !important; color: #90cdf4 !important; }
 body.dark .section-divider { color: #4a5568 !important; border-top-color: #243044 !important; }
+
+/* Etiquetas (OK, FALTA, JUSTIF...): cor translúcida em vez de bloco sólido,
+   para dezenas delas lado a lado não pesarem na tela */
+body.dark .badge.ok     { background: rgba(20,160,133,.16) !important; color: #5eead4 !important; box-shadow: inset 0 0 0 1px rgba(94,234,212,.25); }
+body.dark .badge.falta  { background: rgba(229,62,62,.16)  !important; color: #fc8181 !important; box-shadow: inset 0 0 0 1px rgba(252,129,129,.28); }
+body.dark .badge.justif { background: rgba(240,165,0,.16)  !important; color: #fbd38d !important; box-shadow: inset 0 0 0 1px rgba(251,211,141,.28); }
+body.dark .badge.lancou { background: rgba(66,153,225,.16) !important; color: #90cdf4 !important; box-shadow: inset 0 0 0 1px rgba(144,205,244,.28); }
+body.dark .badge.aguard { background: rgba(160,174,192,.12) !important; color: #a0aec0 !important; box-shadow: inset 0 0 0 1px rgba(160,174,192,.25); }
+
+/* Barras de rolagem e controles nativos escuros */
+html:has(body.dark) { color-scheme: dark; }
+
+/* Menu lateral (montado pelo nav.js) */
+body.dark .sm-side { background: #131e2a; border-right-color: #1f2c3b; box-shadow: 2px 0 12px rgba(0,0,0,.35); }
+body.dark .sm-toggle, body.dark .sm-top { border-bottom-color: #1f2c3b; }
+body.dark .sm-toggle button { background: #1a2633; border-color: #2a3a4c; color: #5eead4; }
+body.dark .sm-toggle button:hover { background: #22303f; }
+body.dark .sm-item, body.dark .sm-group-head { color: #a3b1c2; }
+body.dark .sm-ic { background: #1a2633; }
+body.dark .sm-item:hover, body.dark .sm-group-head:hover { background: #1a2633; color: #e2e8f0; }
+body.dark .sm-item:hover .sm-ic, body.dark .sm-group-head:hover .sm-ic { background: #22303f; }
+body.dark .sm-item.active, body.dark .sm-item.active:hover {
+  background: linear-gradient(135deg,#0d7377,#14a085); color: #fff; box-shadow: 0 4px 12px rgba(0,0,0,.35);
+}
+body.dark .sm-item.active .sm-ic { background: rgba(255,255,255,.18); }
+body.dark .sm-arrow { color: #4d6075; }
+body.dark .sm-group-items { border-left-color: #1f2c3b; }
+body.dark.sm-collapsed .sm-side:hover .sm-group-items { border-left-color: #1f2c3b !important; }
+body.dark .sm-foot { border-top-color: #1f2c3b; color: #4d6075; }
 </style>
 <style id="sidemenu-css">
 .page-nav{display:none !important;}
@@ -354,10 +395,10 @@ window.presenceOpenModal = function() { if(window._presenceOpenModal) window._pr
   <!-- Filtro Estado -->
   <div id="turno-state-filter" style="background:#1a2a3a;padding:7px 12px;display:flex;align-items:center;gap:8px;overflow-x:auto;scrollbar-width:none;border-bottom:2px solid #0d3344;">
     <span style="font-size:0.6rem;font-weight:800;color:rgba(255,255,255,0.45);letter-spacing:1.5px;text-transform:uppercase;white-space:nowrap;flex-shrink:0;">🌎 ESTADO:</span>
-    <button id="state-btn-todos" onclick="turnoSetState('todos')" style="flex-shrink:0;padding:4px 14px;border-radius:20px;border:1.5px solid rgba(255,255,255,0.5);background:#fff;color:#1a2a3a;font-family:Barlow,sans-serif;font-size:0.7rem;font-weight:800;cursor:pointer;transition:all .18s;">Todos</button>
-    <button id="state-btn-ba" onclick="turnoSetState('ba')" style="flex-shrink:0;padding:4px 14px;border-radius:20px;border:1.5px solid rgba(255,255,255,0.2);background:transparent;color:rgba(255,255,255,0.65);font-family:Barlow,sans-serif;font-size:0.7rem;font-weight:800;cursor:pointer;transition:all .18s;">🟡 BA</button>
-    <button id="state-btn-mg" onclick="turnoSetState('mg')" style="flex-shrink:0;padding:4px 14px;border-radius:20px;border:1.5px solid rgba(255,255,255,0.2);background:transparent;color:rgba(255,255,255,0.65);font-family:Barlow,sans-serif;font-size:0.7rem;font-weight:800;cursor:pointer;transition:all .18s;">🔵 MG</button>
-    <button id="state-btn-se" onclick="turnoSetState('se')" style="flex-shrink:0;padding:4px 14px;border-radius:20px;border:1.5px solid rgba(255,255,255,0.2);background:transparent;color:rgba(255,255,255,0.65);font-family:Barlow,sans-serif;font-size:0.7rem;font-weight:800;cursor:pointer;transition:all .18s;">🟣 SE</button>
+    <button id="state-btn-todos" aria-pressed="true" onclick="turnoSetState('todos')" style="flex-shrink:0;padding:4px 14px;border-radius:20px;border:1.5px solid rgba(255,255,255,0.5);background:#fff;color:#1a2a3a;font-family:Barlow,sans-serif;font-size:0.7rem;font-weight:800;cursor:pointer;transition:all .18s;">Todos</button>
+    <button id="state-btn-ba" aria-pressed="false" onclick="turnoSetState('ba')" style="flex-shrink:0;padding:4px 14px;border-radius:20px;border:1.5px solid rgba(255,255,255,0.2);background:transparent;color:rgba(255,255,255,0.65);font-family:Barlow,sans-serif;font-size:0.7rem;font-weight:800;cursor:pointer;transition:all .18s;">🟡 BA</button>
+    <button id="state-btn-mg" aria-pressed="false" onclick="turnoSetState('mg')" style="flex-shrink:0;padding:4px 14px;border-radius:20px;border:1.5px solid rgba(255,255,255,0.2);background:transparent;color:rgba(255,255,255,0.65);font-family:Barlow,sans-serif;font-size:0.7rem;font-weight:800;cursor:pointer;transition:all .18s;">🔵 MG</button>
+    <button id="state-btn-se" aria-pressed="false" onclick="turnoSetState('se')" style="flex-shrink:0;padding:4px 14px;border-radius:20px;border:1.5px solid rgba(255,255,255,0.2);background:transparent;color:rgba(255,255,255,0.65);font-family:Barlow,sans-serif;font-size:0.7rem;font-weight:800;cursor:pointer;transition:all .18s;">🟣 SE</button>
     <div id="turno-base-counts" style="margin-left:auto;font-size:0.62rem;font-weight:700;color:rgba(255,255,255,0.4);white-space:nowrap;"></div>
   </div>
   <!-- Filtro Filial (dinâmico conforme estado selecionado) -->
@@ -1500,6 +1541,7 @@ function updateBaseFilterButtons() {
     const btn = document.createElement('button');
     btn.id = 'base-btn-' + id;
     btn.style.cssText = s;
+    btn.setAttribute('aria-pressed', turnoBaseFilter === id ? 'true' : 'false');
     btn.textContent = label;
     btn.onclick = function() { turnoSetBase(id); };
     return btn;
@@ -1523,6 +1565,7 @@ function turnoSetState(state) {
   ['todos','ba','mg','se'].forEach(s => {
     const el = document.getElementById('state-btn-' + s);
     if (!el) return;
+    el.setAttribute('aria-pressed', s === state ? 'true' : 'false');
     if (s === state) {
       el.style.background = '#1a2a3a'; el.style.color = '#fff'; el.style.borderColor = '#1a2a3a';
     } else {
@@ -1557,6 +1600,7 @@ function updateCentroFilterButtons() {
     const btn = document.createElement('button');
     btn.id = 'centro-btn-' + id;
     btn.style.cssText = s;
+    btn.setAttribute('aria-pressed', turnoCentroFilter === id ? 'true' : 'false');
     btn.textContent = label;
     btn.onclick = function() { turnoSetCentro(id); };
     return btn;
