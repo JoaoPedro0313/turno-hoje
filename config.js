@@ -27,36 +27,9 @@
     + ".gear-card{background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:14px;margin-bottom:12px;}"
     + ".gear-btn{width:100%;padding:11px;border:none;border-radius:10px;font-family:'Barlow',sans-serif;font-size:0.85rem;font-weight:800;cursor:pointer;transition:all .15s;margin-bottom:8px;display:flex;align-items:center;justify-content:center;gap:8px;}"
     + ".team-list{max-height:320px;overflow-y:auto;border:1.5px solid #e8ecef;border-radius:10px;}"
-    // Dark mode
-    + "body.dark{background:#0f1923 !important;color:#e2e8f0 !important;}"
-    + "body.dark .top-bar{box-shadow:0 2px 20px rgba(0,0,0,0.5);}"
-    + "body.dark .page-nav{border-bottom-color:rgba(255,255,255,0.04) !important;}"
-    + "body.dark .page-nav-btn{color:rgba(255,255,255,0.35) !important;}"
-    + "body.dark .page-nav-btn:hover{background:rgba(255,255,255,0.08) !important;color:rgba(255,255,255,0.7) !important;}"
-    + "body.dark .section{background:#1a2535 !important;box-shadow:0 2px 12px rgba(0,0,0,0.4) !important;}"
-    + "body.dark .section-header.green{background:#0d2320 !important;border-bottom-color:#14584e !important;}"
-    + "body.dark .section-header.red{background:#2a1515 !important;border-bottom-color:#5a2020 !important;}"
-    + "body.dark .section-header.orange{background:#2a2010 !important;border-bottom-color:#5a3a10 !important;}"
-    + "body.dark .section-header.blue{background:#101e2a !important;border-bottom-color:#1e4060 !important;}"
-    + "body.dark .section-label{color:#e2e8f0 !important;}"
-    + "body.dark .card{border-color:#243044 !important;}"
-    + "body.dark .card:hover{background:#1e2d3d !important;}"
-    + "body.dark .card-name{color:#e2e8f0 !important;}"
-    + "body.dark .footer{color:#4a5568 !important;}"
-    + "body.dark .bottom-bar{background:rgba(15,25,35,0.95) !important;border-top-color:#243044 !important;}"
-    + "body.dark #gear-modal[style*=\"flex\"]{background:rgba(0,0,10,0.8) !important;}"
-    + "body.dark #gear-modal > div{background:#1a2535 !important;}"
-    + "body.dark .gear-card{background:#141f2e !important;border-color:#243044 !important;}"
-    + "body.dark .gear-tab-btn{color:#94a3b8 !important;}"
-    + "body.dark .gear-tab-btn:hover{background:#243044 !important;color:#e2e8f0 !important;}"
-    + "body.dark #gear-modal [style*=\"background:#f8fafc\"]{background:#141f2e !important;}"
-    + "body.dark #gear-modal [style*=\"background:#fff\"]{background:#1a2535 !important;}"
-    + "body.dark .team-row{border-bottom-color:#243044 !important;}"
-    + "body.dark .team-row:hover{background:#1e2d3d !important;}"
-    + "body.dark .team-row-name{color:#e2e8f0 !important;}"
-    + "body.dark .team-list{border-color:#2d4060 !important;}"
-    + "body.dark input[type=\"text\"],body.dark input[type=\"date\"],body.dark select{background:#243044 !important;color:#e2e8f0 !important;border-color:#2d4060 !important;}"
-    + "body.dark input::placeholder{color:#4a6080 !important;}";
+    // Dark mode: as cores ficam por conta do tema escuro do nav.js (preto total),
+    // que converte este painel e a página. Aqui só escurece o fundo atrás do modal.
+    + "body.dark #gear-modal[style*=\"flex\"]{background:rgba(0,0,0,0.8) !important;}";
   var st = document.createElement('style');
   st.textContent = css;
   document.head.appendChild(st);
