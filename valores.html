@@ -133,6 +133,20 @@
   .fat-items::-webkit-scrollbar-thumb{background:#dbe3ea;border-radius:8px}
   .fat-item{display:flex;align-items:baseline;gap:8px;padding:7px 0;border-bottom:1px dashed #eef2f7}
   .fat-item:last-child{border-bottom:0}
+  .fat-item .it-ed{align-self:center;flex-shrink:0;border:0;background:transparent;color:#94a3b8;cursor:pointer;padding:5px;border-radius:7px;display:inline-flex;line-height:0;transition:background .15s,color .15s}
+  .fat-item .it-ed:hover{background:#e6f4f3;color:#0d7377}
+  .fat-item .it-ed:focus-visible{outline:2px solid #0d7377;outline-offset:1px}
+  .fat-aviso{margin:10px 15px 0;padding:8px 12px;border-radius:9px;background:#fffbeb;border:1px solid #fde68a;color:#92660a;font-size:.78rem;font-weight:700}
+  .ed-box{max-width:520px}
+  .ed-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:0 12px}
+  .ed-grid > div{grid-column:span 2;min-width:0}
+  .ed-grid .ed-w6{grid-column:span 6}
+  .ed-grid .ed-w3{grid-column:span 3}
+  @media(max-width:480px){ .ed-grid > div,.ed-grid .ed-w3{grid-column:span 6} }
+  .ed-grid label{display:block;margin-top:2px}
+  .ed-grid input{margin:5px 0 12px;font-size:.95rem;padding:10px 12px}
+  .btn.ed-del{background:#fef2f2;color:#c53030}.btn.ed-del:hover{background:#fee2e2}
+  .btn:disabled{opacity:.55;cursor:default;transform:none}
   .fat-item .it-desc{flex:1;font-size:.84rem;color:#334155;font-weight:600;min-width:0;overflow-wrap:anywhere}
   .fat-item .it-qu{font-size:.71rem;color:#94a3b8;font-weight:700;white-space:nowrap}
   .fat-item .it-val{font-weight:800;color:#0f3a33;font-size:.84rem;white-space:nowrap;min-width:74px;text-align:right}
@@ -149,6 +163,17 @@
   .fin-mes-bar .seg{width:100%;transition:height .25s}
   .fin-mes-lbl{font-size:.72rem;font-weight:700;color:#64748b;margin-top:8px;white-space:nowrap}
   .fin-legbar{display:flex;gap:16px;flex-wrap:wrap;margin-top:14px;padding-top:11px;border-top:1px solid #f0f4f8}
+  /* filtro de fornecedor no gráfico "Gastos por mês" */
+  .fin-card-hrow{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+  .fin-card-hrow .fin-card-h{margin:0}
+  .fin-seg{margin-left:auto;display:inline-flex;gap:2px;background:#f1f5f9;border-radius:9px;padding:3px}
+  .fin-seg:empty{display:none}
+  .fin-seg button{border:0;background:transparent;font-family:inherit;font-size:.74rem;font-weight:800;color:#64748b;padding:5px 11px;border-radius:7px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;transition:background .15s,color .15s}
+  .fin-seg button i{width:8px;height:8px;border-radius:50%;display:inline-block;flex-shrink:0}
+  .fin-seg button:hover{color:#0f3a33}
+  .fin-seg button.on{background:#fff;color:#0f3a33;box-shadow:0 1px 4px rgba(0,0,0,.12)}
+  .fin-seg button:focus-visible{outline:2px solid #0d7377;outline-offset:1px}
+  .fin-mes-col.vazio .fin-mes-tot{color:#cbd5e1}
   #fin-linhas-forn svg{max-height:240px}
   .fin-leg{display:inline-flex;align-items:center;gap:6px;font-size:.78rem;font-weight:700;color:#475569}
   .fin-leg i{width:12px;height:12px;border-radius:3px;display:inline-block}
@@ -338,7 +363,10 @@ body.sm-collapsed .sm-side:hover .sm-group-head{justify-content:flex-start;paddi
         <div id="fin-resumo" class="fin-kpis"></div>
         <div class="fin-graphs">
           <div class="fin-card">
-            <div class="fin-card-h">Gastos por mês</div>
+            <div class="fin-card-hrow">
+              <div class="fin-card-h">Gastos por mês</div>
+              <div id="fin-mes-forn" class="fin-seg" role="group" aria-label="Filtrar gráfico por fornecedor"></div>
+            </div>
             <div id="fin-chart-mes"></div>
           </div>
           <div class="fin-card">
@@ -902,8 +930,14 @@ function finChart(rows){
   if($('fin-chart'))$('fin-chart').innerHTML=html||'<div style="color:#aaa">Sem dados</div>';
 }
 // Gráfico de gastos por mês (barras empilhadas por fornecedor)
+// Filtro próprio do gráfico: '' = todos; senão o nome do fornecedor (GPM, Jupiter…)
+var FIN_MES_FORN='', FIN_MES_FORN_LIST=[], FIN_MES_ROWS=null;
+function finMesFornSel(i){
+  FIN_MES_FORN=(i>=0&&FIN_MES_FORN_LIST[i])?FIN_MES_FORN_LIST[i]:'';
+  finChartMes(FIN_MES_ROWS);
+}
 function finChartMes(rows){
-  rows=rows||FIN_DATA;
+  rows=rows||FIN_DATA; FIN_MES_ROWS=rows;
   var box=$('fin-chart-mes'); if(!box) return;
   var meses={}, forns={};
   rows.forEach(function(v){
@@ -912,22 +946,45 @@ function finChartMes(rows){
     (meses[mes]=meses[mes]||{})[f]=(meses[mes][f]||0)+Number(v.valor||0);
     forns[f]=1;
   });
+  var todosForn=Object.keys(forns).sort();
+  // se o fornecedor escolhido sumiu (ex.: filtro geral mudou), volta para "Todos"
+  if(FIN_MES_FORN && !forns[FIN_MES_FORN]) FIN_MES_FORN='';
+  // botões de filtro (só aparecem quando há 2+ fornecedores para escolher)
+  var seg=$('fin-mes-forn');
+  if(seg){
+    FIN_MES_FORN_LIST=todosForn;
+    if(todosForn.length<2){ seg.innerHTML=''; }
+    else{
+      var btn=function(i,nome,cor){
+        var on=(i<0?!FIN_MES_FORN:FIN_MES_FORN===nome);
+        return '<button type="button" class="'+(on?'on':'')+'" aria-pressed="'+on+'" onclick="finMesFornSel('+i+')">'
+          +(cor?'<i style="background:'+cor+'"></i>':'')+finEsc(nome)+'</button>';
+      };
+      seg.innerHTML=btn(-1,'Todos','')+todosForn.map(function(f,i){ return btn(i,f,finCorForn(f)); }).join('');
+    }
+  }
   var keys=Object.keys(meses).sort();
   if(!keys.length){ box.innerHTML='<div style="color:#aaa;padding:20px 0;text-align:center">Sem lançamentos com data para montar o gráfico</div>'; return; }
-  var fornList=Object.keys(forns).sort();
+  var fornList=FIN_MES_FORN?[FIN_MES_FORN]:todosForn;
   var totais=keys.map(function(m){ return fornList.reduce(function(s,f){return s+(meses[m][f]||0);},0); });
   var max=Math.max.apply(null,[1].concat(totais));
   var cols=keys.map(function(m,i){
     var tot=totais[i];
+    var mm=m.split('-'), lbl='<div class="fin-mes-lbl">'+mm[1]+'/'+mm[0].slice(2)+'</div>';
+    // mês sem lançamento do fornecedor filtrado: mantém a coluna para não quebrar a linha do tempo
+    if(!tot) return '<div class="fin-mes-col vazio" title="Sem lançamentos de '+finEsc(FIN_MES_FORN||'fornecedores')+'"><div class="fin-mes-tot">—</div>'+lbl+'</div>';
     var barHpx=Math.max(3,Math.round(tot/max*160));
     var segs=fornList.filter(function(f){return meses[m][f];}).map(function(f){
       var h=(meses[m][f]/tot*100);
       return '<div class="seg" style="height:'+h+'%;background:'+finCorForn(f)+'" title="'+f+' · '+finMoney(meses[m][f])+'"></div>';
     }).join('');
-    var mm=m.split('-');
-    return '<div class="fin-mes-col"><div class="fin-mes-tot">'+finMoneyK(tot)+'</div><div class="fin-mes-bar" style="height:'+barHpx+'px">'+segs+'</div><div class="fin-mes-lbl">'+mm[1]+'/'+mm[0].slice(2)+'</div></div>';
+    return '<div class="fin-mes-col"><div class="fin-mes-tot">'+finMoneyK(tot)+'</div><div class="fin-mes-bar" style="height:'+barHpx+'px">'+segs+'</div>'+lbl+'</div>';
   }).join('');
   var leg=fornList.map(function(f){ return '<span class="fin-leg"><i style="background:'+finCorForn(f)+'"></i>'+f+'</span>'; }).join('');
+  if(FIN_MES_FORN){
+    var totF=totais.reduce(function(a,b){return a+b;},0);
+    leg+='<span class="fin-leg" style="margin-left:auto;color:#0f3a33">Total no período: '+finMoney(totF)+'</span>';
+  }
   box.innerHTML='<div class="fin-mes-chart">'+cols+'</div><div class="fin-legbar">'+leg+'</div>';
 }
 // SVG genérico de linha (com média, tendência, valores por mês) para uma série
@@ -1013,9 +1070,9 @@ function finPrefixoComum(arr){
 }
 var FIN_NAV={forn:null, mes:null};
 function finNavGo(forn, mes){ FIN_NAV.forn=forn||null; FIN_NAV.mes=mes||null; finTabela(FIN_ULTIMAS_ROWS); }
-function finMesLbl(mes){ return mes?(mes.split('-')[1]+'/'+mes.split('-')[0]):'sem data'; }
+function finMesLbl(mes){ return (mes&&mes!=='sem-data')?(mes.split('-')[1]+'/'+mes.split('-')[0]):'sem data'; }
 function finMesNome(mes){
-  if(!mes) return 'Sem data';
+  if(!mes||mes==='sem-data') return 'Sem data';
   var nomes=['','Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
   var p=mes.split('-'); return (nomes[parseInt(p[1],10)]||p[1])+' '+p[0];
 }
@@ -1031,7 +1088,7 @@ function finTabela(rows){
   // monta a árvore: fornecedor -> mês -> itens
   var arvore={};
   rows.forEach(function(v){
-    var f=v.fornecedor||'(sem)', mes=(v.data_ref||'').slice(0,7);
+    var f=v.fornecedor||'(sem)', mes=(v.data_ref||'').slice(0,7)||'sem-data';
     if(!arvore[f]) arvore[f]={total:0, meses:{}};
     arvore[f].total+=Number(v.valor||0);
     if(!arvore[f].meses[mes]) arvore[f].meses[mes]={total:0, itens:[]};
@@ -1083,13 +1140,16 @@ function finTabela(rows){
   var itensMes=arvore[FIN_NAV.forn].meses[FIN_NAV.mes].itens;
   var pref=finPrefixoComum(itensMes.map(function(v){return v.descricao||'';}));
   var cor=finCorForn(FIN_NAV.forn);
-  var itens=itensMes.map(function(v){
+  FIN_NIVEL3=itensMes;
+  var itens=itensMes.map(function(v,i){
     var d=(v.descricao||''); if(pref){ var r=d.slice(pref.length).trim(); if(r) d=r; }
     var qu=(v.quantidade!=null&&v.quantidade!==''?finNum(v.quantidade)+'× ':'')+(v.valor_unitario!=null&&v.valor_unitario!==''?finMoney(v.valor_unitario):'');
-    return '<div class="fat-item"><span class="it-desc">'+finEsc(d)+'</span><span class="it-qu">'+qu+'</span><span class="it-val">'+finMoney(v.valor)+'</span></div>';
+    return '<div class="fat-item"><span class="it-desc">'+finEsc(d)+'</span><span class="it-qu">'+qu+'</span><span class="it-val">'+finMoney(v.valor)+'</span>'
+      +'<button type="button" class="it-ed" title="Editar lançamento" aria-label="Editar lançamento" onclick="finEditar('+i+')">'+FIN_ICO_LAPIS+'</button></div>';
   }).join('');
   var total=itensMes.reduce(function(s,v){return s+Number(v.valor||0);},0);
   var sub=pref?'<div class="fat-sub">'+finEsc(pref.replace(/[\s\-–·]+$/,''))+'</div>':'';
+  if(FIN_NAV.mes==='sem-data') sub='<div class="fat-aviso">Estes lançamentos não entram no gráfico por mês. Clique no lápis para definir a data.</div>'+sub;
   box.innerHTML='<div class="fat-card open" style="grid-column:1/-1"><div class="fat-head" onclick="finToggleFat(this)">'
     +'<span class="fat-dot" style="background:'+cor+'"></span>'
     +'<span class="fat-forn">'+finEsc(FIN_NAV.forn)+'</span>'
@@ -1099,6 +1159,76 @@ function finTabela(rows){
     +'</div><div class="fat-body">'+sub+'<div class="fat-items">'+itens+'</div></div></div>';
 }
 function finToggleFat(h){ var c=h.closest('.fat-card'); if(c) c.classList.toggle('open'); }
+
+// ===== Editar / excluir lançamento =====
+var FIN_NIVEL3=[], FIN_EDIT=null;
+var FIN_ICO_LAPIS='<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>';
+function finEdMsg(t,ok){ var m=$('ed-msg'); if(m){ m.textContent=t||''; m.className='imp-msg '+(ok?'ok':(t?'err':'')); } }
+function finEditar(i){
+  var v=FIN_NIVEL3[i]; if(!v) return;
+  if(v.id==null){ alert('Este lançamento não tem identificador no banco e não pode ser editado.'); return; }
+  FIN_EDIT=v;
+  $('ed-forn').value=v.fornecedor||'';
+  $('ed-desc').value=v.descricao||'';
+  $('ed-data').value=(v.data_ref||'').slice(0,10);
+  $('ed-qtd').value=(v.quantidade!=null&&v.quantidade!=='')?v.quantidade:'';
+  $('ed-unit').value=(v.valor_unitario!=null&&v.valor_unitario!=='')?v.valor_unitario:'';
+  $('ed-valor').value=(v.valor!=null&&v.valor!=='')?v.valor:'';
+  var dl=$('ed-forn-list');
+  if(dl) dl.innerHTML=Array.from(new Set(FIN_DATA.map(function(x){return x.fornecedor;}).filter(Boolean))).sort()
+    .map(function(f){ return '<option value="'+finEsc(f).replace(/"/g,'&quot;')+'">'; }).join('');
+  finEdMsg('');
+  $('ed-go').disabled=false; $('ed-del').disabled=false;
+  $('ed-ov').style.display='flex';
+  setTimeout(function(){ ($('ed-data').value?$('ed-desc'):$('ed-data')).focus(); },30);
+}
+function finFecharEdit(){ $('ed-ov').style.display='none'; FIN_EDIT=null; }
+// recalcula o total quando quantidade e unitário estão preenchidos
+function finEdCalc(){
+  var q=$('ed-qtd').value, u=$('ed-unit').value;
+  if(q!==''&&u!=='') $('ed-valor').value=+(Number(q)*Number(u)).toFixed(2);
+}
+async function finSalvarEdit(){
+  if(!FIN_EDIT) return;
+  var reg={
+    fornecedor:$('ed-forn').value.trim()||null,
+    descricao:$('ed-desc').value.trim(),
+    data_ref:$('ed-data').value||null,
+    quantidade:$('ed-qtd').value!==''?Number($('ed-qtd').value):null,
+    valor_unitario:$('ed-unit').value!==''?Number($('ed-unit').value):null,
+    valor:$('ed-valor').value!==''?Number($('ed-valor').value):null
+  };
+  if(!reg.descricao&&reg.valor==null){ finEdMsg('Preencha a descrição ou o total.'); return; }
+  $('ed-go').disabled=true; finEdMsg('Salvando…',true);
+  try{
+    var r=await sb.from('valores').update(reg).eq('id',FIN_EDIT.id).select();
+    if(r.error){ finEdMsg('Erro ao salvar: '+r.error.message); $('ed-go').disabled=false; return; }
+    if(!r.data||!r.data.length){ finEdMsg('O banco recusou a alteração: seu usuário não tem permissão para editar a tabela "valores".'); $('ed-go').disabled=false; return; }
+  }catch(x){ finEdMsg('Erro ao salvar: '+x.message); $('ed-go').disabled=false; return; }
+  // acompanha o lançamento até a pasta nova (fornecedor/mês)
+  FIN_NAV.forn=reg.fornecedor||'(sem)';
+  FIN_NAV.mes=reg.data_ref?reg.data_ref.slice(0,7):'sem-data';
+  finFecharEdit();
+  carregarValores();
+}
+async function finExcluirEdit(){
+  if(!FIN_EDIT) return;
+  var v=FIN_EDIT;
+  if(!confirm('Excluir este lançamento?\n\n'+(v.descricao||'(sem descrição)')+'\n'+finMoney(v.valor)+'\n\nEssa ação não pode ser desfeita.')) return;
+  $('ed-del').disabled=true; finEdMsg('Excluindo…',true);
+  try{
+    var r=await sb.from('valores').delete().eq('id',v.id).select();
+    if(r.error){ finEdMsg('Erro ao excluir: '+r.error.message); $('ed-del').disabled=false; return; }
+    if(!r.data||!r.data.length){ finEdMsg('O banco recusou a exclusão: seu usuário não tem permissão para excluir da tabela "valores".'); $('ed-del').disabled=false; return; }
+  }catch(x){ finEdMsg('Erro ao excluir: '+x.message); $('ed-del').disabled=false; return; }
+  finFecharEdit();
+  carregarValores();
+}
+document.addEventListener('keydown',function(e){
+  var ov=$('ed-ov'); if(!ov||ov.style.display==='none') return;
+  if(e.key==='Escape') finFecharEdit();
+  else if(e.key==='Enter'&&e.target&&e.target.tagName==='INPUT') finSalvarEdit();
+});
 
 // ===== Menu de usuário (topo) =====
 // Defina aqui os links externos do menu (deixe '' para mostrar aviso de não configurado):
@@ -1436,6 +1566,26 @@ async function sair(){ await sb.auth.signOut(); location.reload(); }
       <button class="btn add" id="imp-go" style="display:none" onclick="finImportar()">Importar</button>
     </div>
     <div id="imp-msg" class="imp-msg"></div>
+  </div>
+</div>
+<div id="ed-ov" class="imp-ov" style="display:none" onclick="if(event.target===this)finFecharEdit()">
+  <div class="imp-box ed-box" role="dialog" aria-modal="true" aria-labelledby="ed-tit">
+    <h2 id="ed-tit">✏️ Editar lançamento</h2>
+    <p>Altere os campos e salve. Mudar a data ou o fornecedor move o lançamento para a pasta correspondente.</p>
+    <div class="ed-grid">
+      <div class="ed-w6"><label for="ed-desc">Descrição</label><input id="ed-desc"></div>
+      <div class="ed-w3"><label for="ed-forn">Fornecedor</label><input id="ed-forn" list="ed-forn-list" autocomplete="off"><datalist id="ed-forn-list"></datalist></div>
+      <div class="ed-w3"><label for="ed-data">Data</label><input id="ed-data" type="date"></div>
+      <div><label for="ed-qtd">Quantidade</label><input id="ed-qtd" type="number" step="0.01" oninput="finEdCalc()"></div>
+      <div><label for="ed-unit">Unitário R$</label><input id="ed-unit" type="number" step="0.01" oninput="finEdCalc()"></div>
+      <div><label for="ed-valor">Total R$</label><input id="ed-valor" type="number" step="0.01"></div>
+    </div>
+    <div class="imp-actions">
+      <button class="btn ed-del" id="ed-del" style="margin-right:auto" onclick="finExcluirEdit()">Excluir</button>
+      <button class="btn ghost" onclick="finFecharEdit()">Cancelar</button>
+      <button class="btn add" id="ed-go" onclick="finSalvarEdit()">Salvar</button>
+    </div>
+    <div id="ed-msg" class="imp-msg"></div>
   </div>
 </div>
 <script>window.addEventListener("load",function(){var _t=window.smToggle;if(typeof _t==="function"){window.smToggle=function(){_t();try{localStorage.setItem("mariua_menu",document.body.classList.contains("sm-collapsed")?"recolhido":"aberto");}catch(e){}};}});</script>
