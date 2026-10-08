@@ -345,6 +345,96 @@ body.sm-collapsed .sm-side:hover .sm-top{justify-content:flex-start;padding:12px
 body.sm-collapsed .sm-side:hover .sm-item{justify-content:flex-start;padding:9px 11px}
 body.sm-collapsed .sm-side:hover .sm-group-head{justify-content:flex-start;padding:9px 11px}
 </style>
+<style>
+/* ══ Turno: faixa de filtros escura + seções de borda a borda ═══════════════ */
+/* — faixas de filtro (layout, vale para claro e escuro) — */
+#turno-state-filter,#page-turno .turno-filtro-barra{padding:8px 22px !important;gap:6px !important;min-height:50px}
+#turno-hist-bar{padding:10px 22px !important;gap:8px !important}
+#page-turno .tf-rot{width:150px;flex-shrink:0;font-size:.72rem !important;font-weight:700 !important;letter-spacing:1px !important;text-transform:uppercase}
+#turno-base-filter-btns,#turno-centro-filter-btns{gap:6px !important}
+#turno-state-filter button,#turno-base-filter-btns button,#turno-centro-filter-btns button{min-height:32px;padding:0 14px !important;border-radius:16px !important;border-width:1px !important;border-style:solid !important;font-size:.8rem !important;font-weight:700 !important;letter-spacing:0 !important;transition:background .15s,color .15s,border-color .15s !important}
+#turno-base-counts{font-size:.75rem !important;font-weight:600 !important}
+#turno-hist-bar .td-seta{width:36px;height:36px;padding:0;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;font-family:inherit}
+#turno-hist-bar .td-seta:disabled{opacity:.35;cursor:default}
+#turno-hist-bar .td-dias,#turno-hist-bar .td-hoje,#turno-hist-bar .td-medias,#turno-hist-bar .td-faltas{min-height:36px;padding:0 14px;border-radius:6px;display:inline-flex;align-items:center;gap:8px;white-space:nowrap;cursor:pointer;font-family:'Barlow',sans-serif;font-size:.85rem;font-weight:600;transition:background .15s,border-color .15s,color .15s}
+#turno-hist-bar .td-acoes{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}
+#turno-hist-modo{margin-left:4px !important}
+#turno-hist-bar button:focus-visible,#turno-state-filter button:focus-visible,#turno-base-filter-btns button:focus-visible,#turno-centro-filter-btns button:focus-visible{outline:2px solid #fff;outline-offset:2px}
+#turno-relatorio-flutuante{display:none !important}
+/* — faixas de filtro: cores do modo claro — */
+body:not(.dark) #turno-state-filter,body:not(.dark) #page-turno .turno-filtro-barra{background:#0f3b45 !important;border-bottom:1px solid rgba(255,255,255,.08) !important}
+body:not(.dark) #turno-hist-bar{background:#0b2f37 !important;border-top:2px solid #0d7377 !important;border-bottom:0 !important}
+body:not(.dark) #page-turno .tf-rot,body:not(.dark) #turno-base-counts{color:#9fbfc3 !important}
+body:not(.dark) #turno-state-filter button,body:not(.dark) #turno-base-filter-btns button,body:not(.dark) #turno-centro-filter-btns button{background:transparent !important;color:#d7e6e8 !important;border-color:rgba(255,255,255,.25) !important}
+body:not(.dark) #turno-state-filter button:hover,body:not(.dark) #turno-base-filter-btns button:hover,body:not(.dark) #turno-centro-filter-btns button:hover{border-color:rgba(255,255,255,.6) !important;color:#fff !important}
+body:not(.dark) #turno-state-filter button[aria-pressed="true"],body:not(.dark) #turno-base-filter-btns button[aria-pressed="true"],body:not(.dark) #turno-centro-filter-btns button[aria-pressed="true"]{background:#fff !important;color:#0f3b45 !important;border-color:#fff !important}
+body:not(.dark) #turno-hist-bar .td-seta,body:not(.dark) #turno-hist-bar .td-hoje{background:transparent;border:1px solid rgba(255,255,255,.25);color:#d7e6e8}
+body:not(.dark) #turno-hist-bar .td-dias{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.25);color:#fff}
+body:not(.dark) #turno-hist-bar .td-seta:hover:not(:disabled),body:not(.dark) #turno-hist-bar .td-hoje:hover,body:not(.dark) #turno-hist-bar .td-dias:hover{border-color:rgba(255,255,255,.6);color:#fff}
+body:not(.dark) #turno-hist-bar .td-medias{background:#14a085;border:1px solid #14a085;color:#fff}
+body:not(.dark) #turno-hist-bar .td-medias:hover{background:#0d7377;border-color:#0d7377}
+body:not(.dark) #turno-hist-bar .td-faltas{background:#c2412f;border:1px solid #c2412f;color:#fff}
+body:not(.dark) #turno-hist-bar .td-faltas:hover{background:#a3321f;border-color:#a3321f}
+/* — linha do dia: cores do modo escuro (segue as variáveis do tema) — */
+body.dark #turno-hist-bar .td-seta,body.dark #turno-hist-bar .td-hoje,body.dark #turno-hist-bar .td-dias{background:var(--e-elev);border:1px solid var(--e-linha2);color:var(--e-texto2)}
+body.dark #turno-hist-bar .td-seta:hover:not(:disabled),body.dark #turno-hist-bar .td-hoje:hover,body.dark #turno-hist-bar .td-dias:hover{color:var(--e-texto);border-color:color-mix(in srgb,var(--e-acento) 50%,var(--e-linha2))}
+body.dark #turno-hist-bar .td-medias{background:var(--e-acento);border:1px solid var(--e-acento);color:#fff}
+body.dark #turno-hist-bar .td-faltas{background:#c53030;border:1px solid #c53030;color:#fff}
+
+/* — seções de borda a borda (layout) — */
+#page-turno .container{margin:8px 0 0 !important;padding:0 !important;max-width:none !important}
+#page-turno .section{border-radius:0 !important;margin:0 0 8px !important;box-shadow:none !important;border-left:0 !important;border-right:0 !important}
+#page-turno .section-header{padding:12px 22px !important}
+#page-turno .section-label{font-size:1rem !important;font-weight:700 !important;letter-spacing:0 !important;gap:10px}
+#page-turno .icon-check,#page-turno .icon-warn,#page-turno .icon-dot{width:26px;height:26px;border-radius:6px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:.9rem;font-weight:800}
+#page-turno .icon-dot::after{content:'\2715';color:#fff;font-size:.78rem;font-weight:800}
+#page-turno .section-count{font-size:1.25rem !important;font-weight:800 !important}
+#page-turno .grid{grid-template-columns:repeat(auto-fill,minmax(210px,1fr)) !important;gap:8px !important;padding:12px 22px !important}
+#page-turno .grid .card{display:flex;align-items:center;justify-content:flex-start;gap:8px;min-height:40px;padding:0 10px !important;border-width:1px !important;border-style:solid !important;border-radius:6px}
+#page-turno .grid .card::before{content:'';width:7px;height:7px;border-radius:50%;flex-shrink:0;background:#1e7a46}
+#page-turno .grid .card.absent::before{background:#b42318}
+#page-turno .grid .card.justif::before{display:none}
+#page-turno .grid .card-name{flex:1;min-width:0;font-size:.82rem !important;font-weight:600 !important}
+#page-turno .grid .card-tag{margin-left:auto;flex-shrink:0;padding:1px 6px;border-radius:4px;font-size:.68rem;font-weight:700}
+#page-turno .grid .card.justif{display:block !important;padding:6px 10px !important}
+#page-turno .grid .card.justif .card-linha{display:flex;align-items:center;gap:8px}
+#page-turno .grid .card.justif .card-linha::before{content:'';width:7px;height:7px;border-radius:50%;flex-shrink:0;background:#e8a33d}
+#page-turno .grid .card.justif .justif-obs::after{display:none !important;content:none !important}
+#page-turno .grid .card.justif .justif-obs{display:block !important;position:static !important;max-width:none !important;margin-top:2px;padding:0 0 0 15px !important;background:none !important;box-shadow:none !important;border-radius:0 !important;font-size:.74rem !important;font-weight:500 !important;line-height:1.35 !important}
+@media(max-width:600px){
+  #page-turno .grid{grid-template-columns:repeat(auto-fill,minmax(180px,1fr)) !important;padding:10px 12px !important}
+  #page-turno #turno-hist-bar .tf-rot{width:100%}
+  #turno-hist-bar .td-acoes{margin-left:0;width:100%}
+  #turno-hist-bar .td-acoes button{flex:1 1 auto;justify-content:center}
+  #turno-state-filter,#page-turno .turno-filtro-barra,#turno-hist-bar{padding-left:12px !important;padding-right:12px !important}
+  #page-turno .tf-rot{width:auto}
+  #page-turno .section-header{padding:12px !important}
+}
+/* — seções: cores do modo claro — */
+body:not(.dark) #page-turno .section{background:#fff;border-top:1px solid #dfe3e8 !important;border-bottom:1px solid #dfe3e8 !important}
+body:not(.dark) #page-turno .section-label{color:#16324a}
+body:not(.dark) #page-turno .section-header.green{background:#f1f8f4;border-bottom-color:#d6ebdd}
+body:not(.dark) #page-turno .section-header.orange{background:#fdf8ee;border-bottom-color:#f0dcb4}
+body:not(.dark) #page-turno .section-header.red{background:#fdf3f1;border-bottom-color:#f1cdc7}
+body:not(.dark) #page-turno .icon-check{background:#1e7a46}
+body:not(.dark) #page-turno .icon-warn{background:#e8a33d;color:#3a2405}
+#page-turno .icon-dot{background:#b42318}
+body:not(.dark) #page-turno .section-count.green{color:#1e7a46}
+body:not(.dark) #page-turno .section-count.orange{color:#9a5a12}
+body:not(.dark) #page-turno .section-count.red{color:#b42318}
+body:not(.dark) #page-turno .grid .card{background:#fff;border-color:#e3e8ed !important}
+body:not(.dark) #page-turno .grid .card:hover{background:#f8fafb}
+body:not(.dark) #page-turno .grid .card.justif{background:#fffaf2;border-color:#f0dcb4 !important}
+body:not(.dark) #page-turno .grid .card.absent{background:#fff7f6;border-color:#f1cdc7 !important}
+body:not(.dark) #page-turno .grid .card-name{color:#16324a !important}
+body:not(.dark) #page-turno .grid .card.absent .card-name{color:#7f1d14 !important}
+body:not(.dark) #page-turno .grid .card-tag{background:#f4f6f8;color:#5b6b7a}
+body:not(.dark) #page-turno .grid .card.justif .justif-obs{color:#9a5a12 !important}
+/* — seções: modo escuro — */
+body.dark #page-turno .section{border-top:1px solid var(--e-linha) !important;border-bottom:1px solid var(--e-linha) !important}
+body.dark #page-turno .grid .card-tag{background:var(--e-elev);color:var(--e-texto2)}
+body.dark #page-turno .grid .card.justif .justif-obs{color:#fbd38d !important}
+</style>
 </head>
 <body class="sm-collapsed">
 <script>try{if(localStorage.getItem("mariua_menu")==="aberto")document.body.classList.remove("sm-collapsed");}catch(e){}</script>
@@ -401,28 +491,30 @@ window.presenceOpenModal = function() { if(window._presenceOpenModal) window._pr
 
   <!-- Filtro Estado -->
   <div id="turno-state-filter" style="background:#1a2a3a;padding:7px 12px;display:flex;align-items:center;gap:8px;overflow-x:auto;scrollbar-width:none;border-bottom:2px solid #0d3344;">
-    <span style="font-size:0.6rem;font-weight:800;color:rgba(255,255,255,0.45);letter-spacing:1.5px;text-transform:uppercase;white-space:nowrap;flex-shrink:0;">🌎 ESTADO:</span>
+    <span class="tf-rot" style="font-size:0.6rem;font-weight:800;color:rgba(255,255,255,0.45);letter-spacing:1.5px;text-transform:uppercase;white-space:nowrap;flex-shrink:0;">ESTADO</span>
     <button id="state-btn-todos" aria-pressed="true" onclick="turnoSetState('todos')" style="flex-shrink:0;padding:4px 14px;border-radius:20px;border:1.5px solid rgba(255,255,255,0.5);background:#fff;color:#1a2a3a;font-family:Barlow,sans-serif;font-size:0.7rem;font-weight:800;cursor:pointer;transition:all .18s;">Todos</button>
-    <button id="state-btn-ba" aria-pressed="false" onclick="turnoSetState('ba')" style="flex-shrink:0;padding:4px 14px;border-radius:20px;border:1.5px solid rgba(255,255,255,0.2);background:transparent;color:rgba(255,255,255,0.65);font-family:Barlow,sans-serif;font-size:0.7rem;font-weight:800;cursor:pointer;transition:all .18s;">🟡 BA</button>
-    <button id="state-btn-mg" aria-pressed="false" onclick="turnoSetState('mg')" style="flex-shrink:0;padding:4px 14px;border-radius:20px;border:1.5px solid rgba(255,255,255,0.2);background:transparent;color:rgba(255,255,255,0.65);font-family:Barlow,sans-serif;font-size:0.7rem;font-weight:800;cursor:pointer;transition:all .18s;">🔵 MG</button>
-    <button id="state-btn-se" aria-pressed="false" onclick="turnoSetState('se')" style="flex-shrink:0;padding:4px 14px;border-radius:20px;border:1.5px solid rgba(255,255,255,0.2);background:transparent;color:rgba(255,255,255,0.65);font-family:Barlow,sans-serif;font-size:0.7rem;font-weight:800;cursor:pointer;transition:all .18s;">🟣 SE</button>
+    <button id="state-btn-ba" aria-pressed="false" onclick="turnoSetState('ba')" style="flex-shrink:0;padding:4px 14px;border-radius:20px;border:1.5px solid rgba(255,255,255,0.2);background:transparent;color:rgba(255,255,255,0.65);font-family:Barlow,sans-serif;font-size:0.7rem;font-weight:800;cursor:pointer;transition:all .18s;">BA</button>
+    <button id="state-btn-mg" aria-pressed="false" onclick="turnoSetState('mg')" style="flex-shrink:0;padding:4px 14px;border-radius:20px;border:1.5px solid rgba(255,255,255,0.2);background:transparent;color:rgba(255,255,255,0.65);font-family:Barlow,sans-serif;font-size:0.7rem;font-weight:800;cursor:pointer;transition:all .18s;">MG</button>
+    <button id="state-btn-se" aria-pressed="false" onclick="turnoSetState('se')" style="flex-shrink:0;padding:4px 14px;border-radius:20px;border:1.5px solid rgba(255,255,255,0.2);background:transparent;color:rgba(255,255,255,0.65);font-family:Barlow,sans-serif;font-size:0.7rem;font-weight:800;cursor:pointer;transition:all .18s;">SE</button>
     <div id="turno-base-counts" style="margin-left:auto;font-size:0.62rem;font-weight:700;color:rgba(255,255,255,0.4);white-space:nowrap;"></div>
   </div>
   <!-- Filtro Filial (dinâmico conforme estado selecionado) -->
   <div class="turno-filtro-barra" style="background:#fff;border-bottom:2px solid #e2e8f0;padding:7px 12px;display:flex;align-items:center;gap:7px;overflow-x:auto;scrollbar-width:none;">
-    <span style="font-size:0.6rem;font-weight:800;color:#aaa;letter-spacing:1.5px;text-transform:uppercase;white-space:nowrap;flex-shrink:0;">🏢 FILIAL:</span>
+    <span class="tf-rot" style="font-size:0.6rem;font-weight:800;color:#aaa;letter-spacing:1.5px;text-transform:uppercase;white-space:nowrap;flex-shrink:0;">FILIAL</span>
     <div id="turno-base-filter-btns" style="display:flex;gap:7px;align-items:center;overflow-x:auto;scrollbar-width:none;"></div>
   </div>
   <!-- Filtro Centro de serviço (filtrado pela filial selecionada) -->
   <div class="turno-filtro-barra" style="background:#fff;border-bottom:2px solid #e2e8f0;padding:7px 12px;display:flex;align-items:center;gap:7px;overflow-x:auto;scrollbar-width:none;">
-    <span style="font-size:0.6rem;font-weight:800;color:#aaa;letter-spacing:1.5px;text-transform:uppercase;white-space:nowrap;flex-shrink:0;">💲 CENTRO DE SERVIÇO:</span>
+    <span class="tf-rot" style="font-size:0.6rem;font-weight:800;color:#aaa;letter-spacing:1.5px;text-transform:uppercase;white-space:nowrap;flex-shrink:0;">CENTRO DE SERVIÇO</span>
     <div id="turno-centro-filter-btns" style="display:flex;gap:7px;align-items:center;overflow-x:auto;scrollbar-width:none;"></div>
   </div>
 
   <div id="turno-hist-bar" style="background:#1a2a3a;padding:10px 16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;border-bottom:2px solid #0d7377;position:relative;">
-    <span style="font-size:0.72rem;font-weight:800;color:rgba(255,255,255,0.6);letter-spacing:1px;text-transform:uppercase;white-space:nowrap;">📅 CONSULTAR DIA:</span>
+    <span class="tf-rot" style="font-size:0.72rem;font-weight:800;color:rgba(255,255,255,0.6);letter-spacing:1px;text-transform:uppercase;white-space:nowrap;">CONSULTAR DIA</span>
     <input type="hidden" id="turno-hist-date">
-    <button onclick="if(window.turnoCalToggle)window.turnoCalToggle()" title="Ver dias com atividade salva" style="padding:6px 12px;background:rgba(255,255,255,0.08);color:rgba(255,255,255,0.85);border:1.5px solid rgba(255,255,255,0.2);border-radius:8px;font-family:'Barlow',sans-serif;font-size:0.75rem;font-weight:800;cursor:pointer;">🗓️ Dias salvos</button>
+    <button type="button" class="td-seta" onclick="turnoDiaPasso(-1)" title="Dia salvo anterior" aria-label="Dia salvo anterior"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg></button>
+    <button type="button" class="td-dias" onclick="if(window.turnoCalToggle)window.turnoCalToggle()" title="Ver dias com atividade salva"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18"/><path d="M8 3v4"/><path d="M16 3v4"/></svg>Dias salvos<span id="turno-dia-rotulo"></span></button>
+    <button type="button" class="td-seta" id="turno-dia-prox" onclick="turnoDiaPasso(1)" title="Próximo dia salvo" aria-label="Próximo dia salvo"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></button>
     <div id="turno-cal-pop" style="display:none;position:absolute;top:100%;left:16px;margin-top:6px;z-index:200;background:#16202e;border:1px solid #2a3a4d;border-radius:14px;box-shadow:0 16px 48px rgba(0,0,0,0.45);padding:12px;width:290px;font-family:'Barlow',sans-serif;">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
         <button onclick="turnoCalNav(-1)" style="width:28px;height:28px;border-radius:8px;border:1px solid #2a3a4d;background:#1e2a3a;color:#fff;cursor:pointer;font-weight:800;">‹</button>
@@ -444,30 +536,33 @@ window.presenceOpenModal = function() { if(window._presenceOpenModal) window._pr
         <span id="turno-cal-status" style="margin-left:auto;color:#64748b;"></span>
       </div>
     </div>
-    <button onclick="if(window.turnoHistHoje)window.turnoHistHoje()" style="padding:6px 14px;background:transparent;color:rgba(255,255,255,0.5);border:1.5px solid rgba(255,255,255,0.15);border-radius:8px;font-family:'Barlow',sans-serif;font-size:0.75rem;font-weight:800;cursor:pointer;transition:all 0.15s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,0.5)'">↩ HOJE</button>
-    <button type="button" onclick="if(window.abrirMediasBase)window.abrirMediasBase()" title="Média de equipes que abriram turno em cada base" style="padding:6px 14px;background:#14a085;color:#fff;border:1.5px solid #14a085;border-radius:8px;font-family:'Barlow',sans-serif;font-size:0.75rem;font-weight:800;cursor:pointer;transition:all 0.15s;white-space:nowrap;" onmouseover="this.style.background='#0d7377';this.style.borderColor='#0d7377'" onmouseout="this.style.background='#14a085';this.style.borderColor='#14a085'">📊 Médias por base</button>
+    <button type="button" class="td-hoje" onclick="if(window.turnoHistHoje)window.turnoHistHoje()">Hoje</button>
     <div id="turno-hist-status" style="font-size:0.72rem;font-weight:700;color:rgba(255,255,255,0.5);margin-left:4px;"></div>
-    <div id="turno-hist-modo" style="display:none;margin-left:auto;background:#e53e3e22;border:1px solid #e53e3e66;border-radius:8px;padding:4px 12px;font-size:0.72rem;font-weight:800;color:#fc8181;letter-spacing:0.5px;">👁️ MODO LEITURA — DIA ANTERIOR</div>
+    <div id="turno-hist-modo" style="display:none;margin-left:auto;background:#e53e3e22;border:1px solid #e53e3e66;border-radius:8px;padding:4px 12px;font-size:0.72rem;font-weight:800;color:#fc8181;letter-spacing:0.5px;">Modo leitura — dia anterior</div>
+    <div class="td-acoes">
+      <button type="button" class="td-medias" onclick="if(window.abrirMediasBase)window.abrirMediasBase()" title="Média de equipes que abriram turno em cada base">Médias por base</button>
+      <button type="button" class="td-faltas" onclick="if(window.abrirRelatorioFaltas)window.abrirRelatorioFaltas()" title="Relatório de faltas">Relatório de faltas</button>
+    </div>
   </div>
 
   <div class="container">
     <div class="section">
       <div class="section-header green">
-        <div class="section-label"><div class="icon-check">&#10003;</div> ABRIU TURNO</div>
+        <div class="section-label"><div class="icon-check">&#10003;</div> Abriu turno</div>
         <div class="section-count green" id="ok-count">0</div>
       </div>
       <div class="grid" id="abriu-grid"></div>
     </div>
     <div class="section">
       <div class="section-header orange">
-        <div class="section-label"><div class="icon-warn">!</div> FALTA JUSTIFICADA</div>
+        <div class="section-label"><div class="icon-warn">!</div> Falta justificada</div>
         <div class="section-count orange" id="justif-count">0</div>
       </div>
       <div class="grid" id="justif-grid"></div>
     </div>
     <div class="section">
       <div class="section-header red">
-        <div class="section-label"><div class="icon-dot"></div> NAO ABRIU TURNO</div>
+        <div class="section-label"><div class="icon-dot"></div> Não abriu turno</div>
         <div class="section-count red" id="falta-count">0</div>
       </div>
       <div class="grid" id="falta-grid"></div>
@@ -997,6 +1092,33 @@ function turnoCalPick(ds){
   if(window.turnoHistBuscar) window.turnoHistBuscar();
 }
 window.turnoCalToggle=turnoCalToggle; window.turnoCalNav=turnoCalNav; window.turnoCalPick=turnoCalPick;
+// setas ‹ ›: vão para o dia salvo anterior/seguinte; depois do último dia salvo, volta para hoje
+function turnoDiaPasso(delta){
+  function ir(){
+    var dias=Array.from(TURNO_CAL_DIAS||[]).sort();
+    var h=new Date(), hoje=h.getFullYear()+'-'+String(h.getMonth()+1).padStart(2,'0')+'-'+String(h.getDate()).padStart(2,'0');
+    var inp=document.getElementById('turno-hist-date');
+    var atual=(turnoModoHistorico&&inp&&inp.value)?inp.value:hoje, alvo=null, i;
+    if(delta<0){ for(i=dias.length-1;i>=0;i--) if(dias[i]<atual){ alvo=dias[i]; break; } }
+    else { for(i=0;i<dias.length;i++) if(dias[i]>atual){ alvo=dias[i]; break; } }
+    if(delta>0 && (!alvo||alvo>=hoje)){ if(turnoModoHistorico&&window.turnoHistHoje) turnoHistHoje(); return; }
+    if(alvo) turnoCalPick(alvo);
+    else { var st=document.getElementById('turno-hist-status'); if(st) st.textContent='Nenhum dia salvo antes deste'; }
+  }
+  if(TURNO_CAL_DIAS===null){
+    turnoCalFetch(); var t0=Date.now();
+    var iv=setInterval(function(){ if(TURNO_CAL_DIAS!==null||Date.now()-t0>6000){ clearInterval(iv); ir(); } },120);
+  } else ir();
+}
+function turnoDiaRotulo(){
+  var el=document.getElementById('turno-dia-rotulo'); if(!el) return;
+  var inp=document.getElementById('turno-hist-date'), d='';
+  if(turnoModoHistorico&&inp&&inp.value){ var p=inp.value.split('-'); d=p[2]+'/'+p[1]+'/'+p[0]; }
+  else d=String(currentDate||'');
+  el.textContent=d?('· '+d):'';
+  var prox=document.getElementById('turno-dia-prox'); if(prox) prox.disabled=!turnoModoHistorico;
+}
+window.turnoDiaPasso=turnoDiaPasso; window.turnoDiaRotulo=turnoDiaRotulo;
 // fecha ao clicar fora
 document.addEventListener('click', function(e){
   var pop=document.getElementById('turno-cal-pop'); if(!pop||pop.style.display!=='block') return;
@@ -1048,6 +1170,7 @@ function turnoHistRender(){
       c.style.opacity = '0.85';
     });
   }, 50);
+  if (window.turnoDiaRotulo) turnoDiaRotulo();
 }
 function turnoHistHoje() {
 const statusEl = document.getElementById('turno-hist-status');
@@ -1538,6 +1661,10 @@ const BASE_CONFIG = {
 };
 
 // Atualiza os botões do filtro de Base conforme o estado selecionado
+function turnoRotuloFiltro(l) {
+  var t = String(l || '').replace(/^[^A-Za-zÀ-ÿ]+/, '').replace(/^SERVI[ÇC]OS EM ENERGIA( -| EM)?\s*/i, '').trim();
+  return t.toLowerCase().split(/\s+/).map(function(w, i){ return (i && /^(de|da|do|das|dos|e)$/.test(w)) ? w : w.charAt(0).toUpperCase() + w.slice(1); }).join(' ');
+}
 function updateBaseFilterButtons() {
   const container = document.getElementById('turno-base-filter-btns');
   if (!container) return;
@@ -1549,7 +1676,7 @@ function updateBaseFilterButtons() {
     btn.id = 'base-btn-' + id;
     btn.style.cssText = s;
     btn.setAttribute('aria-pressed', turnoBaseFilter === id ? 'true' : 'false');
-    btn.textContent = label;
+    btn.textContent = turnoRotuloFiltro(label); btn.title = label.replace(/^[^A-Za-zÀ-ÿ]+/, '');
     btn.onclick = function() { turnoSetBase(id); };
     return btn;
   }
@@ -1608,7 +1735,7 @@ function updateCentroFilterButtons() {
     btn.id = 'centro-btn-' + id;
     btn.style.cssText = s;
     btn.setAttribute('aria-pressed', turnoCentroFilter === id ? 'true' : 'false');
-    btn.textContent = label;
+    btn.textContent = turnoRotuloFiltro(label); btn.title = label;
     btn.onclick = function() { turnoSetCentro(id); };
     return btn;
   }
@@ -1690,6 +1817,7 @@ document.getElementById('footer-text').innerHTML  =
 'OBRAS - BA &nbsp;|&nbsp; BA_PROCESSO &nbsp;|&nbsp; ' + total + ' equipes ativas &nbsp;|&nbsp; ' + currentDate;
 updateBaseCounts();
 renderProducao();
+if (window.turnoDiaRotulo) turnoDiaRotulo();
 }
 // Inicializa os botões de base/filial e centro de custo ao carregar
 (function initBaseFilter() {
@@ -1701,6 +1829,13 @@ renderProducao();
   }
 })();
 
+// nome da equipe sem o sufixo do centro (que vira uma etiqueta) + justificativa opcional
+function turnoCardHtml(name, obs) {
+  var t = String(nomeTela(name) || ''), m = t.match(/^(.*\S)\s*-\s*([A-Z]{2,4})$/);
+  var nome = m ? m[1] : t, sigla = m ? m[2] : '';
+  var linha = '<span class="card-name" title="' + esc(t) + '">' + esc(nome) + '</span>' + (sigla ? '<span class="card-tag">' + esc(sigla) + '</span>' : '');
+  return obs ? '<div class="card-linha">' + linha + '</div><div class="justif-obs">' + esc(obs) + '</div>' : linha;
+}
 function emptyMsg(id) {
 document.getElementById(id).innerHTML = '<div class="_s9">Nenhuma equipe</div>';
 }
@@ -1709,7 +1844,7 @@ const g = document.getElementById(id); g.innerHTML = '';
 if (!list.length) { emptyMsg(id); return; }
 list.forEach(name => {
 const d = document.createElement('div'); d.className = 'card';
-d.innerHTML = '<span class="card-name">' + esc(nomeTela(name)) + '</span><span class="badge ok">OK</span>'; // XSS fix
+d.innerHTML = turnoCardHtml(name); // XSS fix
 g.appendChild(d);
 });
 }
@@ -1718,8 +1853,7 @@ const g = document.getElementById(id); g.innerHTML = '';
 if (!list.length) { emptyMsg(id); return; }
 list.forEach(function(t) {
 const d = document.createElement('div'); d.className = 'card justif';
-d.innerHTML = (t.obs ? '<div class="justif-obs">' + esc(t.obs) + '</div>' : '') +
-'<span class="card-name">' + esc(nomeTela(t.name)) + '</span><span class="badge justif">JUSTIF.</span>'; // XSS fix
+d.innerHTML = turnoCardHtml(t.name, t.obs); // XSS fix
 g.appendChild(d);
 });
 }
@@ -1728,7 +1862,7 @@ const g = document.getElementById(id); g.innerHTML = '';
 if (!list.length) { emptyMsg(id); return; }
 list.forEach(name => {
 const d = document.createElement('div'); d.className = 'card absent';
-d.innerHTML = '<span class="card-name">' + esc(nomeTela(name)) + '</span><span class="badge falta">FALTA</span>'; // XSS fix
+d.innerHTML = turnoCardHtml(name); // XSS fix
 g.appendChild(d);
 });
 }
@@ -5972,7 +6106,7 @@ setTimeout(presenceInit, 1500);
 <button onclick="if(window.tirarPrint)window.tirarPrint();else window.print()" title="Imprimir" style="position:fixed;bottom:18px;right:18px;z-index:200;background:rgba(43,108,176,0.82);color:#fff;border:none;border-radius:50%;width:44px;height:44px;font-size:1.15rem;cursor:pointer;box-shadow:0 2px 10px rgba(43,108,176,0.35);display:flex;align-items:center;justify-content:center;transition:all 0.2s;backdrop-filter:blur(4px);" onmouseover="this.style.background='rgba(26,74,128,0.95)';this.style.transform='scale(1.1)'" onmouseout="this.style.background='rgba(43,108,176,0.82)';this.style.transform='scale(1)'">&#128247;</button>
 
 <!-- Botão Relatório de Faltas -->
-<button onclick="abrirRelatorioFaltas()" title="Relatório de Faltas" style="position:fixed;bottom:18px;left:50%;transform:translateX(-50%);z-index:200;background:rgba(197,48,48,0.82);color:#fff;border:none;border-radius:22px;padding:0 18px;height:44px;font-family:'Barlow',sans-serif;font-size:0.78rem;font-weight:800;letter-spacing:0.5px;cursor:pointer;box-shadow:0 2px 10px rgba(197,48,48,0.4);display:flex;align-items:center;gap:7px;transition:all 0.2s;backdrop-filter:blur(4px);white-space:nowrap;" onmouseover="this.style.background='rgba(154,28,28,0.95)';this.style.transform='translateX(-50%) scale(1.05)'" onmouseout="this.style.background='rgba(197,48,48,0.82)';this.style.transform='translateX(-50%) scale(1)'">📊 RELATÓRIO DE FALTAS</button>
+<button id="turno-relatorio-flutuante" onclick="abrirRelatorioFaltas()" title="Relatório de Faltas" style="position:fixed;bottom:18px;left:50%;transform:translateX(-50%);z-index:200;background:rgba(197,48,48,0.82);color:#fff;border:none;border-radius:22px;padding:0 18px;height:44px;font-family:'Barlow',sans-serif;font-size:0.78rem;font-weight:800;letter-spacing:0.5px;cursor:pointer;box-shadow:0 2px 10px rgba(197,48,48,0.4);display:flex;align-items:center;gap:7px;transition:all 0.2s;backdrop-filter:blur(4px);white-space:nowrap;" onmouseover="this.style.background='rgba(154,28,28,0.95)';this.style.transform='translateX(-50%) scale(1.05)'" onmouseout="this.style.background='rgba(197,48,48,0.82)';this.style.transform='translateX(-50%) scale(1)'">📊 RELATÓRIO DE FALTAS</button>
 
 <!-- ══════════════════════ MODAL RELATÓRIO DE FALTAS ══════════════════════ -->
 <div id="relatorio-modal" style="display:none;position:fixed;inset:0;background:rgba(10,20,30,0.7);z-index:1200;align-items:flex-start;justify-content:center;padding:100px 8px 8px 8px;backdrop-filter:blur(4px);overflow-y:auto;">
