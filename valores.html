@@ -154,11 +154,14 @@
   .fin-chart{display:flex;flex-direction:column;gap:10px}
   .fin-graphs{display:grid;grid-template-columns:1.7fr 1fr;gap:14px;margin-bottom:14px;align-items:start}
   @media(max-width:820px){ .fin-graphs{grid-template-columns:1fr} }
+  .fin-graphs > *{min-width:0}
   .fin-graphs2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;align-items:start}
   @media(max-width:820px){ .fin-graphs2{grid-template-columns:1fr} }
-  .fin-mes-chart{display:flex;align-items:flex-end;gap:12px;padding:10px 4px 0;min-height:196px}
-  .fin-mes-col{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;min-width:0}
-  .fin-mes-tot{font-size:.68rem;font-weight:800;color:#0f3a33;margin-bottom:5px;white-space:nowrap}
+  .fin-mes-chart{display:flex;align-items:flex-end;gap:8px;padding:10px 4px 0;min-height:196px;overflow-x:auto}
+  .fin-mes-col{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;min-width:auto}
+  .fin-mes-tot{font-size:.66rem;font-weight:800;color:#0f3a33;margin-bottom:5px;text-align:center;line-height:1.2;font-variant-numeric:tabular-nums}
+  .fin-mes-tot .nm{white-space:nowrap}
+  .fin-mes-tot .rs{display:block;color:#94a3b8;font-weight:700;font-size:.92em}
   .fin-mes-bar{width:100%;max-width:48px;display:flex;flex-direction:column;border-radius:6px 6px 0 0;overflow:hidden;box-shadow:0 1px 5px rgba(0,0,0,.10);min-height:3px}
   .fin-mes-bar .seg{width:100%;transition:height .25s}
   .fin-mes-lbl{font-size:.72rem;font-weight:700;color:#64748b;margin-top:8px;white-space:nowrap}
@@ -978,7 +981,8 @@ function finChartMes(rows){
       var h=(meses[m][f]/tot*100);
       return '<div class="seg" style="height:'+h+'%;background:'+finCorForn(f)+'" title="'+f+' · '+finMoney(meses[m][f])+'"></div>';
     }).join('');
-    return '<div class="fin-mes-col"><div class="fin-mes-tot">'+finMoneyK(tot)+'</div><div class="fin-mes-bar" style="height:'+barHpx+'px">'+segs+'</div>'+lbl+'</div>';
+    var exato=Number(tot).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+    return '<div class="fin-mes-col" title="'+mm[1]+'/'+mm[0]+' · R$ '+exato+'"><div class="fin-mes-tot"><span class="rs">R$</span> <span class="nm">'+exato+'</span></div><div class="fin-mes-bar" style="height:'+barHpx+'px">'+segs+'</div>'+lbl+'</div>';
   }).join('');
   var leg=fornList.map(function(f){ return '<span class="fin-leg"><i style="background:'+finCorForn(f)+'"></i>'+f+'</span>'; }).join('');
   if(FIN_MES_FORN){
