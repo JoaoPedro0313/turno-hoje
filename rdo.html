@@ -267,6 +267,124 @@ body.sm-collapsed .sm-side:hover .sm-top{justify-content:flex-start;padding:12px
 body.sm-collapsed .sm-side:hover .sm-item{justify-content:flex-start;padding:9px 11px}
 body.sm-collapsed .sm-side:hover .sm-group-head{justify-content:flex-start;padding:9px 11px}
 </style>
+<style>
+/* ══ RDO: faixa de filtros escura + seções de borda a borda (mesmo padrão do Turno) ══ */
+/* — faixas de filtro (layout) — */
+#rdo-page .rdo-state-bar,#rdo-page .rdo-base-bar{padding:8px 22px !important;gap:6px !important;min-height:50px;flex-wrap:nowrap}
+#rdo-hist-bar{padding:10px 22px !important;gap:8px !important;flex-wrap:wrap !important}
+#rdo-page .tf-rot{width:150px;flex-shrink:0;font-size:.72rem !important;font-weight:700 !important;letter-spacing:1px !important;text-transform:uppercase}
+#rdo-base-btns,#rdo-centro-btns{gap:6px !important;flex-wrap:nowrap !important}
+#rdo-page .rdo-state-btn,#rdo-page .rdo-base-btn,#rdo-page .rdo-centro-btn{min-height:32px;padding:0 14px !important;border-radius:16px !important;border-width:1px !important;border-style:solid !important;font-size:.8rem !important;font-weight:700 !important;letter-spacing:0 !important;transition:background .15s,color .15s,border-color .15s}
+#rdo-cad-info,#rdo-state-counts{font-size:.75rem !important;font-weight:600 !important}
+#rdo-hist-bar .td-seta{width:36px;height:36px;padding:0;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;font-family:inherit}
+#rdo-hist-bar .td-seta:disabled{opacity:.35;cursor:default}
+#rdo-hist-bar .td-data{height:36px;padding:0 10px;border-radius:6px;font-family:'Barlow',sans-serif;font-size:.85rem;font-weight:600;outline:none}
+#rdo-hist-bar .td-hoje,#rdo-hist-bar .td-medias,#rdo-hist-bar .td-faltas{min-height:36px;padding:0 14px;border-radius:6px;display:inline-flex;align-items:center;gap:8px;white-space:nowrap;cursor:pointer;font-family:'Barlow',sans-serif;font-size:.85rem;font-weight:600;transition:background .15s,border-color .15s,color .15s}
+#rdo-hist-bar .td-acoes{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}
+#rdo-hist-modo{margin-left:4px !important}
+#rdo-page button:focus-visible,#rdo-hist-bar .td-data:focus-visible{outline:2px solid #fff;outline-offset:2px}
+#rdo-relatorio-flutuante{display:none !important}
+/* — faixas de filtro: modo claro — */
+body:not(.dark) #rdo-page .rdo-state-bar,body:not(.dark) #rdo-page .rdo-base-bar{background:#0f3b45 !important;border-bottom:1px solid rgba(255,255,255,.08) !important}
+body:not(.dark) #rdo-hist-bar{background:#0b2f37 !important;border-top:2px solid #0d7377 !important;border-bottom:0 !important}
+body:not(.dark) #rdo-page .tf-rot,body:not(.dark) #rdo-cad-info,body:not(.dark) #rdo-state-counts{color:#9fbfc3 !important}
+body:not(.dark) #rdo-page .rdo-state-btn,body:not(.dark) #rdo-page .rdo-base-btn,body:not(.dark) #rdo-page .rdo-centro-btn{background:transparent !important;color:#d7e6e8 !important;border-color:rgba(255,255,255,.25) !important}
+body:not(.dark) #rdo-page .rdo-state-btn:hover,body:not(.dark) #rdo-page .rdo-base-btn:hover,body:not(.dark) #rdo-page .rdo-centro-btn:hover{border-color:rgba(255,255,255,.6) !important;color:#fff !important}
+body:not(.dark) #rdo-page .rdo-state-btn.active,body:not(.dark) #rdo-page .rdo-base-btn.active,body:not(.dark) #rdo-page .rdo-centro-btn.active{background:#fff !important;color:#0f3b45 !important;border-color:#fff !important}
+body:not(.dark) #rdo-hist-bar .td-seta,body:not(.dark) #rdo-hist-bar .td-hoje{background:transparent;border:1px solid rgba(255,255,255,.25);color:#d7e6e8}
+body:not(.dark) #rdo-hist-bar .td-data{background:rgba(255,255,255,.08) !important;border:1px solid rgba(255,255,255,.25) !important;color:#fff !important;color-scheme:dark}
+body:not(.dark) #rdo-hist-bar .td-seta:hover:not(:disabled),body:not(.dark) #rdo-hist-bar .td-hoje:hover{border-color:rgba(255,255,255,.6);color:#fff}
+body:not(.dark) #rdo-hist-bar .td-medias{background:#14a085;border:1px solid #14a085;color:#fff}
+body:not(.dark) #rdo-hist-bar .td-medias:hover{background:#0d7377;border-color:#0d7377}
+body:not(.dark) #rdo-hist-bar .td-faltas{background:#c2412f;border:1px solid #c2412f;color:#fff}
+body:not(.dark) #rdo-hist-bar .td-faltas:hover{background:#a3321f;border-color:#a3321f}
+/* — faixas de filtro: modo escuro — */
+body.dark #rdo-page .rdo-state-bar,body.dark #rdo-page .rdo-base-bar,body.dark #rdo-hist-bar{background:var(--e-painel,#0a0a0a) !important;border-bottom:1px solid var(--e-linha,#222) !important}
+body.dark #rdo-hist-bar{border-top:0 !important}
+body.dark #rdo-page .tf-rot,body.dark #rdo-cad-info,body.dark #rdo-state-counts{color:var(--e-rotulo,#8c8c8c) !important}
+body.dark #rdo-page .rdo-state-btn,body.dark #rdo-page .rdo-base-btn,body.dark #rdo-page .rdo-centro-btn{background:var(--e-elev,#1a1a1a) !important;color:var(--e-texto2,#b8b8b8) !important;border-color:var(--e-linha2,#303030) !important}
+body.dark #rdo-page .rdo-state-btn.active,body.dark #rdo-page .rdo-base-btn.active,body.dark #rdo-page .rdo-centro-btn.active{background:var(--e-acento,#14a085) !important;color:#fff !important;border-color:var(--e-acento,#14a085) !important}
+body.dark #rdo-hist-bar .td-seta,body.dark #rdo-hist-bar .td-hoje{background:var(--e-elev,#1a1a1a);border:1px solid var(--e-linha2,#303030);color:var(--e-texto2,#b8b8b8)}
+body.dark #rdo-hist-bar .td-data{background:var(--e-elev,#1a1a1a) !important;border:1px solid var(--e-linha2,#303030) !important;color:var(--e-texto,#f2f2f2) !important;color-scheme:dark}
+body.dark #rdo-hist-bar .td-medias{background:var(--e-acento,#14a085);border:1px solid var(--e-acento,#14a085);color:#fff}
+body.dark #rdo-hist-bar .td-faltas{background:#c53030;border:1px solid #c53030;color:#fff}
+
+/* — seções de borda a borda (layout) — */
+#rdo-page .section{border-radius:0 !important;margin:0 0 8px !important;padding:0 !important;box-shadow:none !important;border-left:0 !important;border-right:0 !important;overflow:hidden}
+#rdo-page #rdo-hist-bar + .rdo-upload-bar + .section,#rdo-page .rdo-upload-bar + .section{margin-top:8px !important}
+#rdo-page .section-header{padding:12px 22px !important}
+#rdo-page .section-label{font-size:1rem !important;font-weight:700 !important;letter-spacing:0 !important;gap:10px}
+#rdo-page .icon-check,#rdo-page .icon-warn,#rdo-page .icon-dot{width:26px;height:26px;border-radius:6px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:.9rem;font-weight:800}
+#rdo-page .icon-check{background:#1e7a46;color:#fff}
+#rdo-page .icon-warn{background:#e8a33d;color:#3a2405}
+#rdo-page .icon-dot{background:#b42318}
+#rdo-page .icon-dot::after{content:'\2715';color:#fff;font-size:.78rem;font-weight:800}
+#rdo-page .section-count{font-size:1.25rem !important;font-weight:800 !important}
+#rdo-page .grid{display:grid !important;grid-template-columns:repeat(auto-fill,minmax(210px,1fr)) !important;gap:8px !important;padding:12px 22px !important}
+#rdo-page .grid .empty-msg{grid-column:1/-1;padding:10px 0;text-align:left;font-size:.85rem;font-weight:600}
+#rdo-page .grid .card{display:flex;align-items:center;justify-content:flex-start;gap:8px;min-height:40px;padding:0 10px !important;border-width:1px !important;border-style:solid !important;border-radius:6px;position:relative}
+#rdo-page .grid .card::before{content:'';width:7px;height:7px;border-radius:50%;flex-shrink:0;background:#1e7a46}
+#rdo-page .grid .card.absent::before{background:#b42318}
+#rdo-page .grid .card.justif::before{display:none}
+#rdo-page .grid .card[role="button"]{cursor:pointer}
+#rdo-page .grid .card[role="button"]:focus-visible{outline:2px solid #0d7377;outline-offset:2px}
+#rdo-page .grid .card-name{flex:1;min-width:0;font-size:.82rem !important;font-weight:600 !important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#rdo-page .grid .card-tag{margin-left:auto;flex-shrink:0;padding:1px 6px;border-radius:4px;font-size:.68rem;font-weight:700}
+#rdo-page .grid .card.justif{display:block !important;padding:6px 10px !important}
+#rdo-page .grid .card.justif .card-linha{display:flex;align-items:center;gap:8px}
+#rdo-page .grid .card.justif .card-linha::before{content:'';width:7px;height:7px;border-radius:50%;flex-shrink:0;background:#e8a33d}
+#rdo-page .grid .card.justif .justif-obs::after{display:none !important;content:none !important}
+#rdo-page .grid .card.justif .justif-obs{display:block !important;position:static !important;max-width:none !important;margin-top:2px;padding:0 0 0 15px !important;background:none !important;box-shadow:none !important;border-radius:0 !important;font-size:.74rem !important;font-weight:500 !important;line-height:1.35 !important;white-space:normal}
+@media(max-width:600px){
+  #rdo-page .grid{grid-template-columns:repeat(auto-fill,minmax(180px,1fr)) !important;padding:10px 12px !important}
+  #rdo-page .rdo-state-bar,#rdo-page .rdo-base-bar,#rdo-hist-bar{padding-left:12px !important;padding-right:12px !important}
+  #rdo-page .tf-rot{width:auto}
+  #rdo-page #rdo-hist-bar .tf-rot{width:100%}
+  #rdo-hist-bar .td-acoes{margin-left:0;width:100%}
+  #rdo-hist-bar .td-acoes button{flex:1 1 auto;justify-content:center}
+  #rdo-page .section-header{padding:12px !important}
+}
+/* — seções: modo claro — */
+body:not(.dark) #rdo-page .section{background:#fff !important;border-top:1px solid #dfe3e8 !important;border-bottom:1px solid #dfe3e8 !important}
+body:not(.dark) #rdo-page .section-label{color:#16324a}
+body:not(.dark) #rdo-page .section-header.green{background:#f1f8f4;border-bottom-color:#d6ebdd}
+body:not(.dark) #rdo-page .section-header.orange{background:#fdf8ee;border-bottom-color:#f0dcb4}
+body:not(.dark) #rdo-page .section-header.red{background:#fdf3f1;border-bottom-color:#f1cdc7}
+body:not(.dark) #rdo-page .section-count.green{color:#1e7a46}
+body:not(.dark) #rdo-page .section-count.orange{color:#9a5a12}
+body:not(.dark) #rdo-page .section-count.red{color:#b42318}
+body:not(.dark) #rdo-page .grid .empty-msg{color:#7b8794}
+body:not(.dark) #rdo-page .grid .card{background:#fff;border-color:#e3e8ed !important}
+body:not(.dark) #rdo-page .grid .card:hover{background:#f8fafb}
+body:not(.dark) #rdo-page .grid .card.justif{background:#fffaf2;border-color:#f0dcb4 !important}
+body:not(.dark) #rdo-page .grid .card.justif:hover{background:#fff4e2}
+body:not(.dark) #rdo-page .grid .card.absent{background:#fff7f6;border-color:#f1cdc7 !important}
+body:not(.dark) #rdo-page .grid .card.absent:hover{background:#ffeeeb}
+body:not(.dark) #rdo-page .grid .card-name{color:#16324a !important}
+body:not(.dark) #rdo-page .grid .card.absent .card-name{color:#7f1d14 !important}
+body:not(.dark) #rdo-page .grid .card-tag{background:#f4f6f8;color:#5b6b7a}
+body:not(.dark) #rdo-page .grid .card.justif .justif-obs{color:#9a5a12 !important}
+/* — seções: modo escuro — */
+body.dark #rdo-page{background:var(--e-fundo,#000)}
+body.dark #rdo-page .section{background:var(--e-cartao,#111) !important;border-top:1px solid var(--e-linha,#222) !important;border-bottom:1px solid var(--e-linha,#222) !important}
+body.dark #rdo-page .section-header.green{background:color-mix(in srgb,#14a085 14%,var(--e-cartao,#111)) !important;border-bottom-color:color-mix(in srgb,#14a085 38%,var(--e-cartao,#111)) !important}
+body.dark #rdo-page .section-header.orange{background:color-mix(in srgb,#f0a500 12%,var(--e-cartao,#111)) !important;border-bottom-color:color-mix(in srgb,#f0a500 32%,var(--e-cartao,#111)) !important}
+body.dark #rdo-page .section-header.red{background:color-mix(in srgb,#e53e3e 12%,var(--e-cartao,#111)) !important;border-bottom-color:color-mix(in srgb,#e53e3e 34%,var(--e-cartao,#111)) !important}
+body.dark #rdo-page .section-label{color:var(--e-texto,#f2f2f2) !important}
+body.dark #rdo-page .section-count.green{color:#5eead4 !important}
+body.dark #rdo-page .section-count.orange{color:#fbd38d !important}
+body.dark #rdo-page .section-count.red{color:#fc8181 !important}
+body.dark #rdo-page .grid .empty-msg{color:var(--e-apagado,#5a5a5a)}
+body.dark #rdo-page .grid .card{background:var(--e-cartao,#111) !important;border-color:var(--e-linha,#222) !important}
+body.dark #rdo-page .grid .card:hover{background:var(--e-elev,#1a1a1a) !important}
+body.dark #rdo-page .grid .card.absent{background:color-mix(in srgb,#e53e3e 9%,var(--e-cartao,#111)) !important}
+body.dark #rdo-page .grid .card.justif{background:color-mix(in srgb,#f0a500 9%,var(--e-cartao,#111)) !important}
+body.dark #rdo-page .grid .card-name{color:var(--e-texto,#f2f2f2) !important}
+body.dark #rdo-page .grid .card.absent .card-name{color:#f3c0c0 !important}
+body.dark #rdo-page .grid .card.justif .card-name{color:#fbd38d !important}
+body.dark #rdo-page .grid .card-tag{background:var(--e-elev,#1a1a1a);color:var(--e-texto2,#b8b8b8)}
+body.dark #rdo-page .grid .card.justif .justif-obs{color:#fbd38d !important}
+</style>
 </head>
 
 <style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Barlow',sans-serif;background:#f0f4f5;min-height:100vh;padding-bottom:80px;padding-top:100px}.db-badge{display:inline-flex;align-items:center;gap:5px;font-size:0.7rem;font-weight:800;padding:4px 10px;border-radius:6px;letter-spacing:0.5px;position:relative;border:1px solid rgba(255,255,255,0.3)}.db-badge.offline{background:rgba(229,62,62,0.3);color:#ffc0c0}.db-badge.online{background:rgba(45,184,100,0.3);color:#b0ffd0}.db-badge.local{background:rgba(45,184,100,0.15);color:#9ae6b4}.db-badge.syncing{background:rgba(240,165,0,0.3);color:#ffe9a0}.db-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}.db-badge.offline .db-dot{background:#e53e3e}.db-badge.online .db-dot{background:#14a085;box-shadow:0 0 6px #14a085}.db-badge.syncing .db-dot{background:#f0a500;animation:blink 1s infinite}.db-badge.local .db-dot{background:#38a169}@keyframes blink{0%,100%{opacity:1}50%{opacity:0.3}}.presence-btn{display:inline-flex;align-items:center;gap:6px;font-size:0.7rem;font-weight:800;padding:4px 10px;border-radius:6px;letter-spacing:0.5px;margin-left:6px;position:relative;background:rgba(45,184,100,0.2);color:#b0ffd0;border:1px solid rgba(255,255,255,0.3);cursor:pointer;transition:all 0.2s}.presence-btn:hover{background:rgba(45,184,100,0.35)}.presence-dot{width:7px;height:7px;border-radius:50%;background:#38d996;box-shadow:0 0 6px #38d996;flex-shrink:0;animation:blink 2s infinite}.presence-modal{display:none;position:fixed;inset:0;background:rgba(10,20,30,0.65);z-index:300;align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(4px)}.presence-modal.open{display:flex}.presence-box{background:#fff;border-radius:20px;width:100%;max-width:520px;box-shadow:0 32px 80px rgba(0,0,0,0.25);overflow:hidden;max-height:90vh;display:flex;flex-direction:column}.presence-header{background:linear-gradient(135deg,#0b5e62,#14a085);padding:18px 24px;display:flex;align-items:center;justify-content:space-between}.presence-body{overflow-y:auto;padding:20px 24px}.presence-user-row{display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:10px;margin-bottom:6px;background:#f0fafa;border:1px solid #c0e8e5;transition:all 0.15s}.presence-user-row.me{background:#f0fff4;border-color:#c6f6d5}.presence-avatar{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#0d7377,#14a085);color:#fff;font-size:0.9rem;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0}
@@ -529,40 +647,45 @@ html body.dark .badge.naexec{background:rgba(229,62,62,.16)!important;color:#fc8
 </div>
 
 
+<div id="rdo-page">
 <!-- Filtro Estado -->
-<div class="rdo-state-bar">
-  <span style="font-size:0.6rem;font-weight:800;color:rgba(255,255,255,0.45);letter-spacing:1.5px;text-transform:uppercase;white-space:nowrap;flex-shrink:0;">🌎 ESTADO:</span>
-  <button class="rdo-state-btn active" id="rdo-state-todos" onclick="rdoSetState('todos')">Todos</button>
-  <button class="rdo-state-btn" id="rdo-state-ba" onclick="rdoSetState('ba')">🟡 BA</button>
-  <button class="rdo-state-btn" id="rdo-state-mg" onclick="rdoSetState('mg')">🔵 MG</button>
-  <button class="rdo-state-btn" id="rdo-state-se" onclick="rdoSetState('se')">🟣 SE</button>
+<div class="rdo-state-bar" id="rdo-estado-bar">
+  <span class="tf-rot" style="font-size:0.6rem;font-weight:800;color:rgba(255,255,255,0.45);letter-spacing:1.5px;text-transform:uppercase;white-space:nowrap;flex-shrink:0;">ESTADO</span>
+  <button class="rdo-state-btn active" id="rdo-state-todos" aria-pressed="true" onclick="rdoSetState('todos')">Todos</button>
+  <button class="rdo-state-btn" id="rdo-state-ba" aria-pressed="false" onclick="rdoSetState('ba')">BA</button>
+  <button class="rdo-state-btn" id="rdo-state-mg" aria-pressed="false" onclick="rdoSetState('mg')">MG</button>
+  <button class="rdo-state-btn" id="rdo-state-se" aria-pressed="false" onclick="rdoSetState('se')">SE</button>
   <div id="rdo-cad-info" style="margin-left:auto;font-size:0.62rem;font-weight:700;color:rgba(255,255,255,0.35);white-space:nowrap;"></div>
   <div id="rdo-state-counts" style="margin-left:14px;font-size:0.62rem;font-weight:700;color:rgba(255,255,255,0.4);white-space:nowrap;"></div>
 </div>
 
 <!-- Filtro Filial -->
 <div class="rdo-base-bar">
-  <span style="font-size:0.6rem;font-weight:800;color:#aaa;letter-spacing:1.5px;text-transform:uppercase;white-space:nowrap;flex-shrink:0;">🏢 FILIAL:</span>
+  <span class="tf-rot" style="font-size:0.6rem;font-weight:800;color:#aaa;letter-spacing:1.5px;text-transform:uppercase;white-space:nowrap;flex-shrink:0;">FILIAL</span>
   <div id="rdo-base-btns" style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;overflow-x:auto;"></div>
 </div>
 
 <!-- Filtro Centro de serviço -->
 <div class="rdo-base-bar">
-  <span style="font-size:0.6rem;font-weight:800;color:#aaa;letter-spacing:1.5px;text-transform:uppercase;white-space:nowrap;flex-shrink:0;">💲 CENTRO DE SERVIÇO:</span>
+  <span class="tf-rot" style="font-size:0.6rem;font-weight:800;color:#aaa;letter-spacing:1.5px;text-transform:uppercase;white-space:nowrap;flex-shrink:0;">CENTRO DE SERVIÇO</span>
   <div id="rdo-centro-btns" style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;overflow-x:auto;"></div>
 </div>
 
 <!-- Consultar dia anterior -->
-<div class="rdo-state-bar" style="gap:10px;">
-  <span style="font-size:0.72rem;font-weight:800;color:rgba(255,255,255,0.6);letter-spacing:1px;text-transform:uppercase;white-space:nowrap;">📅 CONSULTAR DIA:</span>
-  <input type="date" id="rdo-hist-date"
-    style="padding:5px 10px;border:1.5px solid rgba(255,255,255,0.2);border-radius:8px;background:rgba(255,255,255,0.1);color:#fff;font-family:'Barlow',sans-serif;font-size:0.78rem;font-weight:700;outline:none;color-scheme:dark;"
-    onkeydown="if(event.key==='Enter') rdoHistBuscar()">
-  <button onclick="if(window.rdoHistBuscar)window.rdoHistBuscar()" style="padding:6px 16px;background:#14a085;color:#fff;border:none;border-radius:8px;font-family:'Barlow',sans-serif;font-size:0.75rem;font-weight:800;cursor:pointer;letter-spacing:0.5px;transition:background 0.15s;" onmouseover="this.style.background='#0d7377'" onmouseout="this.style.background='#14a085'">🔍 BUSCAR</button>
-  <button onclick="if(window.rdoHistHoje)window.rdoHistHoje()" style="padding:6px 14px;background:transparent;color:rgba(255,255,255,0.5);border:1.5px solid rgba(255,255,255,0.15);border-radius:8px;font-family:'Barlow',sans-serif;font-size:0.75rem;font-weight:800;cursor:pointer;transition:all 0.15s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,0.5)'">↩ HOJE</button>
-  <button type="button" onclick="if(window.abrirMediasBase)window.abrirMediasBase()" title="Média de apontamentos de RDO em cada base" style="padding:6px 14px;background:#14a085;color:#fff;border:1.5px solid #14a085;border-radius:8px;font-family:'Barlow',sans-serif;font-size:0.75rem;font-weight:800;cursor:pointer;transition:all 0.15s;white-space:nowrap;flex-shrink:0;" onmouseover="this.style.background='#0d7377';this.style.borderColor='#0d7377'" onmouseout="this.style.background='#14a085';this.style.borderColor='#14a085'">📊 Médias por base</button>
+<div class="rdo-state-bar" id="rdo-hist-bar" style="gap:10px;">
+  <span class="tf-rot" style="font-size:0.72rem;font-weight:800;color:rgba(255,255,255,0.6);letter-spacing:1px;text-transform:uppercase;white-space:nowrap;">CONSULTAR DIA</span>
+  <button type="button" class="td-seta" onclick="rdoDiaPasso(-1)" title="Dia anterior" aria-label="Dia anterior"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg></button>
+  <input type="date" id="rdo-hist-date" class="td-data" aria-label="Dia a consultar" onchange="if(this.value&&window.rdoHistBuscar)rdoHistBuscar()" onkeydown="if(event.key==='Enter') rdoHistBuscar()">
+  <button type="button" class="td-seta" id="rdo-dia-prox" onclick="rdoDiaPasso(1)" title="Próximo dia" aria-label="Próximo dia" disabled><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></button>
+  <button type="button" class="td-hoje" onclick="if(window.rdoHistBuscar)window.rdoHistBuscar()">Buscar</button>
+  <button type="button" class="td-hoje" onclick="if(window.rdoHistHoje)window.rdoHistHoje()">Hoje</button>
+  
   <div id="rdo-hist-status" style="font-size:0.72rem;font-weight:700;color:rgba(255,255,255,0.5);margin-left:4px;"></div>
-  <div id="rdo-hist-modo" style="display:none;margin-left:auto;background:#e53e3e22;border:1px solid #e53e3e66;border-radius:8px;padding:4px 12px;font-size:0.72rem;font-weight:800;color:#fc8181;letter-spacing:0.5px;">👁️ MODO LEITURA — DIA ANTERIOR</div>
+  <div id="rdo-hist-modo" style="display:none;margin-left:auto;background:#e53e3e22;border:1px solid #e53e3e66;border-radius:8px;padding:4px 12px;font-size:0.72rem;font-weight:800;color:#fc8181;letter-spacing:0.5px;">Modo leitura — dia anterior</div>
+  <div class="td-acoes">
+    <button type="button" class="td-medias" onclick="if(window.abrirMediasBase)window.abrirMediasBase()" title="Média de apontamentos de RDO em cada base">Médias por base</button>
+    <button type="button" class="td-faltas" onclick="if(window.abrirRelatorioFaltas)window.abrirRelatorioFaltas()" title="Relatório RDO">Relatório RDO</button>
+  </div>
 </div>
 
 <!-- Data carregada (o upload do arquivo agora fica em ⚙️ Configurações) -->
@@ -576,7 +699,7 @@ html body.dark .badge.naexec{background:rgba(229,62,62,.16)!important;color:#fc8
 <!-- Seção: Lançou RDO -->
 <div class="section">
   <div class="section-header green">
-    <div class="section-label"><div class="icon-check">✓</div> LANÇOU RDO</div>
+    <div class="section-label"><div class="icon-check">✓</div> Lançou RDO</div>
     <span class="section-count green" id="rdo-count-lancou">0</span>
   </div>
   <div class="grid" id="rdo-grid-lancou">
@@ -587,7 +710,7 @@ html body.dark .badge.naexec{background:rgba(229,62,62,.16)!important;color:#fc8
 <!-- Seção: Falta Justificada -->
 <div class="section">
   <div class="section-header orange">
-    <div class="section-label"><div class="icon-warn">!</div> FALTA JUSTIFICADA</div>
+    <div class="section-label"><div class="icon-warn">!</div> Falta justificada</div>
     <span class="section-count orange" id="rdo-count-justif">0</span>
   </div>
   <div class="grid" id="rdo-grid-justif">
@@ -598,13 +721,15 @@ html body.dark .badge.naexec{background:rgba(229,62,62,.16)!important;color:#fc8
 <!-- Seção: Não Lançou RDO -->
 <div class="section">
   <div class="section-header red">
-    <div class="section-label"><div class="icon-dot"></div> NÃO LANÇOU RDO</div>
+    <div class="section-label"><div class="icon-dot"></div> Não lançou RDO</div>
     <span class="section-count red" id="rdo-count-nao">0</span>
   </div>
   <div class="grid" id="rdo-grid-nao">
     <div class="empty-msg" style="grid-column:1/-1;padding:18px;text-align:center;color:#aaa;font-size:0.82rem;">Importe o CSV para ver quem não lançou</div>
   </div>
 </div>
+
+</div><!-- /#rdo-page -->
 
 <script>
 // ── RDO DATA ──────────────────────────────────────────────────────────────
@@ -1059,6 +1184,7 @@ function rdoSetState(s) {
   rdoCentroFilter = 'todos';
   document.querySelectorAll('.rdo-state-btn').forEach(function(btn) {
     btn.classList.toggle('active', btn.id === 'rdo-state-' + s);
+    btn.setAttribute('aria-pressed', btn.id === 'rdo-state-' + s ? 'true' : 'false');
   });
   rdoBuildBaseButtons();
   rdoBuildCentroButtons();
@@ -1074,6 +1200,7 @@ function rdoSetBase(b) {
   }
   document.querySelectorAll('.rdo-base-btn').forEach(function(btn) {
     btn.classList.toggle('active', btn.dataset.base === b);
+    btn.setAttribute('aria-pressed', btn.dataset.base === b ? 'true' : 'false');
   });
   rdoBuildCentroButtons();
   rdoRender();
@@ -1083,10 +1210,15 @@ function rdoSetCentro(b) {
   rdoCentroFilter = b;
   document.querySelectorAll('.rdo-centro-btn').forEach(function(btn) {
     btn.classList.toggle('active', btn.dataset.base === b);
+    btn.setAttribute('aria-pressed', btn.dataset.base === b ? 'true' : 'false');
   });
   rdoRender();
 }
 
+function rdoRotuloFiltro(l) {
+  var t = String(l || '').replace(/^[^A-Za-zÀ-ÿ]+/, '').replace(/^SERVI[ÇC]OS EM ENERGIA( -| EM)?\s*/i, '').trim();
+  return t.toLowerCase().split(/\s+/).map(function(w, i){ return (i && /^(de|da|do|das|dos|e)$/.test(w)) ? w : w.charAt(0).toUpperCase() + w.slice(1); }).join(' ');
+}
 function rdoBuildCentroButtons() {
   const c = document.getElementById('rdo-centro-btns');
   if (!c) return;
@@ -1095,7 +1227,8 @@ function rdoBuildCentroButtons() {
     const btn = document.createElement('button');
     btn.className = 'rdo-centro-btn' + (rdoCentroFilter === id ? ' active' : '');
     btn.dataset.base = id;
-    btn.textContent = label;
+    btn.setAttribute('aria-pressed', rdoCentroFilter === id ? 'true' : 'false');
+    btn.textContent = rdoRotuloFiltro(label); btn.title = label;
     btn.onclick = function() { rdoSetCentro(id); };
     return btn;
   }
@@ -1118,7 +1251,8 @@ function rdoBuildBaseButtons() {
     const btn = document.createElement('button');
     btn.className = 'rdo-base-btn' + (rdoBaseFilter === id ? ' active' : '');
     btn.dataset.base = id;
-    btn.textContent = label;
+    btn.setAttribute('aria-pressed', rdoBaseFilter === id ? 'true' : 'false');
+    btn.textContent = rdoRotuloFiltro(label); btn.title = label.replace(/^[^A-Za-zÀ-ÿ]+/, '');
     btn.onclick = function() { rdoSetBase(id); };
     return btn;
   }
@@ -1686,6 +1820,7 @@ function rdoHistExibir(payload, dataFormatada, fonte) {
   if (statusEl) { statusEl.textContent = '✅ ' + dataFormatada + ' — ' + total + ' equipes (' + fonte + ')'; statusEl.style.color = '#68d391'; }
   if (modoEl) modoEl.style.display = '';
   rdoRender();
+  rdoDiaSync();
 }
 function rdoHistHoje() {
   rdoModoHistorico = false;
@@ -1695,6 +1830,7 @@ function rdoHistHoje() {
   if (input) input.value = '';
   if (statusEl) { statusEl.textContent = ''; statusEl.style.color = 'rgba(255,255,255,0.5)'; }
   if (modoEl) modoEl.style.display = 'none';
+  rdoDiaSync();
   // restaura os dados de hoje
   if (rdoBackupHoje) {
     rdoData = rdoBackupHoje.lancou || {};
@@ -1708,6 +1844,20 @@ function rdoHistHoje() {
 }
 window.rdoHistBuscar = rdoHistBuscar;
 window.rdoHistHoje = rdoHistHoje;
+// setas ‹ ›: um dia antes/depois do dia exibido; ao chegar em hoje, volta para o dia atual
+function rdoDiaPasso(delta) {
+  function iso(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+  var input = document.getElementById('rdo-hist-date'); if (!input) return;
+  var hoje = new Date(); hoje.setHours(0,0,0,0);
+  var base = hoje;
+  if (rdoModoHistorico && input.value) { var p = input.value.split('-'); base = new Date(+p[0], +p[1]-1, +p[2]); }
+  var alvo = new Date(base.getFullYear(), base.getMonth(), base.getDate() + delta);
+  if (alvo >= hoje) { if (rdoModoHistorico) rdoHistHoje(); return; }
+  input.value = iso(alvo);
+  rdoHistBuscar();
+}
+function rdoDiaSync() { var b = document.getElementById('rdo-dia-prox'); if (b) b.disabled = !rdoModoHistorico; }
+window.rdoDiaPasso = rdoDiaPasso;
 
 function rdoRender() {
   rdoData   = rdoNormalizarLancou(rdoData);
@@ -1727,26 +1877,31 @@ function rdoRender() {
   const se = lancouSet.filter(function(n){ return rdoTeamState(n)==='se'; }).length;
   const sc = document.getElementById('rdo-state-counts');
   const _pc = [];
-  if (!rdoAllowedStates || rdoAllowedStates.indexOf('ba') >= 0) _pc.push('BA:'+ba);
-  if (!rdoAllowedStates || rdoAllowedStates.indexOf('mg') >= 0) _pc.push('MG:'+mg);
-  if (!rdoAllowedStates || rdoAllowedStates.indexOf('se') >= 0) _pc.push('SE:'+se);
-  if (sc) sc.textContent = (lancouSet.length && _pc.length) ? _pc.join(' ')+' (lançaram)' : '';
+  if (!rdoAllowedStates || rdoAllowedStates.indexOf('ba') >= 0) _pc.push('BA: '+ba);
+  if (!rdoAllowedStates || rdoAllowedStates.indexOf('mg') >= 0) _pc.push('MG: '+mg);
+  if (!rdoAllowedStates || rdoAllowedStates.indexOf('se') >= 0) _pc.push('SE: '+se);
+  if (sc) sc.textContent = (lancouSet.length && _pc.length) ? _pc.join(' · ')+' (lançaram)' : '';
 
   function buildCard(name, type) {
     // type: 'ok' | 'falta' | 'justif'
-    const disp = rdoDisplayName(name);
+    function e(x){ return String(x==null?'':x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+    const disp = String(rdoDisplayName(name) || '');
+    const m = disp.match(/^(.*\S)\s*-\s*([A-Z]{2,4})$/);
+    const linha = '<span class="card-name" title="'+e(disp)+'">'+e(m ? m[1] : disp)+'</span>' + (m ? '<span class="card-tag">'+e(m[2])+'</span>' : '');
+    const nomeJs = String(name).replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+    const clicavel = ' role="button" tabindex="0" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();this.click();}"';
     if (type === 'justif') {
-      const mot = String(rdoJustif[name]||'Justificado').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
-      return '<div class="card justif" title="Clique para remover a justificativa" onclick="rdoRemoverJustif(\''+name+'\')"><span class="card-name">'+disp+'</span><span class="justif-obs">'+mot+'</span><span class="badge justif">JUS</span></div>';
+      const mot = rdoJustif[name] || 'Justificado';
+      return '<div class="card justif" title="Clique para remover a justificativa"'+clicavel+' onclick="rdoRemoverJustif(\''+e(nomeJs)+'\')"><div class="card-linha">'+linha+'</div><div class="justif-obs">'+e(mot)+'</div></div>';
     }
     if (type === 'falta') {
-      return '<div class="card absent" title="Clique para justificar a falta" onclick="rdoJustificar(\''+name+'\')"><span class="card-name">'+disp+'</span><span class="badge falta">FALTA</span></div>';
+      return '<div class="card absent" title="Clique para justificar a falta"'+clicavel+' onclick="rdoJustificar(\''+e(nomeJs)+'\')">'+linha+'</div>';
     }
     var ci = RDO_CAD_INFO[name];
     var tt = ci ? [ci.encarregado, ci.centro, ci.supervisor ? 'sup. '+ci.supervisor : '',
                    (ci.qtd_colab || ci.qtd_colab === 0) ? ci.qtd_colab+' colab.' : '']
-                   .filter(Boolean).join(' · ').replace(/"/g,'&quot;') : '';
-    return '<div class="card"'+(tt?' title="'+tt+'"':'')+'><span class="card-name">'+disp+'</span><span class="badge ok">OK</span></div>';
+                   .filter(Boolean).join(' · ') : '';
+    return '<div class="card"'+(tt?' title="'+e(tt)+'"':'')+'>'+linha+'</div>';
   }
 
   var gl = document.getElementById('rdo-grid-lancou');
@@ -1862,7 +2017,7 @@ try { rdoCadSincronizar(true); } catch(e) { console.warn('[cadastro] init:', e.m
   onmouseout="this.style.background='rgba(13,115,119,0.82)';this.style.transform='scale(1) rotate(0deg)'">⚙️</button>
 
 <!-- 📊 Relatório RDO -->
-<button onclick="abrirRelatorioFaltas()" title="Relatório RDO"
+<button id="rdo-relatorio-flutuante" onclick="abrirRelatorioFaltas()" title="Relatório RDO"
   style="position:fixed;bottom:18px;left:50%;transform:translateX(-50%);z-index:200;background:rgba(197,48,48,0.82);color:#fff;border:none;border-radius:22px;padding:0 18px;height:44px;font-family:'Barlow',sans-serif;font-size:0.78rem;font-weight:800;letter-spacing:0.5px;cursor:pointer;box-shadow:0 2px 10px rgba(197,48,48,0.4);display:flex;align-items:center;gap:7px;transition:all 0.2s;backdrop-filter:blur(4px);white-space:nowrap;"
   onmouseover="this.style.background='rgba(154,28,28,0.95)';this.style.transform='translateX(-50%) scale(1.05)'"
   onmouseout="this.style.background='rgba(197,48,48,0.82)';this.style.transform='translateX(-50%) scale(1)'">📊 RELATÓRIO RDO</button>
