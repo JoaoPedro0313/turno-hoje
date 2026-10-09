@@ -540,6 +540,7 @@ window.presenceOpenModal = function() { if(window._presenceOpenModal) window._pr
     <div id="turno-hist-status" style="font-size:0.72rem;font-weight:700;color:rgba(255,255,255,0.5);margin-left:4px;"></div>
     <div id="turno-hist-modo" style="display:none;margin-left:auto;background:#e53e3e22;border:1px solid #e53e3e66;border-radius:8px;padding:4px 12px;font-size:0.72rem;font-weight:800;color:#fc8181;letter-spacing:0.5px;">Modo leitura — dia anterior</div>
     <div class="td-acoes">
+      <button type="button" class="td-comparar" onclick="if(window.abrirCompararDias)window.abrirCompararDias()" title="Comparar a situação das equipes em dois dias"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 4v16"/><path d="M17 4v16"/><path d="m3 8 4-4 4 4"/><path d="m13 16 4 4 4-4"/></svg>Comparar dias</button>
       <button type="button" class="td-medias" onclick="if(window.abrirMediasBase)window.abrirMediasBase()" title="Média de equipes que abriram turno em cada base">Médias por base</button>
       <button type="button" class="td-faltas" onclick="if(window.abrirRelatorioFaltas)window.abrirRelatorioFaltas()" title="Relatório de faltas">Relatório de faltas</button>
     </div>
@@ -1431,6 +1432,7 @@ function turnoDefinirTrava(estados){
   }
   if (typeof window.relAplicarTrava === 'function') { try { window.relAplicarTrava(); } catch(e) {} }
   if (typeof window.mbAplicarTrava === 'function') { try { window.mbAplicarTrava(); } catch(e) {} }
+  if (typeof window.cdAplicarTrava === 'function') { try { window.cdAplicarTrava(); } catch(e) {} }
 }
 // Compatibilidade: aceita o valor cru (qualquer formato)
 function turnoAplicarTravaContrato(v){
@@ -7316,6 +7318,613 @@ body.dark #medias-modal .mb-pv.m{color:#fbd38d} body.dark #medias-modal .mb-pv.l
   document.addEventListener('keydown', function(e){
     var m = document.getElementById('medias-modal');
     if (e.key === 'Escape' && m && m.style.display === 'flex') window.fecharMediasBase();
+  });
+})();
+</script>
+
+<!-- ══════════════════════ COMPARAR DOIS DIAS DE TURNO ══════════════════════ -->
+<!-- Aberto pelo botão "Comparar dias" na barra CONSULTAR DIA.
+     Lê dois dias (turno_hist_DD-MM-AAAA ou o turno atual da tela) e mostra, lado a lado,
+     os totais, a abertura por centro de serviço e as equipes que mudaram de situação.
+     Segue o filtro de estado / filial / centro escolhido na tela. -->
+<div id="comparar-modal" role="dialog" aria-modal="true" aria-labelledby="cd-titulo">
+  <div class="cd-box">
+    <div class="cd-head">
+      <div class="cd-head-l">
+        <div class="cd-ico" aria-hidden="true">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4v16"/><path d="M17 4v16"/><path d="m3 8 4-4 4 4"/><path d="m13 16 4 4 4-4"/></svg>
+        </div>
+        <div>
+          <div class="cd-titulo" id="cd-titulo">Comparar dias de turno</div>
+          <div class="cd-sub" id="cd-sub">Carregando…</div>
+        </div>
+      </div>
+      <button type="button" class="cd-fechar" id="cd-fechar" onclick="fecharCompararDias()" aria-label="Fechar">✕</button>
+    </div>
+
+    <div class="cd-ctrl">
+      <label class="cd-campo"><span>Dia A</span><input type="date" id="cd-a" onchange="cdGerar()"></label>
+      <button type="button" class="cd-trocar" onclick="cdTrocar()" title="Trocar dia A e dia B" aria-label="Trocar dia A e dia B">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h14"/><path d="m14 4 4 4-4 4"/><path d="M20 16H6"/><path d="m10 12-4 4 4 4"/></svg>
+      </button>
+      <label class="cd-campo"><span>Dia B</span><input type="date" id="cd-b" onchange="cdGerar()"></label>
+      <div class="cd-campo"><span>Comparar o dia B com</span>
+        <div class="cd-atalhos">
+          <button type="button" class="cd-chip" onclick="cdAtalho('anterior')">Dia salvo anterior</button>
+          <button type="button" class="cd-chip" onclick="cdAtalho('semana')">Mesmo dia da semana passada</button>
+        </div>
+      </div>
+      <div class="cd-acoes">
+        <button type="button" class="cd-btn" onclick="cdGerar(true)">🔄 Atualizar</button>
+        <button type="button" class="cd-btn sec" onclick="cdExportarCSV()">Exportar CSV</button>
+      </div>
+    </div>
+
+    <div id="cd-corpo" class="cd-corpo"></div>
+  </div>
+</div>
+
+<style>
+/* ── Botão na barra CONSULTAR DIA ── */
+#turno-hist-bar .td-comparar{min-height:36px;padding:0 14px;border-radius:6px;display:inline-flex;align-items:center;gap:8px;white-space:nowrap;cursor:pointer;font-family:'Barlow',sans-serif;font-size:.85rem;font-weight:600;transition:background .15s,border-color .15s,color .15s}
+body:not(.dark) #turno-hist-bar .td-comparar{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.25);color:#fff}
+body:not(.dark) #turno-hist-bar .td-comparar:hover{background:rgba(255,255,255,.14);border-color:rgba(255,255,255,.6)}
+body.dark #turno-hist-bar .td-comparar{background:var(--e-elev);border:1px solid var(--e-linha2);color:var(--e-texto2)}
+body.dark #turno-hist-bar .td-comparar:hover{color:var(--e-texto);border-color:color-mix(in srgb,var(--e-acento) 50%,var(--e-linha2))}
+
+/* ── Comparar dias (escopo #comparar-modal) ── */
+#comparar-modal{
+  --cd-fundo:#f0f4f5; --cd-card:#fff; --cd-linha:#e3e8ed; --cd-txt:#16324a; --cd-sub:#5b6b7a;
+  --cd-teal:#0d7377; --cd-teal2:#14a085;
+  --cd-ok:#1e7a46; --cd-ok-bg:#e9f5ee; --cd-jus:#9a5a12; --cd-jus-bg:#fdf4e3;
+  --cd-fal:#b42318; --cd-fal-bg:#fdeeec; --cd-nr:#5b6b7a; --cd-nr-bg:#eef1f4;
+  display:none; position:fixed; inset:0; z-index:1200; background:rgba(10,20,30,.7);
+  backdrop-filter:blur(4px); overflow-y:auto; padding:100px 8px 8px;
+  align-items:flex-start; justify-content:center; font-family:'Barlow',system-ui,sans-serif;
+}
+body.dark #comparar-modal{
+  --cd-fundo:#0a0a0a; --cd-card:#111111; --cd-linha:#262626; --cd-txt:#f2f2f2; --cd-sub:#a0a0a0;
+  --cd-ok:#68d391; --cd-ok-bg:rgba(104,211,145,.12); --cd-jus:#fbd38d; --cd-jus-bg:rgba(251,211,141,.12);
+  --cd-fal:#fc8181; --cd-fal-bg:rgba(252,129,129,.12); --cd-nr:#a0a0a0; --cd-nr-bg:#1f1f1f;
+  background:rgba(0,0,10,.8);
+}
+#comparar-modal .cd-box{background:var(--cd-fundo);border-radius:16px;width:100%;max-width:1100px;margin:0 auto;
+  box-shadow:0 32px 80px rgba(0,0,0,.35);overflow:hidden;display:flex;flex-direction:column;color:var(--cd-txt)}
+#comparar-modal .cd-head{background:linear-gradient(135deg,#0b5e62 0%,#0d7377 50%,#14a085 100%);padding:10px 20px;min-height:60px;
+  display:flex;align-items:center;justify-content:space-between;gap:12px;border-bottom:3px solid #ff6b35}
+#comparar-modal .cd-head-l{display:flex;align-items:center;gap:12px;min-width:0}
+#comparar-modal .cd-ico{width:36px;height:36px;border-radius:10px;background:rgba(255,255,255,.15);color:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+#comparar-modal .cd-titulo{font-size:1rem;font-weight:800;color:#fff;letter-spacing:.3px}
+#comparar-modal .cd-sub{font-size:.72rem;font-weight:600;color:rgba(255,255,255,.75);margin-top:1px}
+#comparar-modal .cd-fechar{background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.25);color:#fff;width:34px;height:34px;border-radius:9px;cursor:pointer;font-size:.9rem;font-weight:800;flex-shrink:0}
+#comparar-modal .cd-fechar:hover{background:rgba(255,255,255,.26)}
+
+#comparar-modal .cd-ctrl{background:var(--cd-card);padding:12px 20px;display:flex;flex-wrap:wrap;gap:10px 14px;align-items:flex-end;border-bottom:1px solid var(--cd-linha)}
+#comparar-modal .cd-campo{display:flex;flex-direction:column;gap:4px}
+#comparar-modal .cd-campo>span{font-size:.68rem;font-weight:700;color:var(--cd-sub)}
+#comparar-modal .cd-campo input{padding:8px 10px;border:1.5px solid var(--cd-linha);border-radius:8px;background:var(--cd-fundo);
+  color:var(--cd-txt);font-family:inherit;font-size:.82rem;font-weight:700;outline:none}
+#comparar-modal .cd-campo input:focus{border-color:var(--cd-teal2)}
+#comparar-modal .cd-trocar{width:36px;height:36px;border-radius:8px;border:1.5px solid var(--cd-linha);background:var(--cd-fundo);color:var(--cd-txt);
+  cursor:pointer;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
+#comparar-modal .cd-trocar:hover{border-color:var(--cd-teal2);color:var(--cd-teal2)}
+#comparar-modal .cd-atalhos{display:flex;gap:6px;flex-wrap:wrap}
+#comparar-modal .cd-chip{padding:7px 12px;border-radius:16px;border:1.5px solid var(--cd-linha);background:transparent;color:var(--cd-txt);
+  font-family:inherit;font-size:.75rem;font-weight:700;cursor:pointer;white-space:nowrap}
+#comparar-modal .cd-chip:hover{border-color:var(--cd-teal2);color:var(--cd-teal2)}
+#comparar-modal .cd-acoes{display:flex;gap:8px;margin-left:auto}
+#comparar-modal .cd-btn{padding:9px 16px;border-radius:8px;border:none;background:var(--cd-teal);color:#fff;font-family:inherit;font-size:.78rem;font-weight:800;cursor:pointer;white-space:nowrap}
+#comparar-modal .cd-btn:hover{background:#0a5c60}
+#comparar-modal .cd-btn.sec{background:transparent;color:var(--cd-teal2);border:1.5px solid var(--cd-teal2)}
+#comparar-modal .cd-btn.sec:hover{background:rgba(20,160,133,.1)}
+#comparar-modal button:focus-visible,#comparar-modal input:focus-visible{outline:2px solid #ff6b35;outline-offset:2px}
+
+#comparar-modal .cd-corpo{padding:14px 14px 18px}
+#comparar-modal .cd-carregando,#comparar-modal .cd-vazio{text-align:center;padding:48px 16px;color:var(--cd-sub);font-size:.85rem;font-weight:700}
+#comparar-modal .cd-vazio b{display:block;color:var(--cd-txt);font-size:.95rem;margin-bottom:6px}
+#comparar-modal .cd-spin{width:32px;height:32px;border:4px solid rgba(20,160,133,.2);border-top-color:var(--cd-teal2);border-radius:50%;animation:spin2 .7s linear infinite;margin:0 auto 12px}
+
+/* Dia A × Dia B */
+#comparar-modal .cd-dias{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:10px;margin-bottom:10px}
+#comparar-modal .cd-dia{background:var(--cd-card);border-radius:12px;padding:12px 14px;display:flex;align-items:center;gap:12px;min-width:0}
+#comparar-modal .cd-let{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:.9rem;flex-shrink:0;background:var(--cd-nr-bg);color:var(--cd-txt)}
+#comparar-modal .cd-dia.b .cd-let{background:var(--cd-teal2);color:#fff}
+#comparar-modal .cd-dia-t{flex:1;min-width:0}
+#comparar-modal .cd-dia-t b{display:block;font-size:.95rem;font-weight:800}
+#comparar-modal .cd-dia-t small{display:block;font-size:.72rem;font-weight:600;color:var(--cd-sub);margin-top:2px}
+#comparar-modal .cd-vs{align-self:center;font-size:.85rem;font-weight:800;color:var(--cd-sub)}
+#comparar-modal .cd-ver{padding:4px 10px;border-radius:6px;border:1.5px solid var(--cd-teal2);background:transparent;color:var(--cd-teal2);font-family:inherit;font-size:.7rem;font-weight:800;cursor:pointer;white-space:nowrap;flex-shrink:0}
+#comparar-modal .cd-ver:hover{background:rgba(20,160,133,.12)}
+
+/* Totais */
+#comparar-modal .cd-mets{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:12px}
+#comparar-modal .cd-met{background:var(--cd-card);border-radius:12px;padding:12px 14px;border-top:3px solid var(--cd-linha)}
+#comparar-modal .cd-met.ok{border-top-color:var(--cd-ok)}
+#comparar-modal .cd-met.jus{border-top-color:#e8a33d}
+#comparar-modal .cd-met.fal{border-top-color:var(--cd-fal)}
+#comparar-modal .cd-met.pct{border-top-color:var(--cd-teal2)}
+#comparar-modal .cd-met-l{font-size:.75rem;font-weight:700;color:var(--cd-sub)}
+#comparar-modal .cd-met-v{display:flex;align-items:baseline;gap:8px;margin-top:6px;font-variant-numeric:tabular-nums}
+#comparar-modal .cd-met-v .a{font-size:1.05rem;font-weight:700;color:var(--cd-sub)}
+#comparar-modal .cd-met-v .seta{font-size:.85rem;color:var(--cd-sub)}
+#comparar-modal .cd-met-v strong{font-size:1.6rem;font-weight:800;line-height:1}
+#comparar-modal .cd-d{display:inline-block;margin-top:6px;padding:2px 8px;border-radius:5px;font-size:.72rem;font-weight:800;font-variant-numeric:tabular-nums;white-space:nowrap}
+#comparar-modal .cd-d.bom{background:var(--cd-ok-bg);color:var(--cd-ok)}
+#comparar-modal .cd-d.ruim{background:var(--cd-fal-bg);color:var(--cd-fal)}
+#comparar-modal .cd-d.neutro{background:var(--cd-nr-bg);color:var(--cd-nr)}
+#comparar-modal td .cd-d{margin-top:0}
+
+/* Blocos (tabela por centro + lista de equipes) */
+#comparar-modal .cd-bloco{background:var(--cd-card);border-radius:12px;overflow:hidden;margin-bottom:12px}
+#comparar-modal .cd-bloco-h{font-size:.9rem;font-weight:800;padding:11px 16px;background:rgba(13,115,119,.06);margin:0}
+#comparar-modal .cd-tab-wrap{overflow-x:auto}
+#comparar-modal table{width:100%;border-collapse:collapse;font-size:.82rem}
+#comparar-modal th,#comparar-modal td{padding:9px 16px;text-align:left;border-top:1px solid var(--cd-linha);white-space:nowrap}
+#comparar-modal thead th{font-size:.7rem;font-weight:700;color:var(--cd-sub);border-top:0}
+#comparar-modal tbody th,#comparar-modal tfoot th{font-weight:800}
+#comparar-modal td{font-weight:700;font-variant-numeric:tabular-nums}
+#comparar-modal td small{font-weight:600;color:var(--cd-sub);margin-left:6px}
+#comparar-modal tfoot th,#comparar-modal tfoot td{background:rgba(13,115,119,.04)}
+
+#comparar-modal .cd-lista-ctrl{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;padding:10px 16px;background:rgba(13,115,119,.06)}
+#comparar-modal .cd-abas{display:flex;gap:6px;flex-wrap:wrap}
+#comparar-modal .cd-aba{padding:6px 12px;border-radius:16px;border:1.5px solid var(--cd-linha);background:var(--cd-card);color:var(--cd-txt);font-family:inherit;font-size:.76rem;font-weight:700;cursor:pointer;white-space:nowrap}
+#comparar-modal .cd-aba b{margin-left:4px;font-variant-numeric:tabular-nums}
+#comparar-modal .cd-aba:hover{border-color:var(--cd-teal2)}
+#comparar-modal .cd-aba[aria-pressed="true"]{background:var(--cd-teal);border-color:var(--cd-teal);color:#fff}
+#comparar-modal .cd-busca{margin-left:auto;width:230px;max-width:100%;padding:7px 12px;border:1.5px solid var(--cd-linha);border-radius:8px;background:var(--cd-card);color:var(--cd-txt);font-family:inherit;font-size:.82rem;font-weight:600;outline:none}
+#comparar-modal .cd-busca:focus{border-color:var(--cd-teal2)}
+#comparar-modal .cd-grupo-h{display:flex;align-items:baseline;gap:8px;padding:14px 16px 6px;font-size:.78rem;font-weight:800;color:var(--cd-sub)}
+#comparar-modal .cd-grupo-h b{color:var(--cd-txt);font-variant-numeric:tabular-nums}
+#comparar-modal .cd-linha{display:flex;align-items:center;justify-content:space-between;gap:6px 16px;flex-wrap:wrap;padding:8px 16px;border-top:1px solid var(--cd-linha)}
+#comparar-modal .cd-eq{min-width:0;flex:1 1 240px}
+#comparar-modal .cd-eq-n{font-size:.85rem;font-weight:700}
+#comparar-modal .cd-tag{margin-left:8px;padding:1px 6px;border-radius:4px;font-size:.68rem;font-weight:700;background:var(--cd-nr-bg);color:var(--cd-sub)}
+#comparar-modal .cd-obs{display:block;font-size:.72rem;font-weight:500;color:var(--cd-jus);margin-top:2px;line-height:1.35}
+#comparar-modal .cd-sts{display:flex;align-items:center;gap:8px;flex-shrink:0}
+#comparar-modal .cd-st{display:inline-block;min-width:96px;text-align:center;padding:3px 8px;border-radius:5px;font-size:.72rem;font-weight:800}
+#comparar-modal .cd-st.ok{background:var(--cd-ok-bg);color:var(--cd-ok)}
+#comparar-modal .cd-st.jus{background:var(--cd-jus-bg);color:var(--cd-jus)}
+#comparar-modal .cd-st.fal{background:var(--cd-fal-bg);color:var(--cd-fal)}
+#comparar-modal .cd-st.nr{background:var(--cd-nr-bg);color:var(--cd-nr)}
+#comparar-modal .cd-seta{color:var(--cd-sub);font-size:.85rem}
+#comparar-modal .cd-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+#comparar-modal .cd-lista-vazia{padding:28px 16px;text-align:center;font-size:.82rem;font-weight:700;color:var(--cd-sub);border-top:1px solid var(--cd-linha)}
+#comparar-modal .cd-nota{font-size:.72rem;font-weight:600;color:var(--cd-sub);line-height:1.5;padding:2px 4px;max-width:78ch}
+
+@media (max-width:760px){
+  #comparar-modal{padding:64px 6px 6px}
+  #comparar-modal .cd-acoes{margin-left:0;width:100%}
+  #comparar-modal .cd-acoes .cd-btn{flex:1}
+  #comparar-modal .cd-dias{grid-template-columns:minmax(0,1fr)}
+  #comparar-modal .cd-vs{display:none}
+  #comparar-modal .cd-mets{grid-template-columns:repeat(2,minmax(0,1fr))}
+  #comparar-modal .cd-busca{margin-left:0;width:100%}
+  #comparar-modal .cd-st{min-width:84px}
+  #comparar-modal th,#comparar-modal td{padding:9px 10px}
+}
+</style>
+
+<script>
+// ══════════════════ LÓGICA DE COMPARAR DOIS DIAS ══════════════════
+(function(){
+  var CD_DOW = ['dom','seg','ter','qua','qui','sex','sáb'];
+  var CD_ROT = { ok:'Abriu', jus:'Justificada', fal:'Não abriu', nr:'Sem registro' };
+  var CD_GRUPOS = [
+    { id:'sobe',  titulo:'Passaram a abrir turno' },
+    { id:'desce', titulo:'Deixaram de abrir turno' },
+    { id:'outra', titulo:'Outras mudanças' },
+    { id:'igual', titulo:'Sem mudança' }
+  ];
+  var CD_ABAS = [
+    { id:'mudancas', rot:'Mudanças',          grupos:['sobe','desce','outra'] },
+    { id:'sobe',     rot:'Passaram a abrir',  grupos:['sobe'] },
+    { id:'desce',    rot:'Deixaram de abrir', grupos:['desce'] },
+    { id:'todas',    rot:'Todas as equipes',  grupos:['sobe','desce','outra','igual'] }
+  ];
+  var cdCache = {};     // 'turno_hist_DD-MM-AAAA' -> payload do dia | null (buscado e não existe)
+  var cdFonte = '';     // 'banco' | 'local'
+  var cdUltimo = null;  // último resultado (usado na lista, na busca e no CSV)
+  var cdAba = 'mudancas';
+  var cdSeq = 0;        // descarta respostas de buscas antigas
+  var cdOrigemFoco = null;
+
+  // ── utilidades de data (formato do input: AAAA-MM-DD) ──
+  function p2(n){ return String(n).padStart(2,'0'); }
+  function deYmd(s){ var p=String(s||'').split('-'); if(p.length!==3) return null; var d=new Date(+p[0],+p[1]-1,+p[2],12,0,0); return isNaN(d.getTime())?null:d; }
+  function ymd(d){ return d.getFullYear()+'-'+p2(d.getMonth()+1)+'-'+p2(d.getDate()); }
+  function dmy(s){ var p=String(s).split('-'); return p[2]+'/'+p[1]+'/'+p[0]; }
+  function dm(s){ var p=String(s).split('-'); return p[2]+'/'+p[1]; }
+  function dow(s){ var d=deYmd(s); return d ? CD_DOW[d.getDay()] : ''; }
+  function chave(s){ var p=String(s).split('-'); return 'turno_hist_'+p[2]+'-'+p[1]+'-'+p[0]; }
+  function hojeYmd(){ return ymd(new Date()); }
+  function menosDias(s,n){ var d=deYmd(s); if(!d) return ''; d.setDate(d.getDate()-n); return ymd(d); }
+  // dia do turno carregado na tela (currentDate = DD/MM/AAAA)
+  function atualYmd(){
+    var cd = (typeof currentDate!=='undefined' && currentDate) ? String(currentDate) : '';
+    var p = cd.split('/'); return p.length===3 ? p[2]+'-'+p[1]+'-'+p[0] : hojeYmd();
+  }
+  function h(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+  function semAcento(s){ return String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase(); }
+  function sinal(n){ return (n>0?'+':n<0?'−':'')+Math.abs(n); }
+
+  // ── leitura dos dias ──
+  function parse(v){
+    if (v && typeof v==='string') { try { v=JSON.parse(v); } catch(e){ return null; } }
+    return (v && typeof v==='object') ? v : null;
+  }
+  function local(k){ try { return (typeof lsGet==='function') ? parse(lsGet(k)) : null; } catch(e){ return null; } }
+
+  async function cdBuscar(keys){
+    var ctl = new AbortController(), t = setTimeout(function(){ ctl.abort(); }, 10000);
+    try {
+      var filtro = keys.map(function(k){ return '"'+k+'"'; }).join(',');
+      var r = await fetch(SUPA_URL+'/rest/v1/turno_data?select=key,value&key=in.('+filtro+')',
+        { headers:{ 'apikey':SUPA_KEY, 'Authorization':'Bearer '+SUPA_KEY }, signal:ctl.signal });
+      clearTimeout(t);
+      if (!r.ok) throw new Error('HTTP '+r.status);
+      var rows = await r.json(), achou = {};
+      (Array.isArray(rows)?rows:[]).forEach(function(row){ var v=parse(row.value); if (v) { achou[row.key]=1; cdCache[row.key]=v; } });
+      keys.forEach(function(k){ if (!achou[k]) cdCache[k] = local(k); });
+      return true;
+    } catch(err) {
+      clearTimeout(t);
+      console.warn('[Comparar] Supabase:', err && err.message);
+      // sem banco: usa o que tiver no aparelho (e tenta o banco de novo na próxima vez)
+      keys.forEach(function(k){ var v=local(k); if (v) cdCache[k]=v; });
+      return false;
+    }
+  }
+
+  // o dia carregado na tela usa a lista da memória (é a mais recente),
+  // desde que o arquivo de turno do dia já tenha sido importado (alguém abriu ou justificou)
+  function usaTela(s){
+    if (s !== atualYmd() || typeof teams==='undefined' || !teams) return false;
+    return ((teams.ok||[]).length + (teams.justif||[]).length) > 0;
+  }
+  function payloadDo(s){
+    if (usaTela(s)) return { p:{ ok:teams.ok, justif:teams.justif, falta:teams.falta }, tela:true };
+    var v = cdCache[chave(s)];
+    return v ? { p:v, tela:false } : null;
+  }
+
+  // ── uma equipe por dia, como na tela: abriu > justificada > não abriu ──
+  function nomeDe(x){ return typeof x==='string' ? x : ((x && x.name) || ''); }
+  function chaveEq(nome){
+    var d = nome;
+    try { d = toDisplayName(nome) || nome; } catch(e){}
+    try { if (typeof eqChave==='function') return eqChave(d); } catch(e){}
+    return semAcento(d).replace(/[^A-Z0-9]/g,'');
+  }
+  function passaFiltro(nome, tela){
+    try {
+      // turno da tela: só equipes do Cadastro (igual à tela de hoje); histórico: como foi registrado
+      return (tela ? filterByStateAndBase([nome], false) : filterByBase([nome])).length > 0;
+    } catch(e){ return true; }
+  }
+  function baseDe(nome){ try { return teamBase(nome) || ''; } catch(e){ return ''; } }
+  function montarDia(d){
+    var p = d.p, mapa = {};
+    function add(lista, st){
+      (Array.isArray(lista)?lista:[]).forEach(function(x){
+        var nome = String(nomeDe(x)||'').trim(); if (!nome) return;
+        var k = chaveEq(nome); if (!k || mapa[k]) return;
+        mapa[k] = { nome:nome, st:st, obs:(x && typeof x==='object' && x.obs) ? String(x.obs) : '' };
+      });
+    }
+    add(p.ok,'ok'); add(p.justif,'jus');
+    var fal = Array.isArray(p.falta) ? p.falta.slice() : [];
+    // histórico: equipes ativas que não estão em nenhuma lista contam como "não abriu" (igual ao CONSULTAR DIA)
+    if (!d.tela && typeof EQUIPES_ATIVAS!=='undefined') fal = fal.concat(EQUIPES_ATIVAS);
+    add(fal,'fal');
+    Object.keys(mapa).forEach(function(k){
+      if (!passaFiltro(mapa[k].nome, d.tela)) { delete mapa[k]; return; }
+      mapa[k].base = baseDe(mapa[k].nome);
+    });
+    return mapa;
+  }
+  function contar(m){
+    var c = { ok:0, jus:0, fal:0 };
+    Object.keys(m).forEach(function(k){ c[m[k].st]++; });
+    c.tot = c.ok + c.jus + c.fal;
+    c.pct = c.tot ? Math.round(c.ok / c.tot * 100) : 0;
+    return c;
+  }
+  function rotulo(l){
+    try { return turnoRotuloFiltro(l); } catch(e){ return String(l||'').replace(/^[^A-Za-zÀ-ÿ]+/,''); }
+  }
+  function porCentro(ma, mb){
+    var ordem = [];
+    try { Object.keys(BASE_CONFIG).forEach(function(st){ BASE_CONFIG[st].forEach(function(b){ ordem.push({ id:b.id, nome:rotulo(b.label) }); }); }); } catch(e){}
+    ordem.push({ id:'', nome:'Sem centro identificado' });
+    function c(m, id){
+      var r = { ok:0, tot:0 };
+      Object.keys(m).forEach(function(k){ if ((m[k].base||'')===id) { r.tot++; if (m[k].st==='ok') r.ok++; } });
+      return r;
+    }
+    return ordem.map(function(b){ return { id:b.id, nome:b.nome, a:c(ma,b.id), b:c(mb,b.id) }; })
+                .filter(function(x){ return x.a.tot || x.b.tot; });
+  }
+  function comparar(ma, mb){
+    var todas = {};
+    Object.keys(ma).forEach(function(k){ todas[k]=1; });
+    Object.keys(mb).forEach(function(k){ todas[k]=1; });
+    var linhas = Object.keys(todas).map(function(k){
+      var ea = ma[k], eb = mb[k];
+      var sa = ea ? ea.st : 'nr', sb = eb ? eb.st : 'nr';
+      var nome = (eb || ea).nome;
+      var g = sa===sb ? 'igual'
+            : (sb==='ok' && sa!=='nr') ? 'sobe'
+            : (sa==='ok' && sb!=='nr') ? 'desce' : 'outra';
+      var tela = nome; try { tela = nomeTela(nome) || nome; } catch(e){}
+      return { nome:nome, tela:String(tela), sa:sa, sb:sb, obsA:ea?ea.obs:'', obsB:eb?eb.obs:'', g:g, base:(eb||ea).base||'' };
+    });
+    linhas.sort(function(x,y){ return x.tela.localeCompare(y.tela,'pt-BR'); });
+    return linhas;
+  }
+  function descFiltro(){
+    var partes = [];
+    try {
+      if (turnoStateFilter !== 'todos') partes.push(String(turnoStateFilter).toUpperCase());
+      if (turnoBaseFilter !== 'todos') {
+        var lb = '';
+        Object.keys(FILIAL_CONFIG).forEach(function(st){ FILIAL_CONFIG[st].forEach(function(f){ if (f.id===turnoBaseFilter) lb=f.label; }); });
+        partes.push(rotulo(lb || turnoBaseFilter));
+      }
+      if (turnoCentroFilter !== 'todos') partes.push(rotulo(CENTRO_CUSTO[turnoCentroFilter] || turnoCentroFilter));
+    } catch(e){}
+    return partes.join(' › ');
+  }
+
+  // ── desenho ──
+  function carregando(txt){ return '<div class="cd-carregando"><div class="cd-spin"></div>'+h(txt)+'</div>'; }
+  function vazio(titulo, texto){ return '<div class="cd-vazio"><b>'+h(titulo)+'</b>'+h(texto||'')+'</div>'; }
+  function delta(d, tipo, suf){
+    // tipo: 'mais' (subir é bom) | 'menos' (subir é ruim) | 'neutro'
+    var c = d===0 ? 'neutro' : tipo==='neutro' ? 'neutro' : ((d>0) === (tipo==='mais') ? 'bom' : 'ruim');
+    return '<span class="cd-d '+c+'">'+(d===0 ? 'igual' : sinal(d)+(suf||''))+'</span>';
+  }
+  function metrica(cls, rot, va, vb, tipo, pct){
+    var s = pct ? '%' : '';
+    return '<div class="cd-met '+cls+'"><div class="cd-met-l">'+h(rot)+'</div>'
+      + '<div class="cd-met-v"><span class="a" title="Dia A">'+va+s+'</span><span class="seta" aria-hidden="true">→</span><strong title="Dia B">'+vb+s+'</strong></div>'
+      + delta(vb-va, tipo, pct?' p.p.':'') + '</div>';
+  }
+  function cartaoDia(letra, s, c, tela){
+    var origem = tela ? 'turno carregado na tela' : (cdFonte==='local' ? 'salvo no aparelho' : 'registro salvo');
+    return '<div class="cd-dia '+letra.toLowerCase()+'"><span class="cd-let" aria-hidden="true">'+letra+'</span>'
+      + '<div class="cd-dia-t"><b><span class="cd-sr">Dia '+letra+': </span>'+h(dow(s))+', '+h(dmy(s))+'</b>'
+      + '<small>'+c.ok+' de '+c.tot+' equipes abriram · '+origem+'</small></div>'
+      + '<button type="button" class="cd-ver" data-ver="'+h(s)+'">Ver dia</button></div>';
+  }
+  function celula(x){ return x.tot ? (x.ok+' de '+x.tot+'<small>'+Math.round(x.ok/x.tot*100)+'%</small>') : '<small>—</small>'; }
+
+  window.cdRender = function(){
+    var r = cdUltimo, corpo = document.getElementById('cd-corpo'); if (!r || !corpo) return;
+    var ca = r.ca, cb = r.cb;
+    var html = '<div class="cd-dias">' + cartaoDia('A', r.a, ca, r.telaA) + '<div class="cd-vs" aria-hidden="true">×</div>' + cartaoDia('B', r.b, cb, r.telaB) + '</div>';
+
+    html += '<div class="cd-mets">'
+      + metrica('ok',  'Abriu turno',       ca.ok,  cb.ok,  'mais')
+      + metrica('jus', 'Falta justificada', ca.jus, cb.jus, 'neutro')
+      + metrica('fal', 'Não abriu turno',   ca.fal, cb.fal, 'menos')
+      + metrica('pct', 'Abertura',          ca.pct, cb.pct, 'mais', true)
+      + '</div>';
+
+    if (r.centros.length) {
+      html += '<section class="cd-bloco"><h3 class="cd-bloco-h">Por centro de serviço</h3><div class="cd-tab-wrap"><table>'
+        + '<thead><tr><th scope="col">Centro de serviço</th><th scope="col">Dia A · '+h(dm(r.a))+'</th><th scope="col">Dia B · '+h(dm(r.b))+'</th><th scope="col">Abriram</th></tr></thead><tbody>';
+      r.centros.forEach(function(c){
+        html += '<tr><th scope="row">'+h(c.nome)+'</th><td>'+celula(c.a)+'</td><td>'+celula(c.b)+'</td><td>'+delta(c.b.ok-c.a.ok,'mais')+'</td></tr>';
+      });
+      html += '</tbody>';
+      if (r.centros.length > 1) {
+        html += '<tfoot><tr><th scope="row">Total</th><td>'+celula({ok:ca.ok,tot:ca.tot})+'</td><td>'+celula({ok:cb.ok,tot:cb.tot})+'</td><td>'+delta(cb.ok-ca.ok,'mais')+'</td></tr></tfoot>';
+      }
+      html += '</table></div></section>';
+    }
+
+    var cont = { sobe:0, desce:0, outra:0, igual:0 };
+    r.linhas.forEach(function(l){ cont[l.g]++; });
+    html += '<section class="cd-bloco" aria-label="Equipes"><div class="cd-lista-ctrl"><div class="cd-abas" role="group" aria-label="Mostrar">';
+    CD_ABAS.forEach(function(a){
+      var n = a.grupos.reduce(function(s,g){ return s+cont[g]; }, 0);
+      html += '<button type="button" class="cd-aba" data-aba="'+a.id+'" aria-pressed="'+(cdAba===a.id)+'">'+h(a.rot)+'<b>'+n+'</b></button>';
+    });
+    html += '</div><input type="search" class="cd-busca" id="cd-busca" placeholder="Buscar equipe" aria-label="Buscar equipe" oninput="cdRenderLista()"></div>'
+         +  '<div id="cd-lista"></div></section>';
+
+    var filtro = descFiltro();
+    html += '<div class="cd-nota">Cada equipe conta uma vez por dia, na situação que aparece no CONSULTAR DIA (abriu &gt; justificada &gt; não abriu). '
+         +  (filtro ? 'Os números seguem o filtro da tela: <b>'+h(filtro)+'</b>.' : 'Os números seguem o filtro de estado, filial e centro de serviço da tela.')
+         +  '</div>';
+    corpo.innerHTML = html;
+    window.cdRenderLista();
+  };
+
+  function linhaHtml(l){
+    var obs = '';
+    if (l.sa==='jus' && l.obsA) obs += '<span class="cd-obs">Dia A: '+h(l.obsA)+'</span>';
+    if (l.sb==='jus' && l.obsB) obs += '<span class="cd-obs">Dia B: '+h(l.obsB)+'</span>';
+    var m = l.tela.match(/^(.*\S)\s*-\s*([A-Z]{2,4})$/);
+    var nome = m ? m[1] : l.tela, sigla = m ? m[2] : (l.base ? l.base.toUpperCase() : '');
+    return '<div class="cd-linha"><div class="cd-eq"><span class="cd-eq-n">'+h(nome)+'</span>'
+      + (sigla ? '<span class="cd-tag">'+h(sigla)+'</span>' : '') + obs + '</div>'
+      + '<div class="cd-sts"><span class="cd-sr">Dia A: </span><span class="cd-st '+l.sa+'">'+CD_ROT[l.sa]+'</span>'
+      + '<span class="cd-seta" aria-hidden="true">→</span>'
+      + '<span class="cd-sr">Dia B: </span><span class="cd-st '+l.sb+'">'+CD_ROT[l.sb]+'</span></div></div>';
+  }
+
+  window.cdRenderLista = function(){
+    var r = cdUltimo, alvo = document.getElementById('cd-lista'); if (!r || !alvo) return;
+    var aba = CD_ABAS.filter(function(a){ return a.id===cdAba; })[0] || CD_ABAS[0];
+    var bInp = document.getElementById('cd-busca');
+    var q = semAcento(bInp ? bInp.value : '').trim();
+    var html = '', algum = false;
+    aba.grupos.forEach(function(gid){
+      var g = CD_GRUPOS.filter(function(x){ return x.id===gid; })[0];
+      var lista = r.linhas.filter(function(l){ return l.g===gid && (!q || semAcento(l.tela).indexOf(q)>=0); });
+      if (!lista.length) return;
+      algum = true;
+      if (aba.grupos.length > 1) html += '<div class="cd-grupo-h">'+h(g.titulo)+' <b>'+lista.length+'</b></div>';
+      lista.forEach(function(l){ html += linhaHtml(l); });
+    });
+    if (!algum) {
+      html = '<div class="cd-lista-vazia">'
+        + (q ? 'Nenhuma equipe encontrada com “'+h(bInp.value.trim())+'”.'
+             : cdAba==='mudancas' ? 'Nenhuma equipe mudou de situação entre os dois dias.'
+             : 'Nenhuma equipe nesta lista.')
+        + '</div>';
+    }
+    alvo.innerHTML = html;
+  };
+
+  // ── ações ──
+  window.cdGerar = async function(forcar){
+    var corpo = document.getElementById('cd-corpo'), sub = document.getElementById('cd-sub');
+    var a = document.getElementById('cd-a').value, b = document.getElementById('cd-b').value;
+    cdUltimo = null;
+    if (!a || !b) { sub.textContent = 'Escolha os dois dias'; corpo.innerHTML = vazio('Escolha o dia A e o dia B.', ''); return; }
+    sub.textContent = dow(a)+' '+dm(a)+'  ×  '+dow(b)+' '+dm(b);
+    if (a === b) { corpo.innerHTML = vazio('Os dois dias são o mesmo.', 'Escolha uma data diferente para o dia A ou para o dia B.'); return; }
+    var seq = ++cdSeq;
+    var keys = [a,b].filter(function(s){ return !usaTela(s); }).map(chave)
+                    .filter(function(k){ return forcar || !(k in cdCache); });
+    if (keys.length) {
+      corpo.innerHTML = carregando('Buscando os dois dias…');
+      var ok = await cdBuscar(keys);
+      if (seq !== cdSeq) return;
+      cdFonte = ok ? 'banco' : 'local';
+    }
+    var da = payloadDo(a), db = payloadDo(b);
+    if (!da || !db) {
+      var falta = [!da ? a : null, !db ? b : null].filter(Boolean).map(function(s){ return dow(s)+', '+dmy(s); });
+      corpo.innerHTML = vazio(falta.length > 1 ? 'Não há turno salvo em '+falta.join(' nem em ')+'.' : 'Não há turno salvo em '+falta[0]+'.',
+        'Use “Dia salvo anterior” ou escolha outra data.' + (cdFonte==='local' ? ' Sem conexão com o banco: só os dias guardados neste aparelho aparecem.' : ''));
+      return;
+    }
+    var ma = montarDia(da), mb = montarDia(db);
+    cdUltimo = { a:a, b:b, telaA:da.tela, telaB:db.tela, ca:contar(ma), cb:contar(mb), centros:porCentro(ma,mb), linhas:comparar(ma,mb) };
+    var filtro = descFiltro();
+    sub.textContent = dow(a)+' '+dmy(a)+'  ×  '+dow(b)+' '+dmy(b) + (filtro ? ' · '+filtro : '') + (cdFonte==='local' ? ' · sem conexão, usando dados do aparelho' : '');
+    window.cdRender();
+  };
+
+  window.cdTrocar = function(){
+    var ia = document.getElementById('cd-a'), ib = document.getElementById('cd-b');
+    var t = ia.value; ia.value = ib.value; ib.value = t;
+    window.cdGerar();
+  };
+
+  function diasSalvos(){ try { return Array.from(TURNO_CAL_DIAS || []).sort(); } catch(e){ return []; } }
+  function anteriorSalvo(s){
+    var d = diasSalvos();
+    for (var i=d.length-1; i>=0; i--) if (d[i] < s) return d[i];
+    return '';
+  }
+  // espera a lista de dias salvos (a mesma do calendário do CONSULTAR DIA)
+  function esperarDias(cb){
+    if (typeof TURNO_CAL_DIAS==='undefined' || TURNO_CAL_DIAS!==null) { cb(); return; }
+    try { turnoCalFetch(); } catch(e){ cb(); return; }
+    var t0 = Date.now(), iv = setInterval(function(){
+      if (TURNO_CAL_DIAS!==null || Date.now()-t0 > 6000) { clearInterval(iv); cb(); }
+    }, 120);
+  }
+
+  window.cdAtalho = function(tipo){
+    var ia = document.getElementById('cd-a'), ib = document.getElementById('cd-b');
+    if (!ib.value) ib.value = atualYmd();
+    if (tipo === 'semana') { ia.value = menosDias(ib.value, 7); window.cdGerar(); return; }
+    document.getElementById('cd-corpo').innerHTML = carregando('Procurando o dia salvo anterior…');
+    esperarDias(function(){
+      var ant = anteriorSalvo(ib.value);
+      if (!ant) {
+        cdUltimo = null;
+        document.getElementById('cd-corpo').innerHTML = vazio('Nenhum dia salvo antes de '+dmy(ib.value)+'.', 'Escolha o dia A no calendário.');
+        return;
+      }
+      ia.value = ant;
+      window.cdGerar();
+    });
+  };
+
+  window.cdExportarCSV = function(){
+    var r = cdUltimo; if (!r) { alert('Nada para exportar: escolha dois dias com turno salvo.'); return; }
+    var mud = { sobe:'Passou a abrir', desce:'Deixou de abrir', outra:'Mudou', igual:'Sem mudança' };
+    var q = function(v){ v = String(v==null?'':v); return /[;"\r\n]/.test(v) ? '"'+v.replace(/"/g,'""')+'"' : v; };
+    var cent = {};
+    try { Object.keys(BASE_CONFIG).forEach(function(st){ BASE_CONFIG[st].forEach(function(b){ cent[b.id] = rotulo(b.label); }); }); } catch(e){}
+    var linhas = [
+      'Dia A;'+dmy(r.a), 'Dia B;'+dmy(r.b), '',
+      ['Equipe','Centro de serviço','Dia A ('+dmy(r.a)+')','Dia B ('+dmy(r.b)+')','Mudança','Justificativa dia A','Justificativa dia B'].join(';')
+    ];
+    r.linhas.forEach(function(l){
+      linhas.push([q(l.tela), q(cent[l.base]||''), CD_ROT[l.sa], CD_ROT[l.sb], mud[l.g], q(l.sa==='jus'?l.obsA:''), q(l.sb==='jus'?l.obsB:'')].join(';'));
+    });
+    var blob = new Blob(['\uFEFF'+linhas.join('\r\n')], { type:'text/csv;charset=utf-8' });
+    var el = document.createElement('a');
+    el.href = URL.createObjectURL(blob);
+    el.download = 'comparacao_turno_'+r.a+'_x_'+r.b+'.csv';
+    document.body.appendChild(el); el.click(); el.remove();
+    setTimeout(function(){ URL.revokeObjectURL(el.href); }, 2000);
+  };
+
+  window.abrirCompararDias = function(){
+    var m = document.getElementById('comparar-modal'); if (!m) return;
+    cdOrigemFoco = document.activeElement;
+    m.style.display = 'flex';
+    var fb = document.getElementById('cd-fechar'); if (fb) fb.focus();
+    var ia = document.getElementById('cd-a'), ib = document.getElementById('cd-b');
+    ia.max = ib.max = hojeYmd();
+    // dia B = o dia que está na tela; dia A = o dia salvo anterior a ele
+    var inp = document.getElementById('turno-hist-date');
+    var hist = (typeof turnoModoHistorico!=='undefined' && turnoModoHistorico && inp && inp.value);
+    ib.value = hist ? inp.value : atualYmd();
+    cdAba = 'mudancas';
+    document.getElementById('cd-corpo').innerHTML = carregando('Procurando os dias salvos…');
+    esperarDias(function(){
+      // dia da tela ainda sem turno: começa pelo último dia salvo
+      var b = ib.value, salvos = diasSalvos();
+      if (!usaTela(b) && salvos.length && salvos.indexOf(b) < 0) {
+        for (var i=salvos.length-1; i>=0; i--) if (salvos[i] <= b) { ib.value = salvos[i]; break; }
+      }
+      window.cdAtalho('anterior');
+    });
+  };
+  window.fecharCompararDias = function(){
+    var m = document.getElementById('comparar-modal'); if (!m) return;
+    m.style.display = 'none';
+    if (cdOrigemFoco && cdOrigemFoco.focus) { try { cdOrigemFoco.focus(); } catch(e){} }
+  };
+  // trava de contrato mudou com a tela aberta
+  window.cdAplicarTrava = function(){
+    var m = document.getElementById('comparar-modal');
+    if (m && m.style.display === 'flex' && cdUltimo) window.cdGerar();
+  };
+
+  var modal = document.getElementById('comparar-modal');
+  modal.addEventListener('click', function(e){
+    if (e.target === this) { window.fecharCompararDias(); return; }
+    var t = e.target; if (!t || !t.closest) return;
+    var aba = t.closest('.cd-aba');
+    if (aba) {
+      cdAba = aba.getAttribute('data-aba');
+      Array.prototype.forEach.call(modal.querySelectorAll('.cd-aba'), function(b){ b.setAttribute('aria-pressed', String(b===aba)); });
+      window.cdRenderLista();
+      return;
+    }
+    var ver = t.closest('.cd-ver');
+    if (ver) {
+      var s = ver.getAttribute('data-ver');
+      window.fecharCompararDias();
+      if (usaTela(s)) { if (typeof window.turnoHistHoje==='function') window.turnoHistHoje(); return; }
+      var inp = document.getElementById('turno-hist-date');
+      if (inp) inp.value = s;
+      if (typeof window.turnoHistBuscar==='function') window.turnoHistBuscar();
+    }
+  });
+  document.addEventListener('keydown', function(e){
+    if (e.key === 'Escape' && modal.style.display === 'flex') window.fecharCompararDias();
   });
 })();
 </script>
