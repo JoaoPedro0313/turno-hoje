@@ -434,6 +434,72 @@ body:not(.dark) #page-turno .grid .card.justif .justif-obs{color:#9a5a12 !import
 body.dark #page-turno .section{border-top:1px solid var(--e-linha) !important;border-bottom:1px solid var(--e-linha) !important}
 body.dark #page-turno .grid .card-tag{background:var(--e-elev);color:var(--e-texto2)}
 body.dark #page-turno .grid .card.justif .justif-obs{color:#fbd38d !important}
+
+/* ══ Turno: arrastar "Não abriu turno" → "Falta justificada" ═══════════════ */
+#falta-grid .card.absent[data-equipe]{cursor:grab;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+#falta-grid .card.absent[data-equipe]:focus-visible{outline:2px solid #e8a33d;outline-offset:2px}
+#falta-grid .card.absent.ta-origem{opacity:.35;border-style:dashed !important}
+body.ta-arrastando,body.ta-arrastando *{cursor:grabbing !important;-webkit-user-select:none !important;user-select:none !important}
+#page-turno .ta-dica{font-size:.74rem;font-weight:500;white-space:nowrap}
+body:not(.dark) #page-turno .ta-dica{color:#8f4a42}
+body.dark #page-turno .ta-dica{color:#c49494}
+@media (max-width:420px){#page-turno .ta-dica{display:none}}
+/* card "fantasma" que acompanha o ponteiro */
+.ta-fantasma{position:fixed;left:0;top:0;z-index:3100;pointer-events:none;display:flex;align-items:center;gap:8px;padding:0 10px;border:1px solid #f1cdc7;border-radius:6px;background:#fff7f6;box-shadow:0 12px 28px rgba(22,50,74,.22);font-family:'Barlow',sans-serif;transition:background .12s,border-color .12s;will-change:transform}
+.ta-fantasma::before{content:'';width:7px;height:7px;border-radius:50%;flex-shrink:0;background:#b42318;transition:background .12s}
+.ta-fantasma .card-name{flex:1;min-width:0;font-size:.82rem;font-weight:600;color:#7f1d14 !important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ta-fantasma .card-tag{margin-left:auto;flex-shrink:0;padding:1px 6px;border-radius:4px;font-size:.68rem;font-weight:700;background:#f4f6f8;color:#5b6b7a}
+.ta-fantasma.ta-vai{background:#fffaf2;border-color:#e8a33d}
+.ta-fantasma.ta-vai::before{background:#e8a33d}
+.ta-fantasma.ta-vai .card-name{color:#9a5a12 !important}
+.ta-fantasma.ta-volta{transition:transform .18s ease-out}
+body.dark .ta-fantasma{background:color-mix(in srgb,#e53e3e 14%,var(--e-cartao));border-color:color-mix(in srgb,#e53e3e 40%,var(--e-cartao));box-shadow:0 14px 32px rgba(0,0,0,.6)}
+body.dark .ta-fantasma .card-name{color:#f3c0c0 !important}
+body.dark .ta-fantasma .card-tag{background:var(--e-elev);color:var(--e-texto2)}
+body.dark .ta-fantasma.ta-vai{background:color-mix(in srgb,#f0a500 16%,var(--e-cartao));border-color:#e8a33d}
+body.dark .ta-fantasma.ta-vai .card-name{color:#fbd38d !important}
+/* seção "Falta justificada" como área de soltar */
+#page-turno .section.ta-alvo{outline:2px dashed rgba(232,163,61,.6);outline-offset:-2px}
+#page-turno .section.ta-alvo.ta-sobre{outline:2px solid #e8a33d}
+body:not(.dark) #page-turno .section.ta-alvo.ta-sobre #justif-grid{background:#fff6e6}
+body.dark #page-turno .section.ta-alvo.ta-sobre #justif-grid{background:color-mix(in srgb,#f0a500 7%,var(--e-cartao))}
+#page-turno .section.ta-alvo #justif-grid ._s9{display:none}
+#page-turno .section.ta-alvo #justif-grid::after{content:'Solte aqui para justificar';display:flex;align-items:center;justify-content:center;min-height:40px;border:1px dashed #e8a33d;border-radius:6px;font-size:.78rem;font-weight:600;color:#9a5a12}
+body.dark #page-turno .section.ta-alvo #justif-grid::after{color:#fbd38d}
+@keyframes taNovo{0%{box-shadow:0 0 0 3px rgba(232,163,61,.75)}100%{box-shadow:0 0 0 3px rgba(232,163,61,0)}}
+#justif-grid .card.justif.ta-novo{animation:taNovo 1.4s ease-out}
+/* diálogo do motivo */
+#ta-dialogo{--td-fundo:#fff;--td-txt:#16324a;--td-sub:#5b6b7a;--td-linha:#dfe3e8;--td-campo:#f8fafb;--td-chip:#fdf8ee;--td-chip-borda:#f0dcb4;--td-chip-txt:#7a4f00;position:fixed;inset:0;z-index:3000;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(10,20,30,.55);backdrop-filter:blur(3px);font-family:'Barlow',system-ui,sans-serif}
+#ta-dialogo[hidden]{display:none}
+body.dark #ta-dialogo{--td-fundo:#111;--td-txt:#f2f2f2;--td-sub:#a0a0a0;--td-linha:#2a2a2a;--td-campo:#0a0a0a;--td-chip:color-mix(in srgb,#f0a500 10%,#111);--td-chip-borda:color-mix(in srgb,#f0a500 35%,#111);--td-chip-txt:#fbd38d;background:rgba(0,0,0,.7)}
+#ta-dialogo .ta-caixa{width:100%;max-width:400px;background:var(--td-fundo);color:var(--td-txt);border:1px solid var(--td-linha);border-top:3px solid #e8a33d;border-radius:12px;box-shadow:0 24px 60px rgba(0,0,0,.35);padding:18px 18px 16px;animation:taAbre .14s ease-out}
+@keyframes taAbre{from{opacity:0;transform:scale(.97)}to{opacity:1;transform:none}}
+#ta-dialogo .ta-cab{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+#ta-dialogo .ta-ico{width:26px;height:26px;border-radius:6px;background:#e8a33d;color:#3a2405;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:.9rem;flex-shrink:0}
+#ta-dialogo .ta-titulo{font-size:1rem;font-weight:700}
+#ta-dialogo .ta-equipe{font-size:.8rem;font-weight:600;color:var(--td-sub);margin-top:1px}
+#ta-dialogo .ta-rot{display:block;font-size:.78rem;font-weight:700;margin-bottom:6px}
+#ta-dialogo .ta-rot span{font-weight:500;color:var(--td-sub)}
+#ta-dialogo input{width:100%;padding:10px 12px;border:1.5px solid var(--td-linha);border-radius:8px;background:var(--td-campo);color:var(--td-txt);font-family:inherit;font-size:.9rem;font-weight:600;outline:none}
+#ta-dialogo input:focus{border-color:#e8a33d}
+#ta-dialogo .ta-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+#ta-dialogo .ta-chips:empty{display:none}
+#ta-dialogo .ta-chips-rot{width:100%;font-size:.7rem;font-weight:600;color:var(--td-sub)}
+#ta-dialogo .ta-chip{max-width:100%;padding:4px 10px;border-radius:14px;border:1px solid var(--td-chip-borda);background:var(--td-chip);color:var(--td-chip-txt);font-family:inherit;font-size:.76rem;font-weight:600;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#ta-dialogo .ta-acoes{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}
+#ta-dialogo .ta-btn{min-height:38px;padding:0 16px;border-radius:8px;border:1px solid #e8a33d;background:#e8a33d;color:#3a2405;font-family:inherit;font-size:.85rem;font-weight:700;cursor:pointer}
+#ta-dialogo .ta-btn:hover{background:#d6912a;border-color:#d6912a}
+#ta-dialogo .ta-btn.sec{background:transparent;border-color:var(--td-linha);color:var(--td-txt)}
+#ta-dialogo .ta-btn.sec:hover{border-color:var(--td-sub)}
+#ta-dialogo button:focus-visible,#ta-dialogo input:focus-visible{outline:2px solid #e8a33d;outline-offset:2px}
+/* aviso com "Desfazer" */
+#ta-toast{position:fixed;left:50%;bottom:calc(84px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:2500;display:flex;align-items:center;gap:14px;max-width:calc(100% - 24px);padding:8px 8px 8px 16px;border-radius:10px;background:#16324a;color:#fff;font-family:'Barlow',sans-serif;font-size:.85rem;font-weight:600;box-shadow:0 10px 30px rgba(0,0,0,.3)}
+#ta-toast[hidden],#ta-toast button[hidden]{display:none}
+#ta-toast button{flex-shrink:0;min-height:32px;padding:0 12px;border-radius:6px;border:1px solid rgba(255,255,255,.35);background:transparent;color:#fbd38d;font-family:inherit;font-size:.82rem;font-weight:700;cursor:pointer}
+#ta-toast button:hover{border-color:#fbd38d}
+#ta-toast button:focus-visible{outline:2px solid #fbd38d;outline-offset:2px}
+body.dark #ta-toast{background:#252525;border:1px solid #303030}
+@media (prefers-reduced-motion:reduce){.ta-fantasma,.ta-fantasma.ta-volta{transition:none}#justif-grid .card.justif.ta-novo,#ta-dialogo .ta-caixa{animation:none}}
 </style>
 </head>
 <body class="sm-collapsed">
@@ -563,7 +629,7 @@ window.presenceOpenModal = function() { if(window._presenceOpenModal) window._pr
     </div>
     <div class="section">
       <div class="section-header red">
-        <div class="section-label"><div class="icon-dot"></div> Não abriu turno</div>
+        <div class="section-label"><div class="icon-dot"></div> Não abriu turno <span class="ta-dica" id="ta-dica" hidden data-html2canvas-ignore></span></div>
         <div class="section-count red" id="falta-count">0</div>
       </div>
       <div class="grid" id="falta-grid"></div>
@@ -1856,18 +1922,270 @@ if (!list.length) { emptyMsg(id); return; }
 list.forEach(function(t) {
 const d = document.createElement('div'); d.className = 'card justif';
 d.innerHTML = turnoCardHtml(t.name, t.obs); // XSS fix
+d.dataset.equipe = t.name;
 g.appendChild(d);
 });
 }
 function buildGridFalta(id, list) {
 const g = document.getElementById(id); g.innerHTML = '';
+taAtualizarDica(list.length);
 if (!list.length) { emptyMsg(id); return; }
+// No dia atual o card pode ser arrastado para "Falta justificada" (no histórico, não)
+const podeMover = id === 'falta-grid' && !turnoModoHistorico;
 list.forEach(name => {
 const d = document.createElement('div'); d.className = 'card absent';
 d.innerHTML = turnoCardHtml(name); // XSS fix
+if (podeMover) {
+  d.dataset.equipe = name;
+  d.tabIndex = 0;
+  d.setAttribute('role', 'button');
+  d.setAttribute('aria-label', nomeTela(name) + ': não abriu turno. Arraste para Falta justificada ou pressione Enter.');
+}
 g.appendChild(d);
 });
 }
+
+// ══ Arrastar equipe de "Não abriu turno" para "Falta justificada" ══════════
+// Mouse: clique e arraste. Toque: segure o card por um instante e arraste.
+// Teclado: foco no card + Enter. Ao soltar, pede o motivo (opcional) e salva.
+function taAtualizarDica(qtd) {
+  var el = document.getElementById('ta-dica'); if (!el) return;
+  var mostrar = qtd > 0 && !turnoModoHistorico;
+  el.hidden = !mostrar;
+  if (mostrar) {
+    var toque = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+    el.textContent = toque ? 'segure e arraste para justificar' : 'arraste para justificar';
+  }
+}
+function turnoJustificarFalta(nome, obs) {
+  if (turnoModoHistorico || teams.falta.indexOf(nome) < 0) return false;
+  teams.falta = teams.falta.filter(function(t){ return t !== nome; });
+  teams.justif.push({ name: nome, obs: obs || '' });
+  render();
+  try { renderManageList(); } catch(e) {}
+  dbSaveTurno();
+  return true;
+}
+function turnoDesfazerJustificativa(nome) {
+  if (turnoModoHistorico) return false;
+  var antes = teams.justif.length;
+  teams.justif = teams.justif.filter(function(t){ return t.name !== nome; });
+  if (teams.justif.length === antes) return false;
+  if (teams.falta.indexOf(nome) < 0) teams.falta.push(nome);
+  render();
+  try { renderManageList(); } catch(e) {}
+  dbSaveTurno();
+  return true;
+}
+window.turnoJustificarFalta = turnoJustificarFalta;
+(function () {
+  var ESPERA_TOQUE = 350, FOLGA_MOUSE = 5, FOLGA_TOQUE = 10;
+  var SELETOR = '#falta-grid .card.absent[data-equipe]';
+  var est = null, fantasma = null, alvo = null;
+  var semMovimento = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  function rotulo(nome) { return typeof nomeTela === 'function' ? nomeTela(nome) : nome; }
+  function cardDe(nome, grade) {
+    var g = document.getElementById(grade || 'falta-grid'); if (!g) return null;
+    var cs = g.querySelectorAll('.card[data-equipe]');
+    for (var i = 0; i < cs.length; i++) if (cs[i].dataset.equipe === nome) return cs[i];
+    return null;
+  }
+  function secaoJustif() { var g = document.getElementById('justif-grid'); return g ? g.closest('.section') : null; }
+
+  // ── ponteiro (mouse, toque e caneta) ──
+  document.addEventListener('pointerdown', function (e) {
+    if (est || turnoModoHistorico) return;
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    var card = e.target.closest ? e.target.closest(SELETOR) : null;
+    if (!card) return;
+    est = { card: card, nome: card.dataset.equipe, id: e.pointerId, toque: e.pointerType !== 'mouse',
+            x0: e.clientX, y0: e.clientY, x: e.clientX, y: e.clientY, ativo: false, sobre: false, timer: 0, raf: 0 };
+    if (est.toque) est.timer = setTimeout(function () { if (est && !est.ativo) iniciar(); }, ESPERA_TOQUE);
+  });
+  document.addEventListener('pointermove', function (e) {
+    if (!est || e.pointerId !== est.id) return;
+    est.x = e.clientX; est.y = e.clientY;
+    if (!est.ativo) {
+      var d = Math.hypot(est.x - est.x0, est.y - est.y0);
+      if (!est.toque && d > FOLGA_MOUSE) iniciar();
+      else if (est.toque && d > FOLGA_TOQUE) { clearTimeout(est.timer); est = null; } // está rolando a página
+      return;
+    }
+    e.preventDefault();
+    posicionar();
+  });
+  document.addEventListener('pointerup', function (e) { if (est && e.pointerId === est.id) soltar(); });
+  document.addEventListener('pointercancel', function (e) { if (est && e.pointerId === est.id) { est.sobre = false; soltar(); } });
+  // no celular, impede a página de rolar enquanto o card está sendo arrastado
+  document.addEventListener('touchmove', function (e) { if (est && est.ativo) e.preventDefault(); }, { passive: false });
+  document.addEventListener('contextmenu', function (e) { if (est && est.toque) e.preventDefault(); });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && est && est.ativo) { est.sobre = false; soltar(); return; }
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    var card = e.target.closest ? e.target.closest(SELETOR) : null;
+    if (!card || turnoModoHistorico) return;
+    e.preventDefault();
+    card.classList.add('ta-origem');
+    abrirDialogo(card.dataset.equipe);
+  });
+
+  function iniciar() {
+    clearTimeout(est.timer);
+    var card = est.card.isConnected ? est.card : cardDe(est.nome);
+    if (!card) { est = null; return; }
+    var r = card.getBoundingClientRect();
+    est.ativo = true; est.ox = est.x - r.left; est.oy = est.y - r.top;
+    fantasma = document.createElement('div');
+    fantasma.className = 'ta-fantasma';
+    fantasma.innerHTML = card.innerHTML;
+    fantasma.style.width = r.width + 'px'; fantasma.style.height = r.height + 'px';
+    document.body.appendChild(fantasma);
+    card.classList.add('ta-origem');
+    document.body.classList.add('ta-arrastando');
+    alvo = secaoJustif(); if (alvo) alvo.classList.add('ta-alvo');
+    if (est.toque && navigator.vibrate) { try { navigator.vibrate(12); } catch (x) {} }
+    posicionar();
+    est.raf = requestAnimationFrame(rolarBorda);
+  }
+  function posicionar() {
+    if (!fantasma || !est) return;
+    fantasma.style.transform = 'translate3d(' + (est.x - est.ox) + 'px,' + (est.y - est.oy) + 'px,0) rotate(-1.5deg)';
+    var sobre = false;
+    if (alvo) { var r = alvo.getBoundingClientRect(); sobre = est.x >= r.left && est.x <= r.right && est.y >= r.top && est.y <= r.bottom; }
+    if (sobre !== est.sobre) {
+      est.sobre = sobre;
+      if (alvo) alvo.classList.toggle('ta-sobre', sobre);
+      fantasma.classList.toggle('ta-vai', sobre);
+    }
+  }
+  // rola a página sozinho quando o card chega perto da borda de cima/baixo
+  function rolarBorda() {
+    if (!est || !est.ativo) return;
+    var topo = 110, base = window.innerHeight - 80, v = 0;
+    if (est.y < topo) v = -(topo - est.y) / 5;
+    else if (est.y > base) v = (est.y - base) / 5;
+    if (v) { window.scrollBy(0, Math.max(-22, Math.min(22, Math.round(v)))); posicionar(); }
+    est.raf = requestAnimationFrame(rolarBorda);
+  }
+  function soltar() {
+    var s = est; est = null;
+    clearTimeout(s.timer); cancelAnimationFrame(s.raf);
+    if (!s.ativo) return;
+    document.body.classList.remove('ta-arrastando');
+    if (alvo) alvo.classList.remove('ta-alvo', 'ta-sobre');
+    var f = fantasma; fantasma = null;
+    if (s.sobre && !turnoModoHistorico) { if (f) f.remove(); abrirDialogo(s.nome); }
+    else voltar(f, s.nome);
+  }
+  // soltou fora: o card volta para o lugar
+  function voltar(f, nome) {
+    var card = cardDe(nome);
+    function fim() { if (f) f.remove(); if (card) card.classList.remove('ta-origem'); }
+    if (!f || !card || semMovimento) { fim(); return; }
+    var r = card.getBoundingClientRect();
+    f.classList.add('ta-volta');
+    f.style.transform = 'translate3d(' + r.left + 'px,' + r.top + 'px,0)';
+    setTimeout(fim, 190);
+  }
+
+  // ── diálogo do motivo ──
+  var dlg = null, dlgNome = null, dlgFocoAntes = null, dlgPressionado = null;
+  function montarDialogo() {
+    dlg = document.createElement('div');
+    dlg.id = 'ta-dialogo'; dlg.hidden = true;
+    dlg.setAttribute('role', 'dialog'); dlg.setAttribute('aria-modal', 'true'); dlg.setAttribute('aria-labelledby', 'ta-dlg-titulo');
+    dlg.innerHTML =
+      '<div class="ta-caixa">' +
+        '<div class="ta-cab"><div class="ta-ico" aria-hidden="true">!</div><div>' +
+          '<div class="ta-titulo" id="ta-dlg-titulo">Justificar falta</div><div class="ta-equipe" id="ta-dlg-equipe"></div>' +
+        '</div></div>' +
+        '<label class="ta-rot" for="ta-dlg-motivo">Motivo <span>(opcional)</span></label>' +
+        '<input id="ta-dlg-motivo" type="text" maxlength="120" autocomplete="off" placeholder="Ex.: atestado médico">' +
+        '<div class="ta-chips" id="ta-dlg-chips"></div>' +
+        '<div class="ta-acoes"><button type="button" class="ta-btn sec" data-acao="cancelar">Cancelar</button>' +
+        '<button type="button" class="ta-btn" data-acao="ok">Justificar falta</button></div>' +
+      '</div>';
+    document.body.appendChild(dlg);
+    dlg.addEventListener('pointerdown', function (e) { dlgPressionado = e.target; });
+    dlg.addEventListener('click', function (e) {
+      if (e.target === dlg) { if (dlgPressionado === dlg) fecharDialogo(false); return; }
+      var b = e.target.closest('button'); if (!b) return;
+      if (b.dataset.acao === 'ok') fecharDialogo(true);
+      else if (b.dataset.acao === 'cancelar') fecharDialogo(false);
+      else if (b.classList.contains('ta-chip')) { var i = document.getElementById('ta-dlg-motivo'); i.value = b.dataset.motivo; i.focus(); }
+    });
+    dlg.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') { e.preventDefault(); fecharDialogo(false); }
+      else if (e.key === 'Enter' && e.target.tagName === 'INPUT') { e.preventDefault(); fecharDialogo(true); }
+      else if (e.key === 'Tab') {
+        var focaveis = dlg.querySelectorAll('input,button');
+        var prim = focaveis[0], ult = focaveis[focaveis.length - 1];
+        if (e.shiftKey && document.activeElement === prim) { e.preventDefault(); ult.focus(); }
+        else if (!e.shiftKey && document.activeElement === ult) { e.preventDefault(); prim.focus(); }
+      }
+    });
+  }
+  function abrirDialogo(nome) {
+    if (!dlg) montarDialogo();
+    dlgNome = nome; dlgFocoAntes = document.activeElement; dlgPressionado = null;
+    document.getElementById('ta-dlg-equipe').textContent = rotulo(nome);
+    var inp = document.getElementById('ta-dlg-motivo'); inp.value = '';
+    // atalhos com os motivos que já foram usados neste turno (mais recentes primeiro)
+    var chips = document.getElementById('ta-dlg-chips'); chips.innerHTML = '';
+    var vistos = {}, motivos = [];
+    for (var i = teams.justif.length - 1; i >= 0 && motivos.length < 5; i--) {
+      var m = String((teams.justif[i] && teams.justif[i].obs) || '').trim(), k = m.toLowerCase();
+      if (m && !vistos[k]) { vistos[k] = 1; motivos.push(m); }
+    }
+    if (motivos.length) {
+      var rot = document.createElement('div'); rot.className = 'ta-chips-rot'; rot.textContent = 'Motivos já usados';
+      chips.appendChild(rot);
+      motivos.forEach(function (m) {
+        var b = document.createElement('button'); b.type = 'button'; b.className = 'ta-chip';
+        b.dataset.motivo = m; b.textContent = m; b.title = m; chips.appendChild(b);
+      });
+    }
+    dlg.hidden = false;
+    setTimeout(function () { inp.focus(); }, 30);
+  }
+  function fecharDialogo(confirmar) {
+    if (!dlg || dlg.hidden) return;
+    var nome = dlgNome, obs = document.getElementById('ta-dlg-motivo').value.trim();
+    dlg.hidden = true; dlgNome = null;
+    var card = cardDe(nome); if (card) card.classList.remove('ta-origem');
+    if (!confirmar) {
+      if (dlgFocoAntes && dlgFocoAntes.isConnected && dlgFocoAntes.focus) dlgFocoAntes.focus({ preventScroll: true });
+      return;
+    }
+    if (!turnoJustificarFalta(nome, obs)) { aviso(rotulo(nome) + ' não está mais em Não abriu turno'); return; }
+    var novo = cardDe(nome, 'justif-grid');
+    if (novo && !semMovimento) { novo.classList.add('ta-novo'); setTimeout(function () { novo.classList.remove('ta-novo'); }, 1500); }
+    aviso(rotulo(nome) + ' foi para Falta justificada', function () {
+      if (turnoDesfazerJustificativa(nome)) aviso(rotulo(nome) + ' voltou para Não abriu turno');
+    });
+  }
+
+  // ── aviso no rodapé, com "Desfazer" ──
+  var avisoEl = null, avisoT = 0, avisoAcao = null;
+  function aviso(txt, desfazer) {
+    if (!avisoEl) {
+      avisoEl = document.createElement('div'); avisoEl.id = 'ta-toast'; avisoEl.hidden = true;
+      avisoEl.setAttribute('role', 'status'); avisoEl.setAttribute('aria-live', 'polite');
+      avisoEl.innerHTML = '<span class="ta-toast-txt"></span><button type="button">Desfazer</button>';
+      document.body.appendChild(avisoEl);
+      avisoEl.querySelector('button').addEventListener('click', function () {
+        var a = avisoAcao; avisoAcao = null; avisoEl.hidden = true; if (a) a();
+      });
+    }
+    avisoEl.querySelector('.ta-toast-txt').textContent = txt;
+    avisoAcao = desfazer || null;
+    avisoEl.querySelector('button').hidden = !desfazer;
+    avisoEl.hidden = false;
+    clearTimeout(avisoT);
+    avisoT = setTimeout(function () { avisoEl.hidden = true; avisoAcao = null; }, desfazer ? 7000 : 3000);
+  }
+})();
 function statusBadge(s) {
 if (!s) return '';
 const map = {'EXECUTADO':'exec','SEM ACESSO':'semac','TEMPO CHUVOSO':'chuva','NÃO EXECUTADO':'naexec','NAO EXECUTADO':'naexec'};
