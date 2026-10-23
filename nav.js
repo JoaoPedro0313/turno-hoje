@@ -545,3 +545,15 @@
     }
   };
 })();
+
+/* ============================================================================
+   AGENTE DE NORMAS — chat flutuante (agente.js), carregado em todas as telas.
+   Ele só aparece depois do login. Para desligar, apague este bloco.
+   ========================================================================== */
+(function () {
+  var pre = /(^|\/)obras\//i.test(location.pathname) ? '../' : '';
+  var s = document.createElement('script');
+  s.src = pre + 'agente.js';
+  s.defer = true;
+  document.head.appendChild(s);
+})();
