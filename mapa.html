@@ -4655,7 +4655,7 @@ function mapaCarregarMes(ano, mes) {
   window._mapaMesDoSheets = true; // marca que o mapa está mostrando dados das planilhas
   window._mapaViewingSheets = true; // flag permanente — só reseta se usuário voltar ao banco
   const mt = document.getElementById('mapa-titulo');
-  if (mt) { mt.textContent = '⏳ Carregando '+label+'...'; mt.style.color='#888'; }
+  if (mt) { mt.textContent = '⏳ Carregando '+label+'...'; mt.style.color='#888'; mt.title=''; }
   if (!entry.gidJacobina && !entry.gidIrece && !entry.sheetJacobina && !entry.sheetIrece && !entry.urlSerrinha) {
     console.warn('[mapa] Entrada do mês sem GIDs/abas:', entry);
     return;
@@ -4684,10 +4684,12 @@ function mapaCarregarMes(ano, mes) {
       const ctrl = new AbortController();
       const fetchTimeout = setTimeout(() => ctrl.abort(), 12000);
       let resJac, resIrc, resSer;
+      const _buscar = (url, utd) => fetch(url, { signal: ctrl.signal }).catch(err => { err.utd = utd; throw err; });
       try {
         [resJac, resIrc, resSer] = await Promise.all([
-          urlJac ? fetch(urlJac, { signal: ctrl.signal }) : Promise.resolve(null),
-          urlIrc ? fetch(urlIrc, { signal: ctrl.signal }) : Promise.resolve(null),
+          // _buscar marca qual UTD falhou, para o aviso dizer onde está o problema
+          urlJac ? _buscar(urlJac, 'Jacobina') : Promise.resolve(null),
+          urlIrc ? _buscar(urlIrc, 'Irecê')    : Promise.resolve(null),
           // Serrinha nao pode derrubar o mes: erro dela vira null, nao excecao.
           urlSer ? fetch(urlSer, { signal: ctrl.signal }).catch(() => null) : Promise.resolve(null)
         ]);
@@ -4784,9 +4786,19 @@ function mapaCarregarMes(ano, mes) {
       clearTimeout(_mesFlagTimeout);
       // CORRIGIDO: reseta a flag para não bloquear o banco local indefinidamente
       window._mapaMesDoSheets = false;
-      const msgErr = e.name === 'AbortError'
-        ? '❌ Timeout ao buscar planilha — verifique sua conexão ou se o Sheets está público'
-        : '❌ Erro ao carregar '+label+': '+e.message;
+      // Motivo real da falha. Antes ele era trocado pelo aviso genérico da cópia e sumia da tela.
+      const _onde = e.utd ? ' em ' + e.utd : '';
+      let motivo;
+      if (e.name === 'AbortError') {
+        motivo = 'a planilha demorou mais de 12 s para responder';
+      } else if (e instanceof TypeError && /fetch|network|load failed/i.test(e.message || '')) {
+        // "Failed to fetch" (Chrome), "NetworkError..." (Firefox), "Load failed" (Safari)
+        motivo = 'sem acesso à planilha' + _onde + ': compartilhamento fechado ou rede bloqueando o Google';
+      } else {
+        motivo = e.message || String(e);
+      }
+      const msgErr = '❌ Erro ao carregar ' + label + ': ' + motivo;
+      const _tecnico = (e.name || 'Erro') + ': ' + (e.message || '') + (e.utd ? ' [' + e.utd + ']' : '');
       if (mt) { mt.textContent = msgErr; mt.style.color='#c53030'; }
       console.error('[mapaCarregarMes]', e);
       // Primeiro tenta a cópia deste mês guardada no banco: e o dado certo do
@@ -4799,9 +4811,9 @@ function mapaCarregarMes(ano, mes) {
         mapaFiltroAtivo='TODOS'; mapaUTDFiltro='TODAS'; mapaMunFiltro=''; mapaEncFiltro='';
         window._mapaCarregarMesInterno = true;
         mapaCarregarDoBanco();
-        const aviso = '⚠️ A planilha não respondeu — mostrando a cópia de ' + label + ' salva em ' + mapaMesQuando(copia.salvo_em);
+        const aviso = '⚠️ Não leu a planilha (' + motivo + ') — mostrando a cópia de ' + label + ' salva em ' + mapaMesQuando(copia.salvo_em);
         window._mapaAvisoMes = aviso;
-        setTimeout(function(){ const t = document.getElementById('mapa-titulo'); if (t) { t.textContent = aviso; t.style.color = '#b7791f'; } }, 60);
+        setTimeout(function(){ const t = document.getElementById('mapa-titulo'); if (t) { t.textContent = aviso; t.style.color = '#b7791f'; t.title = _tecnico; } }, 60);
         console.warn('[mapaCarregarMes] usando a cópia do banco de ' + label);
         return;
       }
