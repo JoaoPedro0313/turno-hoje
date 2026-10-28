@@ -728,12 +728,15 @@ body.sm-collapsed .sm-side:hover{z-index:1300}
     <div style="background:linear-gradient(135deg,#553c9a,#6b46c1);padding:18px 24px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
       <div>
         <div style="color:#fff;font-size:1.05rem;font-weight:800;letter-spacing:0.5px;">📅 Gerenciar Meses das Planilhas</div>
-        <div style="color:rgba(255,255,255,0.65);font-size:0.72rem;font-weight:600;margin-top:2px;">Adicione links dos próximos meses para o mapa</div>
+        <div style="color:rgba(255,255,255,0.65);font-size:0.72rem;font-weight:600;margin-top:2px;">Os meses vêm direto das planilhas; aqui você confere ou cadastra à mão</div>
       </div>
       <button onclick="mapaFecharModalMes()" style="background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.2);color:#fff;width:34px;height:34px;border-radius:10px;cursor:pointer;font-size:1rem;font-weight:800;display:flex;align-items:center;justify-content:center;">✕</button>
     </div>
     <!-- Body scrollável -->
     <div style="overflow-y:auto;flex:1;padding:24px;">
+
+      <!-- Leitura automática das abas -->
+      <div id="modal-meses-auto"></div>
 
       <!-- Meses cadastrados -->
       <div style="font-size:0.68rem;font-weight:800;color:#aaa;letter-spacing:2px;text-transform:uppercase;margin-bottom:12px;">Meses cadastrados</div>
@@ -818,6 +821,11 @@ const GSHEETS_EXPORT = {
   IRECE:    'https://docs.google.com/spreadsheets/d/14ImbZb8-OCBp78jDtd0QFkSLrMG5vXA7tzrM-x6KQVo/export?format=csv&gid='
 };
 window._mapaSemFiltro = false;   // true = usa a rota /export
+/* Chave da Google Sheets API (só leitura). Com ela, o mapa LISTA as abas das
+   planilhas e descobre sozinho qual aba é de qual mês — sem cadastro manual.
+   Veja "MESES DIRETO DA PLANILHA" mais abaixo. Vazia = comportamento antigo.
+   Também pode vir do config.js como window.GSHEETS_API_KEY. */
+const MAPA_SHEETS_API_KEY = '';
 const GSHEETS_BASE = {
   // gviz/tq?tqx=out:csv entrega o CSV DIRETO do docs.google.com, sem o redirect
   // para googleusercontent.com (que estava falhando com ERR_CONNECTION_CLOSED em algumas redes).
@@ -833,14 +841,34 @@ let GSHEETS_MESES = [
   { ano: 2026, mes: 5,  gidJacobina: 1209313517, gidIrece: 663282613  },
   { ano: 2026, mes: 6,  gidJacobina: 557360701,  gidIrece: 1842405101 }
 ];
+// Completa um mês já cadastrado com o que faltar nele (nunca troca o que já tem).
+// Assim um mês fixado só para uma UTD continua recebendo a outra do cadastro.
+function mapaCompletarMes(ja, e) {
+  if (!ja || !e) return;
+  const vazio = g => g === null || g === undefined || g === '';
+  if (vazio(ja.gidJacobina) && !vazio(e.gidJacobina) && !_mapaEstaMorto('JACOBINA', e.gidJacobina)) { ja.gidJacobina = e.gidJacobina; delete ja.sheetJacobina; }
+  if (vazio(ja.gidIrece)    && !vazio(e.gidIrece)    && !_mapaEstaMorto('IRECE', e.gidIrece))       { ja.gidIrece = e.gidIrece; delete ja.sheetIrece; }
+  if (vazio(ja.gidJacobina) && !ja.sheetJacobina && e.sheetJacobina) ja.sheetJacobina = e.sheetJacobina;
+  if (vazio(ja.gidIrece)    && !ja.sheetIrece    && e.sheetIrece)    ja.sheetIrece = e.sheetIrece;
+  if (e.urlSerrinha && !ja.urlSerrinha) ja.urlSerrinha = e.urlSerrinha;
+}
+// gid que a lista de abas da planilha mostrou que não existe mais: o cadastro não pode trazê-lo de volta
+function _mapaMorto(utd, g) {
+  window._mapaGidsMortos = window._mapaGidsMortos || { JACOBINA: [], IRECE: [] };
+  const n = parseInt(g, 10);
+  if (window._mapaGidsMortos[utd].indexOf(n) < 0) window._mapaGidsMortos[utd].push(n);
+}
+function _mapaEstaMorto(utd, g) {
+  return !!(window._mapaGidsMortos && window._mapaGidsMortos[utd] && window._mapaGidsMortos[utd].indexOf(parseInt(g, 10)) >= 0);
+}
 // Carrega meses extras: primeiro do localStorage (imediato), depois sincroniza com Supabase
 (function() {
   try {
     const extras = JSON.parse(localStorage.getItem('mariua_meses_extras') || '[]');
     extras.forEach(e => {
       const ja = GSHEETS_MESES.find(m => m.ano===e.ano && m.mes===e.mes);
-      // Mes fixo que ganhou Serrinha depois: completa em vez de ignorar.
-      if (ja) { if (e.urlSerrinha && !ja.urlSerrinha) ja.urlSerrinha = e.urlSerrinha; }
+      // Mês já existente: completa o que faltar nele em vez de ignorar.
+      if (ja) mapaCompletarMes(ja, e);
       else GSHEETS_MESES.push(e);
     });
     GSHEETS_MESES.sort((a,b) => a.ano!==b.ano ? a.ano-b.ano : a.mes-b.mes);
@@ -851,10 +879,28 @@ let GSHEETS_MESES = [
   try {
     const auto = JSON.parse(localStorage.getItem('mariua_meses_auto') || '[]');
     auto.forEach(e => {
-      if (e && e.ano && e.mes && !GSHEETS_MESES.find(m => m.ano===e.ano && m.mes===e.mes)) GSHEETS_MESES.push(e);
+      if (!e || !e.ano || !e.mes) return;
+      const ja = GSHEETS_MESES.find(m => m.ano===e.ano && m.mes===e.mes);
+      if (ja) mapaCompletarMes(ja, e); else GSHEETS_MESES.push(e);
     });
     GSHEETS_MESES.sort((a,b) => a.ano!==b.ano ? a.ano-b.ano : a.mes-b.mes);
   } catch(e) {}
+})();
+// Abas fixadas no código, por UTD. Cada linha só define a UTD indicada; a outra UTD
+// e Serrinha do mesmo mês continuam vindo do cadastro. Com a chave da API ligada,
+// a lista de abas da planilha confere estes números e corrige se a aba mudar.
+const GSHEETS_ABAS_FIXAS = [
+  { ano: 2026, mes: 10, gidIrece: 488318427 },    // OUT/26 Irecê
+  { ano: 2026, mes: 11, gidIrece: 1804489148 }    // NOV/26 Irecê
+];
+(function() {
+  GSHEETS_ABAS_FIXAS.forEach(f => {
+    let e = GSHEETS_MESES.find(m => m.ano === f.ano && m.mes === f.mes);
+    if (!e) { e = { ano: f.ano, mes: f.mes }; GSHEETS_MESES.push(e); }
+    if (f.gidJacobina != null) { e.gidJacobina = f.gidJacobina; delete e.sheetJacobina; }
+    if (f.gidIrece    != null) { e.gidIrece    = f.gidIrece;    delete e.sheetIrece; }
+  });
+  GSHEETS_MESES.sort((a,b) => a.ano!==b.ano ? a.ano-b.ano : a.mes-b.mes);
 })();
 // Carrega o ÚLTIMO mês disponível (o mais recente da lista). Usado ao entrar no mapa.
 function mapaCarregarUltimoMes() {
@@ -885,15 +931,23 @@ async function mapaMMCarregarSupabase() {
     const data = await res.json();
     if (!data || !data.length || !data[0].value) { console.log('[meses] Registro não encontrado no banco.'); return; }
     const extras = Array.isArray(data[0].value) ? data[0].value : [];
+    const _ativoAntes = mapaMesAtivo ? _mapaAssinatura(GSHEETS_MESES.find(m => m.ano===mapaMesAtivo.ano && m.mes===mapaMesAtivo.mes)) : null;
     // Reconstrói GSHEETS_MESES: mantém todos os já existentes + adiciona novos extras
     extras.forEach(e => {
       if (!e || !e.ano || !e.mes) return;
       const ja = GSHEETS_MESES.find(m => m.ano===e.ano && m.mes===e.mes);
-      if (ja) { if (e.urlSerrinha && !ja.urlSerrinha) ja.urlSerrinha = e.urlSerrinha; }
+      if (ja) mapaCompletarMes(ja, e);
       else GSHEETS_MESES.push(e);
     });
     GSHEETS_MESES.sort((a,b) => a.ano!==b.ano ? a.ano-b.ano : a.mes-b.mes);
     GSHEETS.SERRINHA = gsheetsGetURL('SERRINHA');
+    if (_ativoAntes !== null && mapaMesAtivo) {
+      const _agora = GSHEETS_MESES.find(m => m.ano===mapaMesAtivo.ano && m.mes===mapaMesAtivo.mes);
+      if (_mapaAssinatura(_agora) !== _ativoAntes) {
+        console.log('[meses] o cadastro completou o mês aberto — recarregando');
+        mapaCarregarMes(mapaMesAtivo.ano, mapaMesAtivo.mes);
+      }
+    }
     console.log('[meses] Supabase:', extras.length, 'extra(s) carregado(s). Total:', GSHEETS_MESES.length);
     // Mescla com o cache local em vez de sobrescrever — assim meses adicionados localmente
     // (ex.: julho) não somem caso o registro do banco ainda não os tenha.
@@ -903,7 +957,7 @@ async function mapaMMCarregarSupabase() {
       (Array.isArray(locais) ? locais : []).forEach(e => {
         if (!e || !e.ano || !e.mes) return;
         const ja = merge.find(m => m.ano===e.ano && m.mes===e.mes);
-        if (ja) { if (e.urlSerrinha && !ja.urlSerrinha) ja.urlSerrinha = e.urlSerrinha; }
+        if (ja) mapaCompletarMes(ja, e);
         else merge.push(e);
       });
       localStorage.setItem('mariua_meses_extras', JSON.stringify(merge));
@@ -932,9 +986,16 @@ window.mapaMMNotificarOutros = mapaMMNotificarOutros;
 window.addEventListener('load', function() {
   // Ao entrar no mapa, abre já no ÚLTIMO mês (lista embutida/local), sem depender do Supabase.
   setTimeout(function() {
-    if (!window._mapaMesAutoLoaded && !mapaMesAtivo && !window._mapaViewingSheets) {
-      if (mapaCarregarUltimoMes()) window._mapaMesAutoLoaded = true;
-    }
+    if (window._mapaMesAutoLoaded || mapaMesAtivo || window._mapaViewingSheets) return;
+    // Espera a lista de abas da planilha (até 5 s) para já abrir no mês e na aba certos.
+    window._mapaMesAutoLoaded = true;   // segura o carregamento do Supabase enquanto espera
+    const espera = window._mapaDescoberta
+      ? Promise.race([window._mapaDescoberta, new Promise(function(r){ setTimeout(r, 5000); })])
+      : Promise.resolve();
+    espera.then(function() {
+      if (mapaMesAtivo || window._mapaViewingSheets) return;
+      if (!mapaCarregarUltimoMes()) window._mapaMesAutoLoaded = false;
+    });
   }, 1200);
   setTimeout(mapaMMCarregarSupabase, 2000);
   setInterval(mapaMMCarregarSupabase, 30000);
@@ -4643,6 +4704,12 @@ function mapaCarregarMes(ano, mes) {
   const entry = GSHEETS_MESES.find(e => e.ano===ano && e.mes===mes);
   if (!entry) return;
   mapaMesAtivo = { ano, mes };
+  // Só a chamada mais recente mexe na tela: se outra começar no meio (clique em
+  // outro mês, aba trocada na planilha), esta termina calada.
+  const _seq = window._mapaMesSeq = (window._mapaMesSeq || 0) + 1;
+  const _velha = () => _seq !== window._mapaMesSeq;
+  // gid 0 é uma aba válida (a primeira da planilha): não pode ser tratado como "vazio"
+  const _temGid = g => g !== null && g !== undefined && g !== '';
   // Atualiza visual dos botões imediatamente
   document.querySelectorAll('.mapa-mes-btn').forEach(b => {
     const on = parseInt(b.dataset.ano)===ano && parseInt(b.dataset.mesnum)===mes;
@@ -4656,20 +4723,22 @@ function mapaCarregarMes(ano, mes) {
   window._mapaViewingSheets = true; // flag permanente — só reseta se usuário voltar ao banco
   const mt = document.getElementById('mapa-titulo');
   if (mt) { mt.textContent = '⏳ Carregando '+label+'...'; mt.style.color='#888'; mt.title=''; }
-  if (!entry.gidJacobina && !entry.gidIrece && !entry.sheetJacobina && !entry.sheetIrece && !entry.urlSerrinha) {
+  if (!_temGid(entry.gidJacobina) && !_temGid(entry.gidIrece) && !entry.sheetJacobina && !entry.sheetIrece && !entry.urlSerrinha) {
     console.warn('[mapa] Entrada do mês sem GIDs/abas:', entry);
+    if (mt) { mt.textContent = '⚠️ ' + label + ': nenhuma aba encontrada nas planilhas'; mt.style.color = '#b7791f'; }
     return;
   }
   const _baseJac = window._mapaSemFiltro ? GSHEETS_EXPORT.JACOBINA : GSHEETS_BASE.JACOBINA;
   const _baseIrc = window._mapaSemFiltro ? GSHEETS_EXPORT.IRECE    : GSHEETS_BASE.IRECE;
-  const urlJac = entry.gidJacobina ? _baseJac + entry.gidJacobina
+  const urlJac = _temGid(entry.gidJacobina) ? _baseJac + entry.gidJacobina
                : entry.sheetJacobina ? GSHEETS_SHEETBASE.JACOBINA + encodeURIComponent(entry.sheetJacobina) : null;
-  const urlIrc = entry.gidIrece ? _baseIrc + entry.gidIrece
+  const urlIrc = _temGid(entry.gidIrece) ? _baseIrc + entry.gidIrece
                : entry.sheetIrece ? GSHEETS_SHEETBASE.IRECE + encodeURIComponent(entry.sheetIrece) : null;
   const urlSer = entry.urlSerrinha || null;
 
   // CORRIGIDO: timeout de segurança — se o Sheets não responder em 15s, libera o banco local
   const _mesFlagTimeout = setTimeout(() => {
+    if (_velha()) return;
     window._mapaMesDoSheets = false;
     window._mapaCarregarMesInterno = false;
     if (mt) { mt.textContent = '❌ Timeout ao carregar '+label+' — verifique se as planilhas estão públicas'; mt.style.color='#c53030'; }
@@ -4703,6 +4772,7 @@ function mapaCarregarMes(ano, mes) {
         (resIrc && resIrc.ok) ? resIrc.text() : Promise.resolve(''),
         (resSer && resSer.ok) ? resSer.text() : Promise.resolve('')
       ]);
+      if (_velha()) { clearTimeout(_mesFlagTimeout); return; }
       let dataJac = compParseCSVText(textJac, 'JACOBINA') || [];
       let dataIrc = compParseCSVText(textIrc, 'IRECÊ') || [];
       let dataSer = textSer ? (compParseCSVText(textSer, 'SERRINHA') || []) : [];
@@ -4725,8 +4795,8 @@ function mapaCarregarMes(ano, mes) {
       const mesJac = (dataJac && dataJac._mesPlanilha) || mapaMesDaPlanilha(textJac);
       const mesIrc = (dataIrc && dataIrc._mesPlanilha) || mapaMesDaPlanilha(textIrc);
       const avisosMes = [];
-      if ((entry.gidJacobina||entry.sheetJacobina) && mesJac && mesJac !== label) { avisosMes.push('Jacobina ainda em '+mesJac); dataJac = []; }
-      if ((entry.gidIrece   ||entry.sheetIrece)    && mesIrc && mesIrc !== label) { avisosMes.push('Irecê ainda em '+mesIrc);    dataIrc = []; }
+      if ((_temGid(entry.gidJacobina)||entry.sheetJacobina) && mesJac && mesJac !== label) { avisosMes.push('Jacobina ainda em '+mesJac); dataJac = []; }
+      if ((_temGid(entry.gidIrece)   ||entry.sheetIrece)    && mesIrc && mesIrc !== label) { avisosMes.push('Irecê ainda em '+mesIrc);    dataIrc = []; }
       const mesSer = (dataSer && dataSer._mesPlanilha) || (textSer ? mapaMesDaPlanilha(textSer) : null);
       if (entry.urlSerrinha && mesSer && mesSer !== label) { avisosMes.push('Serrinha ainda em '+mesSer); dataSer = []; }
       window._mapaAvisoMes = avisosMes.length
@@ -4756,6 +4826,7 @@ function mapaCarregarMes(ano, mes) {
       window._mapaAusentes = _ausentes;
 
       // Substitui bancoDB temporariamente com dados deste mês
+      if (_velha()) return;
       bancoDB = [...dataJac, ...dataIrc, ...dataSer];
       const pad = n => String(n).padStart(2,'0');
       const now = new Date();
@@ -4776,6 +4847,7 @@ function mapaCarregarMes(ano, mes) {
       // Se alguma aba estava em outro mês, mostra o aviso no título (após o render)
       if (window._mapaAvisoMes) {
         setTimeout(function(){
+          if (_velha()) return;
           const t = document.getElementById('mapa-titulo');
           if (!t) return;
           t.style.color = '#b7791f';
@@ -4784,6 +4856,7 @@ function mapaCarregarMes(ano, mes) {
       }
     } catch(e) {
       clearTimeout(_mesFlagTimeout);
+      if (_velha()) return;
       // CORRIGIDO: reseta a flag para não bloquear o banco local indefinidamente
       window._mapaMesDoSheets = false;
       // Motivo real da falha. Antes ele era trocado pelo aviso genérico da cópia e sumia da tela.
@@ -4804,6 +4877,7 @@ function mapaCarregarMes(ano, mes) {
       // Primeiro tenta a cópia deste mês guardada no banco: e o dado certo do
       // mes pedido, nao o mes que por acaso estava na tela.
       const copia = await mapaMesLerCopia(ano, mes);
+      if (_velha()) return;
       if (copia) {
         bancoDB = [].concat(copia.jac||[], copia.irc||[], copia.ser||[]);
         bancoDBInfo = { count: bancoDB.length, updatedAt: label + ' (cópia do banco)',
@@ -4879,7 +4953,7 @@ function mapaInitMesBar() {
     const isCurrent = entry.ano === now.getFullYear() && entry.mes === now.getMonth() + 1;
     const isActive = mapaMesAtivo ? (mapaMesAtivo.ano===entry.ano && mapaMesAtivo.mes===entry.mes) : isCurrent;
     return `<button class="mapa-mes-btn" data-ano="${entry.ano}" data-mesnum="${entry.mes}"
-      onclick="mapaCarregarMes(${entry.ano},${entry.mes})"
+      onclick="mapaEscolherMes(${entry.ano},${entry.mes})"
       style="padding:6px 18px;border-radius:20px;border:2px solid ${isActive?'#6b46c1':'#e2e8f0'};background:${isActive?'#6b46c1':'#fff'};font-family:'Barlow',sans-serif;font-size:0.78rem;font-weight:800;cursor:pointer;color:${isActive?'#fff':'#555'};transition:all 0.15s;white-space:nowrap;box-shadow:${isActive?'0 2px 8px rgba(107,70,193,0.25)':'none'};">
       📅 ${label}</button>`;
   }).join('');
@@ -4929,6 +5003,9 @@ async function mapaSondarAbaMes(utd, ano, mes) {
 }
 // Detecta meses novos após o último conhecido, até o mês atual real (não sonda futuro).
 async function mapaDetectarMesesNovos() {
+  // Com a lista de abas vindo da API, a sondagem por nome não é necessária.
+  if (window._mapaDescoberta) { try { await window._mapaDescoberta; } catch(e) {} }
+  if (window._mapaDescobertaOk) return;
   if (!Array.isArray(GSHEETS_MESES) || !GSHEETS_MESES.length) return;
   let ult = GSHEETS_MESES[0];
   for (const e of GSHEETS_MESES) if (e.ano*12+e.mes > ult.ano*12+ult.mes) ult = e;
@@ -4949,6 +5026,22 @@ async function mapaDetectarMesesNovos() {
     GSHEETS_MESES.push(entrada); novos.push(entrada);
     console.log('[mapa] mês novo detectado na carteira:', (MESES_PT[mes])+'/'+String(ano).slice(-2), entrada);
   }
+  // Mês atual cadastrado sem uma das UTDs (ex.: só Irecê fixada no código): procura a outra pelo nome.
+  const _mesAtual = GSHEETS_MESES.find(e => e.ano === now.getFullYear() && e.mes === now.getMonth() + 1);
+  const _semUtd = (e, u) => (u === 'J' ? (e.gidJacobina == null && !e.sheetJacobina) : (e.gidIrece == null && !e.sheetIrece));
+  if (_mesAtual && (_semUtd(_mesAtual, 'J') || _semUtd(_mesAtual, 'I'))) {
+    const [jac, irc] = await Promise.all([
+      _semUtd(_mesAtual, 'J') ? mapaSondarAbaMes('JACOBINA', _mesAtual.ano, _mesAtual.mes) : null,
+      _semUtd(_mesAtual, 'I') ? mapaSondarAbaMes('IRECE', _mesAtual.ano, _mesAtual.mes) : null
+    ]);
+    let achou = false;   // o cadastro pode ter completado enquanto a sondagem rodava: confere de novo
+    if (jac && _semUtd(_mesAtual, 'J')) { _mesAtual.sheetJacobina = jac.nome; achou = true; }
+    if (irc && _semUtd(_mesAtual, 'I')) { _mesAtual.sheetIrece = irc.nome; achou = true; }
+    if (achou) {
+      console.log('[mapa] aba que faltava no mês atual encontrada pelo nome:', _mesAtual);
+      if (mapaMesAtivo && mapaMesAtivo.ano === _mesAtual.ano && mapaMesAtivo.mes === _mesAtual.mes) mapaCarregarMes(_mesAtual.ano, _mesAtual.mes);
+    }
+  }
   if (novos.length) {
     GSHEETS_MESES.sort((a,b)=> a.ano!==b.ano ? a.ano-b.ano : a.mes-b.mes);
     try {
@@ -4964,6 +5057,322 @@ if (!window._mapaAutoDetectAgendado) {
   window._mapaAutoDetectAgendado = true;
   window.addEventListener('load', () => setTimeout(() => { try { mapaDetectarMesesNovos(); } catch(e){} }, 2000));
 }
+
+/* ═══ MESES DIRETO DA PLANILHA (Google Sheets API) ═══════════════════════════
+   Com MAPA_SHEETS_API_KEY preenchida, o mapa lê a lista de abas de cada
+   planilha e descobre sozinho qual aba é de qual mês pelo nome dela
+   ("OUT.26", "OUTUBRO 2026", "10/2026"...). Assim:
+     - aba de mês novo aparece no mapa sem cadastro;
+     - aba apagada e recriada (gid novo) é seguida automaticamente;
+     - gid cadastrado que não existe mais na planilha é descartado.
+   Aba sem ano no nome ("OUTUBRO") tem o ano lido do rótulo no topo dela ("OUT/26").
+   Se houver duas abas do mesmo mês, ganha a visível e sem "cópia/backup/teste" no nome.
+   Sem a chave, tudo continua como antes: cadastro manual + sondagem por nome.
+   Console: mapaDescobrirAbas() roda na hora; window._mapaDescobertaStatus mostra o resultado. */
+function mapaSheetsApiKey() {
+  const deFora = (typeof window.GSHEETS_API_KEY === 'string') ? window.GSHEETS_API_KEY : '';
+  return String(deFora || MAPA_SHEETS_API_KEY || '').trim();
+}
+function _mapaSemAcento(s) {
+  return String(s || '').toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+const _MAPA_NOMES_MES = [
+  ['JANEIRO',1],['FEVEREIRO',2],['MARCO',3],['ABRIL',4],['MAIO',5],['JUNHO',6],
+  ['JULHO',7],['AGOSTO',8],['SETEMBRO',9],['OUTUBRO',10],['NOVEMBRO',11],['DEZEMBRO',12],
+  ['JAN',1],['FEV',2],['MAR',3],['ABR',4],['MAI',5],['JUN',6],
+  ['JUL',7],['AGO',8],['SET',9],['OUT',10],['NOV',11],['DEZ',12]
+];
+// "OUT.26" → {mes:10, ano:2026} · "OUTUBRO" → {mes:10, ano:null} · "RESUMO" → null
+function mapaMesDoTitulo(titulo) {
+  const t = ' ' + _mapaSemAcento(titulo) + ' ';
+  const anoDe = s => {
+    const n = parseInt(s, 10);
+    if (s.length === 4) return (n >= 2020 && n <= 2040) ? n : null;
+    return (n >= 20 && n <= 40) ? 2000 + n : null;
+  };
+  for (const [nome, mes] of _MAPA_NOMES_MES) {
+    const m = new RegExp('[^A-Z]' + nome + '(?=[^A-Z])').exec(t);
+    if (!m) continue;
+    const depois = t.slice(m.index + m[0].length);
+    let a = depois.match(/^\s*[\/.\-_]?\s*(\d{4}|\d{2})(?!\d)/);
+    let ano = a ? anoDe(a[1]) : null;
+    if (ano == null) { a = t.match(/(?:^|\D)(20[2-4]\d)(?!\d)/); ano = a ? parseInt(a[1], 10) : null; }
+    return { mes, ano };
+  }
+  let m = t.match(/(?:^|\D)(0?[1-9]|1[0-2])\s*[\/.\-_]\s*(\d{4}|\d{2})(?!\d)/);
+  if (m) { const ano = anoDe(m[2]); if (ano) return { mes: parseInt(m[1], 10), ano }; }
+  m = t.match(/(?:^|\D)(20[2-4]\d)\s*[\/.\-_]\s*(0?[1-9]|1[0-2])(?!\d)/);
+  if (m) return { mes: parseInt(m[2], 10), ano: parseInt(m[1], 10) };
+  return null;
+}
+function mapaMotivoApi(status, msg) {
+  msg = String(msg || '');
+  if (/API key not valid|API_KEY_INVALID/i.test(msg)) return 'chave da API inválida';
+  if (/has not been used|is disabled|SERVICE_DISABLED/i.test(msg)) return 'a Google Sheets API não está ativada no projeto da chave';
+  if (/referer|referrer/i.test(msg)) return 'a chave não aceita este site (confira as restrições de site da chave)';
+  if (status === 403) return 'sem permissão: a planilha não está em "Qualquer pessoa com o link"';
+  if (status === 404) return 'planilha não encontrada (apagada ou trocada de endereço)';
+  if (status === 429) return 'limite de consultas do Google atingido, tenta de novo em instantes';
+  return msg;
+}
+async function mapaListarAbas(id, key) {
+  const url = 'https://sheets.googleapis.com/v4/spreadsheets/' + encodeURIComponent(id)
+    + '?fields=' + encodeURIComponent('sheets.properties(sheetId,title,hidden,index)')
+    + '&key=' + encodeURIComponent(key);
+  const ctrl = new AbortController();
+  const to = setTimeout(() => ctrl.abort(), 10000);
+  let r;
+  try { r = await fetch(url, { signal: ctrl.signal }); } finally { clearTimeout(to); }
+  let corpo = null;
+  try { corpo = await r.json(); } catch(e) {}
+  if (!r.ok) {
+    const msg = (corpo && corpo.error && corpo.error.message) || ('HTTP ' + r.status);
+    const err = new Error(msg);
+    err.motivo = mapaMotivoApi(r.status, msg);
+    throw err;
+  }
+  // A API omite campos com valor 0 (gid 0 = primeira aba): por isso o "|| 0".
+  return ((corpo && corpo.sheets) || []).map(sh => {
+    const p = sh.properties || {};
+    return { gid: p.sheetId || 0, titulo: p.title || '', oculta: !!p.hidden, indice: p.index || 0 };
+  });
+}
+// Aba sem ano no nome: lê o rótulo do topo ("OUT/26"). Guarda o resultado por 1 dia.
+async function mapaAnoPeloConteudo(id, aba) {
+  const chave = id + ':' + aba.gid + ':' + aba.titulo;
+  let cache = {};
+  try { cache = JSON.parse(localStorage.getItem('mariua_abas_ano') || '{}') || {}; } catch(e) {}
+  const c = cache[chave];
+  if (c && (Date.now() - c.ts) < 24 * 3600 * 1000) return c.ano;
+  let ano = null;
+  try {
+    const ctrl = new AbortController();
+    const to = setTimeout(() => ctrl.abort(), 10000);
+    let r;
+    try { r = await fetch('https://docs.google.com/spreadsheets/d/' + id + '/gviz/tq?tqx=out:csv&gid=' + aba.gid, { signal: ctrl.signal }); }
+    finally { clearTimeout(to); }
+    if (r.ok) {
+      const rot = mapaMesDaPlanilha(await r.text());   // ex.: "OUT/26"
+      if (rot) {
+        const partes = rot.split('/');
+        if (MESES_ORDER[partes[0]] === aba.mes) ano = 2000 + parseInt(partes[1], 10);
+      }
+    }
+  } catch(e) { return null; }   // falha de rede: tenta de novo na próxima verificação
+  cache[chave] = { ano, ts: Date.now() };
+  try { localStorage.setItem('mariua_abas_ano', JSON.stringify(cache)); } catch(e) {}
+  return ano;
+}
+const _MAPA_ABA_RUIM = /COPIA|COPY|BKP|BACKUP|ANTIG|\bOLD\b|TESTE|MODELO|RASCUNHO|NAO USAR/;
+// Lista de abas → { '2026-10': { gid, titulo }, ... } (uma aba por mês)
+async function mapaMesesDasAbas(id, abas) {
+  const candidatos = [], semAno = [];
+  abas.forEach(aba => {
+    const p = mapaMesDoTitulo(aba.titulo);
+    if (!p) return;
+    if (p.ano) candidatos.push(Object.assign({}, aba, { mes: p.mes, ano: p.ano, peloConteudo: false }));
+    else semAno.push(Object.assign({}, aba, { mes: p.mes }));
+  });
+  const resolvidos = await Promise.all(semAno.map(async aba => {
+    const ano = await mapaAnoPeloConteudo(id, aba);
+    return ano ? Object.assign({}, aba, { ano, peloConteudo: true }) : null;
+  }));
+  resolvidos.forEach(a => { if (a) candidatos.push(a); });
+  const nota = a => (a.oculta ? 100 : 0) + (_MAPA_ABA_RUIM.test(_mapaSemAcento(a.titulo)) ? 50 : 0) + (a.peloConteudo ? 10 : 0);
+  const porMes = {};
+  candidatos.forEach(a => { const k = a.ano + '-' + a.mes; (porMes[k] = porMes[k] || []).push(a); });
+  const escolhidos = {};
+  Object.keys(porMes).forEach(k => {
+    const lista = porMes[k].sort((x, y) => nota(x) - nota(y) || x.titulo.length - y.titulo.length || x.indice - y.indice);
+    escolhidos[k] = { gid: lista[0].gid, titulo: lista[0].titulo };
+    if (lista.length > 1) console.log('[mapa] ' + lista.length + ' abas para ' + MESES_PT[lista[0].mes] + '/' + String(lista[0].ano).slice(-2)
+      + ' — usando "' + lista[0].titulo + '"; ignoradas:', lista.slice(1).map(a => a.titulo));
+  });
+  return escolhidos;
+}
+function _mapaRotulo(e) { return (MESES_PT[e.mes] || '?') + '/' + String(e.ano).slice(-2); }
+function _mapaAssinatura(e) { return e ? [e.gidJacobina, e.gidIrece, e.urlSerrinha, e.sheetJacobina, e.sheetIrece].join('|') : ''; }
+// achados = { ids:{JACOBINA,IRECE,SERRINHA}, gids:{<id>:[gid...]}, meses:{JACOBINA:{'2026-10':{gid,titulo}}, IRECE:{...}, SERRINHA:{...}} }
+function mapaAplicarAbas(achados) {
+  const log = [];
+  const gids = achados.gids || {}, meses = achados.meses || {}, ids = achados.ids || {};
+  const listada = id => !!(id && gids[id]);
+  const existe = (id, g) => gids[id].indexOf(parseInt(g, 10)) >= 0;
+  const vazio = g => g === null || g === undefined || g === '';
+  // 1) gid cadastrado que sumiu da planilha: descarta (senão o mês fica tentando ler uma aba que não existe)
+  GSHEETS_MESES.forEach(e => {
+    if (!vazio(e.gidJacobina) && listada(ids.JACOBINA) && !existe(ids.JACOBINA, e.gidJacobina)) {
+      log.push(_mapaRotulo(e) + ' Jacobina: gid ' + e.gidJacobina + ' não existe mais na planilha'); _mapaMorto('JACOBINA', e.gidJacobina); e.gidJacobina = null;
+    }
+    if (!vazio(e.gidIrece) && listada(ids.IRECE) && !existe(ids.IRECE, e.gidIrece)) {
+      log.push(_mapaRotulo(e) + ' Irecê: gid ' + e.gidIrece + ' não existe mais na planilha'); _mapaMorto('IRECE', e.gidIrece); e.gidIrece = null;
+    }
+    if (e.urlSerrinha) {
+      const sid = mapaMMExtrairId(e.urlSerrinha), sg = mapaMMExtrairGid(e.urlSerrinha);
+      if (sg != null && listada(sid) && !existe(sid, sg)) {
+        log.push(_mapaRotulo(e) + ' Serrinha: gid ' + sg + ' não existe mais na planilha'); e.urlSerrinha = null;
+      }
+    }
+  });
+  // 2) o que a planilha tem agora manda
+  const chaves = {};
+  ['JACOBINA', 'IRECE', 'SERRINHA'].forEach(u => Object.keys(meses[u] || {}).forEach(k => { chaves[k] = 1; }));
+  Object.keys(chaves).forEach(k => {
+    const ano = parseInt(k.split('-')[0], 10), mes = parseInt(k.split('-')[1], 10);
+    let e = GSHEETS_MESES.find(x => x.ano === ano && x.mes === mes);
+    if (!e) { e = { ano, mes }; GSHEETS_MESES.push(e); log.push(_mapaRotulo(e) + ': mês novo encontrado na planilha'); }
+    const j = (meses.JACOBINA || {})[k], i = (meses.IRECE || {})[k], s = (meses.SERRINHA || {})[k];
+    if (j) {
+      if (vazio(e.gidJacobina) || parseInt(e.gidJacobina, 10) !== j.gid) log.push(_mapaRotulo(e) + ' Jacobina → aba "' + j.titulo + '" (gid ' + j.gid + ')');
+      e.gidJacobina = j.gid; delete e.sheetJacobina;
+    }
+    if (i) {
+      if (vazio(e.gidIrece) || parseInt(e.gidIrece, 10) !== i.gid) log.push(_mapaRotulo(e) + ' Irecê → aba "' + i.titulo + '" (gid ' + i.gid + ')');
+      e.gidIrece = i.gid; delete e.sheetIrece;
+    }
+    if (s && ids.SERRINHA) {
+      const u = 'https://docs.google.com/spreadsheets/d/' + ids.SERRINHA + '/gviz/tq?tqx=out:csv&gid=' + s.gid;
+      if (e.urlSerrinha !== u) { log.push(_mapaRotulo(e) + ' Serrinha → aba "' + s.titulo + '" (gid ' + s.gid + ')'); e.urlSerrinha = u; }
+    }
+    e.daPlanilha = true;
+  });
+  GSHEETS_MESES.sort((a, b) => a.ano !== b.ano ? a.ano - b.ano : a.mes - b.mes);
+  return log;
+}
+// Depois de mexer na lista de meses: atualiza a tela e, se preciso, recarrega o mês.
+function mapaPosAtualizarMeses(assinaturaAntes) {
+  try { mapaInitMesBar(); } catch(e) {}
+  ['JACOBINA', 'IRECE', 'SERRINHA'].forEach(u => {
+    try { const url = gsheetsGetURL(u); if (u === 'SERRINHA' || /gid=\d+$/.test(url || '')) GSHEETS[u] = url; } catch(e) {}
+  });
+  try { if (document.getElementById('modal-meses-overlay')?.style.display === 'flex') mapaMMRenderLista(); } catch(e) {}
+  if (!mapaMesAtivo) return;   // o carregamento inicial ainda vai acontecer e já usa a lista nova
+  const agora = GSHEETS_MESES.find(e => e.ano === mapaMesAtivo.ano && e.mes === mapaMesAtivo.mes);
+  if (_mapaAssinatura(agora) !== assinaturaAntes) {
+    console.log('[mapa] a aba do mês aberto mudou na planilha — recarregando ' + _mapaRotulo(mapaMesAtivo));
+    mapaCarregarMes(mapaMesAtivo.ano, mapaMesAtivo.mes);
+    return;
+  }
+  if (window._mapaMesEscolhido) return;   // quem escolheu um mês na mão continua nele
+  const hoje = new Date(), lim = hoje.getFullYear() * 12 + hoje.getMonth() + 1;
+  let ultimo = null;
+  GSHEETS_MESES.forEach(e => {
+    const v = e.ano * 12 + e.mes;
+    const temAba = e.gidJacobina != null || e.gidIrece != null || e.urlSerrinha || e.sheetJacobina || e.sheetIrece;
+    if (v <= lim && temAba && (!ultimo || v > ultimo.ano * 12 + ultimo.mes)) ultimo = e;
+  });
+  if (ultimo && (ultimo.ano * 12 + ultimo.mes) > (mapaMesAtivo.ano * 12 + mapaMesAtivo.mes)) {
+    console.log('[mapa] mês novo na planilha — abrindo ' + _mapaRotulo(ultimo));
+    mapaCarregarMes(ultimo.ano, ultimo.mes);
+  }
+}
+let _mapaDescobrindo = null;
+async function mapaDescobrirAbas() {
+  if (_mapaDescobrindo) return _mapaDescobrindo;   // já tem uma verificação rodando
+  _mapaDescobrindo = (async () => {
+    const key = mapaSheetsApiKey();
+    if (!key) {
+      window._mapaDescobertaStatus = { ativo: false, quando: new Date().toISOString(), utds: [] };
+      window._mapaDescobertaOk = false;
+      mapaMMRenderAuto();
+      return false;
+    }
+    // Serrinha não tem ID fixo no código: usa a planilha do mês mais recente que tem link.
+    const serIds = [];
+    GSHEETS_MESES.slice().sort((a, b) => (b.ano * 12 + b.mes) - (a.ano * 12 + a.mes)).forEach(e => {
+      const id = mapaMMExtrairId(e.urlSerrinha);
+      if (id && serIds.indexOf(id) < 0) serIds.push(id);
+    });
+    const fontes = [
+      { utd: 'JACOBINA', nome: 'Jacobina', id: mapaMMExtrairId(GSHEETS_BASE.JACOBINA), principal: true },
+      { utd: 'IRECE',    nome: 'Irecê',    id: mapaMMExtrairId(GSHEETS_BASE.IRECE),    principal: true }
+    ];
+    serIds.slice(0, 3).forEach((id, n) => fontes.push({ utd: 'SERRINHA', nome: 'Serrinha', id, principal: n === 0 }));
+    const achados = { ids: { JACOBINA: fontes[0].id, IRECE: fontes[1].id, SERRINHA: serIds[0] || null }, gids: {}, meses: {} };
+    const status = [];
+    await Promise.all(fontes.map(async f => {
+      try {
+        const abas = await mapaListarAbas(f.id, key);
+        achados.gids[f.id] = abas.map(a => a.gid);
+        if (f.principal) {
+          achados.meses[f.utd] = await mapaMesesDasAbas(f.id, abas);
+          status.push({ nome: f.nome, ok: true, meses: Object.keys(achados.meses[f.utd]).length, abas: abas.length });
+        }
+      } catch(e) {
+        const motivo = e.motivo || (e.name === 'AbortError' ? 'o Google demorou mais de 10 s para responder' : 'sem conexão com o Google (' + e.message + ')');
+        if (f.principal) status.push({ nome: f.nome, ok: false, erro: motivo });
+        console.warn('[mapa] não leu a lista de abas de ' + f.nome + ': ' + motivo);
+      }
+    }));
+    const ordem = ['Jacobina', 'Irecê', 'Serrinha'];
+    status.sort((a, b) => ordem.indexOf(a.nome) - ordem.indexOf(b.nome));
+    const ativo = mapaMesAtivo ? GSHEETS_MESES.find(e => e.ano === mapaMesAtivo.ano && e.mes === mapaMesAtivo.mes) : null;
+    const antes = _mapaAssinatura(ativo);
+    const log = mapaAplicarAbas(achados);
+    if (log.length) console.log('[mapa] meses ajustados pela lista de abas:\n  ' + log.join('\n  '));
+    window._mapaDescobertaOk = status.some(u => u.ok);
+    window._mapaDescobertaStatus = { ativo: true, quando: new Date().toISOString(), utds: status };
+    // Guarda para a próxima visita abrir já certo. Planilha que falhou agora mantém o que se sabia dela.
+    try {
+      const ant = JSON.parse(localStorage.getItem('mariua_meses_planilha') || 'null');
+      if (ant && ant.achados) {
+        Object.keys(ant.achados.gids || {}).forEach(id => { if (!achados.gids[id]) achados.gids[id] = ant.achados.gids[id]; });
+        Object.keys(ant.achados.meses || {}).forEach(u => { if (!achados.meses[u]) achados.meses[u] = ant.achados.meses[u]; });
+      }
+      localStorage.setItem('mariua_meses_planilha', JSON.stringify({ ts: Date.now(), achados }));
+    } catch(e) {}
+    mapaPosAtualizarMeses(antes);
+    mapaMMRenderAuto();
+    return window._mapaDescobertaOk;
+  })();
+  try { return await _mapaDescobrindo; } finally { _mapaDescobrindo = null; }
+}
+window.mapaDescobrirAbas = mapaDescobrirAbas;
+// Clique num mês da barra: a partir daí o mapa não troca de mês sozinho.
+window.mapaEscolherMes = function(ano, mes) {
+  window._mapaMesEscolhido = true;
+  mapaCarregarMes(ano, mes);
+};
+function mapaMMRenderAuto() {
+  const el = document.getElementById('modal-meses-auto');
+  if (!el) return;
+  const st = window._mapaDescobertaStatus;
+  const caixa = (bg, borda) => 'background:' + bg + ';border:1.5px solid ' + borda + ';border-radius:12px;padding:12px 14px;margin-bottom:18px;font-size:0.78rem;color:#2d3748;line-height:1.45;';
+  if (!st) { el.innerHTML = ''; return; }
+  if (!st.ativo) {
+    el.innerHTML = '<div style="' + caixa('#fffaf0', '#fbd38d') + '"><b>Leitura automática das abas: desligada.</b><br>'
+      + 'Preencha <code>MAPA_SHEETS_API_KEY</code> no mapa.html (ou <code>window.GSHEETS_API_KEY</code> no config.js) '
+      + 'para os meses virem direto da planilha. Enquanto isso, vale o cadastro abaixo.</div>';
+    return;
+  }
+  const linhas = st.utds.map(u => u.ok
+    ? '<div><b>' + esc(u.nome) + ':</b> ' + u.meses + (u.meses === 1 ? ' mês encontrado' : ' meses encontrados') + ' em ' + u.abas + ' abas</div>'
+    : '<div style="color:#c53030;"><b>' + esc(u.nome) + ':</b> ' + esc(u.erro) + '</div>').join('');
+  const erro = st.utds.some(u => !u.ok);
+  el.innerHTML = '<div style="' + caixa(erro ? '#fff5f5' : '#f0fff4', erro ? '#feb2b2' : '#9ae6b4') + '">'
+    + '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px;">'
+    + '<b>Meses lidos direto da planilha</b>'
+    + '<button onclick="mapaMMVerificarAgora(this)" style="padding:5px 12px;border-radius:8px;border:1.5px solid #cbd5e0;background:#fff;'
+    + 'font-family:\'Barlow\',sans-serif;font-size:0.72rem;font-weight:800;color:#4a5568;cursor:pointer;white-space:nowrap;">Verificar agora</button></div>'
+    + linhas
+    + '<div style="color:#888;font-size:0.7rem;margin-top:6px;">Última verificação: ' + mapaMesQuando(st.quando)
+    + '. Abas novas entram sozinhas; o cadastro abaixo só é preciso para aba cujo nome não diz o mês.</div>'
+    + '</div>';
+}
+window.mapaMMVerificarAgora = function(btn) {
+  if (btn) { btn.disabled = true; btn.textContent = 'Verificando...'; }
+  mapaDescobrirAbas().catch(() => {}).then(() => { mapaMMRenderAuto(); mapaMMRenderLista(); });
+};
+// Abre já com a lista de abas da última visita; a verificação de agora corrige o que mudou.
+(function() {
+  if (!mapaSheetsApiKey()) return;
+  try {
+    const c = JSON.parse(localStorage.getItem('mariua_meses_planilha') || 'null');
+    if (c && c.achados) mapaAplicarAbas(c.achados);
+  } catch(e) {}
+})();
+window._mapaDescoberta = mapaDescobrirAbas().catch(e => { console.warn('[mapa] verificação das abas falhou:', e); return false; });
+setInterval(() => { mapaDescobrirAbas().catch(() => {}); }, 10 * 60 * 1000);   // aba nova entra em até 10 min
 
 // ── MODAL: GERENCIAR MESES ────────────────────────────────────────────────
 function mapaMMExtrairGid(url) {
@@ -5012,8 +5421,10 @@ function mapaMMPreview() {
   }
 }
 function mapaMMRenderLista() {
+  mapaMMRenderAuto();
   const lista = document.getElementById('modal-meses-lista');
   if (!lista) return;
+  const _gidTxt = (g, nome) => (g !== null && g !== undefined && g !== '') ? g : (nome ? '"' + esc(nome) + '"' : '—');
   const MESES_NOME = ['','Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
   // Meses fixos (built-in) — fonte de verdade para distinguir fixo vs adicionado
   const fixos = [
@@ -5034,10 +5445,10 @@ function mapaMMRenderLista() {
     row.innerHTML = `
       <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:0;">
         <span style="font-size:0.85rem;font-weight:800;color:${isFixo?'#2d3748':'#553c9a'};">📅 ${MESES_NOME[e.mes]} ${e.ano}</span>
-        ${isFixo ? '<span style="font-size:0.6rem;font-weight:800;background:#e2e8f0;color:#888;padding:2px 8px;border-radius:10px;text-transform:uppercase;letter-spacing:1px;">Padrão</span>' : '<span style="font-size:0.6rem;font-weight:800;background:#e9d8fd;color:#6b46c1;padding:2px 8px;border-radius:10px;text-transform:uppercase;letter-spacing:1px;">Adicionado</span>'}
+        ${e.daPlanilha ? '<span style="font-size:0.6rem;font-weight:800;background:#c6f6d5;color:#276749;padding:2px 8px;border-radius:10px;text-transform:uppercase;letter-spacing:1px;">Da planilha</span>' : isFixo ? '<span style="font-size:0.6rem;font-weight:800;background:#e2e8f0;color:#888;padding:2px 8px;border-radius:10px;text-transform:uppercase;letter-spacing:1px;">Padrão</span>' : '<span style="font-size:0.6rem;font-weight:800;background:#e9d8fd;color:#6b46c1;padding:2px 8px;border-radius:10px;text-transform:uppercase;letter-spacing:1px;">Adicionado</span>'}
       </div>
-      <div style="font-size:0.65rem;color:#888;font-weight:700;white-space:nowrap;">JAC: ${e.gidJacobina} · IRC: ${e.gidIrece}${e.urlSerrinha ? ' · <span style="color:#553c9a;">SER ✔</span>' : ''}</div>
-      ${!isFixo ? `<button onclick="mapaMMRemover(${e.ano},${e.mes})" title="Remover" style="background:#fde8e8;color:#c53030;border:none;border-radius:7px;width:28px;height:28px;cursor:pointer;font-size:0.9rem;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">✕</button>` : ''}
+      <div style="font-size:0.65rem;color:#888;font-weight:700;white-space:nowrap;">JAC: ${_gidTxt(e.gidJacobina, e.sheetJacobina)} · IRC: ${_gidTxt(e.gidIrece, e.sheetIrece)}${e.urlSerrinha ? ' · <span style="color:#553c9a;">SER ✔</span>' : ''}</div>
+      ${!isFixo && !e.daPlanilha ? `<button onclick="mapaMMRemover(${e.ano},${e.mes})" title="Remover" style="background:#fde8e8;color:#c53030;border:none;border-radius:7px;width:28px;height:28px;cursor:pointer;font-size:0.9rem;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">✕</button>` : ''}
     `;
     lista.appendChild(row);
   });
@@ -5096,11 +5507,20 @@ function mapaMMSalvar() {
     erro.textContent = 'O link de Serrinha não tem o formato esperado. Cole a URL completa da aba (com /spreadsheets/d/… e #gid=…).'; erro.style.display='block'; return;
   }
   const existente = GSHEETS_MESES.find(e => e.ano===ano && e.mes===mes);
-  // Mes ja cadastrado: aceita se o objetivo for so acrescentar Serrinha a ele.
-  if (existente && !(uSer && !existente.urlSerrinha)) {
-    erro.textContent = existente.urlSerrinha
-      ? 'Este mês já está cadastrado e já tem Serrinha.'
-      : 'Este mês já está cadastrado! Para acrescentar Serrinha a ele, preencha o campo de Serrinha.';
+  // Mês já cadastrado: aceita completar o que falta nele (uma UTD sem aba, ou Serrinha).
+  const _vz = g => g === null || g === undefined || g === '';
+  const completaJac = !!existente && gJac != null && _vz(existente.gidJacobina);
+  const completaIrc = !!existente && gIrc != null && _vz(existente.gidIrece);
+  const completaSer = !!existente && !!uSer && !existente.urlSerrinha;
+  if (existente && !completaJac && !completaIrc && !completaSer) {
+    const falta = [
+      _vz(existente.gidJacobina) && !existente.sheetJacobina ? 'Jacobina' : null,
+      _vz(existente.gidIrece) && !existente.sheetIrece ? 'Irecê' : null,
+      !existente.urlSerrinha ? 'Serrinha' : null
+    ].filter(Boolean);
+    erro.textContent = falta.length
+      ? 'Este mês já está cadastrado. Para completá-lo, cole só o link de: ' + falta.join(', ') + '.'
+      : 'Este mês já está cadastrado e completo.';
     erro.style.display='block'; return;
   }
   if (!existente) {
@@ -5109,7 +5529,10 @@ function mapaMMSalvar() {
   }
   erro.style.display = 'none';
   const nova = existente
-    ? { ...existente, urlSerrinha: uSer }
+    ? { ...existente,
+        ...(completaJac ? { gidJacobina: gJac } : {}),
+        ...(completaIrc ? { gidIrece: gIrc } : {}),
+        ...(completaSer ? { urlSerrinha: uSer } : {}) }
     : { ano, mes, gidJacobina: gJac, gidIrece: gIrc, ...(uSer ? { urlSerrinha: uSer } : {}) };
   const fixos = [{ano:2026,mes:1},{ano:2026,mes:2},{ano:2026,mes:3},{ano:2026,mes:4},{ano:2026,mes:5}];
   // Desabilita botão e mostra progresso
@@ -5496,11 +5919,13 @@ const mesBar = document.getElementById('mapa-mes-bar');
 const mesWrapper = document.getElementById('mapa-mes-bar-wrapper');
 if (mesBar && GSHEETS_MESES && GSHEETS_MESES.length > 0) {
   if (mesWrapper) mesWrapper.style.display = 'flex';
-  mesBar.innerHTML = GSHEETS_MESES.map(entry => {
+  const _limR = new Date().getFullYear()*12 + new Date().getMonth() + 1;
+  const _visR = GSHEETS_MESES.filter(e => (e.ano*12 + e.mes) <= _limR);
+  mesBar.innerHTML = (_visR.length ? _visR : GSHEETS_MESES).map(entry => {
     const label = MESES_PT[entry.mes] + '/' + String(entry.ano).slice(-2);
     const isActive = mapaMesAtivo && mapaMesAtivo.ano===entry.ano && mapaMesAtivo.mes===entry.mes;
     return `<button class="mapa-mes-btn" data-ano="${entry.ano}" data-mesnum="${entry.mes}"
-      onclick="mapaCarregarMes(${entry.ano},${entry.mes})"
+      onclick="mapaEscolherMes(${entry.ano},${entry.mes})"
       style="padding:5px 16px;border-radius:20px;border:2px solid ${isActive?'#6b46c1':'#e2e8f0'};background:${isActive?'#6b46c1':'#fff'};font-family:'Barlow',sans-serif;font-size:0.78rem;font-weight:800;cursor:pointer;color:${isActive?'#fff':'#555'};transition:all 0.15s;white-space:nowrap;box-shadow:${isActive?'0 2px 8px rgba(107,70,193,0.25)':'none'};">
       📅 ${label}</button>`;
   }).join('');
