@@ -910,7 +910,7 @@ function mapaCarregarUltimoMes() {
   // prefere o mês mais recente que NÃO seja futuro (evita abrir num mês vazio ainda por vir)
   for (const e of GSHEETS_MESES) {
     const v = e.ano*12 + e.mes;
-    if (v <= _atual && (!ultimo || v > (ultimo.ano*12 + ultimo.mes))) ultimo = e;
+    if (v <= _atual && mapaMesTemAba(e) && (!ultimo || v > (ultimo.ano*12 + ultimo.mes))) ultimo = e;
   }
   // se todos forem futuros, cai pro mais recente da lista
   if (!ultimo) { ultimo = GSHEETS_MESES[0]; for (const e of GSHEETS_MESES) if ((e.ano*12 + e.mes) > (ultimo.ano*12 + ultimo.mes)) ultimo = e; }
@@ -4714,8 +4714,9 @@ function mapaCarregarMes(ano, mes) {
   document.querySelectorAll('.mapa-mes-btn').forEach(b => {
     const on = parseInt(b.dataset.ano)===ano && parseInt(b.dataset.mesnum)===mes;
     b.style.background = on ? '#6b46c1' : '#fff';
-    b.style.color = on ? '#fff' : '#555';
-    b.style.borderColor = on ? '#6b46c1' : '#e2e8f0';
+    const fut = b.dataset.futuro === '1';
+    b.style.color = on ? '#fff' : (fut ? '#6b46c1' : '#555');
+    b.style.borderColor = on ? '#6b46c1' : (fut ? '#b794f4' : '#e2e8f0');
     b.style.boxShadow = on ? '0 2px 8px rgba(107,70,193,0.25)' : 'none';
   });
   const label = (MESES_PT[mes]||'?')+'/'+String(ano).slice(-2);
@@ -4939,22 +4940,36 @@ window.mapaVoltarAoBanco = function() {
 window.mapaCarregarMes = mapaCarregarMes;
 
 // ── Renderiza botões de mês IMEDIATAMENTE, sem esperar dados ──────────────
+// Mês que tem aba em pelo menos uma planilha (Jacobina, Irecê ou Serrinha).
+function mapaMesTemAba(e) {
+  const t = g => g !== null && g !== undefined && g !== '';
+  return !!e && (t(e.gidJacobina) || t(e.gidIrece) || !!e.sheetJacobina || !!e.sheetIrece || !!e.urlSerrinha);
+}
+// Estilo do botão de mês. Mês que ainda não começou fica com borda tracejada.
+function mapaEstiloBotaoMes(entry, isActive, padding) {
+  const hoje = new Date();
+  const futuro = (entry.ano*12 + entry.mes) > (hoje.getFullYear()*12 + hoje.getMonth() + 1);
+  const borda = isActive ? '#6b46c1' : (futuro ? '#b794f4' : '#e2e8f0');
+  const cor   = isActive ? '#fff' : (futuro ? '#6b46c1' : '#555');
+  return { futuro, style: `padding:${padding};border-radius:20px;border:2px ${futuro?'dashed':'solid'} ${borda};background:${isActive?'#6b46c1':'#fff'};font-family:'Barlow',sans-serif;font-size:0.78rem;font-weight:800;cursor:pointer;color:${cor};transition:all 0.15s;white-space:nowrap;box-shadow:${isActive?'0 2px 8px rgba(107,70,193,0.25)':'none'};` };
+}
 function mapaInitMesBar() {
   const mesBar = document.getElementById('mapa-mes-bar');
   const mesWrapper = document.getElementById('mapa-mes-bar-wrapper');
   if (!mesBar || !GSHEETS_MESES || !GSHEETS_MESES.length) return;
   mesWrapper.style.display = 'flex';
   const _now = new Date(); const _atual = _now.getFullYear()*12 + (_now.getMonth()+1);
-  // Não exibe meses futuros (aba criada antes do mês chegar / ainda vazia).
-  const _mesesVis = GSHEETS_MESES.filter(e => (e.ano*12 + e.mes) <= _atual);
+  // Mostra todo mês que tem aba na planilha, inclusive os que ainda vão começar.
+  const _mesesVis = GSHEETS_MESES.filter(mapaMesTemAba);
   mesBar.innerHTML = (_mesesVis.length ? _mesesVis : GSHEETS_MESES).map(entry => {
     const label = (MESES_PT[entry.mes]||'?') + '/' + String(entry.ano).slice(-2);
     const now = new Date();
     const isCurrent = entry.ano === now.getFullYear() && entry.mes === now.getMonth() + 1;
     const isActive = mapaMesAtivo ? (mapaMesAtivo.ano===entry.ano && mapaMesAtivo.mes===entry.mes) : isCurrent;
-    return `<button class="mapa-mes-btn" data-ano="${entry.ano}" data-mesnum="${entry.mes}"
-      onclick="mapaEscolherMes(${entry.ano},${entry.mes})"
-      style="padding:6px 18px;border-radius:20px;border:2px solid ${isActive?'#6b46c1':'#e2e8f0'};background:${isActive?'#6b46c1':'#fff'};font-family:'Barlow',sans-serif;font-size:0.78rem;font-weight:800;cursor:pointer;color:${isActive?'#fff':'#555'};transition:all 0.15s;white-space:nowrap;box-shadow:${isActive?'0 2px 8px rgba(107,70,193,0.25)':'none'};">
+    const est = mapaEstiloBotaoMes(entry, isActive, '6px 18px');
+    return `<button class="mapa-mes-btn" data-ano="${entry.ano}" data-mesnum="${entry.mes}" data-futuro="${est.futuro?1:0}"
+      onclick="mapaEscolherMes(${entry.ano},${entry.mes})"${est.futuro ? ' title="Mês ainda não começou"' : ''}
+      style="${est.style}">
       📅 ${label}</button>`;
   }).join('');
 }
@@ -5919,14 +5934,14 @@ const mesBar = document.getElementById('mapa-mes-bar');
 const mesWrapper = document.getElementById('mapa-mes-bar-wrapper');
 if (mesBar && GSHEETS_MESES && GSHEETS_MESES.length > 0) {
   if (mesWrapper) mesWrapper.style.display = 'flex';
-  const _limR = new Date().getFullYear()*12 + new Date().getMonth() + 1;
-  const _visR = GSHEETS_MESES.filter(e => (e.ano*12 + e.mes) <= _limR);
+  const _visR = GSHEETS_MESES.filter(mapaMesTemAba);   // todo mês com aba, inclusive futuro
   mesBar.innerHTML = (_visR.length ? _visR : GSHEETS_MESES).map(entry => {
     const label = MESES_PT[entry.mes] + '/' + String(entry.ano).slice(-2);
     const isActive = mapaMesAtivo && mapaMesAtivo.ano===entry.ano && mapaMesAtivo.mes===entry.mes;
-    return `<button class="mapa-mes-btn" data-ano="${entry.ano}" data-mesnum="${entry.mes}"
-      onclick="mapaEscolherMes(${entry.ano},${entry.mes})"
-      style="padding:5px 16px;border-radius:20px;border:2px solid ${isActive?'#6b46c1':'#e2e8f0'};background:${isActive?'#6b46c1':'#fff'};font-family:'Barlow',sans-serif;font-size:0.78rem;font-weight:800;cursor:pointer;color:${isActive?'#fff':'#555'};transition:all 0.15s;white-space:nowrap;box-shadow:${isActive?'0 2px 8px rgba(107,70,193,0.25)':'none'};">
+    const est = mapaEstiloBotaoMes(entry, isActive, '5px 16px');
+    return `<button class="mapa-mes-btn" data-ano="${entry.ano}" data-mesnum="${entry.mes}" data-futuro="${est.futuro?1:0}"
+      onclick="mapaEscolherMes(${entry.ano},${entry.mes})"${est.futuro ? ' title="Mês ainda não começou"' : ''}
+      style="${est.style}">
       📅 ${label}</button>`;
   }).join('');
 } else if (mesWrapper) { mesWrapper.style.display = 'none'; }
