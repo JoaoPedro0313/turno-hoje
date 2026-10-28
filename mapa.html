@@ -3843,8 +3843,8 @@ if (_ignoradas) console.warn('[mapa] '+(utdLabel||'?')+': '+_ignoradas+' linha(s
 // que ficam ANTES do cabeçalho (PEP OBRA). Usado para validar se a aba bate com o mês.
 try {
   const topo = rows.slice(0, headerIdx + 1).map(r => (r||[]).join(' ')).join(' ').toUpperCase();
-  const mm = topo.match(/\b(JAN|FEV|MAR|ABR|MAI|JUN|JUL|AGO|SET|OUT|NOV|DEZ)\s*\/\s*(\d{2})\b/);
-  data._mesPlanilha = mm ? (mm[1] + '/' + mm[2]) : null;
+  const mm = topo.match(/\b(JAN|FEV|MAR|ABR|MAI|JUN|JUL|AGO|SET|OUT|NOV|DEZ)\s*\/\s*(\d{4}|\d{2})\b/);
+  data._mesPlanilha = mm ? (mm[1] + '/' + mm[2].slice(-2)) : null;   // aceita "OUT/2026"
 } catch(e) { data._mesPlanilha = null; }
 return data;
 }
@@ -4427,8 +4427,8 @@ const MESES_ORDER = {'JAN':1,'FEV':2,'MAR':3,'ABR':4,'MAI':5,'JUN':6,'JUL':7,'AG
 // Lê o rótulo de mês declarado no topo de uma aba (ex.: "JUN/26"), se existir.
 function mapaMesDaPlanilha(csvText) {
   const m = String(csvText || '').toUpperCase()
-    .match(/\b(JAN|FEV|MAR|ABR|MAI|JUN|JUL|AGO|SET|OUT|NOV|DEZ)\s*[\/.\-]\s*(\d{2})\b/);
-  return m ? (m[1] + '/' + m[2]) : null;
+    .match(/\b(JAN|FEV|MAR|ABR|MAI|JUN|JUL|AGO|SET|OUT|NOV|DEZ)\s*[\/.\-]\s*(\d{4}|\d{2})\b/);
+  return m ? (m[1] + '/' + m[2].slice(-2)) : null;   // "OUT/2026" e "OUT/26" viram "OUT/26"
 }
 // Extrai as colunas PES (percentuais de execução) de uma obra da planilha.
 function mapaPesDeObra(obj) {
