@@ -434,7 +434,7 @@ try{if(localStorage.getItem("mariua_darkmode")==="1")document.body.classList.add
      substitui os serviços que vierem no arquivo (as atividades podem mudar).
    ===================================================================== */
 var OC_DB=null;                 // { 'AAAA-MM': {comp, servs:[...], atualizado, arquivo} }
-var OC_F={mes:'', base:'', grupo:'', sit:'', sup:'', modo:'oc', agrupar:'eq', zeros:true};
+var OC_F={mes:'', base:'', grupo:'', sit:'', sup:'', modo:'oc', agrupar:'eq'};
 var OC_CAD=null;                // cadastro de equipes preparado: {lista, idx, atualizado, por, fonte}
 var OC_CAD_CACHE={};            // casamento equipe do GPM -> equipe do cadastro
 var OC_LISTA_SUP=[], OC_SUP_NOME={};
@@ -632,19 +632,6 @@ function ocAgregar(lista, todos, semFiltroBase){
     if(e.vistos[chave]) return;
     e.vistos[chave]=1; contadas[s.id]=1; e.oc++; T.oc++; distintas[s.oc]=1;
   });
-  // equipes do cadastro sem nenhum serviço no recorte (só nas bases do apontamento)
-  if(OC_CAD&&OC_F.zeros&&!OC_F.grupo&&!OC_F.sit&&todos){
-    var bd=ocBasesDosDados(todos);
-    OC_CAD.lista.forEach(function(q){
-      var tk=ocCadChave(q), b=q.base;
-      if(cadVistos[tk]||!bd[b]) return;
-      if(OC_F.base&&!semFiltroBase&&b!==OC_F.base) return;
-      if(OC_F.sup&&ocSupKey(q.sup)!==OC_F.sup) return;
-      var k=b+'|'+tk; if(eqs[k]) return;
-      eqs[k]={k:k, eq:ocCadNome(q), cad:q, base:b, baseEq:b, nomesGPM:{}, grupos:{}, sups:{}, oc:0, serv:0, nexe:0, ap:0, ft:0, semValor:0, vistos:{}, servs:[], zero:true};
-      if(q.sup) eqs[k].sups[q.sup]=1;
-    });
-  }
   var bases={};
   Object.keys(eqs).forEach(function(k){
     var e=eqs[k];
@@ -661,7 +648,6 @@ function ocAgregar(lista, todos, semFiltroBase){
     b.ap=ocR2(b.ap); b.ft=ocR2(b.ft);
     b.eqs.sort(function(x,y){ return (y.oc-x.oc)||(y.ap-x.ap)||(x.eq<y.eq?-1:1); });
     b.ativas=b.eqs.filter(function(e){ return e.oc>0; }).length;
-    b.zeros=b.eqs.filter(function(e){ return e.zero; }).length;
   });
   lb.sort(function(x,y){ return (y.ap-x.ap)||(y.oc-x.oc); });
   T.ap=ocR2(T.ap); T.ft=ocR2(T.ft); T.apSemValor=ocR2(T.apSemValor);
@@ -768,9 +754,6 @@ function ocFiltros(todos){
   h+=bloco('Base de cada equipe','agrupar','<div class="fg-flist">'
     +chip(OC_F.agrupar==='eq','Base do cadastro',"ocOpcao('agrupar','eq')",'','A base onde a equipe está no Cadastro de Equipes')
     +chip(OC_F.agrupar==='cs','Centro de serviço do GPM',"ocOpcao('agrupar','cs')",'','O centro de serviço de cada atendimento no GPM')+'</div>',true);
-  if(OC_CAD&&OC_CAD.lista.length) h+=bloco('Equipes sem ocorrência','zeros','<div class="fg-fgrid">'
-    +chip(OC_F.zeros,'Mostrar',"ocOpcao('zeros',true)",'','Equipes do cadastro que não aparecem no apontamento do período')
-    +chip(!OC_F.zeros,'Ocultar',"ocOpcao('zeros',false)")+'</div>',true);
   box.innerHTML=h;
 }
 function ocFiltro(chave,valor){ OC_F[chave]=(OC_F[chave]===valor?'':valor); ocRender(); }
