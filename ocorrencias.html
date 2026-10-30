@@ -606,7 +606,7 @@ function ocB(s){ return OC_F.agrupar==='cs'?s.baseCs:s.baseEq; }
 function ocPassa(s, sem){
   if(OC_F.mes && sem!=='mes' && s.d.slice(0,7)!==OC_F.mes) return false;
   if(OC_F.base && sem!=='base' && ocB(s)!==OC_F.base) return false;
-  if(OC_F.sup && s.supK!==OC_F.sup) return false;
+  if(OC_F.sup && sem!=='sup' && s.supK!==OC_F.sup) return false;
   if(OC_F.grupo && s.gk!==OC_F.grupo) return false;
   if(OC_F.sit && s.sit!==OC_F.sit) return false;
   return true;
@@ -676,9 +676,9 @@ function ocRender(){
   ocStatusLinha(todos);
   OC_LISTA_GRP=Array.from(new Set(todos.map(function(s){ return s.gk; }))).sort();
   OC_LISTA_SIT=Array.from(new Set(todos.map(function(s){ return s.sit; }).filter(Boolean))).sort();
-  var sups={}, bd=ocBasesDosDados(todos);
-  todos.forEach(function(s){ if(s.supK) sups[s.supK]=1; });
-  if(OC_CAD) OC_CAD.lista.forEach(function(q){ if(q.sup&&bd[q.base]) sups[ocSupKey(q.sup)]=1; });
+  // só supervisores com serviço no recorte (mês, base, grupo); quem não teve ocorrência não aparece
+  var sups={};
+  todos.forEach(function(s){ if(s.supK&&ocPassa(s,'sup')) sups[s.supK]=1; });
   OC_LISTA_SUP=Object.keys(sups).sort(function(a,b){ return OC_SUP_NOME[a]<OC_SUP_NOME[b]?-1:1; });
   if(OC_F.sup&&OC_LISTA_SUP.indexOf(OC_F.sup)<0) OC_F.sup='';
   if(OC_F.grupo&&OC_LISTA_GRP.indexOf(OC_F.grupo)<0) OC_F.grupo='';
