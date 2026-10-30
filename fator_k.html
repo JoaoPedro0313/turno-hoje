@@ -268,6 +268,30 @@ table.oc-dtbl{width:100%;min-width:720px;border-collapse:collapse;background:var
 .fk-nota{margin:12px 2px 0;font-size:.82rem;color:var(--txt2);font-weight:600}
 .oc-kteste{margin:12px 12px 0;max-width:none}
 
+/* mensagem de importação (os botões ficam no perfil) */
+.oc-msg-solo{margin-top:0;background:var(--card);border-radius:10px;padding:10px 14px;box-shadow:var(--shadow)}
+.oc-vazio-btn{margin-top:12px}
+
+/* fator K: tabela base × tipo de equipe */
+.oc-ktab{margin:14px 0 12px;display:flex;flex-direction:column;gap:10px}
+.oc-krow{display:grid;grid-template-columns:minmax(150px,1fr) minmax(0,1fr) minmax(0,1fr);gap:8px 14px;align-items:start}
+.oc-krow.cab{font-size:.64rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--txt2);padding-bottom:6px;border-bottom:1px solid var(--line)}
+.oc-kbase{font-size:.9rem;font-weight:800;color:var(--txt);display:flex;align-items:center;min-height:40px}
+.oc-kcel{display:flex;flex-direction:column;gap:3px;text-transform:none;letter-spacing:0}
+.oc-kcel-t{display:none;font-size:.7rem;font-weight:800;color:var(--txt2)}
+.oc-kcel small{font-size:.7rem;color:var(--txt2);font-weight:600}
+.oc-ktab .inp{display:flex;align-items:center;border:1.5px solid var(--chip-bd);border-radius:9px;background:var(--card);padding:0 10px}
+.oc-ktab .inp > span{color:var(--txt2);font-weight:800;font-size:.85rem}
+.oc-ktab .inp input{border:0;margin:0;padding:9px 8px;font-size:.95rem;font-family:inherit;background:transparent;color:var(--txt);font-weight:700;font-variant-numeric:tabular-nums;width:100%;outline:none;box-shadow:none}
+.oc-ktab .inp input:disabled{color:var(--txt2);cursor:not-allowed}
+.oc-ktab .inp:focus-within{border-color:#0d7377;box-shadow:0 0 0 3px rgba(13,115,119,.2)}
+@media(max-width:640px){
+  .oc-krow{grid-template-columns:1fr 1fr}
+  .oc-kbase{grid-column:1/-1;min-height:0}
+  .oc-krow.cab{display:none}
+  .oc-kcel-t{display:block}
+}
+
 </style>
 <style id="dark-mode-css" data-tema="proprio">
 /* tema escuro próprio desta tela: o nav.js liga body.dark e cuida só da barra do topo e do menu */
@@ -368,7 +392,7 @@ try{if(localStorage.getItem("mariua_darkmode")==="1")document.body.classList.add
 <div class="page-hdr">
   <div>
     <h2>Fator K</h2>
-    <p>Multiplicador do contrato de manutenção em cada base. Só gestor altera. O valor salvo aqui entra no faturado da tela Obras › Ocorrências.</p>
+    <p>Multiplicador do contrato de manutenção em cada base, com um valor para equipes de Linha Viva e outro para Linha Morta. Só gestor altera. O valor salvo aqui entra no faturado da tela Obras › Ocorrências.</p>
   </div>
 </div>
 <div class="oc-wrap"><div class="fk-wrap">
@@ -399,15 +423,16 @@ try{if(localStorage.getItem("mariua_darkmode")==="1")document.body.classList.add
      (ADAILTON-FSA), depois pelo nº da equipe no GPM (cod_equipe) e por fim pelo encarregado.
    - Base = base da equipe no cadastro (ou, se preferir, o centro de serviço do GPM).
    - Ocorrência atendida = serviço com retorno EXECUTADO; a OC conta uma vez por equipe.
-   - Faturado = tudo o que foi apontado: quantidade × valor unitário × fator K da base.
-     O GPM traz o mesmo preço unitário em todas as bases; o K de cada base fica em
-     turno_data.ocorr_fator_k e vale para o centro de serviço do atendimento (só manutenção).
+   - Faturado = tudo o que foi apontado: quantidade × valor unitário × fator K.
+     O GPM traz o mesmo preço unitário em todas as bases. O K (turno_data.ocorr_fator_k) é por
+     base e por tipo de equipe: Linha Viva (LV) tem um, Linha Morta (LM) outro. Vale a base do
+     centro de serviço do atendimento e o tipo da equipe no cadastro (só manutenção).
      (A coluna valor_total do GPM fica zerada enquanto o serviço não é complementado, por isso não é usada.)
    - Gravação no turno_data, uma linha por mês (ocorr_fat_AAAA-MM). Importar de novo
      substitui os serviços que vierem no arquivo (as atividades podem mudar).
    ===================================================================== */
 var OC_DB=null;                 // { 'AAAA-MM': {comp, servs:[...], atualizado, arquivo} }
-var OC_F={mes:'', base:'', grupo:'', sit:'', sup:'', modo:'oc', agrupar:'eq', zeros:true};
+var OC_F={mes:'', base:'', grupo:'', sit:'', sup:'', modo:'oc', agrupar:'eq'};
 var OC_CAD=null;                // cadastro de equipes preparado: {lista, idx, atualizado, por, fonte}
 var OC_CAD_CACHE={};            // casamento equipe do GPM -> equipe do cadastro
 var OC_LISTA_SUP=[], OC_SUP_NOME={};
@@ -530,7 +555,15 @@ function ocBasesDosDados(todos){ var b={}; todos.forEach(function(s){ b[s.baseEq
 function ocMsg(t, tipo){ var m=$('oc-msg'); if(!m) return; m.textContent=t||''; m.className='oc-msg'+(tipo?' '+tipo:''); clearTimeout(m._t); if(t&&tipo==='ok') m._t=setTimeout(function(){ m.textContent=''; },8000); }
 
 // ---------- fator K por base ----------
-function ocKBase(b){ var k=OC_K&&OC_K.k&&OC_K.k[b]; k=Number(k); return k>0?k:null; }
+var OC_KTIPOS=[{id:'lm', nome:'Linha Morta', sigla:'LM'},{id:'lv', nome:'Linha Viva', sigla:'LV'}];
+function ocKSigla(tp){ return tp==='lv'?'LV':'LM'; }
+// LV quando o tipo fala em Linha Viva; Linha Morta, Manutenção Pesada, Leve etc. contam como LM
+function ocKTipoDe(txt){ return ocSemAcento(txt).indexOf('VIVA')>=0?'lv':'lm'; }
+// K da base para o tipo de equipe; um K único salvo antes (formato antigo) vale para os dois tipos
+function ocKBase(b,tp){
+  var t=OC_K&&OC_K.kt&&OC_K.kt[b]&&Number(OC_K.kt[b][tp]); if(t>0) return t;
+  var k=OC_K&&OC_K.k&&Number(OC_K.k[b]); return k>0?k:null;
+}
 function ocEhManut(s){ var t=ocSemAcento(s.ts); return !t||t.indexOf('MANUTEN')>=0; }
 function ocFmtK(n){ return Number(n).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:4}); }
 // valor de uma linha de atividade: quantidade × unitário × K, arredondado no centavo
@@ -550,12 +583,17 @@ async function ocIniciar(recarregar){
 
 // todos os serviços, já somados e em ordem de data (a 1ª visita da equipe à OC é a que conta)
 function ocServicos(){
-  var out=[], id=0;
+  var out=[], id=0, grpEq={};
+  Object.keys(OC_DB||{}).forEach(function(c){ ((OC_DB[c]&&OC_DB[c].servs)||[]).forEach(function(s){
+    var e=String(s.eq||'').toUpperCase().trim(), g=grpEq[e]||(grpEq[e]={}); g[s.grp||'']=(g[s.grp||'']||0)+1; }); });
+  var grpPrinc=function(e){ var g=grpEq[e]||{}; return Object.keys(g).sort(function(a,b){ return g[b]-g[a]; })[0]||''; };
   Object.keys(OC_DB||{}).sort().forEach(function(c){
     ((OC_DB[c]&&OC_DB[c].servs)||[]).forEach(function(s){
       var eq=String(s.eq||'').toUpperCase().trim()||'(SEM EQUIPE)';
       var sufixo0=ocBaseEquipe(eq), centro0=ocBaseCentro(s.cs), bK=centro0||sufixo0||'sb';
-      var manut=ocEhManut(s), kb=manut?ocKBase(bK):null, kUsado=manut?(kb||1):1;
+      var cad0=ocCadAchar(eq, String(s.ce||'').trim(), s.resp||'', sufixo0||centro0);
+      var kTipo=ocKTipoDe((cad0&&cad0.tipo)||grpPrinc(eq));
+      var manut=ocEhManut(s), kb=manut?ocKBase(bK,kTipo):null, kUsado=manut?(kb||1):1;
       var ap=0, ap0=0, ft=0, sits={};
       (s.at||[]).forEach(function(a){ ap0+=(Number(a[3])||0)*(Number(a[4])||0); ap+=ocValLinha(a,kUsado); ft+=Number(a[5])||0; var k=a[6]||''; if(k) sits[k]=(sits[k]||0)+1; });
       var gk=ocSemAcento(s.grp)||'SEM GRUPO';
@@ -569,7 +607,7 @@ function ocServicos(){
         baseEq:baseEq, baseCs:centro||baseEq, supK:sup?ocSupKey(sup):'', supNome:sup,
         ot:s.ot||'', oc:ocNormOC(s.ot,s.s), ret:s.ret||'', exec:ocSemAcento(s.ret).indexOf('EXECUTADO')===0,
         gk:gk, resp:s.resp||'', loc:s.loc||'', end:s.end||'', at:s.at||[], nAt:(s.at||[]).length,
-        ap:ocR2(ap), ap0:ocR2(ap0), ft:ocR2(ft), sit:sit, k:kUsado, kBase:bK, kFalta:manut&&!kb, ts:s.ts||''});
+        ap:ocR2(ap), ap0:ocR2(ap0), ft:ocR2(ft), sit:sit, k:kUsado, kBase:bK, kTipo:kTipo, kFalta:manut&&!kb, ts:s.ts||''});
     });
   });
   out.sort(function(a,b){ return a.d<b.d?-1:a.d>b.d?1:(Number(a.s)||0)-(Number(b.s)||0); });
@@ -579,7 +617,7 @@ function ocB(s){ return OC_F.agrupar==='cs'?s.baseCs:s.baseEq; }
 function ocPassa(s, sem){
   if(OC_F.mes && sem!=='mes' && s.d.slice(0,7)!==OC_F.mes) return false;
   if(OC_F.base && sem!=='base' && ocB(s)!==OC_F.base) return false;
-  if(OC_F.sup && s.supK!==OC_F.sup) return false;
+  if(OC_F.sup && sem!=='sup' && s.supK!==OC_F.sup) return false;
   if(OC_F.grupo && s.gk!==OC_F.grupo) return false;
   if(OC_F.sit && s.sit!==OC_F.sit) return false;
   return true;
@@ -597,7 +635,7 @@ function ocAgregar(lista, todos, semFiltroBase){
     e.grupos[s.gk]=(e.grupos[s.gk]||0)+1;
     if(s.supNome) e.sups[s.supNome]=(e.sups[s.supNome]||0)+1;
     e.ap+=s.ap; e.ft+=s.ft; T.ap+=s.ap; T.ft+=s.ft; T.linhas+=s.nAt;
-    if(s.kFalta) T.kFalta[s.kBase]=1;
+    if(s.kFalta) T.kFalta[s.kBase+'|'+s.kTipo]=1;
     if(s.ft===0&&s.ap>0){ e.semValor++; T.semValor++; T.apSemValor+=s.ap; }
     if(!s.exec){ e.nexe++; T.nexe++; return; }
     e.serv++; T.serv++;
@@ -605,19 +643,6 @@ function ocAgregar(lista, todos, semFiltroBase){
     if(e.vistos[chave]) return;
     e.vistos[chave]=1; contadas[s.id]=1; e.oc++; T.oc++; distintas[s.oc]=1;
   });
-  // equipes do cadastro sem nenhum serviço no recorte (só nas bases do apontamento)
-  if(OC_CAD&&OC_F.zeros&&!OC_F.grupo&&!OC_F.sit&&todos){
-    var bd=ocBasesDosDados(todos);
-    OC_CAD.lista.forEach(function(q){
-      var tk=ocCadChave(q), b=q.base;
-      if(cadVistos[tk]||!bd[b]) return;
-      if(OC_F.base&&!semFiltroBase&&b!==OC_F.base) return;
-      if(OC_F.sup&&ocSupKey(q.sup)!==OC_F.sup) return;
-      var k=b+'|'+tk; if(eqs[k]) return;
-      eqs[k]={k:k, eq:ocCadNome(q), cad:q, base:b, baseEq:b, nomesGPM:{}, grupos:{}, sups:{}, oc:0, serv:0, nexe:0, ap:0, ft:0, semValor:0, vistos:{}, servs:[], zero:true};
-      if(q.sup) eqs[k].sups[q.sup]=1;
-    });
-  }
   var bases={};
   Object.keys(eqs).forEach(function(k){
     var e=eqs[k];
@@ -634,7 +659,6 @@ function ocAgregar(lista, todos, semFiltroBase){
     b.ap=ocR2(b.ap); b.ft=ocR2(b.ft);
     b.eqs.sort(function(x,y){ return (y.oc-x.oc)||(y.ap-x.ap)||(x.eq<y.eq?-1:1); });
     b.ativas=b.eqs.filter(function(e){ return e.oc>0; }).length;
-    b.zeros=b.eqs.filter(function(e){ return e.zero; }).length;
   });
   lb.sort(function(x,y){ return (y.ap-x.ap)||(y.oc-x.oc); });
   T.ap=ocR2(T.ap); T.ft=ocR2(T.ft); T.apSemValor=ocR2(T.apSemValor);
@@ -663,9 +687,9 @@ function ocRender(){
   ocStatusLinha(todos);
   OC_LISTA_GRP=Array.from(new Set(todos.map(function(s){ return s.gk; }))).sort();
   OC_LISTA_SIT=Array.from(new Set(todos.map(function(s){ return s.sit; }).filter(Boolean))).sort();
-  var sups={}, bd=ocBasesDosDados(todos);
-  todos.forEach(function(s){ if(s.supK) sups[s.supK]=1; });
-  if(OC_CAD) OC_CAD.lista.forEach(function(q){ if(q.sup&&bd[q.base]) sups[ocSupKey(q.sup)]=1; });
+  // só supervisores com serviço no recorte (mês, base, grupo); quem não teve ocorrência não aparece
+  var sups={};
+  todos.forEach(function(s){ if(s.supK&&ocPassa(s,'sup')) sups[s.supK]=1; });
   OC_LISTA_SUP=Object.keys(sups).sort(function(a,b){ return OC_SUP_NOME[a]<OC_SUP_NOME[b]?-1:1; });
   if(OC_F.sup&&OC_LISTA_SUP.indexOf(OC_F.sup)<0) OC_F.sup='';
   if(OC_F.grupo&&OC_LISTA_GRP.indexOf(OC_F.grupo)<0) OC_F.grupo='';
@@ -673,7 +697,8 @@ function ocRender(){
   ocFiltros(todos);
   if(!todos.length){
     OC_ULT=null;
-    $('oc-kpis').innerHTML='<div class="fg-kpi oc-vazio-kpi"><span class="fg-vazio">Nenhum apontamento importado ainda. No GPM, baixe o relatório <b>Apontamento de faturamento</b> e use <b>Importar apontamento GPM</b> aqui em cima (pode ser o .zip do jeito que vem).</span></div>';
+    $('oc-kpis').innerHTML='<div class="fg-kpi oc-vazio-kpi"><span class="fg-vazio">Nenhum apontamento importado ainda. No GPM, baixe o relatório <b>Apontamento de faturamento</b> e importe aqui (pode ser o .zip do jeito que vem). Depois, importar e baixar o resumo ficam no seu perfil, no canto superior direito.'
+      +'<br><button type="button" class="btn add oc-vazio-btn" onclick="ocAbrirImportar()">Importar apontamento GPM</button></span></div>';
     ['oc-bases','oc-evo','oc-ativ'].forEach(function(id){ var el=$(id); if(el) el.innerHTML=''; });
     OC_DIA=''; ocDiaRender([]);
     $('oc-tabela').innerHTML='<div class="fg-vazio">As equipes aparecem aqui depois da primeira importação.</div>';
@@ -741,9 +766,6 @@ function ocFiltros(todos){
   h+=bloco('Base de cada equipe','agrupar','<div class="fg-flist">'
     +chip(OC_F.agrupar==='eq','Base do cadastro',"ocOpcao('agrupar','eq')",'','A base onde a equipe está no Cadastro de Equipes')
     +chip(OC_F.agrupar==='cs','Centro de serviço do GPM',"ocOpcao('agrupar','cs')",'','O centro de serviço de cada atendimento no GPM')+'</div>',true);
-  if(OC_CAD&&OC_CAD.lista.length) h+=bloco('Equipes sem ocorrência','zeros','<div class="fg-fgrid">'
-    +chip(OC_F.zeros,'Mostrar',"ocOpcao('zeros',true)",'','Equipes do cadastro que não aparecem no apontamento do período')
-    +chip(!OC_F.zeros,'Ocultar',"ocOpcao('zeros',false)")+'</div>',true);
   box.innerHTML=h;
 }
 function ocFiltro(chave,valor){ OC_F[chave]=(OC_F[chave]===valor?'':valor); ocRender(); }
@@ -765,10 +787,24 @@ function ocKpis(A){
   A.lista.forEach(function(s){ s.at.forEach(function(a){ tipos[(a[0]||'')+'|'+(a[1]||'')]=1; if((Number(a[3])||0)>0&&!(Number(a[4])||0)) semPreco++; }); });
   box.innerHTML=card(OC_ICO.ok,'Ocorrências atendidas'+(ocPeriodo(A)?' de '+ocPeriodo(A):''),ocNum(T.oc),sub1)
     +card(OC_ICO.fat,'Faturado',ocMoney(T.ap),Object.keys(T.kFalta).length
-        ?'<span class="up">fator K não definido para '+Object.keys(T.kFalta).sort(function(a,b){ var o=Object.keys(OC_BASES); return o.indexOf(a)-o.indexOf(b); }).map(function(b){ return ocEsc(OC_BASES[b].nome); }).join(', ')+' (contando K = 1).'+(typeof ocKLink==='function'?ocKLink():'')+'</span>'
-        :'quantidade × valor unitário × fator K da base')
+        ?'<span class="up">fator K não definido para '+ocKFaltaTxt(T.kFalta)+' (contando K = 1).'+(typeof ocKLink==='function'?ocKLink():'')+'</span>'
+        :'quantidade × valor unitário × fator K (base e tipo LM/LV)')
     +card(OC_ICO.media,'Média por ocorrência',T.oc?ocMoney(T.ap/T.oc):'—',ocPl(T.oc,'ocorrência atendida','ocorrências atendidas')+' no período')
     +card(OC_ICO.apont,'Atividades apontadas',ocNum(T.linhas),ocPl(Object.keys(tipos).length,'tipo de atividade','tipos de atividade')+(semPreco?'; '+ocPl(semPreco,'sem preço no GPM','sem preço no GPM'):''));
+}
+// {'fsa|lv':1,'jac|lm':1,'jac|lv':1} -> "Feira de Santana (LV), Jacobina (LM e LV)"
+function ocKFaltaTxt(m){
+  var por={}, o=Object.keys(OC_BASES);
+  Object.keys(m).forEach(function(k){ var p=k.split('|'); (por[p[0]]=por[p[0]]||[]).push(p[1]); });
+  return Object.keys(por).sort(function(a,b){ return o.indexOf(a)-o.indexOf(b); }).map(function(b){
+    var ts=por[b].sort().map(ocKSigla); return ocEsc(OC_BASES[b].nome)+' ('+ts.join(' e ')+')';
+  }).join(', ');
+}
+function ocKTag(b){
+  if(b==='sb') return '';
+  var lm=ocKBase(b,'lm'), lv=ocKBase(b,'lv');
+  if(!lm&&!lv) return '<em class="oc-kb falta">sem fator K</em>';
+  return '<em class="oc-kb'+(lm&&lv?'':' falta')+'" title="Fator K: Linha Morta e Linha Viva">K LM '+(lm?ocFmtK(lm):'falta')+' · LV '+(lv?ocFmtK(lv):'falta')+'</em>';
 }
 function ocBarra(v, total, cor){
   var p=total?Math.min(100,v/total*100):0;
@@ -782,7 +818,7 @@ function ocBasesCards(B){
       :ocPl(b.ativas,'equipe atendeu','equipes atenderam');
     var cfg=OC_BASES[b.base], on=OC_F.base===b.base, off=OC_F.base&&!on;
     return '<button type="button" class="oc-base'+(on?' on':'')+(off?' off':'')+'" style="--c:'+cfg.cor+'" aria-pressed="'+on+'" onclick="ocFiltro(\'base\',\''+b.base+'\')" title="Filtrar por '+ocAttr(cfg.nome)+'">'
-      +'<span class="nm">'+ocEsc(cfg.nome)+(b.base!=='sb'?(ocKBase(b.base)?'<em class="oc-kb">K '+ocFmtK(ocKBase(b.base))+'</em>':'<em class="oc-kb falta">sem fator K</em>'):'')+'</span>'
+      +'<span class="nm">'+ocEsc(cfg.nome)+ocKTag(b.base)+'</span>'
       +'<span class="q">'+ocNum(b.oc)+'<small>'+(b.oc===1?'ocorrência':'ocorrências')+'</small></span>'
       +'<span class="v">'+ocMoney(b.ap)+' <small>faturado</small></span>'
       +ocBarra(b.ap,tot,cfg.cor)
@@ -835,7 +871,7 @@ function ocValorAt(a,k){
   if(q>0&&!vu) return '<span class="oc-sempreco" title="Atividade apontada sem valor unitário no GPM">sem preço</span>';
   return ocMoney(ocValLinha(a,k));
 }
-function ocKTxt(s){ return s.k&&s.k!==1?' × K '+ocFmtK(s.k):(s.kFalta?' × K 1 (não definido)':''); }
+function ocKTxt(s){ return s.kFalta?' × K 1 ('+ocKSigla(s.kTipo)+' não definido)':(s.k&&s.k!==1?' × K '+ocFmtK(s.k)+' ('+ocKSigla(s.kTipo)+')':''); }
 function ocDetalhe(e, A){
   var servs=e.servs.slice().sort(function(a,b){ return a.d<b.d?1:a.d>b.d?-1:(Number(b.s)||0)-(Number(a.s)||0); });
   var h='<tr class="oc-det"><td colspan="8"><table><thead><tr><th>Data</th><th>Ocorrência</th><th>Serviço</th><th>Local</th><th class="n">Atividades</th><th class="n">Faturado</th></tr></thead><tbody>';
@@ -974,7 +1010,7 @@ function ocDiaPorEquipe(lista){
       s.at.forEach(function(a){
         var q=Number(a[3])||0, vu=Number(a[4])||0;
         h+='<tr class="a"><td><span class="cod">'+ocEsc(a[0])+'</span>'+ocEsc(a[1])+'</td><td class="n">'+ocQtd(q)+' '+ocEsc(a[2]||'')+'</td><td class="n">'+ocMoney(vu)+'</td>'
-          +'<td class="n">'+(s.kFalta?'<span class="oc-falta" title="Fator K desta base ainda não foi definido">1 (falta)</span>':ocFmtK(s.k))+'</td><td class="n">'+ocValorAt(a,s.k)+'</td></tr>';
+          +'<td class="n">'+(s.kFalta?'<span class="oc-falta" title="Fator K desta base para este tipo de equipe ainda não foi definido">1 (falta '+ocKSigla(s.kTipo)+')</span>':ocFmtK(s.k)+' '+ocKSigla(s.kTipo))+'</td><td class="n">'+ocValorAt(a,s.k)+'</td></tr>';
       });
     });
   });
@@ -1009,7 +1045,7 @@ function ocDiaExportar(){
   lista.forEach(function(s){
     s.at.forEach(function(a){
       var q=Number(a[3])||0, vu=Number(a[4])||0;
-      L.push([ocDataBR(s.d),OC_BASES[ocB(s)].nome,s.nome,s.oc.charAt(0)==='#'?s.ot:s.oc,s.s,s.loc||s.end,s.ret,a[0],a[1],ocQtd(q),a[2],dec(vu),dec(q*vu),String(s.k).replace('.',',')+(s.kFalta?' (não definido)':''),dec(ocValLinha(a,s.k))]);
+      L.push([ocDataBR(s.d),OC_BASES[ocB(s)].nome,s.nome,s.oc.charAt(0)==='#'?s.ot:s.oc,s.s,s.loc||s.end,s.ret,a[0],a[1],ocQtd(q),a[2],dec(vu),dec(q*vu),String(s.k).replace('.',',')+' ('+ocKSigla(s.kTipo)+(s.kFalta?', não definido':'')+')',dec(ocValLinha(a,s.k))]);
     });
   });
   var csv='\uFEFF'+L.map(function(r){ return r.map(function(c){ c=String(c==null?'':c); return /[;"\n]/.test(c)?'"'+c.replace(/"/g,'""')+'"':c; }).join(';'); }).join('\r\n');
@@ -1051,21 +1087,38 @@ function ocToggleK(forcar){
 function ocKForm(){
   var p=$('oc-k'); if(!p) return;
   var todos=ocServicos(), usadas={};
-  todos.forEach(function(s){ if(ocEhManut(s)&&s.kBase!=='sb') usadas[s.kBase]=(usadas[s.kBase]||0)+1; });
-  Object.keys((OC_K&&OC_K.k)||{}).forEach(function(b){ if(OC_BASES[b]&&b!=='sb'&&!usadas[b]) usadas[b]=0; });
+  todos.forEach(function(s){
+    if(!ocEhManut(s)||s.kBase==='sb') return;
+    var u=usadas[s.kBase]||(usadas[s.kBase]={lm:0,lv:0}); u[s.kTipo]++;
+  });
+  var salvas=Object.keys((OC_K&&OC_K.kt)||{}).concat(Object.keys((OC_K&&OC_K.k)||{}));
+  salvas.forEach(function(b){ if(OC_BASES[b]&&b!=='sb'&&!usadas[b]) usadas[b]={lm:0,lv:0}; });
   var ordem=Object.keys(OC_BASES);
   OC_K_FORM=Object.keys(usadas).sort(function(a,b){ return ordem.indexOf(a)-ordem.indexOf(b); });
-  var pode=ocPodeK(), faltam=OC_K_FORM.filter(function(b){ return usadas[b]&&!ocKBase(b); });
-  var h='<div class="oc-valbox"><h2 class="fg-h">Fator K por base</h2>'
-    +'<p>O faturado da manutenção na tela Obras › Ocorrências é quantidade × valor unitário do GPM × fator K. O GPM usa o mesmo preço unitário em todas as bases, então o K de cada base entra aqui. Ele vale para o centro de serviço onde o atendimento foi lançado no GPM.</p>';
-  if(faltam.length) h+='<div class="oc-aviso">Falta o fator K de '+faltam.map(function(b){ return ocEsc(OC_BASES[b].nome); }).join(', ')+'. Enquanto não for preenchido, essa base conta com K = 1.</div>';
+  var pode=ocPodeK(), faltam={}, antigo=false;
+  OC_K_FORM.forEach(function(b){
+    OC_KTIPOS.forEach(function(t){ if(usadas[b][t.id]&&!ocKBase(b,t.id)) faltam[b+'|'+t.id]=1; });
+    if(OC_K&&OC_K.k&&Number(OC_K.k[b])>0&&!(OC_K.kt&&OC_K.kt[b])) antigo=true;
+  });
+  var h='<div class="oc-valbox"><h2 class="fg-h">Fator K por base e tipo de equipe</h2>'
+    +'<p>O faturado da manutenção na tela Obras › Ocorrências é quantidade × valor unitário do GPM × fator K. O GPM usa o mesmo preço unitário em todas as bases; o K muda por base e pelo tipo da equipe: Linha Viva (LV) tem um, Linha Morta (LM) outro. Vale a base do centro de serviço do atendimento no GPM.</p>'
+    +'<p>O tipo vem do Cadastro de Equipes (sem cadastro, do grupo das atividades no GPM). Manutenção pesada e Leve contam como Linha Morta.</p>';
+  if(Object.keys(faltam).length) h+='<div class="oc-aviso">Falta o fator K de '+ocKFaltaTxt(faltam)+'. Enquanto não for preenchido, conta com K = 1.</div>';
+  if(antigo) h+='<div class="oc-aviso">Antes havia um K único por base: ele aparece nos dois campos. Ajuste o de cada tipo e salve.</div>';
   if(!OC_K_FORM.length) h+='<p style="margin-top:10px">Nenhuma base ainda: importe o apontamento do GPM na tela Obras › Ocorrências e as bases aparecem aqui.</p>';
   else {
-    h+='<div class="oc-val">'+OC_K_FORM.map(function(b,i){
-      var v=ocKBase(b);
-      return '<label for="oc-k-'+i+'"><span><i class="oc-kdot" style="background:'+OC_BASES[b].cor+'"></i>'+ocEsc(OC_BASES[b].nome)+'</span><small>'+(usadas[b]?ocPl(usadas[b],'serviço de manutenção','serviços de manutenção'):'sem serviços importados')+'</small>'
-        +'<span class="inp"><span>K</span><input id="oc-k-'+i+'" type="number" inputmode="decimal" min="0" step="0.0001" placeholder="1,0000" value="'+(v==null?'':v)+'"'+(pode?'':' disabled')+'></span></label>';
-    }).join('')+'</div>';
+    h+='<div class="oc-ktab" role="table" aria-label="Fator K por base e tipo de equipe">'
+      +'<div class="oc-krow cab" role="row"><span role="columnheader">Base</span>'+OC_KTIPOS.map(function(t){ return '<span role="columnheader">'+t.nome+' ('+t.sigla+')</span>'; }).join('')+'</div>'
+      +OC_K_FORM.map(function(b,i){
+        return '<div class="oc-krow" role="row"><span class="oc-kbase" role="rowheader"><i class="oc-kdot" style="background:'+OC_BASES[b].cor+'"></i>'+ocEsc(OC_BASES[b].nome)+'</span>'
+          +OC_KTIPOS.map(function(t){
+            var v=ocKBase(b,t.id), n=usadas[b][t.id], id='oc-k-'+i+'-'+t.id;
+            return '<label class="oc-kcel" for="'+id+'" role="cell"><span class="oc-kcel-t">'+t.sigla+'</span>'
+              +'<span class="inp"><span>K</span><input id="'+id+'" type="number" inputmode="decimal" min="0" step="0.0001" placeholder="1,0000" value="'+(v==null?'':v)+'"'+(pode?'':' disabled')
+              +' aria-label="Fator K de '+ocAttr(OC_BASES[b].nome)+', '+t.nome+'"></span>'
+              +'<small>'+(n?ocPl(n,'serviço','serviços'):'sem serviços')+'</small></label>';
+          }).join('')+'</div>';
+      }).join('')+'</div>';
     var info='';
     if(OC_K&&OC_K.atualizado){ info='Alterado em '+new Date(OC_K.atualizado).toLocaleDateString('pt-BR')+(OC_K.por?' por '+ocEsc(OC_K.por):''); }
     h+='<div class="oc-valact"><span class="fg-ks">'+info+'</span>'
@@ -1075,18 +1128,20 @@ function ocKForm(){
 }
 async function ocSalvarK(){
   if(!ocPodeK()){ ocMsg('Só gestor altera o fator K.','err'); return; }
-  var k={}, ruim=[];
-  Object.keys((OC_K&&OC_K.k)||{}).forEach(function(b){ if(OC_K_FORM.indexOf(b)<0) k[b]=OC_K.k[b]; });   // mantém bases que não estão na tela
+  var kt={}, ruim=[];
+  Object.keys((OC_K&&OC_K.kt)||{}).forEach(function(b){ if(OC_K_FORM.indexOf(b)<0) kt[b]=OC_K.kt[b]; });   // mantém bases fora da tela
   OC_K_FORM.forEach(function(b,i){
-    var el=$('oc-k-'+i), v=el?String(el.value).trim():'';
-    if(v==='') return;
-    var n=Number(v.replace(',','.'));
-    if(!isFinite(n)||n<=0){ ruim.push(OC_BASES[b].nome); return; }
-    k[b]=Math.round(n*10000)/10000;
+    OC_KTIPOS.forEach(function(t){
+      var el=$('oc-k-'+i+'-'+t.id), v=el?String(el.value).trim():'';
+      if(v==='') return;
+      var n=Number(v.replace(',','.'));
+      if(!isFinite(n)||n<=0){ ruim.push(OC_BASES[b].nome+' '+t.sigla); return; }
+      (kt[b]=kt[b]||{})[t.id]=Math.round(n*10000)/10000;
+    });
   });
   if(ruim.length){ ocMsg('Fator K inválido para '+ruim.join(', ')+'. Use um número maior que zero, por exemplo 1,0850.','err'); return; }
   var btn=$('oc-k-go'); if(btn){ btn.disabled=true; btn.textContent='Salvando…'; }
-  var u=window.MARIUA_USER, val={k:k, atualizado:new Date().toISOString(), por:(u&&(u.nome||u.email))||''};
+  var u=window.MARIUA_USER, val={kt:kt, atualizado:new Date().toISOString(), por:(u&&(u.nome||u.email))||''};
   try{
     await ocGravar([{key:'ocorr_fator_k', value:val}]);
     OC_K=val; ocMsg($('oc-kpis')?'Fator K salvo. O faturado já foi recalculado.':'Fator K salvo. A tela Obras › Ocorrências já usa os novos valores.','ok');
@@ -1201,6 +1256,16 @@ async function ocImportar(file){
   var pk=$('oc-k'); if(pk&&!pk.hidden) ocKForm(); else ocKAutoAbrir();
 }
 
+// ---------- ações no perfil (avatar do topo) ----------
+function ocAbrirImportar(){ var f=$('oc-file'); if(f) f.click(); }
+function ocRegistrarPerfil(){
+  window.mariuaPerfilAcoes=[
+    {texto:'Importar apontamento GPM', dica:'Relatório Apontamento de faturamento do GPM (.zip ou .csv)', acao:ocAbrirImportar},
+    {texto:'Baixar resumo (CSV)', dica:'Equipes, ocorrências e faturado com os filtros atuais', acao:ocExportar,
+      visivel:function(){ return !!(OC_ULT&&OC_ULT.lista.length)&&(typeof ocPodeBaixar!=='function'||ocPodeBaixar()); }}
+  ];
+}
+
 // ---------- resumo em CSV ----------
 function ocResumoCSV(){
   var A=OC_ULT;
@@ -1215,7 +1280,8 @@ function ocResumoCSV(){
   });
   linha(['TOTAL','','','','','','',''],A.T);
   L.push([]);
-  var ks=Object.keys(OC_BASES).filter(function(b){ return ocKBase(b); }).map(function(b){ return OC_BASES[b].nome+' '+ocFmtK(ocKBase(b)); });
+  var ks=[];
+  Object.keys(OC_BASES).forEach(function(b){ OC_KTIPOS.forEach(function(t){ var v=ocKBase(b,t.id); if(v) ks.push(OC_BASES[b].nome+' '+t.sigla+' '+ocFmtK(v)); }); });
   L.push(['Faturado = tudo o que foi apontado no GPM × fator K da base (quantidade × valor unitário × K). Fator K: '+(ks.length?ks.join(', '):'nenhum definido (K = 1)')+'. Filtros: mês '+(OC_F.mes?ocCurto(OC_F.mes):'todos')+'; base '+(OC_F.base?OC_BASES[OC_F.base].nome:'todas')+'; supervisor '+(OC_F.sup?(OC_SUP_NOME[OC_F.sup]||OC_F.sup):'todos')+'; grupo '+(OC_F.grupo?ocGrupoNome(OC_F.grupo):'todos')+(OC_F.sit?'; situação '+OC_F.sit:'')+'; contagem por '+(OC_F.modo==='oc'?'ocorrência':'serviço')]);
   return '\uFEFF'+L.map(function(r){ return r.map(function(c){ c=String(c==null?'':c); return /[;"\n]/.test(c)?'"'+c.replace(/"/g,'""')+'"':c; }).join(';'); }).join('\r\n');
 }
