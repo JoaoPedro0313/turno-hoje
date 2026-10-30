@@ -56,7 +56,6 @@
     { id:'mapa',       nome:'Mapa de obras',          arquivos:['mapa.html'] },
     { id:'comp',       nome:'Comparador de postes',   arquivos:['comp.html'] },
     { id:'estagios',   nome:'Estágios de obras',      arquivos:['estagios.html'] },
-    { id:'ocorrencias',nome:'Ocorrências por equipe', arquivos:['ocorrencias.html'] },
     { id:'projecao',   nome:'Projeção / PDA',         arquivos:['projeçao.html','projecao.html'] },
     { id:'neoex',      nome:'NEOEX · apontamento',    arquivos:['neoex.html'] },
     { id:'obra',       nome:'Cadastro de obra',       arquivos:['cadastro_obra.html'] },
@@ -65,6 +64,7 @@
     { id:'ensaios',    nome:'Ensaios · SESMT',        arquivos:['ensaios.html'] },
     { id:'brigada',    nome:'Brigada / extintores',   arquivos:['brigada.html'] },
     { id:'permissoes', nome:'Telas × usuários',       arquivos:['permissoes.html'] },
+    { id:'ocorrencias',nome:'Ocorrências por equipe', arquivos:['ocorrencias.html'] },
     { id:'valores',    nome:'Financeiro',             arquivos:['valores.html'], soGestor:true },
     { id:'admin',      nome:'Admin',                  arquivos:['admin.html'],  soGestor:true }
   ];

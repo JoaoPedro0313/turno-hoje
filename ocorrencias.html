@@ -48,13 +48,12 @@ button{font-family:'Barlow',sans-serif}
 
 /* ───────── CABEÇALHO DA PÁGINA ───────── */
 .page-hdr{background:#fff;border-bottom:1px solid #e2e8f0;padding:14px 20px;display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap}
-
-:root{--bg:#f0f4f5;--card:#ffffff;--soft:#f8fafc;--soft2:#eef2f6;--line:#eef2f7;--line2:#e2e8f0;--track:#eef2f6;--txt:#16324a;--txt2:#5b6b7a;--txt3:#94a3b8;--zero:#c3ccd6;--accent:#0d6e70;--accent-bg:#e2f0f0;--chip-bd:#c5d2dc;--grp:#f0f6f6;--grp-bd:#d5e6e6;--hover:#f9fbfd;--foot:#16324a;--warn:#9a5a12;--warn-bg:#fff1dc;--bad:#b42318;--msg-ok:#276749;--msg-err:#c53030;--hdr:#0b5e62;--ghost:#eef2f7;--ghost-txt:#334155;--ghost-hover:#e2e8f0;--ap-bar:#b9dcd8;--ap-bar-hover:#a3d0cb;--shadow:0 1px 3px rgba(16,42,67,.08);--shadow2:0 3px 12px rgba(16,42,67,.14);}
+:root{--bg:#f0f4f5;--card:#ffffff;--soft:#f8fafc;--soft2:#eef2f6;--line:#eef2f7;--line2:#e2e8f0;--track:#eef2f6;--txt:#16324a;--txt2:#5b6b7a;--txt3:#94a3b8;--zero:#c3ccd6;--accent:#0d6e70;--accent-bg:#e2f0f0;--chip-bd:#c5d2dc;--grp:#f0f6f6;--grp-bd:#d5e6e6;--hover:#f9fbfd;--foot:#16324a;--warn:#9a5a12;--warn-bg:#fff1dc;--bad:#b42318;--bad-bg:#fdeceb;--msg-ok:#276749;--msg-err:#c53030;--hdr:#0b5e62;--ghost:#eef2f7;--ghost-txt:#334155;--ghost-hover:#e2e8f0;--ap-bar:#b9dcd8;--ft-bar:#0d7377;--ap-bar-hover:#a3d0cb;--shadow:0 1px 3px rgba(16,42,67,.08);--shadow2:0 3px 12px rgba(16,42,67,.14);}
 body{background:var(--bg);color:var(--txt)}
 input,select,textarea{font-family:'Barlow',sans-serif}
 .page-hdr{background:var(--card);border-bottom:1px solid var(--line2);padding:14px 20px}
 .page-hdr h2{font-size:1.05rem;font-weight:800;color:var(--hdr);letter-spacing:.5px;text-transform:uppercase}
-.page-hdr p{font-size:.8rem;color:var(--txt2);margin-top:4px;font-weight:600;max-width:72ch;line-height:1.45}
+.page-hdr p{font-size:.8rem;color:var(--txt2);margin-top:4px;font-weight:600;max-width:78ch;line-height:1.45}
 
 /* ───── botões ───── */
 .btn{padding:9px 16px;border:0;border-radius:999px;font-weight:800;cursor:pointer;font-size:.82rem;font-family:inherit;transition:transform .12s ease,box-shadow .12s ease,filter .12s ease,background .12s;letter-spacing:.01em}
@@ -110,9 +109,7 @@ input,select,textarea{font-family:'Barlow',sans-serif}
 @media(max-width:1100px){ .oc-row2{grid-template-columns:1fr} }
 
 /* ───── barra de ações ───── */
-.oc-top{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-.oc-st{flex:1 1 280px;font-size:.82rem;color:var(--txt2);font-weight:600;line-height:1.4;min-width:0}
-.oc-st b{color:var(--txt)}
+.oc-top{display:flex;align-items:center;justify-content:flex-end;gap:10px;flex-wrap:wrap}
 .oc-msg{font-size:.82rem;font-weight:700;margin-top:10px}
 .oc-msg:empty{display:none}
 .oc-msg.ok{color:var(--msg-ok)}.oc-msg.err{color:var(--msg-err)}
@@ -179,15 +176,15 @@ table.oc-tbl{min-width:900px}
 .oc-cc.clic:focus-visible{outline:2px solid #0d7377;outline-offset:2px;border-radius:6px}
 .oc-ct{font-size:.68rem;font-weight:800;color:var(--txt2);margin-bottom:4px;white-space:nowrap;font-variant-numeric:tabular-nums}
 .oc-cb{position:relative;width:100%;max-width:46px;flex:1;max-height:170px}
-.oc-cb .ap{position:absolute;bottom:0;left:0;right:0;background:var(--ap-bar);border-radius:4px 4px 0 0;min-height:1px}
-.oc-cb .ft{position:absolute;bottom:0;left:22%;right:22%;background:#0d7377;border-radius:3px 3px 0 0}
-.oc-cc:hover .ap{background:var(--ap-bar-hover)}
+.oc-cb .ap{position:absolute;bottom:0;left:0;right:0;background:var(--ft-bar);border-radius:4px 4px 0 0;min-height:1px}
+.oc-cb .ft{position:absolute;bottom:0;left:22%;right:22%;background:var(--ft-bar);border-radius:3px 3px 0 0}
+.oc-cc.clic:hover .ap{filter:brightness(1.15)}
 .oc-cl{font-size:.68rem;font-weight:700;color:var(--txt2);margin-top:6px;white-space:nowrap;font-variant-numeric:tabular-nums}
 .oc-cc.fds .oc-cl{color:var(--txt3)}
 .oc-evo-leg{display:flex;gap:16px;flex-wrap:wrap;align-items:center;margin-top:12px;padding-top:10px;border-top:1px solid var(--line)}
 .oc-leg{display:inline-flex;align-items:center;gap:6px;font-size:.78rem;font-weight:700;color:var(--txt2)}
 .oc-leg i{width:12px;height:12px;border-radius:3px;display:inline-block}
-.oc-leg i.ap{background:var(--ap-bar)}.oc-leg i.ft{background:#0d7377}
+.oc-leg i.ap{background:var(--ft-bar)}.oc-leg i.ft{background:var(--ft-bar)}
 .oc-leg-nota{margin-left:auto;font-size:.72rem;color:var(--txt3);font-weight:600}
 
 /* ───── atividades que mais somam ───── */
@@ -197,15 +194,76 @@ table.oc-tbl{min-width:900px}
 .oc-rk-t .vl{font-size:.8rem;font-weight:800;color:var(--txt);font-variant-numeric:tabular-nums;white-space:nowrap}
 .oc-rk-b{height:9px;margin-top:4px;background:var(--track);border-radius:5px;overflow:hidden}
 .oc-rk-b .ap{display:block;height:100%;background:var(--ap-bar);border-radius:5px;overflow:hidden}
-.oc-rk-b .ft{display:block;height:100%;background:#0d7377}
+.oc-rk-b .ft{display:block;height:100%;background:var(--ft-bar)}
 .oc-rk-s{font-size:.7rem;color:var(--txt3);font-weight:600;margin-top:3px}
 .oc-rk-mais{margin-top:10px;font-size:.72rem;color:var(--txt3);font-weight:600}
+
+/* ───── dados do Cadastro de Equipes ───── */
+.oc-fora{display:inline-block;margin-left:8px;font-size:.66rem;font-weight:800;padding:1px 7px;border-radius:999px;background:var(--bad-bg);color:var(--bad);vertical-align:1px}
+.oc-semoc{display:inline-block;margin-left:8px;font-size:.66rem;font-weight:800;padding:1px 7px;border-radius:999px;background:var(--soft2);color:var(--txt2);vertical-align:1px}
+.oc-eqzero{cursor:default;color:var(--txt2)}
+.oc-tbl tr.oc-eq.zero td{color:var(--txt2)}
+.oc-aviso-tx{color:var(--warn);font-weight:700}
+
+/* ───── dia escolhido no gráfico ───── */
+.oc-cc.apag{opacity:.45}
+.oc-cc.sel .ap{box-shadow:0 0 0 2px var(--card),0 0 0 4px var(--ft-bar)}
+.oc-cc.sel .oc-cl{color:var(--accent);font-weight:800}
+.oc-dia-h{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px}
+.oc-dia-h .fg-h{margin:0}
+.oc-nav{width:30px;height:30px;border-radius:8px;border:1px solid var(--chip-bd);background:var(--card);color:var(--txt);font-size:1.1rem;font-weight:800;line-height:1;cursor:pointer;font-family:inherit}
+.oc-nav:hover:not(:disabled){border-color:#0d7377;color:var(--accent)}
+.oc-nav:disabled{opacity:.35;cursor:default}
+.oc-nav:focus-visible{outline:2px solid #0d7377;outline-offset:1px}
+.oc-dia-acoes{margin-left:auto;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.oc-seg{display:inline-flex;gap:2px;background:var(--soft2);border-radius:9px;padding:3px}
+.oc-seg button{border:0;background:transparent;color:var(--txt2);font-family:inherit;font-size:.78rem;font-weight:800;padding:6px 11px;border-radius:7px;cursor:pointer}
+.oc-seg button[aria-pressed="true"]{background:var(--card);color:var(--txt);box-shadow:0 1px 4px rgba(0,0,0,.12)}
+.oc-seg button:focus-visible{outline:2px solid #0d7377;outline-offset:1px}
+.oc-dia-res{margin:0 0 12px;font-size:.82rem;color:var(--txt2);font-weight:600;line-height:1.45}
+.oc-dia-res b{color:var(--txt)}
+.oc-dia-f{color:var(--warn);font-weight:700}
+table.oc-dtbl{width:100%;min-width:720px;border-collapse:collapse;background:var(--card)}
+.oc-dtbl th{text-align:left;background:var(--soft);text-transform:uppercase;color:var(--txt2);font-weight:800;font-size:.62rem;letter-spacing:.04em;padding:8px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+.oc-dtbl td{padding:6px 10px;font-size:.8rem;color:var(--txt);border-bottom:1px solid var(--line)}
+.oc-dtbl .n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.oc-dtbl tr.t td{background:var(--grp);border-top:2px solid var(--grp-bd);font-size:.84rem;padding-top:9px;padding-bottom:9px}
+.oc-dtbl tr.t td.n{font-weight:800}
+.oc-dtbl tr.t i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:8px}
+.oc-dtbl tr.t span{margin-left:10px;font-size:.72rem;color:var(--txt3);font-weight:600}
+.oc-dtbl tr.s td{background:var(--soft);font-size:.76rem;color:var(--txt2);padding-top:7px;padding-bottom:5px}
+.oc-dtbl tr.s b{color:var(--txt)}
+.oc-dtbl tr.a td:first-child{padding-left:22px}
+.oc-dtbl .cod{font-weight:800;color:var(--txt3);margin-right:6px;font-size:.72rem}
+.oc-dtbl td.eqs{font-size:.74rem;color:var(--txt2);max-width:260px}
+.oc-dtbl tfoot td{background:var(--foot);color:#fff;font-weight:800;border:0;padding:8px 10px;font-size:.8rem}
+
+.oc-sempreco{display:inline-block;font-size:.66rem;font-weight:800;padding:1px 7px;border-radius:999px;background:var(--warn-bg);color:var(--warn);white-space:nowrap}
+.oc-tbl td .oc-sup{white-space:normal;max-width:340px;line-height:1.3}
+.oc-tbl td.tp{white-space:normal;min-width:96px;max-width:130px;line-height:1.25}
+.oc-tbl .oc-prog{min-width:120px}
+
+/* ───── fator K ───── */
+.oc-kb{font-style:normal;margin-left:8px;font-size:.68rem;font-weight:800;padding:1px 7px;border-radius:999px;background:var(--accent-bg);color:var(--accent);vertical-align:1px}
+.oc-kb.falta{background:var(--warn-bg);color:var(--warn)}
+.oc-valbox{border-top:1px solid var(--line);margin-top:12px;padding-top:12px}
+.oc-valbox p{margin:4px 0 0;font-size:.8rem;color:var(--txt2);font-weight:600;line-height:1.45;max-width:78ch}
+.oc-val{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px 14px;margin:12px 0}
+.oc-val label{display:flex;flex-direction:column;gap:5px;font-size:.84rem;color:var(--txt);font-weight:700;text-transform:none;letter-spacing:0}
+.oc-val label small{font-weight:600;color:var(--txt2);font-size:.72rem}
+.oc-kdot{display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:7px}
+.oc-val .inp{display:flex;align-items:center;border:1.5px solid var(--chip-bd);border-radius:9px;background:var(--card);padding:0 10px}
+.oc-val .inp > span{color:var(--txt2);font-weight:800;font-size:.85rem}
+.oc-val .inp input{border:0;margin:0;padding:9px 8px;font-size:.95rem;font-family:inherit;background:transparent;color:var(--txt);font-weight:700;font-variant-numeric:tabular-nums;width:100%;outline:none;box-shadow:none}
+.oc-val .inp input:disabled{color:var(--txt2);cursor:not-allowed}
+.oc-val .inp:focus-within{border-color:#0d7377;box-shadow:0 0 0 3px rgba(13,115,119,.2)}
+.oc-valact{display:flex;gap:10px;align-items:center;justify-content:flex-end;flex-wrap:wrap}
+.oc-aviso{padding:9px 12px;border-radius:9px;background:var(--warn-bg);color:var(--warn);font-size:.8rem;font-weight:700;margin-top:10px}
 
 </style>
 <style id="dark-mode-css" data-tema="proprio">
 /* tema escuro próprio desta tela: o nav.js liga body.dark e cuida só da barra do topo e do menu */
-body.dark{--bg:#0d1416;--card:#152024;--soft:#1a272b;--soft2:#223237;--line:#22313a;--line2:#2c3c42;--track:#22323a;--txt:#e6eef2;--txt2:#a3b3bc;--txt3:#71838d;--zero:#4a5a61;--accent:#5fd0c2;--accent-bg:#183a3b;--chip-bd:#33454c;--grp:#182a2d;--grp-bd:#25403f;--hover:#1a272b;--foot:#0b2a33;--warn:#f0b664;--warn-bg:#3a2a12;--bad:#f2877c;--msg-ok:#71d39d;--msg-err:#f2877c;--hdr:#5fd0c2;--ghost:#22313a;--ghost-txt:#d5dee3;--ghost-hover:#2c3c42;--ap-bar:#2c5a57;--ap-bar-hover:#367069;--shadow:0 1px 3px rgba(0,0,0,.45);--shadow2:0 3px 14px rgba(0,0,0,.55);}
-body.dark .page-hdr{border-bottom-color:var(--line2)}
+body.dark{--bg:#0d1416;--card:#152024;--soft:#1a272b;--soft2:#223237;--line:#22313a;--line2:#2c3c42;--track:#22323a;--txt:#e6eef2;--txt2:#a3b3bc;--txt3:#71838d;--zero:#4a5a61;--accent:#5fd0c2;--accent-bg:#183a3b;--chip-bd:#33454c;--grp:#182a2d;--grp-bd:#25403f;--hover:#1a272b;--foot:#0b2a33;--warn:#f0b664;--warn-bg:#3a2a12;--bad:#f2877c;--bad-bg:#3d1c1a;--msg-ok:#71d39d;--msg-err:#f2877c;--hdr:#5fd0c2;--ghost:#22313a;--ghost-txt:#d5dee3;--ghost-hover:#2c3c42;--ap-bar:#2c5a57;--ft-bar:#4fc7b6;--ap-bar-hover:#367069;--shadow:0 1px 3px rgba(0,0,0,.45);--shadow2:0 3px 14px rgba(0,0,0,.55);}
 </style>
 <style id="sidemenu-css">
 .page-nav{display:none !important;}
@@ -301,7 +359,7 @@ try{if(localStorage.getItem("mariua_darkmode")==="1")document.body.classList.add
 
 <div class="page-hdr">
   <h2>Ocorrências por equipe</h2>
-  <p>Ocorrências atendidas por equipe em cada base, quanto foi apontado e quanto já está faturado no GPM, a partir do relatório Apontamento de faturamento.</p>
+  <p>Ocorrências atendidas por equipe em cada base e quanto foi faturado: tudo o que foi apontado no GPM, com o fator K de cada base. Os dados das equipes (base, encarregado, supervisor) vêm do Cadastro de Equipes.</p>
 </div>
 <div class="oc-wrap">
 <div class="fg-layout">
@@ -309,12 +367,13 @@ try{if(localStorage.getItem("mariua_darkmode")==="1")document.body.classList.add
   <div class="fg-main">
     <section class="fg-card">
       <div class="oc-top">
-        <div class="oc-st" id="oc-status">Carregando…</div>
+        <button class="btn ghost" type="button" id="oc-btn-k" onclick="ocToggleK()" aria-expanded="false" aria-controls="oc-k">Fator K por base</button>
         <button class="btn ghost" type="button" id="oc-btn-csv" onclick="ocExportar()">Baixar resumo (CSV)</button>
         <button class="btn add" type="button" onclick="document.getElementById('oc-file').click()">Importar apontamento GPM</button>
         <input type="file" id="oc-file" accept=".zip,.csv,.txt,.xlsx,.xls" hidden onchange="ocImportar(this.files[0]);this.value=''">
       </div>
       <div class="oc-msg" id="oc-msg" role="status" aria-live="polite"></div>
+      <div id="oc-k" hidden></div>
     </section>
     <section class="fg-kpis" id="oc-kpis" aria-label="Indicadores"></section>
     <section class="oc-bases" id="oc-bases" aria-label="Resumo por base"></section>
@@ -332,6 +391,7 @@ try{if(localStorage.getItem("mariua_darkmode")==="1")document.body.classList.add
         <div id="oc-ativ"></div>
       </section>
     </div>
+    <section class="fg-card oc-dia" id="oc-dia" hidden aria-live="polite"></section>
   </div>
 </div>
 </div>
@@ -353,16 +413,26 @@ try{if(localStorage.getItem("mariua_darkmode")==="1")document.body.classList.add
    ---------------------------------------------------------------------
    Fonte: relatório apontamento_faturamento_*.csv do GPM (ou o .zip que o GPM baixa).
    Cada linha do relatório é uma atividade de um serviço (qtd, valor unitário, valor total).
-   - Base = centro de serviço da linha (BA-FEIRA DE SANTANA → Feira de Santana).
-     Sem centro, vale o sufixo da equipe (-FSA, -SRR, -JAC…), como no Turno.
+   - Equipes: dados do Cadastro de Equipes (turno_data.cadastro_equipes): base, encarregado,
+     supervisor, colaboradores e tipo. A equipe do GPM é casada com o cadastro pelo código
+     (ADAILTON-FSA), depois pelo nº da equipe no GPM (cod_equipe) e por fim pelo encarregado.
+   - Base = base da equipe no cadastro (ou, se preferir, o centro de serviço do GPM).
    - Ocorrência atendida = serviço com retorno EXECUTADO; a OC conta uma vez por equipe.
-   - Apontado = soma de quantidade × valor unitário das atividades.
-   - Faturado = soma da coluna valor_total do GPM.
+   - Faturado = tudo o que foi apontado: quantidade × valor unitário × fator K da base.
+     O GPM traz o mesmo preço unitário em todas as bases; o K de cada base fica em
+     turno_data.ocorr_fator_k e vale para o centro de serviço do atendimento (só manutenção).
+     (A coluna valor_total do GPM fica zerada enquanto o serviço não é complementado, por isso não é usada.)
    - Gravação no turno_data, uma linha por mês (ocorr_fat_AAAA-MM). Importar de novo
      substitui os serviços que vierem no arquivo (as atividades podem mudar).
    ===================================================================== */
 var OC_DB=null;                 // { 'AAAA-MM': {comp, servs:[...], atualizado, arquivo} }
-var OC_F={mes:'', base:'', grupo:'', sit:'', modo:'oc'};
+var OC_F={mes:'', base:'', grupo:'', sit:'', sup:'', modo:'oc', agrupar:'eq', zeros:true};
+var OC_CAD=null;                // cadastro de equipes preparado: {lista, idx, atualizado, por, fonte}
+var OC_CAD_CACHE={};            // casamento equipe do GPM -> equipe do cadastro
+var OC_LISTA_SUP=[], OC_SUP_NOME={};
+var OC_DIA='', OC_DIA_VISTA='eq', OC_EVO_DIARIO=false;   // dia escolhido no gráfico
+var OC_K=null;                  // fator K por base: {k:{fsa:1.1,...}, atualizado, por}
+var OC_K_AUTO=false, OC_K_FORM=[];
 var OC_ABERTO={}, OC_ABERTO_S={};
 var OC_ULT=null, OC_LISTA_EQ=[], OC_LISTA_GRP=[], OC_LISTA_SIT=[];
 var OC_GRUPO_NOME={};
@@ -382,6 +452,7 @@ var OC_ICO={
   ok:'<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 11l3 3 8-8"/><path d="M20 12v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h9"/></svg>',
   apont:'<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="2"/><path d="M9 12h6M9 16h4"/></svg>',
   fat:'<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2Z"/><path d="M9 8h6"/><path d="M9 12h6"/></svg>',
+  media:'<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h16"/><path d="M7 16v-5"/><path d="M12 16V7"/><path d="M17 16v-8"/></svg>',
   pend:'<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
   filtro:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 5h18l-7 8v6l-4-2v-4Z"/></svg>'
 };
@@ -430,7 +501,60 @@ function ocNumBR(v){
   var n=parseFloat(s); return isFinite(n)?n:0;
 }
 function ocGrupoNome(gk){ return OC_GRUPO_NOME[gk]||gk; }
+function ocSquash(t){ return ocSemAcento(t).replace(/[^A-Z0-9]/g,''); }
+function ocToks(t){ return ocSemAcento(t).replace(/[^A-Z ]/g,' ').split(' ').filter(Boolean); }
+function ocQuem(p){ if(!p) return ''; if(typeof p==='string') return p; return p.nome||p.email||''; }
+
+// ---------- cadastro de equipes ----------
+function ocCadPreparar(pkg, fonte){
+  var eqs=(pkg&&Array.isArray(pkg.equipes))?pkg.equipes:[];
+  var lista=[];
+  eqs.forEach(function(q){
+    if(!q||!(q.codigo||q.encarregado)) return;
+    var utd=String(q.utd||'').toLowerCase().trim();
+    var base=(utd&&utd!=='sb'&&OC_BASES[utd])?utd:(ocBaseCentro(q.centro)||ocBaseEquipe(q.codigo)||'sb');
+    lista.push({codigo:String(q.codigo||'').replace(/\s+/g,' ').toUpperCase().trim(), ce:String(q.cod_equipe||'').trim(),
+      enc:String(q.encarregado||'').trim(), mat:String(q.matricula||'').trim(), sup:String(q.supervisor||'').trim(),
+      colab:(q.qtd_colab===0||q.qtd_colab)?Number(q.qtd_colab)||0:null, tipo:String(q.tipo||'').trim(), veic:String(q.veiculo||'').trim(),
+      centro:String(q.centro||'').trim(), base:base});
+  });
+  var idx={sq:{}, ce:{}};
+  lista.forEach(function(q){ var k=ocSquash(q.codigo); if(k&&!idx.sq[k]) idx.sq[k]=q; if(q.ce&&!idx.ce[q.ce]) idx.ce[q.ce]=q; });
+  OC_CAD={lista:lista, idx:idx, atualizado:(pkg&&pkg.atualizado)||'', por:ocQuem(pkg&&pkg.por), fonte:fonte||''};
+  OC_CAD_CACHE={};
+}
+function ocCadChave(q){ return 'C:'+(ocSquash(q.codigo)||ocSquash(q.enc)); }
+function ocCadNome(q){ return q.codigo||q.enc; }
+// equipe do GPM -> equipe do cadastro (código; nº da equipe no GPM; encarregado com todos os nomes batendo)
+function ocCadAchar(eq, ce, resp, baseHint){
+  if(!OC_CAD||!OC_CAD.lista.length) return null;
+  var ck=eq+'|'+ce+'|'+resp;
+  if(Object.prototype.hasOwnProperty.call(OC_CAD_CACHE,ck)) return OC_CAD_CACHE[ck];
+  var I=OC_CAD.idx, achou=I.sq[ocSquash(eq)]||(ce?I.ce[ce]:null)||null;
+  if(!achou&&resp){
+    var nome=ocToks(resp), peso=-1;
+    OC_CAD.lista.forEach(function(q){
+      var t=ocToks(q.enc); if(t.length<2) return;
+      for(var i=0;i<t.length;i++) if(nome.indexOf(t[i])<0) return;
+      var p=(q.base===baseHint?1000:0)+t.length;
+      if(p>peso){ peso=p; achou=q; }
+    });
+  }
+  OC_CAD_CACHE[ck]=achou;
+  return achou;
+}
+function ocSupKey(n){ var k=ocSemAcento(n); if(k&&!OC_SUP_NOME[k]) OC_SUP_NOME[k]=String(n).replace(/\s+/g,' ').trim().toUpperCase(); return k; }
+// bases que aparecem no apontamento: equipes do cadastro de outras bases (MG, SE…) não entram como "sem ocorrência"
+function ocBasesDosDados(todos){ var b={}; todos.forEach(function(s){ b[s.baseEq]=1; b[s.baseCs]=1; }); delete b.sb; return b; }
 function ocMsg(t, tipo){ var m=$('oc-msg'); if(!m) return; m.textContent=t||''; m.className='oc-msg'+(tipo?' '+tipo:''); clearTimeout(m._t); if(t&&tipo==='ok') m._t=setTimeout(function(){ m.textContent=''; },8000); }
+
+// ---------- fator K por base ----------
+function ocKBase(b){ var k=OC_K&&OC_K.k&&OC_K.k[b]; k=Number(k); return k>0?k:null; }
+function ocEhManut(s){ var t=ocSemAcento(s.ts); return !t||t.indexOf('MANUTEN')>=0; }
+function ocFmtK(n){ return Number(n).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:4}); }
+// valor de uma linha de atividade: quantidade × unitário × K, arredondado no centavo
+function ocValLinha(a,k){ return ocR2((Number(a[3])||0)*(Number(a[4])||0)*(k||1)); }
+function ocPodeK(){ return typeof ocPodeEditarK==='function'?ocPodeEditarK():true; }
 
 // ---------- entrada da tela ----------
 async function ocIniciar(recarregar){
@@ -440,6 +564,7 @@ async function ocIniciar(recarregar){
     catch(e){ OC_DB=OC_DB||{}; ocMsg('Não foi possível carregar o apontamento ('+(e.message||e)+').','err'); }
   }
   ocRender();
+  ocKAutoAbrir();
 }
 
 // todos os serviços, já somados e em ordem de data (a 1ª visita da equipe à OC é a que conta)
@@ -448,39 +573,50 @@ function ocServicos(){
   Object.keys(OC_DB||{}).sort().forEach(function(c){
     ((OC_DB[c]&&OC_DB[c].servs)||[]).forEach(function(s){
       var eq=String(s.eq||'').toUpperCase().trim()||'(SEM EQUIPE)';
-      var ap=0, ft=0, sits={};
-      (s.at||[]).forEach(function(a){ ap+=(Number(a[3])||0)*(Number(a[4])||0); ft+=Number(a[5])||0; var k=a[6]||''; if(k) sits[k]=(sits[k]||0)+1; });
+      var sufixo0=ocBaseEquipe(eq), centro0=ocBaseCentro(s.cs), bK=centro0||sufixo0||'sb';
+      var manut=ocEhManut(s), kb=manut?ocKBase(bK):null, kUsado=manut?(kb||1):1;
+      var ap=0, ap0=0, ft=0, sits={};
+      (s.at||[]).forEach(function(a){ ap0+=(Number(a[3])||0)*(Number(a[4])||0); ap+=ocValLinha(a,kUsado); ft+=Number(a[5])||0; var k=a[6]||''; if(k) sits[k]=(sits[k]||0)+1; });
       var gk=ocSemAcento(s.grp)||'SEM GRUPO';
       if(!OC_GRUPO_NOME[gk]&&s.grp) OC_GRUPO_NOME[gk]=String(s.grp).replace(/\s+/g,' ').trim().toUpperCase();
       var sit=Object.keys(sits).sort(function(a,b){ return sits[b]-sits[a]; })[0]||'';
-      out.push({id:id++, s:String(s.s), d:s.d||'', eq:eq, base:ocBaseCentro(s.cs)||ocBaseEquipe(eq)||'sb', baseEq:ocBaseEquipe(eq)||'sb',
+      var sufixo=ocBaseEquipe(eq), centro=ocBaseCentro(s.cs);
+      var cad=ocCadAchar(eq, String(s.ce||'').trim(), s.resp||'', sufixo||centro);
+      var baseEq=(cad&&cad.base!=='sb'?cad.base:'')||sufixo||centro||'sb';
+      var sup=(cad&&cad.sup)||s.sup||'';
+      out.push({id:id++, s:String(s.s), d:s.d||'', eq:eq, cad:cad, tk:cad?ocCadChave(cad):'G:'+eq, nome:cad?ocCadNome(cad):eq,
+        baseEq:baseEq, baseCs:centro||baseEq, supK:sup?ocSupKey(sup):'', supNome:sup,
         ot:s.ot||'', oc:ocNormOC(s.ot,s.s), ret:s.ret||'', exec:ocSemAcento(s.ret).indexOf('EXECUTADO')===0,
-        gk:gk, sup:s.sup||'', resp:s.resp||'', loc:s.loc||'', end:s.end||'', at:s.at||[], nAt:(s.at||[]).length,
-        ap:ocR2(ap), ft:ocR2(ft), sit:sit});
+        gk:gk, resp:s.resp||'', loc:s.loc||'', end:s.end||'', at:s.at||[], nAt:(s.at||[]).length,
+        ap:ocR2(ap), ap0:ocR2(ap0), ft:ocR2(ft), sit:sit, k:kUsado, kBase:bK, kFalta:manut&&!kb, ts:s.ts||''});
     });
   });
   out.sort(function(a,b){ return a.d<b.d?-1:a.d>b.d?1:(Number(a.s)||0)-(Number(b.s)||0); });
   return out;
 }
+function ocB(s){ return OC_F.agrupar==='cs'?s.baseCs:s.baseEq; }
 function ocPassa(s, sem){
   if(OC_F.mes && sem!=='mes' && s.d.slice(0,7)!==OC_F.mes) return false;
-  if(OC_F.base && sem!=='base' && s.base!==OC_F.base) return false;
+  if(OC_F.base && sem!=='base' && ocB(s)!==OC_F.base) return false;
+  if(OC_F.sup && s.supK!==OC_F.sup) return false;
   if(OC_F.grupo && s.gk!==OC_F.grupo) return false;
   if(OC_F.sit && s.sit!==OC_F.sit) return false;
   return true;
 }
 
 // ---------- agregação ----------
-function ocAgregar(lista){
-  var porOC=OC_F.modo==='oc', eqs={}, contadas={}, distintas={};
-  var T={oc:0, serv:0, nexe:0, ap:0, ft:0, semValor:0, apSemValor:0, linhas:0};
+function ocAgregar(lista, todos, semFiltroBase){
+  var porOC=OC_F.modo==='oc', eqs={}, contadas={}, distintas={}, cadVistos={};
+  var T={oc:0, serv:0, nexe:0, ap:0, ft:0, semValor:0, apSemValor:0, linhas:0, kFalta:{}};
   lista.forEach(function(s){
-    var k=s.base+'|'+s.eq;      // a mesma equipe pode atender em mais de uma base
-    var e=eqs[k]||(eqs[k]={k:k, eq:s.eq, base:s.base, baseEq:s.baseEq, grupos:{}, sups:{}, oc:0, serv:0, nexe:0, ap:0, ft:0, semValor:0, vistos:{}, servs:[]});
-    e.servs.push(s);
+    var b0=ocB(s), k=b0+'|'+s.tk;      // a mesma equipe pode aparecer em mais de uma base
+    var e=eqs[k]||(eqs[k]={k:k, eq:s.nome, cad:s.cad, base:b0, baseEq:s.baseEq, nomesGPM:{}, grupos:{}, sups:{}, oc:0, serv:0, nexe:0, ap:0, ft:0, semValor:0, vistos:{}, servs:[]});
+    e.servs.push(s); e.nomesGPM[s.eq]=1;
+    if(s.cad) cadVistos[s.tk]=1;
     e.grupos[s.gk]=(e.grupos[s.gk]||0)+1;
-    if(s.sup) e.sups[s.sup]=(e.sups[s.sup]||0)+1;
+    if(s.supNome) e.sups[s.supNome]=(e.sups[s.supNome]||0)+1;
     e.ap+=s.ap; e.ft+=s.ft; T.ap+=s.ap; T.ft+=s.ft; T.linhas+=s.nAt;
+    if(s.kFalta) T.kFalta[s.kBase]=1;
     if(s.ft===0&&s.ap>0){ e.semValor++; T.semValor++; T.apSemValor+=s.ap; }
     if(!s.exec){ e.nexe++; T.nexe++; return; }
     e.serv++; T.serv++;
@@ -488,13 +624,27 @@ function ocAgregar(lista){
     if(e.vistos[chave]) return;
     e.vistos[chave]=1; contadas[s.id]=1; e.oc++; T.oc++; distintas[s.oc]=1;
   });
+  // equipes do cadastro sem nenhum serviço no recorte (só nas bases do apontamento)
+  if(OC_CAD&&OC_F.zeros&&!OC_F.grupo&&!OC_F.sit&&todos){
+    var bd=ocBasesDosDados(todos);
+    OC_CAD.lista.forEach(function(q){
+      var tk=ocCadChave(q), b=q.base;
+      if(cadVistos[tk]||!bd[b]) return;
+      if(OC_F.base&&!semFiltroBase&&b!==OC_F.base) return;
+      if(OC_F.sup&&ocSupKey(q.sup)!==OC_F.sup) return;
+      var k=b+'|'+tk; if(eqs[k]) return;
+      eqs[k]={k:k, eq:ocCadNome(q), cad:q, base:b, baseEq:b, nomesGPM:{}, grupos:{}, sups:{}, oc:0, serv:0, nexe:0, ap:0, ft:0, semValor:0, vistos:{}, servs:[], zero:true};
+      if(q.sup) eqs[k].sups[q.sup]=1;
+    });
+  }
   var bases={};
   Object.keys(eqs).forEach(function(k){
     var e=eqs[k];
     e.ap=ocR2(e.ap); e.ft=ocR2(e.ft);
     e.grupo=Object.keys(e.grupos).sort(function(a,b){ return e.grupos[b]-e.grupos[a]; })[0]||'';
     e.misto=Object.keys(e.grupos).length>1;
-    e.sup=Object.keys(e.sups).sort(function(a,b){ return e.sups[b]-e.sups[a]; })[0]||'';
+    e.sup=(e.cad&&e.cad.sup)||Object.keys(e.sups).sort(function(a,b){ return e.sups[b]-e.sups[a]; })[0]||'';
+    e.tipo=(e.cad&&e.cad.tipo)?e.cad.tipo:ocGrupoNome(e.grupo);
     var b=bases[e.base]||(bases[e.base]={base:e.base, oc:0, serv:0, nexe:0, ap:0, ft:0, semValor:0, eqs:[]});
     b.oc+=e.oc; b.serv+=e.serv; b.nexe+=e.nexe; b.ap+=e.ap; b.ft+=e.ft; b.semValor+=e.semValor; b.eqs.push(e);
   });
@@ -503,11 +653,18 @@ function ocAgregar(lista){
     b.ap=ocR2(b.ap); b.ft=ocR2(b.ft);
     b.eqs.sort(function(x,y){ return (y.oc-x.oc)||(y.ap-x.ap)||(x.eq<y.eq?-1:1); });
     b.ativas=b.eqs.filter(function(e){ return e.oc>0; }).length;
+    b.zeros=b.eqs.filter(function(e){ return e.zero; }).length;
   });
   lb.sort(function(x,y){ return (y.ap-x.ap)||(y.oc-x.oc); });
   T.ap=ocR2(T.ap); T.ft=ocR2(T.ft); T.apSemValor=ocR2(T.apSemValor);
   var meses=Array.from(new Set(lista.map(function(s){ return s.d.slice(0,7); }).filter(Boolean))).sort();
   return {lista:lista, bases:lb, contadas:contadas, distintas:Object.keys(distintas).length, T:T, meses:meses};
+}
+// equipes do cadastro por base (para o "N de M equipes")
+function ocCadPorBase(){
+  var c={}; if(!OC_CAD) return c;
+  OC_CAD.lista.forEach(function(q){ if(OC_F.sup&&ocSupKey(q.sup)!==OC_F.sup) return; c[q.base]=(c[q.base]||0)+1; });
+  return c;
 }
 function ocPeriodo(A){
   var n=A.meses.length; if(!n) return '';
@@ -524,6 +681,11 @@ function ocRender(){
   ocStatusLinha(todos);
   OC_LISTA_GRP=Array.from(new Set(todos.map(function(s){ return s.gk; }))).sort();
   OC_LISTA_SIT=Array.from(new Set(todos.map(function(s){ return s.sit; }).filter(Boolean))).sort();
+  var sups={}, bd=ocBasesDosDados(todos);
+  todos.forEach(function(s){ if(s.supK) sups[s.supK]=1; });
+  if(OC_CAD) OC_CAD.lista.forEach(function(q){ if(q.sup&&bd[q.base]) sups[ocSupKey(q.sup)]=1; });
+  OC_LISTA_SUP=Object.keys(sups).sort(function(a,b){ return OC_SUP_NOME[a]<OC_SUP_NOME[b]?-1:1; });
+  if(OC_F.sup&&OC_LISTA_SUP.indexOf(OC_F.sup)<0) OC_F.sup='';
   if(OC_F.grupo&&OC_LISTA_GRP.indexOf(OC_F.grupo)<0) OC_F.grupo='';
   if(OC_F.sit&&OC_LISTA_SIT.indexOf(OC_F.sit)<0) OC_F.sit='';
   ocFiltros(todos);
@@ -531,14 +693,15 @@ function ocRender(){
     OC_ULT=null;
     $('oc-kpis').innerHTML='<div class="fg-kpi oc-vazio-kpi"><span class="fg-vazio">Nenhum apontamento importado ainda. No GPM, baixe o relatório <b>Apontamento de faturamento</b> e use <b>Importar apontamento GPM</b> aqui em cima (pode ser o .zip do jeito que vem).</span></div>';
     ['oc-bases','oc-evo','oc-ativ'].forEach(function(id){ var el=$(id); if(el) el.innerHTML=''; });
+    OC_DIA=''; ocDiaRender([]);
     $('oc-tabela').innerHTML='<div class="fg-vazio">As equipes aparecem aqui depois da primeira importação.</div>';
     $('oc-tbl-cap').textContent=''; $('oc-evo-cap').textContent='';
     return;
   }
-  var A=ocAgregar(todos.filter(function(s){ return ocPassa(s); }));
-  var B=ocAgregar(todos.filter(function(s){ return ocPassa(s,'base'); }));
+  var A=ocAgregar(todos.filter(function(s){ return ocPassa(s); }), todos);
+  var B=ocAgregar(todos.filter(function(s){ return ocPassa(s,'base'); }), todos, true);
   OC_ULT=A;
-  ocKpis(A); ocBasesCards(B); ocTabela(A); ocEvolucao(todos); ocAtividades(A);
+  ocKpis(A); ocBasesCards(B); ocTabela(A); ocEvolucao(todos); ocAtividades(A); ocDiaRender(todos);
 }
 
 function ocStatusLinha(todos){
@@ -552,6 +715,17 @@ function ocStatusLinha(todos){
     var dt=new Date(ult.atualizado);
     h+=' Última importação em '+dt.toLocaleDateString('pt-BR')+' às '+dt.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})+(ult.arquivo?' ('+ocEsc(ult.arquivo)+')':'')+'.';
   }
+  if(OC_CAD&&OC_CAD.lista.length){
+    var fora={};
+    todos.forEach(function(s){ if(!s.cad) fora[s.eq]=1; });
+    var nf=Object.keys(fora).sort();
+    h+='<br>Equipes do <b>Cadastro de Equipes</b>: '+ocPl(OC_CAD.lista.length,'equipe','equipes')
+      +(OC_CAD.atualizado?', atualizado em '+new Date(OC_CAD.atualizado).toLocaleDateString('pt-BR')+(OC_CAD.por?' por '+ocEsc(OC_CAD.por):''):'')
+      +(OC_CAD.fonte?' ('+ocEsc(OC_CAD.fonte)+')':'')+'.'
+      +(nf.length?' <span class="oc-aviso-tx">'+ocPl(nf.length,'equipe do GPM não está','equipes do GPM não estão')+' no cadastro: '+nf.map(ocEsc).join(', ')+'.</span>':' Todas as equipes do GPM foram encontradas no cadastro.');
+  } else {
+    h+='<br><span class="oc-aviso-tx">Cadastro de Equipes não carregado: base e supervisor vêm do próprio GPM.</span>';
+  }
   st.innerHTML=h;
 }
 
@@ -560,7 +734,7 @@ function ocFiltros(todos){
   var meses=Array.from(new Set(todos.map(function(s){ return s.d.slice(0,7); }).filter(Boolean))).sort();
   if(OC_F.mes&&meses.indexOf(OC_F.mes)<0) OC_F.mes='';
   var ordem=Object.keys(OC_BASES);
-  var bs=Array.from(new Set(todos.map(function(s){ return s.base; }))).sort(function(a,b){ return ordem.indexOf(a)-ordem.indexOf(b); });
+  var bs=Array.from(new Set(todos.map(function(s){ return ocB(s); }))).sort(function(a,b){ return ordem.indexOf(a)-ordem.indexOf(b); });
   if(OC_F.base&&bs.indexOf(OC_F.base)<0) OC_F.base='';
   var chip=function(on,label,acao,extra,titulo){
     return '<button type="button" class="fg-chip'+(on?' on':'')+'" aria-pressed="'+on+'" onclick="'+acao+'"'+(titulo?' title="'+ocAttr(titulo)+'"':'')+'>'+(extra||'')+label+'</button>';
@@ -573,6 +747,8 @@ function ocFiltros(todos){
   var h=bloco('Mês','mes','<div class="fg-fgrid">'+meses.map(function(m){ return chip(OC_F.mes===m, ocCurto(m), "ocFiltro('mes','"+m+"')"); }).join('')+'</div>');
   h+=bloco('Base','base','<div class="fg-flist">'+chip(!OC_F.base,'Todas',"ocFiltro('base','')")
     +bs.map(function(b){ return chip(OC_F.base===b, ocEsc(OC_BASES[b].nome), "ocFiltro('base','"+b+"')", '<i style="background:'+OC_BASES[b].cor+'"></i>'); }).join('')+'</div>');
+  if(OC_LISTA_SUP.length) h+=bloco('Supervisor','sup','<div class="fg-flist">'+chip(!OC_F.sup,'Todos',"ocFiltro('sup','')")
+    +OC_LISTA_SUP.map(function(k,i){ return chip(OC_F.sup===k, ocEsc(OC_SUP_NOME[k]||k), 'ocFiltroIdx(\'sup\','+i+')'); }).join('')+'</div>');
   h+=bloco('Grupo','grupo','<div class="fg-flist">'+chip(!OC_F.grupo,'Todos',"ocFiltro('grupo','')")
     +OC_LISTA_GRP.map(function(g,i){ return chip(OC_F.grupo===g, ocEsc(ocGrupoNome(g)), 'ocFiltroIdx(\'grupo\','+i+')'); }).join('')+'</div>');
   if(OC_LISTA_SIT.length>1) h+=bloco('Situação no GPM','sit','<div class="fg-flist">'+chip(!OC_F.sit,'Todas',"ocFiltro('sit','')")
@@ -580,10 +756,17 @@ function ocFiltros(todos){
   h+=bloco('Contar por','modo','<div class="fg-flist">'
     +chip(OC_F.modo==='oc','Ocorrência',"ocModo('oc')",'','Cada OC conta uma vez por equipe, mesmo que ela tenha voltado ao local')
     +chip(OC_F.modo==='serv','Serviço',"ocModo('serv')",'','Cada serviço do GPM conta separado')+'</div>',true);
+  h+=bloco('Base de cada equipe','agrupar','<div class="fg-flist">'
+    +chip(OC_F.agrupar==='eq','Base do cadastro',"ocOpcao('agrupar','eq')",'','A base onde a equipe está no Cadastro de Equipes')
+    +chip(OC_F.agrupar==='cs','Centro de serviço do GPM',"ocOpcao('agrupar','cs')",'','O centro de serviço de cada atendimento no GPM')+'</div>',true);
+  if(OC_CAD&&OC_CAD.lista.length) h+=bloco('Equipes sem ocorrência','zeros','<div class="fg-fgrid">'
+    +chip(OC_F.zeros,'Mostrar',"ocOpcao('zeros',true)",'','Equipes do cadastro que não aparecem no apontamento do período')
+    +chip(!OC_F.zeros,'Ocultar',"ocOpcao('zeros',false)")+'</div>',true);
   box.innerHTML=h;
 }
 function ocFiltro(chave,valor){ OC_F[chave]=(OC_F[chave]===valor?'':valor); ocRender(); }
-function ocFiltroIdx(chave,i){ var lista=chave==='grupo'?OC_LISTA_GRP:OC_LISTA_SIT, v=lista[i]||''; OC_F[chave]=(OC_F[chave]===v?'':v); ocRender(); }
+function ocFiltroIdx(chave,i){ var lista=chave==='grupo'?OC_LISTA_GRP:(chave==='sup'?OC_LISTA_SUP:OC_LISTA_SIT), v=lista[i]||''; OC_F[chave]=(OC_F[chave]===v?'':v); ocRender(); }
+function ocOpcao(chave,valor){ OC_F[chave]=valor; if(chave==='agrupar') OC_F.base=''; ocRender(); }
 function ocModo(m){ OC_F.modo=m; ocRender(); }
 
 function ocKpis(A){
@@ -596,32 +779,35 @@ function ocKpis(A){
   var porOC=OC_F.modo==='oc';
   var sub1=porOC?ocPl(T.serv,'serviço executado','serviços executados')+', '+ocPl(A.distintas,'OC distinta','OCs distintas'):'serviços executados';
   if(T.nexe) sub1+='; '+ocPl(T.nexe,'não executado','não executados');
-  var pct=T.ap?T.ft/T.ap*100:0, falta=ocR2(T.ap-T.ft);
+  var tipos={}, semPreco=0;
+  A.lista.forEach(function(s){ s.at.forEach(function(a){ tipos[(a[0]||'')+'|'+(a[1]||'')]=1; if((Number(a[3])||0)>0&&!(Number(a[4])||0)) semPreco++; }); });
   box.innerHTML=card(OC_ICO.ok,'Ocorrências atendidas'+(ocPeriodo(A)?' de '+ocPeriodo(A):''),ocNum(T.oc),sub1)
-    +card(OC_ICO.apont,'Apontado',ocMoney(T.ap),'quantidade × valor unitário de '+ocPl(T.linhas,'atividade','atividades'))
-    +card(OC_ICO.fat,'Faturado no GPM',ocMoney(T.ft),ocPct(pct)+' do apontado (coluna valor total)')
-    +card(OC_ICO.pend,'A faturar',ocMoney(falta),T.semValor?ocPl(T.semValor,'serviço ainda sem valor no GPM','serviços ainda sem valor no GPM'):'todos os serviços têm valor no GPM');
+    +card(OC_ICO.fat,'Faturado',ocMoney(T.ap),Object.keys(T.kFalta).length
+        ?'<span class="up">fator K não definido para '+Object.keys(T.kFalta).sort(function(a,b){ var o=Object.keys(OC_BASES); return o.indexOf(a)-o.indexOf(b); }).map(function(b){ return ocEsc(OC_BASES[b].nome); }).join(', ')+' (contando K = 1)</span>'
+        :'quantidade × valor unitário × fator K da base')
+    +card(OC_ICO.media,'Média por ocorrência',T.oc?ocMoney(T.ap/T.oc):'—',ocPl(T.oc,'ocorrência atendida','ocorrências atendidas')+' no período')
+    +card(OC_ICO.apont,'Atividades apontadas',ocNum(T.linhas),ocPl(Object.keys(tipos).length,'tipo de atividade','tipos de atividade')+(semPreco?'; '+ocPl(semPreco,'sem preço no GPM','sem preço no GPM'):''));
 }
-
-function ocBarra(ap, ft, cor){
-  var p=ap?Math.min(100,ft/ap*100):0;
-  return '<span class="oc-prog" title="'+ocAttr(ocMoney(ft)+' de '+ocMoney(ap))+'"><span><b style="width:'+p.toFixed(1)+'%'+(cor?';background:'+cor:'')+'"></b></span><em>'+ocPct(p)+'</em></span>';
+function ocBarra(v, total, cor){
+  var p=total?Math.min(100,v/total*100):0;
+  return '<span class="oc-prog" title="'+ocAttr(ocMoney(v)+' de '+ocMoney(total))+'"><span><b style="width:'+p.toFixed(1)+'%'+(cor?';background:'+cor:'')+'"></b></span><em>'+ocPct(p)+'</em></span>';
 }
-
 function ocBasesCards(B){
   var box=$('oc-bases'); if(!box) return;
+  var cadB=ocCadPorBase(), tot=B.T.ap||0;
   box.innerHTML=B.bases.map(function(b){
+    var eqTxt=(OC_F.agrupar==='eq'&&cadB[b.base])?ocNum(b.ativas)+' de '+ocPl(cadB[b.base],'equipe do cadastro','equipes do cadastro')+' '+(b.ativas===1?'atendeu':'atenderam')
+      :ocPl(b.ativas,'equipe atendeu','equipes atenderam');
     var cfg=OC_BASES[b.base], on=OC_F.base===b.base, off=OC_F.base&&!on;
     return '<button type="button" class="oc-base'+(on?' on':'')+(off?' off':'')+'" style="--c:'+cfg.cor+'" aria-pressed="'+on+'" onclick="ocFiltro(\'base\',\''+b.base+'\')" title="Filtrar por '+ocAttr(cfg.nome)+'">'
-      +'<span class="nm">'+ocEsc(cfg.nome)+'</span>'
+      +'<span class="nm">'+ocEsc(cfg.nome)+(b.base!=='sb'?(ocKBase(b.base)?'<em class="oc-kb">K '+ocFmtK(ocKBase(b.base))+'</em>':'<em class="oc-kb falta">sem fator K</em>'):'')+'</span>'
       +'<span class="q">'+ocNum(b.oc)+'<small>'+(b.oc===1?'ocorrência':'ocorrências')+'</small></span>'
-      +'<span class="v">'+ocMoney(b.ft)+' <small>faturado de '+ocMoneyCurto(b.ap)+'</small></span>'
-      +ocBarra(b.ap,b.ft,cfg.cor)
-      +'<span class="s">'+ocPl(b.ativas,'equipe atendeu','equipes atenderam')+(b.semValor?', '+ocPl(b.semValor,'serviço sem valor','serviços sem valor'):'')+'</span>'
+      +'<span class="v">'+ocMoney(b.ap)+' <small>faturado</small></span>'
+      +ocBarra(b.ap,tot,cfg.cor)
+      +'<span class="s">'+eqTxt+'</span>'
       +'</button>';
   }).join('');
 }
-
 function ocTabela(A){
   var box=$('oc-tabela'), cap=$('oc-tbl-cap'); if(!box) return;
   if(cap) cap.textContent=(ocPeriodo(A)?ocPeriodo(A)+', ':'')+(OC_F.modo==='oc'?'contando por ocorrência':'contando por serviço');
@@ -629,44 +815,62 @@ function ocTabela(A){
   OC_LISTA_EQ=[];
   var z=function(n){ return n?ocNum(n):'<span class="oc-zero">0</span>'; };
   var m=function(v){ return v?ocMoney(v):'<span class="oc-zero">'+ocMoney(0)+'</span>'; };
-  var h='<table class="oc-tbl"><thead><tr><th>Equipe</th><th>Grupo</th><th class="n">Ocorrências</th><th class="n">Serviços</th><th class="n">Não exec.</th><th class="n">Apontado</th><th class="n">Faturado</th><th>Faturado do apontado</th></tr></thead><tbody>';
+  var h='<table class="oc-tbl"><thead><tr><th>Equipe</th><th>Tipo</th><th class="n">Ocorrências</th><th class="n">Serviços</th><th class="n">Não exec.</th><th class="n">Faturado</th><th class="n" title="Faturado dividido pelas ocorrências">Média por OC</th><th>Participação na base</th></tr></thead><tbody>';
   A.bases.forEach(function(b){
     var cfg=OC_BASES[b.base];
     h+='<tr class="oc-grp"><td colspan="2"><i style="background:'+cfg.cor+'"></i>'+ocEsc(cfg.nome)+'<small>'+ocPl(b.eqs.length,'equipe','equipes')+'</small></td>'
       +'<td class="n">'+ocNum(b.oc)+'</td><td class="n">'+ocNum(b.serv)+'</td><td class="n">'+z(b.nexe)+'</td>'
-      +'<td class="n">'+ocMoney(b.ap)+'</td><td class="n">'+ocMoney(b.ft)+'</td><td>'+ocBarra(b.ap,b.ft,cfg.cor)+'</td></tr>';
+      +'<td class="n">'+ocMoney(b.ap)+'</td><td class="n">'+(b.oc?ocMoney(b.ap/b.oc):'—')+'</td><td>'+ocPct(A.T.ap?b.ap/A.T.ap*100:0)+' do total</td></tr>';
     b.eqs.forEach(function(e){
       var i=OC_LISTA_EQ.push(e.k)-1, aberto=!!OC_ABERTO[e.k];
-      var outra=e.baseEq!==e.base&&e.baseEq!=='sb'?'<span class="oc-outra" title="Equipe de outra base atendendo neste centro de serviço">de '+ocEsc(OC_BASES[e.baseEq].nome)+'</span>':'';
-      h+='<tr class="oc-eq"><td><button type="button" class="oc-eqbtn" aria-expanded="'+aberto+'" onclick="ocToggleEq('+i+')"><span class="ch">▸</span>'+ocEsc(e.eq)+'</button>'+outra
-        +(e.sup?'<span class="oc-sup">'+ocEsc(e.sup)+'</span>':'')+'</td>'
-        +'<td>'+ocEsc(ocGrupoNome(e.grupo))+(e.misto?' +':'')+'</td>'
+      var tags='';
+      if(OC_F.agrupar==='cs'&&e.baseEq!==e.base&&e.baseEq!=='sb') tags+='<span class="oc-outra" title="Equipe de outra base atendendo neste centro de serviço">de '+ocEsc(OC_BASES[e.baseEq].nome)+'</span>';
+      if(OC_CAD&&OC_CAD.lista.length&&!e.cad) tags+='<span class="oc-fora" title="Esta equipe do GPM não foi encontrada no Cadastro de Equipes">fora do cadastro</span>';
+      if(e.zero) tags+='<span class="oc-semoc" title="Está no Cadastro de Equipes, mas não aparece no apontamento do período">sem ocorrência</span>';
+      var info=[];
+      if(e.cad&&e.cad.enc) info.push(ocEsc(e.cad.enc));
+      if(e.sup) info.push('sup. '+ocEsc(e.sup));
+      if(e.cad&&e.cad.colab) info.push(ocPl(e.cad.colab,'colaborador','colaboradores'));
+      var gpm=Object.keys(e.nomesGPM).filter(function(n){ return ocSquash(n)!==ocSquash(e.eq); });
+      if(gpm.length) info.push('no GPM: '+gpm.map(ocEsc).join(', '));
+      var btn=e.servs.length?'<button type="button" class="oc-eqbtn" aria-expanded="'+aberto+'" onclick="ocToggleEq('+i+')"><span class="ch">▸</span>'+ocEsc(e.eq)+'</button>'
+        :'<span class="oc-eqbtn oc-eqzero"><span class="ch"></span>'+ocEsc(e.eq)+'</span>';
+      h+='<tr class="oc-eq'+(e.zero?' zero':'')+'"><td>'+btn+tags
+        +(info.length?'<span class="oc-sup">'+info.join(', ')+'</span>':'')+'</td>'
+        +'<td class="tp">'+ocEsc(e.tipo||'—')+(e.misto&&!(e.cad&&e.cad.tipo)?' +':'')+'</td>'
         +'<td class="n"><b>'+z(e.oc)+'</b></td><td class="n">'+z(e.serv)+'</td><td class="n">'+z(e.nexe)+'</td>'
-        +'<td class="n">'+m(e.ap)+'</td><td class="n"><b>'+m(e.ft)+'</b></td><td>'+ocBarra(e.ap,e.ft,cfg.cor)+'</td></tr>';
-      if(aberto) h+=ocDetalhe(e,A);
+        +'<td class="n"><b>'+m(e.ap)+'</b></td><td class="n">'+(e.oc?ocMoney(e.ap/e.oc):'<span class="oc-zero">—</span>')+'</td><td>'+ocBarra(e.ap,b.ap,cfg.cor)+'</td></tr>';
+      if(aberto&&e.servs.length) h+=ocDetalhe(e,A);
     });
   });
   var T=A.T;
-  h+='</tbody><tfoot><tr><td colspan="2">Total</td><td class="n">'+ocNum(T.oc)+'</td><td class="n">'+ocNum(T.serv)+'</td><td class="n">'+ocNum(T.nexe)+'</td><td class="n">'+ocMoney(T.ap)+'</td><td class="n">'+ocMoney(T.ft)+'</td><td>'+ocPct(T.ap?T.ft/T.ap*100:0)+'</td></tr></tfoot></table>';
+  h+='</tbody><tfoot><tr><td colspan="2">Total</td><td class="n">'+ocNum(T.oc)+'</td><td class="n">'+ocNum(T.serv)+'</td><td class="n">'+ocNum(T.nexe)+'</td><td class="n">'+ocMoney(T.ap)+'</td><td class="n">'+(T.oc?ocMoney(T.ap/T.oc):'—')+'</td><td></td></tr></tfoot></table>';
   box.innerHTML=h;
 }
+// valor de uma atividade apontada; sem preço no GPM aparece marcado
+function ocValorAt(a,k){
+  var q=Number(a[3])||0, vu=Number(a[4])||0;
+  if(q>0&&!vu) return '<span class="oc-sempreco" title="Atividade apontada sem valor unitário no GPM">sem preço</span>';
+  return ocMoney(ocValLinha(a,k));
+}
+function ocKTxt(s){ return s.k&&s.k!==1?' × K '+ocFmtK(s.k):(s.kFalta?' × K 1 (não definido)':''); }
 function ocDetalhe(e, A){
   var servs=e.servs.slice().sort(function(a,b){ return a.d<b.d?1:a.d>b.d?-1:(Number(b.s)||0)-(Number(a.s)||0); });
-  var h='<tr class="oc-det"><td colspan="8"><table><thead><tr><th>Data</th><th>Ocorrência</th><th>Serviço</th><th>Local</th><th class="n">Atividades</th><th class="n">Apontado</th><th class="n">Faturado</th><th>Situação</th></tr></thead><tbody>';
+  var h='<tr class="oc-det"><td colspan="8"><table><thead><tr><th>Data</th><th>Ocorrência</th><th>Serviço</th><th>Local</th><th class="n">Atividades</th><th class="n">Faturado</th></tr></thead><tbody>';
   servs.forEach(function(s){
     var ab=!!OC_ABERTO_S[s.id];
     var marca=!s.exec?'<span class="oc-tag nexe">'+ocEsc(s.ret||'Não executado')+'</span>'
       :(A.contadas[s.id]?'':'<span class="oc-rep" title="Esta equipe já tinha atendido esta OC: o valor entra, a ocorrência não conta de novo">OC repetida</span>');
+    if(OC_F.agrupar==='eq'&&s.baseCs!==s.baseEq&&s.baseCs!=='sb') marca+=' <span class="oc-outra" title="Centro de serviço deste atendimento no GPM">centro '+ocEsc(OC_BASES[s.baseCs].nome)+'</span>';
     h+='<tr class="oc-svc"><td>'+ocDataBR(s.d)+'</td>'
       +'<td><button type="button" class="oc-eqbtn oc-svcbtn" aria-expanded="'+ab+'" onclick="ocToggleSvc('+s.id+')"><span class="ch">▸</span>'+ocEsc(s.oc.charAt(0)==='#'?(s.ot||'(sem código)'):s.oc)+'</button> '+marca+'</td>'
       +'<td>'+ocEsc(s.s)+'</td><td class="end">'+ocEsc(s.loc||s.end)+'</td>'
-      +'<td class="n">'+s.nAt+'</td><td class="n">'+ocMoney(s.ap)+'</td><td class="n">'+(s.ft?ocMoney(s.ft):'<span class="oc-falta">'+ocMoney(0)+'</span>')+'</td>'
-      +'<td><span class="oc-tag sit">'+ocEsc(s.sit||'—')+'</span></td></tr>';
+      +'<td class="n">'+s.nAt+'</td><td class="n">'+ocMoney(s.ap)+'</td></tr>';
     if(ab){
       s.at.forEach(function(a){
-        var q=Number(a[3])||0, vu=Number(a[4])||0, vt=Number(a[5])||0;
+        var q=Number(a[3])||0, vu=Number(a[4])||0;
         h+='<tr class="oc-at"><td></td><td colspan="3"><span class="cod">'+ocEsc(a[0])+'</span> '+ocEsc(a[1])+'</td>'
-          +'<td class="n">'+ocQtd(q)+' '+ocEsc(a[2]||'')+' × '+ocMoney(vu)+'</td><td class="n">'+ocMoney(q*vu)+'</td><td class="n">'+(vt?ocMoney(vt):'<span class="oc-falta">'+ocMoney(0)+'</span>')+'</td><td>'+ocEsc(a[6]||'')+'</td></tr>';
+          +'<td class="n">'+ocQtd(q)+' '+ocEsc(a[2]||'')+' × '+ocMoney(vu)+ocKTxt(s)+'</td><td class="n">'+ocValorAt(a,s.k)+'</td></tr>';
       });
     }
   });
@@ -681,6 +885,7 @@ function ocEvolucao(todos){
   var base=todos.filter(function(s){ return ocPassa(s,'mes'); });
   var meses=Array.from(new Set(base.map(function(s){ return s.d.slice(0,7); }).filter(Boolean))).sort();
   var porDia=!!OC_F.mes||meses.length<=1;
+  OC_EVO_DIARIO=porDia;
   var lista=porDia&&OC_F.mes?base.filter(function(s){ return s.d.slice(0,7)===OC_F.mes; }):base;
   var grupos={}, chaves=[];
   if(porDia){
@@ -690,28 +895,144 @@ function ocEvolucao(todos){
       while(d<=fim&&chaves.length<400){ chaves.push(d.getFullYear()+'-'+ocPad(d.getMonth()+1)+'-'+ocPad(d.getDate())); d.setDate(d.getDate()+1); }
     }
   } else chaves=meses;
-  chaves.forEach(function(k){ grupos[k]={ap:0,ft:0,oc:0}; });
-  lista.forEach(function(s){ var k=porDia?s.d:s.d.slice(0,7), g=grupos[k]; if(!g) return; g.ap+=s.ap; g.ft+=s.ft; if(s.exec) g.oc++; });
+  chaves.forEach(function(k){ grupos[k]={ap:0,oc:0,n:0}; });
+  lista.forEach(function(s){ var k=porDia?s.d:s.d.slice(0,7), g=grupos[k]; if(!g) return; g.ap+=s.ap; g.n++; if(s.exec) g.oc++; });
   if(cap) cap.textContent=porDia?(lista.length?'Por dia'+(OC_F.mes?', '+ocCurto(OC_F.mes):(meses[0]?', '+ocCurto(meses[0]):'')):''):'Por mês; clique num mês para filtrar';
+  if(porDia&&OC_DIA&&chaves.indexOf(OC_DIA)<0) OC_DIA='';
   if(!chaves.length){ box.innerHTML='<div class="fg-vazio">Sem serviços para mostrar</div>'; return; }
   var max=Math.max.apply(null,chaves.map(function(k){ return grupos[k].ap; }))||1;
   var poucos=chaves.length<=12, dias=['dom','seg','ter','qua','qui','sex','sáb'];
   var cols=chaves.map(function(k){
-    var g=grupos[k], hAp=g.ap/max*100, hFt=g.ft/max*100;
+    var g=grupos[k], hAp=g.ap/max*100;
     var rot=porDia?k.slice(8,10):ocCurto(k);
     var dsem=porDia?new Date(k+'T12:00:00').getDay():-1;
-    var tit=(porDia?ocDataBR(k)+' ('+dias[dsem]+')':ocCurto(k))+': '+ocPl(g.oc,'serviço executado','serviços executados')+', apontado '+ocMoney(g.ap)+', faturado '+ocMoney(g.ft);
-    var acao=porDia?'':' onclick="ocFiltro(\'mes\',\''+k+'\')"';
-    var tag=porDia?'div':'button type="button"', fecha=porDia?'div':'button';
-    return '<'+tag+' class="oc-cc'+(porDia?'':' clic')+(dsem===0||dsem===6?' fds':'')+'"'+acao+' title="'+ocAttr(tit)+'" aria-label="'+ocAttr(tit)+'">'
+    var tit=(porDia?ocDataBR(k)+' ('+dias[dsem]+')':ocCurto(k))+': '+ocPl(g.oc,'serviço executado','serviços executados')+', faturado '+ocMoney(g.ap)
+      +(porDia&&g.n?'. Clique para ver as atividades do dia':'');
+    var sel=porDia&&OC_DIA===k, vazio=porDia&&!g.n;
+    var acao=porDia?(vazio?'':' onclick="ocDia(\''+k+'\')" aria-pressed="'+sel+'"'):' onclick="ocFiltro(\'mes\',\''+k+'\')"';
+    var tag=vazio?'div':'button type="button"', fecha=vazio?'div':'button';
+    return '<'+tag+' class="oc-cc'+(vazio?'':' clic')+(sel?' sel':'')+(porDia&&OC_DIA&&!sel?' apag':'')+(dsem===0||dsem===6?' fds':'')+'"'+acao+' title="'+ocAttr(tit)+'" aria-label="'+ocAttr(tit)+'">'
       +(poucos?'<span class="oc-ct">'+ocMoneyCurto(g.ap)+'</span>':'')
-      +'<span class="oc-cb"><span class="ap" style="height:'+hAp.toFixed(1)+'%"></span><span class="ft" style="height:'+hFt.toFixed(1)+'%"></span></span>'
+      +'<span class="oc-cb"><span class="ap" style="height:'+hAp.toFixed(1)+'%"></span></span>'
       +'<span class="oc-cl">'+rot+'</span></'+fecha+'>';
   }).join('');
-  box.innerHTML='<div class="oc-chart">'+cols+'</div><div class="oc-evo-leg"><span class="oc-leg"><i class="ap"></i>Apontado</span><span class="oc-leg"><i class="ft"></i>Faturado no GPM</span>'
-    +(poucos?'':'<span class="oc-leg-nota">Passe o mouse numa barra para ver os valores do dia</span>')+'</div>';
+  box.innerHTML='<div class="oc-chart">'+cols+'</div><div class="oc-evo-leg"><span class="oc-leg"><i class="ap"></i>Faturado (tudo o que foi apontado)</span>'
+    +(porDia?'<span class="oc-leg-nota">Clique num dia para ver as atividades realizadas</span>':'')+'</div>';
 }
-
+// ---------- atividades de um dia (clique no gráfico) ----------
+var OC_DIAS_SEM=['domingo','segunda-feira','terça-feira','quarta-feira','quinta-feira','sexta-feira','sábado'];
+function ocDia(d){
+  OC_DIA=(OC_DIA===d?'':d); OC_ABERTO_DIA={};
+  ocRender();
+  var el=$('oc-dia');
+  if(OC_DIA&&el&&el.scrollIntoView){
+    var calmo=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    el.scrollIntoView({behavior:calmo?'auto':'smooth', block:'nearest'});
+  }
+}
+function ocDiaVista(v){ OC_DIA_VISTA=v; ocRender(); }
+var OC_ABERTO_DIA={};
+function ocDiaServicos(todos){
+  return todos.filter(function(s){ return s.d===OC_DIA&&ocPassa(s,'mes'); });
+}
+function ocDiaRender(todos){
+  var box=$('oc-dia'); if(!box) return;
+  if(!OC_DIA||!OC_EVO_DIARIO){ OC_DIA=''; box.hidden=true; box.innerHTML=''; return; }
+  var base=todos.filter(function(s){ return ocPassa(s,'mes'); });
+  var dias=Array.from(new Set(base.map(function(s){ return s.d; }).filter(Boolean))).sort();
+  var ant='', prox='';
+  dias.forEach(function(d){ if(d<OC_DIA) ant=d; if(d>OC_DIA&&!prox) prox=d; });
+  var lista=base.filter(function(s){ return s.d===OC_DIA; });
+  var dt=new Date(OC_DIA+'T12:00:00');
+  var h='<div class="oc-dia-h">'
+    +'<button type="button" class="oc-nav" onclick="ocDia(\''+ant+'\')"'+(ant?' title="Dia anterior com serviços: '+ocDataBR(ant)+'"':' disabled')+' aria-label="Dia anterior">‹</button>'
+    +'<h2 class="fg-h">Atividades de '+OC_DIAS_SEM[dt.getDay()]+', '+ocDataBR(OC_DIA)+'</h2>'
+    +'<button type="button" class="oc-nav" onclick="ocDia(\''+prox+'\')"'+(prox?' title="Próximo dia com serviços: '+ocDataBR(prox)+'"':' disabled')+' aria-label="Próximo dia">›</button>'
+    +'<div class="oc-dia-acoes"><div class="oc-seg" role="group" aria-label="Ver as atividades">'
+    +'<button type="button" aria-pressed="'+(OC_DIA_VISTA==='eq')+'" onclick="ocDiaVista(\'eq\')">Por equipe</button>'
+    +'<button type="button" aria-pressed="'+(OC_DIA_VISTA==='at')+'" onclick="ocDiaVista(\'at\')">Por atividade</button></div>'
+    +(lista.length?'<button type="button" class="btn ghost sm" onclick="ocDiaExportar()">Baixar o dia (CSV)</button>':'')
+    +'<button type="button" class="fg-fclr" onclick="ocDia(\''+OC_DIA+'\')" title="Fechar" aria-label="Fechar as atividades do dia">✕</button></div></div>';
+  if(!lista.length){
+    box.innerHTML=h+'<div class="fg-vazio">Nenhum serviço neste dia com os filtros escolhidos.</div>';
+    box.hidden=false; return;
+  }
+  var ap=0, nAt=0, exec=0, eqs={}, ocs={};
+  lista.forEach(function(s){ ap+=s.ap; nAt+=s.nAt; if(s.exec){ exec++; ocs[s.oc]=1; } eqs[s.tk]=1; });
+  var filtros=[];
+  if(OC_F.base) filtros.push(OC_BASES[OC_F.base].nome);
+  if(OC_F.sup) filtros.push('sup. '+(OC_SUP_NOME[OC_F.sup]||OC_F.sup));
+  if(OC_F.grupo) filtros.push(ocGrupoNome(OC_F.grupo));
+  if(OC_F.sit) filtros.push(OC_F.sit);
+  h+='<p class="oc-dia-res">'+ocPl(lista.length,'serviço','serviços')+' de '+ocPl(Object.keys(eqs).length,'equipe','equipes')
+    +', '+ocPl(Object.keys(ocs).length,'ocorrência atendida','ocorrências atendidas')+(lista.length-exec?' e '+ocPl(lista.length-exec,'não executado','não executados'):'')
+    +'. '+ocPl(nAt,'atividade apontada','atividades apontadas')+', faturado <b>'+ocMoney(ap)+'</b>.'
+    +(filtros.length?' <span class="oc-dia-f">Filtro: '+filtros.map(ocEsc).join(', ')+'.</span>':'')+'</p>';
+  h+='<div class="oc-tbl-wrap">'+(OC_DIA_VISTA==='at'?ocDiaPorAtividade(lista):ocDiaPorEquipe(lista))+'</div>';
+  box.innerHTML=h; box.hidden=false;
+}
+function ocDiaPorEquipe(lista){
+  var grupos={};
+  lista.forEach(function(s){
+    var k=ocB(s)+'|'+s.tk;
+    var g=grupos[k]||(grupos[k]={nome:s.nome, cad:s.cad, base:ocB(s), sup:s.supNome, servs:[], ap:0});
+    g.servs.push(s); g.ap+=s.ap;
+  });
+  var gs=Object.keys(grupos).map(function(k){ return grupos[k]; }).sort(function(a,b){ return (b.ap-a.ap)||(a.nome<b.nome?-1:1); });
+  var h='<table class="oc-dtbl"><thead><tr><th>Atividade</th><th class="n">Quantidade</th><th class="n">Unitário</th><th class="n">Fator K</th><th class="n">Faturado</th></tr></thead><tbody>';
+  gs.forEach(function(g){
+    var info=[]; if(g.cad&&g.cad.enc) info.push(ocEsc(g.cad.enc)); if(g.sup) info.push('sup. '+ocEsc(g.sup));
+    h+='<tr class="t"><td colspan="4"><i style="background:'+OC_BASES[g.base].cor+'" title="'+ocAttr(OC_BASES[g.base].nome)+'"></i><b>'+ocEsc(g.nome)+'</b>'
+      +(info.length?'<span>'+info.join(', ')+'</span>':'')+'</td><td class="n">'+ocMoney(g.ap)+'</td></tr>';
+    g.servs.forEach(function(s){
+      var oc=s.oc.charAt(0)==='#'?(s.ot||'sem código'):s.oc;
+      h+='<tr class="s"><td colspan="5"><b>'+ocEsc(oc)+'</b>, serviço '+ocEsc(s.s)+(s.loc||s.end?', '+ocEsc(s.loc||s.end):'')
+        +(s.exec?'':' <span class="oc-tag nexe">'+ocEsc(s.ret||'Não executado')+'</span>')+'</td></tr>';
+      if(!s.at.length) h+='<tr class="a"><td colspan="5" class="oc-zero">Sem atividades apontadas</td></tr>';
+      s.at.forEach(function(a){
+        var q=Number(a[3])||0, vu=Number(a[4])||0;
+        h+='<tr class="a"><td><span class="cod">'+ocEsc(a[0])+'</span>'+ocEsc(a[1])+'</td><td class="n">'+ocQtd(q)+' '+ocEsc(a[2]||'')+'</td><td class="n">'+ocMoney(vu)+'</td>'
+          +'<td class="n">'+(s.kFalta?'<span class="oc-falta" title="Fator K desta base ainda não foi definido">1 (falta)</span>':ocFmtK(s.k))+'</td><td class="n">'+ocValorAt(a,s.k)+'</td></tr>';
+      });
+    });
+  });
+  return h+'</tbody></table>';
+}
+function ocDiaPorAtividade(lista){
+  var mapa={};
+  lista.forEach(function(s){
+    s.at.forEach(function(a){
+      var k=(a[0]||'')+'|'+(a[1]||''), q=Number(a[3])||0, vu=Number(a[4])||0;
+      var r=mapa[k]||(mapa[k]={cod:a[0]||'', desc:a[1]||'', un:a[2]||'', q:0, ap:0, semPreco:false, servs:{}, eqs:{}});
+      r.q+=q; r.ap+=ocValLinha(a,s.k); if(q>0&&!vu) r.semPreco=true; r.servs[s.s]=1; r.eqs[s.nome]=1;
+    });
+  });
+  var rs=Object.keys(mapa).map(function(k){ return mapa[k]; }).sort(function(a,b){ return (b.ap-a.ap)||(b.q-a.q)||(a.desc<b.desc?-1:1); });
+  var tap=0;
+  var h='<table class="oc-dtbl"><thead><tr><th>Atividade</th><th class="n">Quantidade</th><th class="n">Serviços</th><th>Equipes</th><th class="n">Faturado</th></tr></thead><tbody>';
+  rs.forEach(function(r){
+    tap+=r.ap;
+    h+='<tr class="a"><td><span class="cod">'+ocEsc(r.cod)+'</span>'+ocEsc(r.desc)+'</td><td class="n">'+ocQtd(r.q)+' '+ocEsc(r.un)+'</td>'
+      +'<td class="n">'+Object.keys(r.servs).length+'</td><td class="eqs">'+Object.keys(r.eqs).sort().map(ocEsc).join(', ')+'</td>'
+      +'<td class="n">'+(r.semPreco&&!r.ap?'<span class="oc-sempreco" title="Atividade apontada sem valor unitário no GPM">sem preço</span>':ocMoney(r.ap))+'</td></tr>';
+  });
+  return h+'</tbody><tfoot><tr><td colspan="4">'+ocPl(rs.length,'tipo de atividade','tipos de atividade')+'</td><td class="n">'+ocMoney(tap)+'</td></tr></tfoot></table>';
+}
+function ocDiaExportar(){
+  if(!OC_DIA||!OC_ULT) return;
+  var todos=ocServicos(), lista=ocDiaServicos(todos);
+  if(!lista.length){ ocMsg('Não há atividades neste dia com os filtros escolhidos.','err'); return; }
+  var dec=function(n){ return Number(n||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2,useGrouping:false}); };
+  var L=[['Data','Base','Equipe','Ocorrência','Serviço','Local','Retorno de campo','Código','Atividade','Quantidade','Unidade','Valor unitário (R$)','Valor sem K (R$)','Fator K','Faturado (R$)']];
+  lista.forEach(function(s){
+    s.at.forEach(function(a){
+      var q=Number(a[3])||0, vu=Number(a[4])||0;
+      L.push([ocDataBR(s.d),OC_BASES[ocB(s)].nome,s.nome,s.oc.charAt(0)==='#'?s.ot:s.oc,s.s,s.loc||s.end,s.ret,a[0],a[1],ocQtd(q),a[2],dec(vu),dec(q*vu),String(s.k).replace('.',',')+(s.kFalta?' (não definido)':''),dec(ocValLinha(a,s.k))]);
+    });
+  });
+  var csv='\uFEFF'+L.map(function(r){ return r.map(function(c){ c=String(c==null?'':c); return /[;"\n]/.test(c)?'"'+c.replace(/"/g,'""')+'"':c; }).join(';'); }).join('\r\n');
+  ocBaixar('atividades_'+OC_DIA+(OC_F.base?'_'+OC_F.base:'')+'.csv', csv);
+}
 // atividades que mais somam no período
 function ocAtividades(A){
   var box=$('oc-ativ'); if(!box) return;
@@ -719,26 +1040,86 @@ function ocAtividades(A){
   A.lista.forEach(function(s){
     s.at.forEach(function(a){
       var k=(a[0]||'')+'|'+(a[1]||''), q=Number(a[3])||0, vu=Number(a[4])||0;
-      var r=mapa[k]||(mapa[k]={cod:a[0]||'', desc:a[1]||'', un:a[2]||'', q:0, ap:0, ft:0, servs:{}});
-      r.q+=q; r.ap+=q*vu; r.ft+=Number(a[5])||0; r.servs[s.s]=1;
+      var r=mapa[k]||(mapa[k]={cod:a[0]||'', desc:a[1]||'', un:a[2]||'', q:0, ap:0, servs:{}});
+      r.q+=q; r.ap+=ocValLinha(a,s.k); r.servs[s.s]=1;
     });
   });
-  var lista=Object.keys(mapa).map(function(k){ return mapa[k]; }).sort(function(a,b){ return b.ap-a.ap; });
+  var lista=Object.keys(mapa).map(function(k){ return mapa[k]; }).sort(function(a,b){ return (b.ap-a.ap)||(b.q-a.q); });
   if(!lista.length){ box.innerHTML='<div class="fg-vazio">Sem atividades para os filtros escolhidos</div>'; return; }
-  var top=lista.slice(0,10), max=top[0].ap||1;
+  var top=lista.slice(0,10), max=top[0].ap||1, tot=lista.reduce(function(s,r){ return s+r.ap; },0);
   box.innerHTML='<div class="oc-rank">'+top.map(function(r){
     var ns=Object.keys(r.servs).length;
     return '<div class="oc-rk"><div class="oc-rk-t"><span class="nm" title="'+ocAttr(r.cod+' '+r.desc)+'">'+ocEsc(r.desc)+'</span><span class="vl">'+ocMoney(r.ap)+'</span></div>'
-      +'<div class="oc-rk-b"><span class="ap" style="width:'+(r.ap/max*100).toFixed(1)+'%"><span class="ft" style="width:'+(r.ap?Math.min(100,r.ft/r.ap*100):0).toFixed(1)+'%"></span></span></div>'
-      +'<div class="oc-rk-s">'+ocQtd(r.q)+' '+ocEsc(r.un)+' em '+ocPl(ns,'serviço','serviços')+', '+ocMoney(r.ft)+' faturado</div></div>';
+      +'<div class="oc-rk-b"><span class="ap" style="width:'+(r.ap/max*100).toFixed(1)+'%;background:var(--ft-bar)"></span></div>'
+      +'<div class="oc-rk-s">'+ocQtd(r.q)+' '+ocEsc(r.un)+' em '+ocPl(ns,'serviço','serviços')+', '+ocPct(tot?r.ap/tot*100:0)+' do faturado</div></div>';
   }).join('')+'</div>'+(lista.length>10?'<div class="oc-rk-mais">Mais '+ocPl(lista.length-10,'atividade','atividades')+' no período</div>':'');
+}
+// ---------- painel do fator K ----------
+function ocKAutoAbrir(){
+  if(OC_K_AUTO) return;
+  var falta=ocServicos().some(function(s){ return s.kFalta; });
+  if(falta){ OC_K_AUTO=true; ocToggleK(true); }
+}
+function ocToggleK(forcar){
+  var p=$('oc-k'), b=$('oc-btn-k'); if(!p) return;
+  var abrir=forcar===true?true:p.hidden;
+  p.hidden=!abrir; if(b) b.setAttribute('aria-expanded',String(abrir));
+  if(abrir) ocKForm();
+}
+function ocKForm(){
+  var p=$('oc-k'); if(!p) return;
+  var todos=ocServicos(), usadas={};
+  todos.forEach(function(s){ if(ocEhManut(s)&&s.kBase!=='sb') usadas[s.kBase]=(usadas[s.kBase]||0)+1; });
+  Object.keys((OC_K&&OC_K.k)||{}).forEach(function(b){ if(OC_BASES[b]&&b!=='sb'&&!usadas[b]) usadas[b]=0; });
+  var ordem=Object.keys(OC_BASES);
+  OC_K_FORM=Object.keys(usadas).sort(function(a,b){ return ordem.indexOf(a)-ordem.indexOf(b); });
+  var pode=ocPodeK(), faltam=OC_K_FORM.filter(function(b){ return usadas[b]&&!ocKBase(b); });
+  var h='<div class="oc-valbox"><h2 class="fg-h">Fator K por base</h2>'
+    +'<p>O faturado da manutenção é quantidade × valor unitário do GPM × fator K. O GPM usa o mesmo preço unitário em todas as bases, então o K de cada base entra aqui. Ele vale para o centro de serviço onde o atendimento foi lançado no GPM.</p>';
+  if(faltam.length) h+='<div class="oc-aviso">Falta o fator K de '+faltam.map(function(b){ return ocEsc(OC_BASES[b].nome); }).join(', ')+'. Enquanto não for preenchido, essa base conta com K = 1.</div>';
+  if(!OC_K_FORM.length) h+='<p style="margin-top:10px">Importe um apontamento do GPM para listar as bases.</p>';
+  else {
+    h+='<div class="oc-val">'+OC_K_FORM.map(function(b,i){
+      var v=ocKBase(b);
+      return '<label for="oc-k-'+i+'"><span><i class="oc-kdot" style="background:'+OC_BASES[b].cor+'"></i>'+ocEsc(OC_BASES[b].nome)+'</span><small>'+(usadas[b]?ocPl(usadas[b],'serviço de manutenção','serviços de manutenção'):'sem serviços importados')+'</small>'
+        +'<span class="inp"><span>K</span><input id="oc-k-'+i+'" type="number" inputmode="decimal" min="0" step="0.0001" placeholder="1,0000" value="'+(v==null?'':v)+'"'+(pode?'':' disabled')+'></span></label>';
+    }).join('')+'</div>';
+    var info='';
+    if(OC_K&&OC_K.atualizado){ info='Alterado em '+new Date(OC_K.atualizado).toLocaleDateString('pt-BR')+(OC_K.por?' por '+ocEsc(OC_K.por):''); }
+    h+='<div class="oc-valact"><span class="fg-ks">'+info+'</span>'
+      +(pode?'<button class="btn add" type="button" id="oc-k-go" onclick="ocSalvarK()">Salvar fator K</button>':'<span class="fg-ks">Só gestor altera o fator K.</span>')+'</div>';
+  }
+  p.innerHTML=h+'</div>';
+}
+async function ocSalvarK(){
+  if(!ocPodeK()){ ocMsg('Só gestor altera o fator K.','err'); return; }
+  var k={}, ruim=[];
+  Object.keys((OC_K&&OC_K.k)||{}).forEach(function(b){ if(OC_K_FORM.indexOf(b)<0) k[b]=OC_K.k[b]; });   // mantém bases que não estão na tela
+  OC_K_FORM.forEach(function(b,i){
+    var el=$('oc-k-'+i), v=el?String(el.value).trim():'';
+    if(v==='') return;
+    var n=Number(v.replace(',','.'));
+    if(!isFinite(n)||n<=0){ ruim.push(OC_BASES[b].nome); return; }
+    k[b]=Math.round(n*10000)/10000;
+  });
+  if(ruim.length){ ocMsg('Fator K inválido para '+ruim.join(', ')+'. Use um número maior que zero, por exemplo 1,0850.','err'); return; }
+  var btn=$('oc-k-go'); if(btn){ btn.disabled=true; btn.textContent='Salvando…'; }
+  var u=window.MARIUA_USER, val={k:k, atualizado:new Date().toISOString(), por:(u&&(u.nome||u.email))||''};
+  try{
+    await ocGravar([{key:'ocorr_fator_k', value:val}]);
+    OC_K=val; ocMsg('Fator K salvo. O faturado já foi recalculado.','ok');
+    ocRender(); ocKForm();
+  }catch(e){
+    ocMsg('Não foi possível salvar o fator K: '+(e.message||e),'err');
+    if(btn){ btn.disabled=false; btn.textContent='Salvar fator K'; }
+  }
 }
 
 // ---------- importação do apontamento de faturamento ----------
 var OC_COLS={
-  s:['COD_SERV','SERVICO','COD SERV'], d:['DATA_SERVICO','DATA SERVICO'], eq:['DES_EQUIPE','EQUIPE'], resp:['RESPONSAVEL'],
+  s:['COD_SERV','SERVICO','COD SERV'], d:['DATA_SERVICO','DATA SERVICO'], eq:['DES_EQUIPE','EQUIPE'], ce:['COD_EQUIPE'], resp:['RESPONSAVEL'],
   sup:['SUPERVISOR'], ot:['SS/OT','SS / OT','OT'], ret:['RETORNO_CAMPO','RETORNO DE CAMPO'], cs:['CENTRO_SERVICO','CENTRO SERVICO'],
-  loc:['LOCALIDADE'], end:['ENDERECO','ENDERECOS'], grp:['DES_GRUPO','GRUPO'], cod:['COD_ATIVIDADE'], ativ:['DES_ATIVIDADE','ATIVIDADE'],
+  loc:['LOCALIDADE'], end:['ENDERECO','ENDERECOS'], grp:['DES_GRUPO','GRUPO'], ts:['TIPO_SERVICO','TIPO DE SERVICO'], cod:['COD_ATIVIDADE'], ativ:['DES_ATIVIDADE','ATIVIDADE'],
   un:['UNIDADE_MEDIDA'], q:['QTD_ATIVIDADE','QUANTIDADE'], vu:['VALOR_UNITARIO'], vt:['VALOR_TOTAL'], sit:['SITUACAO']
 };
 function ocParseCSV(text){
@@ -807,8 +1188,8 @@ async function ocImportar(file){
     if(!d){ semData++; continue; }
     var sv=servs[s];
     if(!sv){
-      sv=servs[s]={s:s, d:d, eq:g(l,'eq').toUpperCase(), resp:g(l,'resp'), sup:g(l,'sup'), ot:g(l,'ot'), ret:g(l,'ret'),
-        cs:g(l,'cs'), loc:g(l,'loc'), end:g(l,'end'), grp:g(l,'grp'), at:[]};
+      sv=servs[s]={s:s, d:d, eq:g(l,'eq').toUpperCase(), ce:g(l,'ce'), resp:g(l,'resp'), sup:g(l,'sup'), ot:g(l,'ot'), ret:g(l,'ret'),
+        cs:g(l,'cs'), loc:g(l,'loc'), end:g(l,'end'), grp:g(l,'grp'), ts:g(l,'ts'), at:[]};
       ordem.push(s);
     }
     var q=ocNumBR(g(l,'q')), vu=ocNumBR(g(l,'vu')), vt=idx.vt>=0?ocNumBR(g(l,'vt')):ocR2(q*vu);
@@ -835,6 +1216,7 @@ async function ocImportar(file){
   ocMsg(ocPl(ordem.length,'serviço importado','serviços importados')+' com '+ocPl(nLin,'atividade','atividades')+' ('+Object.keys(porComp).sort().map(ocCurto).join(', ')+'): '
     +ocNum(novos)+' novos e '+ocNum(atual)+' atualizados'+(semData?'; '+ocPl(semData,'linha sem data ficou','linhas sem data ficaram')+' de fora':'')+'.','ok');
   ocRender();
+  var pk=$('oc-k'); if(pk&&!pk.hidden) ocKForm(); else ocKAutoAbrir();
 }
 
 // ---------- resumo em CSV ----------
@@ -842,16 +1224,17 @@ function ocResumoCSV(){
   var A=OC_ULT;
   if(!A||!A.lista.length) return null;
   var dec=function(n){ return Number(n||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2,useGrouping:false}); };
-  var L=[['Base (centro de serviço)','Equipe','Base da equipe','Grupo','Supervisor','Ocorrências','Serviços executados','Não executados','Apontado (R$)','Faturado no GPM (R$)','A faturar (R$)','Faturado do apontado (%)']];
-  var linha=function(nome,eq,beq,grp,sup,o){ L.push([nome,eq,beq,grp,sup,o.oc,o.serv,o.nexe,dec(o.ap),dec(o.ft),dec(o.ap-o.ft),dec(o.ap?o.ft/o.ap*100:0)]); };
+  var L=[[(OC_F.agrupar==='cs'?'Base (centro de serviço do GPM)':'Base (cadastro)'),'Equipe','No cadastro','Encarregado','Supervisor','Colaboradores','Tipo','Base da equipe','Ocorrências','Serviços executados','Não executados','Faturado (R$)','Média por ocorrência (R$)']];
+  var linha=function(c,o){ L.push(c.concat([o.oc,o.serv,o.nexe,dec(o.ap),o.oc?dec(o.ap/o.oc):''])); };
   A.bases.forEach(function(b){
     var nome=OC_BASES[b.base].nome;
-    b.eqs.forEach(function(e){ linha(nome,e.eq,OC_BASES[e.baseEq].nome,ocGrupoNome(e.grupo)+(e.misto?' (+)':''),e.sup,e); });
-    linha('Subtotal '+nome,'','','','',b);
+    b.eqs.forEach(function(e){ linha([nome,e.eq,e.cad?'sim':'não',e.cad?e.cad.enc:'',e.sup,e.cad&&e.cad.colab!=null?e.cad.colab:'',e.tipo,OC_BASES[e.baseEq].nome],e); });
+    linha(['Subtotal '+nome,'','','','','','',''],b);
   });
-  linha('TOTAL','','','','',A.T);
+  linha(['TOTAL','','','','','','',''],A.T);
   L.push([]);
-  L.push(['Filtros: mês '+(OC_F.mes?ocCurto(OC_F.mes):'todos')+'; base '+(OC_F.base?OC_BASES[OC_F.base].nome:'todas')+'; grupo '+(OC_F.grupo?ocGrupoNome(OC_F.grupo):'todos')+(OC_F.sit?'; situação '+OC_F.sit:'')+'; contagem por '+(OC_F.modo==='oc'?'ocorrência':'serviço')]);
+  var ks=Object.keys(OC_BASES).filter(function(b){ return ocKBase(b); }).map(function(b){ return OC_BASES[b].nome+' '+ocFmtK(ocKBase(b)); });
+  L.push(['Faturado = tudo o que foi apontado no GPM × fator K da base (quantidade × valor unitário × K). Fator K: '+(ks.length?ks.join(', '):'nenhum definido (K = 1)')+'. Filtros: mês '+(OC_F.mes?ocCurto(OC_F.mes):'todos')+'; base '+(OC_F.base?OC_BASES[OC_F.base].nome:'todas')+'; supervisor '+(OC_F.sup?(OC_SUP_NOME[OC_F.sup]||OC_F.sup):'todos')+'; grupo '+(OC_F.grupo?ocGrupoNome(OC_F.grupo):'todos')+(OC_F.sit?'; situação '+OC_F.sit:'')+'; contagem por '+(OC_F.modo==='oc'?'ocorrência':'serviço')]);
   return '\uFEFF'+L.map(function(r){ return r.map(function(c){ c=String(c==null?'':c); return /[;"\n]/.test(c)?'"'+c.replace(/"/g,'""')+'"':c; }).join(';'); }).join('\r\n');
 }
 function ocExportar(){
@@ -867,13 +1250,29 @@ var SUPA_URL='https://eqxejfoibebcbtsqymji.supabase.co';
 var SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVxeGVqZm9pYmViY2J0c3F5bWppIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE4NjUzMTEsImV4cCI6MjA4NzQ0MTMxMX0.lwf7_EJ6UchEOpzhW3cVKztxDGy78gaQblRvgiEwWh8';
 var SUPA_H={apikey:SUPA_KEY,Authorization:'Bearer '+SUPA_KEY,'Content-Type':'application/json'};
 function setDbStatus(status, msg){ var b=$('db-badge'); if(b) b.className='db-badge '+status; var t=$('db-text'); if(t) t.textContent=msg; }
+// Cadastro de Equipes: a mesma linha que a tela de Cadastro grava; sem banco, a cópia que ela deixa no aparelho
+async function ocCarregarCadastro(){
+  try{
+    var r=await fetch(SUPA_URL+'/rest/v1/turno_data?select=value&key=eq.cadastro_equipes&limit=1',{headers:SUPA_H,cache:'no-store'});
+    if(r.ok){ var a=await r.json(); if(a&&a[0]&&a[0].value){ ocCadPreparar(a[0].value,''); return; } }
+  }catch(e){}
+  try{ var c=JSON.parse(localStorage.getItem('cadastro_equipes_v1')||'null'); if(c&&Array.isArray(c.equipes)){ ocCadPreparar(c,'cópia guardada neste aparelho'); return; } }catch(e){}
+  OC_CAD=null;
+}
 async function ocCarregar(){
   setDbStatus('syncing','Carregando…');
+  var cad=ocCarregarCadastro();
   try{
-    var r=await fetch(SUPA_URL+'/rest/v1/turno_data?select=key,value&key=like.ocorr_fat_*',{headers:SUPA_H,cache:'no-store'});
+    var r=await fetch(SUPA_URL+'/rest/v1/turno_data?select=key,value&or=(key.like.ocorr_fat_*,key.eq.ocorr_fator_k)',{headers:SUPA_H,cache:'no-store'});
     if(!r.ok) throw new Error('HTTP '+r.status);
-    var db={};
-    ((await r.json())||[]).forEach(function(row){ if(row&&row.value&&row.key.indexOf('ocorr_fat_')===0){ db[row.value.comp||row.key.slice(10)]=row.value; } });
+    var db={}, k={k:{}};
+    ((await r.json())||[]).forEach(function(row){
+      if(!row||!row.value) return;
+      if(row.key==='ocorr_fator_k'){ k=row.value; if(!k.k) k.k={}; return; }
+      if(row.key.indexOf('ocorr_fat_')===0) db[row.value.comp||row.key.slice(10)]=row.value;
+    });
+    OC_K=k;
+    await cad;
     OC_DB=db; setDbStatus('online','Compartilhado');
   }catch(e){ setDbStatus('offline','Sem conexão'); throw e; }
 }
@@ -886,6 +1285,8 @@ async function ocGravar(regs){
   if(!w.ok){ setDbStatus('offline','Não salvou'); throw new Error('HTTP '+w.status); }
   setDbStatus('online','Compartilhado');
 }
+// fator K mexe no faturamento: só gestor altera (os demais só veem)
+function ocPodeEditarK(){ var u=window.MARIUA_USER; return !!(u&&u.gestor); }
 function ocBaixar(nome, csv){
   var a=document.createElement('a');
   a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
