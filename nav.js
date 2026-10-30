@@ -28,6 +28,7 @@
           { href: 'prog.html',                icone: 'calendar-event',   texto: 'Prog. Diária' },
           { href: 'comp.html',                icone: 'git-compare',      texto: 'Comparador' },
           { href: 'estagios.html',            icone: 'layout-kanban',    texto: 'Estágios' },
+          { href: 'ocorrencias.html',         icone: 'bolt',             texto: 'Ocorrências' },
           { href: 'obras/neoex.html',         icone: 'box',              texto: 'NEOEX' },
           { href: 'obras/cadastro_obra.html', icone: 'building',         texto: 'Cadastro de Obra' }
         ]
