@@ -260,6 +260,14 @@ table.oc-dtbl{width:100%;min-width:720px;border-collapse:collapse;background:var
 .oc-valact{display:flex;gap:10px;align-items:center;justify-content:flex-end;flex-wrap:wrap}
 .oc-aviso{padding:9px 12px;border-radius:9px;background:var(--warn-bg);color:var(--warn);font-size:.8rem;font-weight:700;margin-top:10px}
 
+.oc-link{color:var(--accent);font-weight:800;text-decoration:underline;text-underline-offset:2px;background:none;border:0;padding:0;font:inherit;cursor:pointer}
+.oc-link:focus-visible{outline:2px solid #0d7377;outline-offset:2px;border-radius:3px}
+/* tela Gestão › Fator K */
+.fk-wrap{max-width:1000px}
+.fk-wrap .oc-valbox{border-top:0;margin-top:0;padding-top:0}
+.fk-nota{margin:12px 2px 0;font-size:.82rem;color:var(--txt2);font-weight:600}
+.oc-kteste{margin:12px 12px 0;max-width:none}
+
 </style>
 <style id="dark-mode-css" data-tema="proprio">
 /* tema escuro próprio desta tela: o nav.js liga body.dark e cuida só da barra do topo e do menu */
@@ -358,8 +366,10 @@ try{if(localStorage.getItem("mariua_darkmode")==="1")document.body.classList.add
 </div>
 
 <div class="page-hdr">
-  <h2>Ocorrências por equipe</h2>
-  <p>Ocorrências atendidas por equipe em cada base e quanto foi faturado: tudo o que foi apontado no GPM, com o fator K de cada base. Os dados das equipes (base, encarregado, supervisor) vêm do Cadastro de Equipes.</p>
+  <div>
+    <h2>Ocorrências por equipe</h2>
+    <p>Ocorrências atendidas por equipe em cada base e quanto foi faturado: tudo o que foi apontado no GPM, com o fator K de cada base. Os dados das equipes (base, encarregado, supervisor) vêm do Cadastro de Equipes.</p>
+  </div>
 </div>
 <div class="oc-wrap">
 <div class="fg-layout">
@@ -367,13 +377,11 @@ try{if(localStorage.getItem("mariua_darkmode")==="1")document.body.classList.add
   <div class="fg-main">
     <section class="fg-card">
       <div class="oc-top">
-        <button class="btn ghost" type="button" id="oc-btn-k" onclick="ocToggleK()" aria-expanded="false" aria-controls="oc-k">Fator K por base</button>
         <button class="btn ghost" type="button" id="oc-btn-csv" onclick="ocExportar()">Baixar resumo (CSV)</button>
         <button class="btn add" type="button" onclick="document.getElementById('oc-file').click()">Importar apontamento GPM</button>
         <input type="file" id="oc-file" accept=".zip,.csv,.txt,.xlsx,.xls" hidden onchange="ocImportar(this.files[0]);this.value=''">
       </div>
       <div class="oc-msg" id="oc-msg" role="status" aria-live="polite"></div>
-      <div id="oc-k" hidden></div>
     </section>
     <section class="fg-kpis" id="oc-kpis" aria-label="Indicadores"></section>
     <section class="oc-bases" id="oc-bases" aria-label="Resumo por base"></section>
@@ -677,6 +685,7 @@ function ocPeriodo(A){
 
 // ---------- desenho ----------
 function ocRender(){
+  if(!$('oc-kpis')) return;            // tela Gestão › Fator K: só o painel do K
   var todos=ocServicos();
   ocStatusLinha(todos);
   OC_LISTA_GRP=Array.from(new Set(todos.map(function(s){ return s.gk; }))).sort();
@@ -783,7 +792,7 @@ function ocKpis(A){
   A.lista.forEach(function(s){ s.at.forEach(function(a){ tipos[(a[0]||'')+'|'+(a[1]||'')]=1; if((Number(a[3])||0)>0&&!(Number(a[4])||0)) semPreco++; }); });
   box.innerHTML=card(OC_ICO.ok,'Ocorrências atendidas'+(ocPeriodo(A)?' de '+ocPeriodo(A):''),ocNum(T.oc),sub1)
     +card(OC_ICO.fat,'Faturado',ocMoney(T.ap),Object.keys(T.kFalta).length
-        ?'<span class="up">fator K não definido para '+Object.keys(T.kFalta).sort(function(a,b){ var o=Object.keys(OC_BASES); return o.indexOf(a)-o.indexOf(b); }).map(function(b){ return ocEsc(OC_BASES[b].nome); }).join(', ')+' (contando K = 1)</span>'
+        ?'<span class="up">fator K não definido para '+Object.keys(T.kFalta).sort(function(a,b){ var o=Object.keys(OC_BASES); return o.indexOf(a)-o.indexOf(b); }).map(function(b){ return ocEsc(OC_BASES[b].nome); }).join(', ')+' (contando K = 1).'+(typeof ocKLink==='function'?ocKLink():'')+'</span>'
         :'quantidade × valor unitário × fator K da base')
     +card(OC_ICO.media,'Média por ocorrência',T.oc?ocMoney(T.ap/T.oc):'—',ocPl(T.oc,'ocorrência atendida','ocorrências atendidas')+' no período')
     +card(OC_ICO.apont,'Atividades apontadas',ocNum(T.linhas),ocPl(Object.keys(tipos).length,'tipo de atividade','tipos de atividade')+(semPreco?'; '+ocPl(semPreco,'sem preço no GPM','sem preço no GPM'):''));
@@ -1075,9 +1084,9 @@ function ocKForm(){
   OC_K_FORM=Object.keys(usadas).sort(function(a,b){ return ordem.indexOf(a)-ordem.indexOf(b); });
   var pode=ocPodeK(), faltam=OC_K_FORM.filter(function(b){ return usadas[b]&&!ocKBase(b); });
   var h='<div class="oc-valbox"><h2 class="fg-h">Fator K por base</h2>'
-    +'<p>O faturado da manutenção é quantidade × valor unitário do GPM × fator K. O GPM usa o mesmo preço unitário em todas as bases, então o K de cada base entra aqui. Ele vale para o centro de serviço onde o atendimento foi lançado no GPM.</p>';
+    +'<p>O faturado da manutenção na tela Obras › Ocorrências é quantidade × valor unitário do GPM × fator K. O GPM usa o mesmo preço unitário em todas as bases, então o K de cada base entra aqui. Ele vale para o centro de serviço onde o atendimento foi lançado no GPM.</p>';
   if(faltam.length) h+='<div class="oc-aviso">Falta o fator K de '+faltam.map(function(b){ return ocEsc(OC_BASES[b].nome); }).join(', ')+'. Enquanto não for preenchido, essa base conta com K = 1.</div>';
-  if(!OC_K_FORM.length) h+='<p style="margin-top:10px">Importe um apontamento do GPM para listar as bases.</p>';
+  if(!OC_K_FORM.length) h+='<p style="margin-top:10px">Nenhuma base ainda: importe o apontamento do GPM na tela Obras › Ocorrências e as bases aparecem aqui.</p>';
   else {
     h+='<div class="oc-val">'+OC_K_FORM.map(function(b,i){
       var v=ocKBase(b);
@@ -1107,7 +1116,7 @@ async function ocSalvarK(){
   var u=window.MARIUA_USER, val={k:k, atualizado:new Date().toISOString(), por:(u&&(u.nome||u.email))||''};
   try{
     await ocGravar([{key:'ocorr_fator_k', value:val}]);
-    OC_K=val; ocMsg('Fator K salvo. O faturado já foi recalculado.','ok');
+    OC_K=val; ocMsg($('oc-kpis')?'Fator K salvo. O faturado já foi recalculado.':'Fator K salvo. A tela Obras › Ocorrências já usa os novos valores.','ok');
     ocRender(); ocKForm();
   }catch(e){
     ocMsg('Não foi possível salvar o fator K: '+(e.message||e),'err');
@@ -1293,11 +1302,15 @@ function ocBaixar(nome, csv){
   a.download=nome; document.body.appendChild(a); a.click();
   setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); },800);
 }
+// quando falta o K de alguma base, o aviso leva para a tela onde ele é definido
+function ocKLink(){ var u=window.MARIUA_USER; return (u&&u.gestor)?' <a class="oc-link" href="fator_k.html">Definir em Gestão › Fator K</a>':' Um gestor define em Gestão › Fator K.'; }
+</script>
+
+<script>
 window.dbBadgeClick=function(){ ocIniciar(true); };
 document.addEventListener('visibilitychange',function(){ if(document.visibilityState==='visible'&&OC_DB) ocIniciar(true); });
 ocIniciar();
 </script>
-
 <aside class="sm-side">
   <!-- Menu montado por nav.js — NÃO edite os itens aqui, edite a lista em nav.js -->
   <nav class="sm-nav"><a class="sm-item" href="index.html"><span class="sm-ic"><i class="ti ti-home"></i></span><span class="sm-tx">Início</span></a></nav>

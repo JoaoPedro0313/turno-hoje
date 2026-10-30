@@ -28,6 +28,7 @@
           { href: 'prog.html',                icone: 'calendar-event',   texto: 'Prog. Diária' },
           { href: 'comp.html',                icone: 'git-compare',      texto: 'Comparador' },
           { href: 'estagios.html',            icone: 'layout-kanban',    texto: 'Estágios' },
+          { href: 'ocorrencias.html',         icone: 'bolt',             texto: 'Ocorrências' },
           { href: 'obras/neoex.html',         icone: 'box',              texto: 'NEOEX' },
           { href: 'obras/cadastro_obra.html', icone: 'building',         texto: 'Cadastro de Obra' }
         ]
@@ -42,7 +43,7 @@
         id: 'gestao', icone: 'adjustments', texto: 'Gestão',
         itens: [
           { href: 'equipes.html',    icone: 'users',         texto: 'Cadastro de Equipes' },
-          { href: 'ocorrencias.html',icone: 'bolt',          texto: 'Ocorrências' },
+          { href: 'fator_k.html',    icone: 'calculator',    texto: 'Fator K' },
           { href: 'permissoes.html', icone: 'lock',          texto: 'Telas x Usuários' },
           { href: 'projeçao.html',   icone: 'device-mobile', texto: 'PDA' },
           { href: 'admin.html',      icone: 'settings',      texto: 'Admin' }

@@ -1205,6 +1205,7 @@ var TELAS_SISTEMA = [
   { id:'brigada',    nome:'Brigada / extintores' },
   { id:'permissoes', nome:'Telas × usuários' },
   { id:'valores',    nome:'Financeiro (só gestor)' },
+  { id:'fatork',     nome:'Fator K por base (só gestor)' },
   { id:'admin',      nome:'Admin (só gestor)' }
 ];
 
@@ -1213,10 +1214,10 @@ var TELAS_SISTEMA = [
    Tela que não estiver em nenhum grupo cai automaticamente em "Outras telas". */
 var TELAS_GRUPOS = [
   { nome:'Operação diária',   telas:['turno','rdo','prog','neoex'] },
-  { nome:'Obras',             telas:['mapa','estagios','projecao','comp'] },
+  { nome:'Obras',             telas:['mapa','estagios','ocorrencias','projecao','comp'] },
   { nome:'Cadastros',         telas:['obra','equipes'] },
   { nome:'Segurança · SESMT', telas:['cursos','ensaios','brigada'] },
-  { nome:'Gestão / sistema',  telas:['permissoes','ocorrencias','valores','admin'] }
+  { nome:'Gestão / sistema',  telas:['permissoes','valores','fatork','admin'] }
 ];
 function telasPorGrupo(){
   var byId={}, usados={};
