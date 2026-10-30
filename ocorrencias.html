@@ -268,6 +268,10 @@ table.oc-dtbl{width:100%;min-width:720px;border-collapse:collapse;background:var
 .fk-nota{margin:12px 2px 0;font-size:.82rem;color:var(--txt2);font-weight:600}
 .oc-kteste{margin:12px 12px 0;max-width:none}
 
+/* mensagem de importação (os botões ficam no perfil) */
+.oc-msg-solo{margin-top:0;background:var(--card);border-radius:10px;padding:10px 14px;box-shadow:var(--shadow)}
+.oc-vazio-btn{margin-top:12px}
+
 </style>
 <style id="dark-mode-css" data-tema="proprio">
 /* tema escuro próprio desta tela: o nav.js liga body.dark e cuida só da barra do topo e do menu */
@@ -365,24 +369,13 @@ try{if(localStorage.getItem("mariua_darkmode")==="1")document.body.classList.add
   </div>
 </div>
 
-<div class="page-hdr">
-  <div>
-    <h2>Ocorrências por equipe</h2>
-    <p>Ocorrências atendidas por equipe em cada base e quanto foi faturado: tudo o que foi apontado no GPM, com o fator K de cada base. Os dados das equipes (base, encarregado, supervisor) vêm do Cadastro de Equipes.</p>
-  </div>
-</div>
 <div class="oc-wrap">
 <div class="fg-layout">
   <aside class="fg-side" id="oc-side" aria-label="Filtros"></aside>
   <div class="fg-main">
-    <section class="fg-card">
-      <div class="oc-top">
-        <button class="btn ghost" type="button" id="oc-btn-csv" onclick="ocExportar()">Baixar resumo (CSV)</button>
-        <button class="btn add" type="button" onclick="document.getElementById('oc-file').click()">Importar apontamento GPM</button>
-        <input type="file" id="oc-file" accept=".zip,.csv,.txt,.xlsx,.xls" hidden onchange="ocImportar(this.files[0]);this.value=''">
-      </div>
-      <div class="oc-msg" id="oc-msg" role="status" aria-live="polite"></div>
-    </section>
+    <!-- importar e baixar ficam no perfil (avatar no canto superior direito) -->
+    <input type="file" id="oc-file" accept=".zip,.csv,.txt,.xlsx,.xls" hidden onchange="ocImportar(this.files[0]);this.value=''">
+    <div class="oc-msg oc-msg-solo" id="oc-msg" role="status" aria-live="polite"></div>
     <section class="fg-kpis" id="oc-kpis" aria-label="Indicadores"></section>
     <section class="oc-bases" id="oc-bases" aria-label="Resumo por base"></section>
     <section class="fg-card">
@@ -686,7 +679,8 @@ function ocRender(){
   ocFiltros(todos);
   if(!todos.length){
     OC_ULT=null;
-    $('oc-kpis').innerHTML='<div class="fg-kpi oc-vazio-kpi"><span class="fg-vazio">Nenhum apontamento importado ainda. No GPM, baixe o relatório <b>Apontamento de faturamento</b> e use <b>Importar apontamento GPM</b> aqui em cima (pode ser o .zip do jeito que vem).</span></div>';
+    $('oc-kpis').innerHTML='<div class="fg-kpi oc-vazio-kpi"><span class="fg-vazio">Nenhum apontamento importado ainda. No GPM, baixe o relatório <b>Apontamento de faturamento</b> e importe aqui (pode ser o .zip do jeito que vem). Depois, importar e baixar o resumo ficam no seu perfil, no canto superior direito.'
+      +'<br><button type="button" class="btn add oc-vazio-btn" onclick="ocAbrirImportar()">Importar apontamento GPM</button></span></div>';
     ['oc-bases','oc-evo','oc-ativ'].forEach(function(id){ var el=$(id); if(el) el.innerHTML=''; });
     OC_DIA=''; ocDiaRender([]);
     $('oc-tabela').innerHTML='<div class="fg-vazio">As equipes aparecem aqui depois da primeira importação.</div>';
@@ -1211,6 +1205,16 @@ async function ocImportar(file){
   var pk=$('oc-k'); if(pk&&!pk.hidden) ocKForm(); else ocKAutoAbrir();
 }
 
+// ---------- ações no perfil (avatar do topo) ----------
+function ocAbrirImportar(){ var f=$('oc-file'); if(f) f.click(); }
+function ocRegistrarPerfil(){
+  window.mariuaPerfilAcoes=[
+    {texto:'Importar apontamento GPM', dica:'Relatório Apontamento de faturamento do GPM (.zip ou .csv)', acao:ocAbrirImportar},
+    {texto:'Baixar resumo (CSV)', dica:'Equipes, ocorrências e faturado com os filtros atuais', acao:ocExportar,
+      visivel:function(){ return !!(OC_ULT&&OC_ULT.lista.length)&&(typeof ocPodeBaixar!=='function'||ocPodeBaixar()); }}
+  ];
+}
+
 // ---------- resumo em CSV ----------
 function ocResumoCSV(){
   var A=OC_ULT;
@@ -1292,6 +1296,7 @@ function ocKLink(){ var u=window.MARIUA_USER; return (u&&u.gestor)?' <a class="o
 <script>
 window.dbBadgeClick=function(){ ocIniciar(true); };
 document.addEventListener('visibilitychange',function(){ if(document.visibilityState==='visible'&&OC_DB) ocIniciar(true); });
+ocRegistrarPerfil();
 ocIniciar();
 </script>
 <aside class="sm-side">
