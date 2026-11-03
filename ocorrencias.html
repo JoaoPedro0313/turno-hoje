@@ -443,6 +443,8 @@ try{if(localStorage.getItem("mariua_darkmode")==="1")document.body.classList.add
      O GPM traz o mesmo preço unitário em todas as bases. O K (turno_data.ocorr_fator_k) é por
      base e por tipo de equipe: Linha Viva (LV) tem um, Linha Morta (LM) outro. Vale a base do
      centro de serviço do atendimento e o tipo da equipe no cadastro (só manutenção).
+   - Feira de Santana e Serrinha são o mesmo contrato de manutenção: aparecem como uma base só
+     (OC_BASE_UNIDA), com os valores somados e o fator K de Feira valendo para as duas.
      (A coluna valor_total do GPM fica zerada enquanto o serviço não é complementado, por isso não é usada.)
    - Gravação no turno_data, uma linha por mês (ocorr_fat_AAAA-MM). Importar de novo
      substitui os serviços que vierem no arquivo (as atividades podem mudar).
@@ -459,8 +461,7 @@ var OC_ABERTO={}, OC_ABERTO_S={};
 var OC_ULT=null, OC_LISTA_EQ=[], OC_LISTA_GRP=[], OC_LISTA_SIT=[];
 var OC_GRUPO_NOME={};
 var OC_BASES={
-  fsa:{nome:'Feira de Santana', cor:'#0d7377'},
-  srr:{nome:'Serrinha',         cor:'#e8843f'},
+  fsa:{nome:'Feira de Santana e Serrinha', cor:'#0d7377'},
   jac:{nome:'Jacobina',         cor:'#2b8fd6'},
   irc:{nome:'Irecê',            cor:'#8b7bd8'},
   aju:{nome:'Aracaju',          cor:'#c2417a'},
@@ -468,7 +469,11 @@ var OC_BASES={
   ita:{nome:'Itajubá',          cor:'#b8892b'},
   sb: {nome:'Sem base',         cor:'#94a3b8'}
 };
-var OC_CENTRO_REGRAS=[[/IRECE/,'irc'],[/JACOBINA/,'jac'],[/FEIRA/,'fsa'],[/SERRINHA/,'srr'],[/ARACAJU/,'aju'],[/ITAJUBA/,'ita'],[/POUSO ALEGRE|CONGONHAL|LINHA VIVA|CON.?MANUT.?MG/,'pa']];
+// Serrinha responde ao mesmo contrato de manutenção de Feira de Santana: tudo o que for de Serrinha
+// (centro de serviço, sufixo -SRR da equipe ou base 'srr' no cadastro) soma em Feira e usa o fator K de Feira
+var OC_BASE_UNIDA={srr:'fsa'};
+function ocUnida(b){ return OC_BASE_UNIDA[b]||b; }
+var OC_CENTRO_REGRAS=[[/IRECE/,'irc'],[/JACOBINA/,'jac'],[/FEIRA/,'fsa'],[/SERRINHA/,'fsa'],[/ARACAJU/,'aju'],[/ITAJUBA/,'ita'],[/POUSO ALEGRE|CONGONHAL|LINHA VIVA|CON.?MANUT.?MG/,'pa']];
 var OC_MESES_ABR=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
 var OC_ICO={
   ok:'<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 11l3 3 8-8"/><path d="M20 12v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h9"/></svg>',
@@ -500,7 +505,7 @@ function ocSemAcento(s){ return String(s==null?'':s).normalize('NFD').replace(/[
 function ocPad(n){ n=String(n); return n.length<2?'0'+n:n; }
 function ocPl(n,um,varios){ return ocNum(n)+' '+(n===1?um:varios); }
 function ocBaseCentro(cs){ var c=ocSemAcento(cs); if(!c) return ''; for(var i=0;i<OC_CENTRO_REGRAS.length;i++) if(OC_CENTRO_REGRAS[i][0].test(c)) return OC_CENTRO_REGRAS[i][1]; return ''; }
-function ocBaseEquipe(eq){ var m=String(eq||'').toUpperCase().trim().match(/-([A-Z]{2,3})$/); var k=m?m[1].toLowerCase():''; return (k&&k!=='sb'&&OC_BASES[k])?k:''; }
+function ocBaseEquipe(eq){ var m=String(eq||'').toUpperCase().trim().match(/-([A-Z]{2,3})$/); var k=m?ocUnida(m[1].toLowerCase()):''; return (k&&k!=='sb'&&OC_BASES[k])?k:''; }
 // "OC. 31461" / "0C-33184" / "OC-036855" -> "OC-31461". Código vazio ou inválido: usa o nº do serviço
 function ocNormOC(raw, serv){
   var t=String(raw||'').toUpperCase().replace(/\s+/g,'');
@@ -533,7 +538,7 @@ function ocCadPreparar(pkg, fonte){
   var lista=[];
   eqs.forEach(function(q){
     if(!q||!(q.codigo||q.encarregado)) return;
-    var utd=String(q.utd||'').toLowerCase().trim();
+    var utd=ocUnida(String(q.utd||'').toLowerCase().trim());
     var base=(utd&&utd!=='sb'&&OC_BASES[utd])?utd:(ocBaseCentro(q.centro)||ocBaseEquipe(q.codigo)||'sb');
     lista.push({codigo:String(q.codigo||'').replace(/\s+/g,' ').toUpperCase().trim(), ce:String(q.cod_equipe||'').trim(),
       enc:String(q.encarregado||'').trim(), mat:String(q.matricula||'').trim(), sup:String(q.supervisor||'').trim(),
