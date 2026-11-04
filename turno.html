@@ -500,6 +500,70 @@ body.dark #ta-dialogo{--td-fundo:#111;--td-txt:#f2f2f2;--td-sub:#a0a0a0;--td-lin
 #ta-toast button:focus-visible{outline:2px solid #fbd38d;outline-offset:2px}
 body.dark #ta-toast{background:#252525;border:1px solid #303030}
 @media (prefers-reduced-motion:reduce){.ta-fantasma,.ta-fantasma.ta-volta{transition:none}#justif-grid .card.justif.ta-novo,#ta-dialogo .ta-caixa{animation:none}}
+/* ══ Turno: onde a equipe abriu o turno (Júpiter laranja / GPM Obras) ══════ */
+.sis-jupiter{--sis-cor:#ea580c;--sis-fundo:#fff1e7;--sis-txt:#b2470c;--sis-borda:#fbcfa9}
+.sis-gpm{--sis-cor:#1d4ed8;--sis-fundo:#eef3ff;--sis-txt:#1e45b5;--sis-borda:#c7d5fb}
+body.dark .sis-jupiter{--sis-cor:#f97316;--sis-fundo:color-mix(in srgb,#f97316 16%,var(--e-cartao));--sis-txt:#fdba74;--sis-borda:color-mix(in srgb,#f97316 42%,var(--e-cartao))}
+body.dark .sis-gpm{--sis-cor:#3b82f6;--sis-fundo:color-mix(in srgb,#3b82f6 16%,var(--e-cartao));--sis-txt:#93c5fd;--sis-borda:color-mix(in srgb,#3b82f6 42%,var(--e-cartao))}
+#page-turno .grid .card-sis{flex-shrink:0;padding:1px 6px;border-radius:4px;border:1px solid var(--sis-borda);background:var(--sis-fundo);color:var(--sis-txt);font-size:.68rem;font-weight:700;line-height:1.35;white-space:nowrap}
+#abriu-grid .card[data-equipe]{cursor:pointer}
+#abriu-grid .card[data-equipe]:focus-visible{outline:2px solid #1e7a46;outline-offset:2px}
+/* contagem no cabeçalho de "Abriu turno" */
+#page-turno .section-header.green .section-label{flex-wrap:wrap;row-gap:6px}
+#page-turno .ts-resumo{display:inline-flex;align-items:center;flex-wrap:wrap;gap:6px;font-size:.74rem;font-weight:500}
+#page-turno .ts-resumo[hidden]{display:none}
+#page-turno .ts-cont{padding:1px 8px;border-radius:10px;border:1px solid var(--sis-borda);background:var(--sis-fundo);color:var(--sis-txt);font-weight:600;white-space:nowrap}
+#page-turno .ts-cont b{font-weight:800}
+#page-turno .ts-sem{white-space:nowrap}
+body:not(.dark) #page-turno .ts-sem{color:#4d6b57}
+body.dark #page-turno .ts-sem{color:#9cc5ad}
+@media (max-width:420px){#page-turno .ts-dica{display:none}}
+/* escolha do sistema */
+#ts-dialogo{--td-fundo:#fff;--td-txt:#16324a;--td-sub:#5b6b7a;--td-linha:#dfe3e8;--td-campo:#f8fafb;position:fixed;inset:0;z-index:3000;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(10,20,30,.55);backdrop-filter:blur(3px);font-family:'Barlow',system-ui,sans-serif}
+#ts-dialogo[hidden]{display:none}
+body.dark #ts-dialogo{--td-fundo:#111;--td-txt:#f2f2f2;--td-sub:#a0a0a0;--td-linha:#2a2a2a;--td-campo:#0a0a0a;background:rgba(0,0,0,.7)}
+#ts-dialogo .ts-caixa{width:100%;max-width:400px;background:var(--td-fundo);color:var(--td-txt);border:1px solid var(--td-linha);border-top:3px solid #1e7a46;border-radius:12px;box-shadow:0 24px 60px rgba(0,0,0,.35);padding:18px 18px 16px;animation:taAbre .14s ease-out}
+#ts-dialogo .ts-cab{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+#ts-dialogo .ts-ico{width:26px;height:26px;border-radius:6px;background:#1e7a46;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:.9rem;flex-shrink:0}
+#ts-dialogo .ts-titulo{font-size:1rem;font-weight:700}
+#ts-dialogo .ts-equipe{font-size:.8rem;font-weight:600;color:var(--td-sub);margin-top:1px}
+#ts-dialogo .ts-opcoes{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+#ts-dialogo .ts-opcao{display:flex;align-items:center;gap:10px;min-height:54px;padding:10px 12px;border-radius:10px;border:1.5px solid var(--td-linha);background:var(--td-campo);color:var(--td-txt);font-family:inherit;font-size:.9rem;font-weight:700;line-height:1.2;text-align:left;cursor:pointer}
+#ts-dialogo .ts-opcao:hover{border-color:var(--sis-cor)}
+#ts-dialogo .ts-marca{width:14px;height:14px;border-radius:50%;border:2px solid var(--sis-cor);flex-shrink:0}
+#ts-dialogo .ts-opcao[aria-pressed="true"]{border-color:var(--sis-cor);background:var(--sis-fundo);color:var(--sis-txt)}
+#ts-dialogo .ts-opcao[aria-pressed="true"] .ts-marca{background:var(--sis-cor);box-shadow:inset 0 0 0 2px var(--td-fundo)}
+#ts-dialogo .ts-lote{display:flex;align-items:flex-start;gap:8px;margin-top:12px;font-size:.8rem;font-weight:600;color:var(--td-sub);line-height:1.35;cursor:pointer}
+#ts-dialogo .ts-lote[hidden]{display:none}
+#ts-dialogo .ts-lote input{width:16px;height:16px;margin:1px 0 0;accent-color:#1e7a46;flex-shrink:0;cursor:pointer}
+#ts-dialogo .ts-acoes{display:flex;gap:8px;margin-top:16px}
+#ts-dialogo .ts-btn{min-height:38px;padding:0 16px;border-radius:8px;border:1px solid var(--td-linha);background:transparent;color:var(--td-txt);font-family:inherit;font-size:.85rem;font-weight:700;cursor:pointer}
+#ts-dialogo .ts-btn:hover{border-color:var(--td-sub)}
+#ts-dialogo .ts-btn[hidden]{display:none}
+#ts-dialogo .ts-cancelar{margin-left:auto}
+#ts-dialogo button:focus-visible,#ts-dialogo input:focus-visible{outline:2px solid #1e7a46;outline-offset:2px}
+@media (max-width:360px){#ts-dialogo .ts-opcoes{grid-template-columns:1fr}}
+/* interruptor em Configurações › Turno */
+#gear-modal .ts-config{display:flex;align-items:center;gap:14px}
+#gear-modal .ts-config-txt{flex:1;min-width:0}
+#gear-modal .ts-config-tit{font-size:.88rem;font-weight:800;color:#2d3748}
+#gear-modal .ts-config-sub{font-size:.72rem;color:#718096;margin-top:2px;line-height:1.4}
+body.dark #gear-modal .ts-config-tit{color:var(--e-texto)}
+body.dark #gear-modal .ts-config-sub{color:var(--e-texto2)}
+.ts-switch{display:flex;flex-direction:column;align-items:center;gap:4px;flex-shrink:0;padding:4px;border:0;border-radius:8px;background:transparent;font-family:inherit;cursor:pointer}
+.ts-switch-trilho{position:relative;display:block;width:44px;height:24px;border-radius:24px;background:#cbd5e0;transition:background .2s}
+.ts-switch-bola{position:absolute;left:3px;top:3px;width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.2);transition:transform .2s}
+.ts-switch[aria-checked="true"] .ts-switch-trilho{background:#0d7377}
+.ts-switch[aria-checked="true"] .ts-switch-bola{transform:translateX(20px)}
+.ts-switch-txt{font-size:.66rem;font-weight:700;color:#718096}
+.ts-switch[aria-checked="true"] .ts-switch-txt{color:#0d7377}
+.ts-switch:focus-visible{outline:2px solid #0d7377;outline-offset:2px}
+body.dark .ts-switch-trilho{background:#3a3a3a}
+body.dark .ts-switch[aria-checked="true"] .ts-switch-trilho{background:#14a085}
+body.dark .ts-switch-txt{color:var(--e-texto2)}
+body.dark .ts-switch[aria-checked="true"] .ts-switch-txt{color:#5eead4}
+@media (prefers-reduced-motion:reduce){.ts-switch-trilho,.ts-switch-bola{transition:none}}
+@media (prefers-reduced-motion:reduce){#ts-dialogo .ts-caixa{animation:none}}
 </style>
 </head>
 <body class="sm-collapsed">
@@ -615,7 +679,7 @@ window.presenceOpenModal = function() { if(window._presenceOpenModal) window._pr
   <div class="container">
     <div class="section">
       <div class="section-header green">
-        <div class="section-label"><div class="icon-check">&#10003;</div> Abriu turno</div>
+        <div class="section-label"><div class="icon-check">&#10003;</div> Abriu turno <span class="ts-resumo" id="ts-resumo" hidden></span></div>
         <div class="section-count green" id="ok-count">0</div>
       </div>
       <div class="grid" id="abriu-grid"></div>
@@ -728,8 +792,72 @@ ok: [],
 justif: [],
 falta: []
 };
-let teams = { ok: [...DEFAULTS.ok], justif: [], falta: [...DEFAULTS.falta] };
+let teams = { ok: [...DEFAULTS.ok], justif: [], falta: [...DEFAULTS.falta], sistema: {} };
 let currentDate = DEFAULTS.date;
+// ── Onde a equipe abriu o turno: Júpiter laranja ou GPM Obras ─────────────────
+// Vale só para quem está em "Abriu turno". Fica salvo junto com o turno do dia em
+// value.sistema = { 'NOME-EQUIPE': 'jupiter' | 'gpm' }. Equipe sem marcação = não informado.
+const TURNO_SISTEMAS = {
+  jupiter: { nome: 'Júpiter laranja', curto: 'Júpiter', img: 'JÚPITER', cor: '#c2410c' },
+  gpm:     { nome: 'GPM Obras',       curto: 'GPM',     img: 'GPM',     cor: '#1d4ed8' }
+};
+// Liga/desliga a opção (Configurações › Turno). Vale para todos os usuários: fica no banco
+// em turno_config. Desligada, some das equipes, do cabeçalho e da foto da câmera; as
+// marcações já feitas continuam guardadas e voltam quando ligar de novo.
+let turnoSistemaAtivo = true;
+function tsConfigAtualizarUI() {
+  const b = document.getElementById('ts-config-switch'); if (!b) return;
+  b.setAttribute('aria-checked', turnoSistemaAtivo ? 'true' : 'false');
+  const e = document.getElementById('ts-config-estado'); if (e) e.textContent = turnoSistemaAtivo ? 'Ativado' : 'Desativado';
+}
+document.addEventListener('DOMContentLoaded', tsConfigAtualizarUI);
+async function dbSaveTurnoConfig() {
+  const value = { sistemaAtivo: turnoSistemaAtivo };
+  lsSet('turno_config', value);
+  try {
+    setDbStatus('syncing', 'Salvando...');
+    const res = await fetch(SUPA_URL + '/rest/v1/turno_data', {
+      method: 'POST',
+      headers: { ...SUPA_HEADERS, 'Prefer': 'resolution=merge-duplicates,return=representation' },
+      body: JSON.stringify({ key: 'turno_config', value: value })
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    try {
+      const saved = await res.json();
+      if (Array.isArray(saved) && saved[0] && saved[0].updated_at) lastTsMap['turno_config'] = saved[0].updated_at;
+    } catch(e) {}
+    setDbStatus('online', 'Salvo!');
+    setTimeout(() => setDbStatus('online', 'Banco online'), 1500);
+  } catch(e) {
+    setDbStatus('local', 'Salvo local');
+    setTimeout(() => setDbStatus('local', 'Dados locais'), 2000);
+  }
+}
+function turnoAlternarSistema(ligar) {
+  turnoSistemaAtivo = (typeof ligar === 'boolean') ? ligar : !turnoSistemaAtivo;
+  tsConfigAtualizarUI();
+  try { render(); } catch(e) {}
+  dbSaveTurnoConfig();
+  if (window.turnoAviso) window.turnoAviso(turnoSistemaAtivo
+    ? 'Júpiter / GPM ativado: aparece nas equipes e na foto da câmera'
+    : 'Júpiter / GPM desativado');
+}
+window.turnoAlternarSistema = turnoAlternarSistema;
+function turnoSistemaValido(s) { return Object.prototype.hasOwnProperty.call(TURNO_SISTEMAS, s) ? s : ''; }
+// mapa salvo → Map(nome de exibição → sistema), para achar a equipe mesmo pelo nome antigo
+function turnoMapaSistema(mapa) {
+  const m = new Map();
+  if (mapa && typeof mapa === 'object' && !Array.isArray(mapa)) Object.keys(mapa).forEach(k => {
+    const s = turnoSistemaValido(mapa[k]); if (s) m.set(toDisplayName(k), s);
+  });
+  return m;
+}
+// o que vai para o banco: só equipes que estão em "Abriu turno", com o nome da lista
+function turnoSistemaLimpo() {
+  const m = turnoMapaSistema(teams.sistema), out = {};
+  teams.ok.forEach(n => { const s = m.get(toDisplayName(n)); if (s) out[n] = s; });
+  return out;
+}
 let producao = {};
 let selectedStatus = 'ok';
 function setDbStatus(status, msg) {
@@ -832,6 +960,7 @@ const norm = arr => (arr||[]).map(n => toDisplayName(typeof n==='string'?n:(n.na
 teams.ok    = (v.ok    && v.ok.length)    ? [...new Set(norm(v.ok))]    : [...DEFAULTS.ok];
 // CORRIGIDO: Array.isArray garante que justif=[] (vazio) seja aplicado corretamente
 teams.justif = Array.isArray(v.justif) ? v.justif : [];
+teams.sistema = (v.sistema && typeof v.sistema === 'object' && !Array.isArray(v.sistema)) ? v.sistema : {};
 currentDate = v.date || DEFAULTS.date;
 const justifNms = teams.justif.map(t=>t.name);
 // CORRIGIDO: normaliza AMBOS os lados para evitar bug nome completo vs codigo curto
@@ -852,6 +981,10 @@ teams.falta = [...faltaSet].filter(n => {
   _faltaVistos.add(d);
   return !okNorm.has(d) && !justifNorm.has(d);
 });
+}
+if (row.key==='turno_config') {
+  turnoSistemaAtivo = !(row.value && row.value.sistemaAtivo === false);
+  try { tsConfigAtualizarUI(); } catch(e) {}
 }
 if (row.key==='producao') { producao = row.value || {}; }
 if (row.key==='obras_base') {
@@ -881,7 +1014,7 @@ try { mapaProgRender(); } catch(e) {}
 }
 }
 function loadFromLocalStorage() {
-['turno','producao','obras_base','apr_data','prog_diaria'].forEach(key => {
+['turno','turno_config','producao','obras_base','apr_data','prog_diaria'].forEach(key => {
 const v = lsGet(key);
 if (v!==null) applyRowData({ key, value: v });
 });
@@ -895,7 +1028,7 @@ try {
 const controller = new AbortController();
 const tid = setTimeout(() => controller.abort(), 10000);
 // Busca apenas as chaves leves (exclui obras_base e prog_diaria que têm carga separada)
-const res = await fetch(SUPA_URL + '/rest/v1/turno_data?select=key,value&key=in.(turno,producao,apr_data,comp_historico)', {
+const res = await fetch(SUPA_URL + '/rest/v1/turno_data?select=key,value&key=in.(turno,turno_config,producao,apr_data,comp_historico)', {
 headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY },
 signal: controller.signal
 });
@@ -1007,7 +1140,8 @@ dbReconectar();
 }
 }
 async function dbSaveTurno() {
-const payload = { date: currentDate, ok: teams.ok, justif: teams.justif, falta: teams.falta };
+teams.sistema = turnoSistemaLimpo();
+const payload = { date: currentDate, ok: teams.ok, justif: teams.justif, falta: teams.falta, sistema: teams.sistema };
 lsSet('turno', payload);
 try {
 setDbStatus('syncing', 'Salvando...');
@@ -1210,7 +1344,8 @@ const justifDispH = new Set(justifTemp.map(t => toDisplayName(_nomeH(t))));
 // Garante que todos do EQUIPES_ATIVAS que nao estao em ok/justif aparecem em falta
 const faltaTemp = [...faltaRaw, ...EQUIPES_ATIVAS].filter(_unicoH);
 // guarda os dados do dia consultado para re-aplicar o filtro quando ele mudar
-turnoHistDados = { ok: [...okTemp], justif: [...justifTemp], falta: [...faltaTemp], data: dataFormatada, fonte: fonte };
+turnoHistDados = { ok: [...okTemp], justif: [...justifTemp], falta: [...faltaTemp], data: dataFormatada, fonte: fonte,
+  sistema: (payload.sistema && typeof payload.sistema === 'object' && !Array.isArray(payload.sistema)) ? payload.sistema : {} };
 turnoHistRender();
 }
 // Re-renderiza o histórico (dia anterior) aplicando o filtro de estado/filial/centro atual.
@@ -1218,7 +1353,7 @@ function turnoHistRender(){
   const d = turnoHistDados; if(!d) return;
   const statusEl = document.getElementById('turno-hist-status');
   const modoEl = document.getElementById('turno-hist-modo');
-  buildGridOk('abriu-grid', filterByBase([...d.ok].sort()));
+  buildGridOk('abriu-grid', filterByBase([...d.ok].sort()), d.sistema);
   buildGridJustif('justif-grid', filterByBase([...d.justif].sort((a,b)=>a.name.localeCompare(b.name))));
   buildGridFalta('falta-grid', filterByBase([...d.falta].sort()));
   document.getElementById('ok-count').textContent = filterByBase(d.ok).length;
@@ -1870,7 +2005,7 @@ const faltaFiltrada = teams.falta.filter(n => {
 const okFilt     = filterByStateAndBase([...teams.ok].sort());
 const justifFilt = filterByStateAndBase([...teams.justif].sort((a,b)=>a.name.localeCompare(b.name)));
 const faltaFilt  = filterByStateAndBase([...faltaFiltrada].sort());
-buildGridOk('abriu-grid', okFilt);
+buildGridOk('abriu-grid', okFilt, teams.sistema);
 buildGridJustif('justif-grid', justifFilt);
 buildGridFalta('falta-grid', faltaFilt);
 document.getElementById('ok-count').textContent    = okFilt.length;
@@ -1898,23 +2033,57 @@ if (window.turnoDiaRotulo) turnoDiaRotulo();
 })();
 
 // nome da equipe sem o sufixo do centro (que vira uma etiqueta) + justificativa opcional
-function turnoCardHtml(name, obs) {
+function turnoCardHtml(name, obs, sistema) {
   var t = String(nomeTela(name) || ''), m = t.match(/^(.*\S)\s*-\s*([A-Z]{2,4})$/);
   var nome = m ? m[1] : t, sigla = m ? m[2] : '';
-  var linha = '<span class="card-name" title="' + esc(t) + '">' + esc(nome) + '</span>' + (sigla ? '<span class="card-tag">' + esc(sigla) + '</span>' : '');
+  var sis = sistema && TURNO_SISTEMAS[sistema];
+  var linha = '<span class="card-name" title="' + esc(t) + '">' + esc(nome) + '</span>'
+    + (sis ? '<span class="card-sis sis-' + sistema + '" title="Turno aberto no ' + esc(sis.nome) + '">' + esc(sis.curto) + '</span>' : '')
+    + (sigla ? '<span class="card-tag">' + esc(sigla) + '</span>' : '');
   return obs ? '<div class="card-linha">' + linha + '</div><div class="justif-obs">' + esc(obs) + '</div>' : linha;
 }
 function emptyMsg(id) {
 document.getElementById(id).innerHTML = '<div class="_s9">Nenhuma equipe</div>';
 }
-function buildGridOk(id, list) {
+function buildGridOk(id, list, mapa) {
 const g = document.getElementById(id); g.innerHTML = '';
+const m = turnoSistemaAtivo ? turnoMapaSistema(mapa) : new Map();
+if (id === 'abriu-grid') tsAtualizarResumo(list, m);
 if (!list.length) { emptyMsg(id); return; }
+// No dia atual, clicar na equipe (ou Enter) abre a escolha Júpiter laranja / GPM Obras
+const podeMarcar = id === 'abriu-grid' && !turnoModoHistorico && turnoSistemaAtivo;
 list.forEach(name => {
+const nm = typeof name === 'string' ? name : ((name && name.name) || '');
+const sis = m.get(toDisplayName(nm)) || '';
 const d = document.createElement('div'); d.className = 'card';
-d.innerHTML = turnoCardHtml(name); // XSS fix
+d.innerHTML = turnoCardHtml(nm, '', sis); // XSS fix
+if (podeMarcar) {
+  d.dataset.equipe = nm;
+  d.tabIndex = 0;
+  d.setAttribute('role', 'button');
+  d.setAttribute('aria-label', nomeTela(nm) + ': abriu turno' + (sis ? ' no ' + TURNO_SISTEMAS[sis].nome : ', sistema não informado') + '. Pressione Enter para informar onde o turno foi aberto.');
+}
 g.appendChild(d);
 });
+}
+// Contagem no cabeçalho de "Abriu turno": Júpiter n · GPM n · n sem sistema
+function tsAtualizarResumo(list, m) {
+  const el = document.getElementById('ts-resumo'); if (!el) return;
+  if (!turnoSistemaAtivo) { el.hidden = true; el.innerHTML = ''; return; }
+  const c = { jupiter: 0, gpm: 0 }; let sem = 0;
+  list.forEach(n => { const s = m.get(toDisplayName(typeof n === 'string' ? n : ((n && n.name) || ''))); if (s) c[s]++; else sem++; });
+  // dia do histórico salvo antes desta opção existir: não mostra nada
+  if (!list.length || (turnoModoHistorico && !c.jupiter && !c.gpm)) { el.hidden = true; el.innerHTML = ''; return; }
+  let html = Object.keys(TURNO_SISTEMAS).map(k =>
+    '<span class="ts-cont sis-' + k + '" title="Turno aberto no ' + esc(TURNO_SISTEMAS[k].nome) + '">' + esc(TURNO_SISTEMAS[k].curto) + ' <b>' + c[k] + '</b></span>'
+  ).join('');
+  if (sem) {
+    const toque = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+    html += '<span class="ts-sem">' + sem + ' sem sistema'
+      + (turnoModoHistorico ? '' : '<span class="ts-dica" data-html2canvas-ignore> · ' + (toque ? 'toque' : 'clique') + ' na equipe para informar</span>')
+      + '</span>';
+  }
+  el.innerHTML = html; el.hidden = false;
 }
 function buildGridJustif(id, list) {
 const g = document.getElementById(id); g.innerHTML = '';
@@ -2167,6 +2336,7 @@ window.turnoJustificarFalta = turnoJustificarFalta;
   }
 
   // ── aviso no rodapé, com "Desfazer" ──
+  window.turnoAviso = aviso; // usado também pela escolha Júpiter/GPM
   var avisoEl = null, avisoT = 0, avisoAcao = null;
   function aviso(txt, desfazer) {
     if (!avisoEl) {
@@ -2185,6 +2355,148 @@ window.turnoJustificarFalta = turnoJustificarFalta;
     clearTimeout(avisoT);
     avisoT = setTimeout(function () { avisoEl.hidden = true; avisoAcao = null; }, desfazer ? 7000 : 3000);
   }
+})();
+// ══ "Abriu turno": turno aberto no Júpiter laranja ou no GPM Obras ═════════
+// Clique (ou Enter) na equipe abre a escolha. Só no dia atual; no histórico é só leitura.
+function turnoDefinirSistema(nomes, sis) {
+  if (turnoModoHistorico || !turnoSistemaAtivo) return false;
+  sis = turnoSistemaValido(sis);
+  const okD = new Set(teams.ok.map(n => toDisplayName(n)));
+  const m = Object.assign({}, teams.sistema || {});
+  let mudou = 0;
+  nomes.forEach(nome => {
+    const d = toDisplayName(nome);
+    if (!okD.has(d)) return;
+    // tira qualquer grafia antiga da mesma equipe antes de gravar
+    Object.keys(m).forEach(k => { if (toDisplayName(k) === d) delete m[k]; });
+    if (sis) m[nome] = sis;
+    mudou++;
+  });
+  if (!mudou) return false;
+  teams.sistema = m;
+  render();
+  dbSaveTurno();
+  return true;
+}
+function turnoRestaurarSistema(mapa) {
+  if (turnoModoHistorico) return;
+  teams.sistema = Object.assign({}, mapa || {});
+  render();
+  dbSaveTurno();
+}
+window.turnoDefinirSistema = turnoDefinirSistema;
+(function () {
+  var dlg = null, dlgNome = null, focoAntes = null, pressionado = null;
+  var SELETOR_OK = '#abriu-grid .card[data-equipe]';
+  function rotulo(n) { return typeof nomeTela === 'function' ? nomeTela(n) : n; }
+  function avisar(txt, desfazer) { if (window.turnoAviso) window.turnoAviso(txt, desfazer); }
+  function cardOk(nome) {
+    var g = document.getElementById('abriu-grid'); if (!g) return null;
+    var cs = g.querySelectorAll('.card[data-equipe]');
+    for (var i = 0; i < cs.length; i++) if (cs[i].dataset.equipe === nome) return cs[i];
+    return null;
+  }
+  function filtroAtivo() {
+    return turnoStateFilter !== 'todos' || turnoBaseFilter !== 'todos' || turnoCentroFilter !== 'todos';
+  }
+  // equipes de "Abriu turno" na tela (filtro atual) ainda sem sistema, fora a do diálogo
+  function outrasSemSistema(nome) {
+    var m = turnoMapaSistema(teams.sistema), d = toDisplayName(nome);
+    return filterByStateAndBase(teams.ok.slice()).filter(function (n) {
+      var x = toDisplayName(n); return x !== d && !m.get(x);
+    });
+  }
+
+  function montar() {
+    dlg = document.createElement('div');
+    dlg.id = 'ts-dialogo'; dlg.hidden = true;
+    dlg.setAttribute('role', 'dialog'); dlg.setAttribute('aria-modal', 'true'); dlg.setAttribute('aria-labelledby', 'ts-dlg-titulo');
+    dlg.innerHTML =
+      '<div class="ts-caixa">' +
+        '<div class="ts-cab"><div class="ts-ico" aria-hidden="true">&#10003;</div><div>' +
+          '<div class="ts-titulo" id="ts-dlg-titulo">Onde o turno foi aberto?</div><div class="ts-equipe" id="ts-dlg-equipe"></div>' +
+        '</div></div>' +
+        '<div class="ts-opcoes" role="group" aria-labelledby="ts-dlg-titulo">' +
+          Object.keys(TURNO_SISTEMAS).map(function (k) {
+            return '<button type="button" class="ts-opcao sis-' + k + '" data-sis="' + k + '" aria-pressed="false">' +
+              '<span class="ts-marca" aria-hidden="true"></span><span>' + esc(TURNO_SISTEMAS[k].nome) + '</span></button>';
+          }).join('') +
+        '</div>' +
+        '<label class="ts-lote" id="ts-dlg-lote"><input type="checkbox" id="ts-dlg-lote-chk"><span id="ts-dlg-lote-txt"></span></label>' +
+        '<div class="ts-acoes">' +
+          '<button type="button" class="ts-btn" data-acao="limpar" id="ts-dlg-limpar">Limpar sistema</button>' +
+          '<button type="button" class="ts-btn ts-cancelar" data-acao="cancelar">Cancelar</button>' +
+        '</div>' +
+      '</div>';
+    document.body.appendChild(dlg);
+    dlg.addEventListener('pointerdown', function (e) { pressionado = e.target; });
+    dlg.addEventListener('click', function (e) {
+      if (e.target === dlg) { if (pressionado === dlg) fechar(); return; }
+      var b = e.target.closest('button'); if (!b) return;
+      if (b.dataset.sis) escolher(b.dataset.sis);
+      else if (b.dataset.acao === 'limpar') escolher('');
+      else if (b.dataset.acao === 'cancelar') fechar();
+    });
+    dlg.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') { e.preventDefault(); fechar(); }
+      else if (e.key === 'Tab') {
+        var focaveis = Array.prototype.filter.call(dlg.querySelectorAll('button,input'), function (x) { return !x.closest('[hidden]'); });
+        var prim = focaveis[0], ult = focaveis[focaveis.length - 1];
+        if (e.shiftKey && document.activeElement === prim) { e.preventDefault(); ult.focus(); }
+        else if (!e.shiftKey && document.activeElement === ult) { e.preventDefault(); prim.focus(); }
+      }
+    });
+  }
+  function abrir(nome) {
+    if (turnoModoHistorico || !turnoSistemaAtivo) return;
+    if (!dlg) montar();
+    dlgNome = nome; focoAntes = document.activeElement; pressionado = null;
+    var atual = turnoMapaSistema(teams.sistema).get(toDisplayName(nome)) || '';
+    document.getElementById('ts-dlg-equipe').textContent = rotulo(nome);
+    var ops = dlg.querySelectorAll('.ts-opcao');
+    Array.prototype.forEach.call(ops, function (b) { b.setAttribute('aria-pressed', b.dataset.sis === atual ? 'true' : 'false'); });
+    document.getElementById('ts-dlg-limpar').hidden = !atual;
+    var outras = outrasSemSistema(nome).length;
+    document.getElementById('ts-dlg-lote').hidden = !outras;
+    document.getElementById('ts-dlg-lote-chk').checked = false;
+    document.getElementById('ts-dlg-lote-txt').textContent = outras === 1
+      ? 'Usar também na outra equipe sem sistema' + (filtroAtivo() ? ' deste filtro' : '')
+      : 'Usar também nas outras ' + outras + ' equipes sem sistema' + (filtroAtivo() ? ' deste filtro' : '');
+    dlg.hidden = false;
+    setTimeout(function () { (dlg.querySelector('.ts-opcao[aria-pressed="true"]') || ops[0]).focus(); }, 30);
+  }
+  function fechar() {
+    if (!dlg || dlg.hidden) return;
+    dlg.hidden = true; dlgNome = null;
+    if (focoAntes && focoAntes.isConnected && focoAntes.focus) focoAntes.focus({ preventScroll: true });
+  }
+  function escolher(sis) {
+    var nome = dlgNome; if (!nome) return;
+    var emLote = sis && !document.getElementById('ts-dlg-lote').hidden && document.getElementById('ts-dlg-lote-chk').checked;
+    var nomes = [nome].concat(emLote ? outrasSemSistema(nome) : []);
+    var antes = Object.assign({}, teams.sistema || {});
+    dlg.hidden = true; dlgNome = null;
+    if (!turnoDefinirSistema(nomes, sis)) { avisar(rotulo(nome) + ' não está mais em Abriu turno'); return; }
+    var card = cardOk(nome); if (card) card.focus({ preventScroll: true }); // o grid foi redesenhado
+    var txt = !sis ? rotulo(nome) + ': sistema limpo'
+      : nomes.length > 1 ? nomes.length + ' equipes marcadas como ' + TURNO_SISTEMAS[sis].nome
+      : rotulo(nome) + ': turno aberto no ' + TURNO_SISTEMAS[sis].nome;
+    avisar(txt, function () { turnoRestaurarSistema(antes); avisar('Marcação desfeita'); });
+  }
+
+  document.addEventListener('click', function (e) {
+    var card = e.target.closest ? e.target.closest(SELETOR_OK) : null;
+    if (!card || turnoModoHistorico) return;
+    abrir(card.dataset.equipe);
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    var card = e.target.closest ? e.target.closest(SELETOR_OK) : null;
+    if (!card || turnoModoHistorico) return;
+    e.preventDefault();
+    abrir(card.dataset.equipe);
+  });
+  window.turnoAbrirSistema = abrir;
 })();
 function statusBadge(s) {
 if (!s) return '';
@@ -3105,6 +3417,8 @@ for (let i=1; i<lines.length; i++) {
     if (m) dataCsv = m[1];
   }
 }
+// Arquivo de outro dia: as marcações Júpiter/GPM eram do dia anterior
+if (dataCsv && dataCsv !== currentDate) teams.sistema = {};
 // Aplica data do CSV se detectada
 if (dataCsv) {
   currentDate = dataCsv;
@@ -3267,6 +3581,21 @@ function atualizarRelatorio() {
   try { progRenderDash(); } catch(e) {}
   dbReconectar();
 }
+// Imagens (foto da câmera e bot): contagem "JÚPITER n  GPM n" ao lado de ABRIU TURNO, com a opção ativada
+function tsResumoImagem(list) {
+  if (!turnoSistemaAtivo || !list.length) return '';
+  const m = turnoMapaSistema(teams.sistema), c = { jupiter: 0, gpm: 0 };
+  list.forEach(n => { const s = m.get(toDisplayName(typeof n === 'string' ? n : ((n && n.name) || ''))); if (s) c[s]++; });
+  return Object.keys(TURNO_SISTEMAS).map(k =>
+    '<span style="margin-left:6px;background:' + TURNO_SISTEMAS[k].cor + ';color:#fff;font-size:11px;font-weight:800;padding:2px 8px;border-radius:3px;letter-spacing:0.5px;">' + TURNO_SISTEMAS[k].img + ' ' + c[k] + '</span>'
+  ).join('');
+}
+// selo do card na imagem: o sistema, se a equipe abriu e foi marcada
+function tsSeloImagem(item, type, mapa) {
+  if (type !== 'ok' || !turnoSistemaAtivo) return null;
+  const s = mapa.get(toDisplayName(typeof item === 'string' ? item : ((item && item.name) || '')));
+  return s ? TURNO_SISTEMAS[s] : null;
+}
 function tirarPrint() {
 const pad = n => String(n).padStart(2,'0');
 const now = new Date();
@@ -3295,6 +3624,7 @@ if (turnoCentroFilter === 'todos' && turnoBaseFilter !== 'todos') {
 const filtroLabel  = (turnoStateFilter!=='todos'||_localFiltro!=='todos')
   ? (STATE_LABELS[turnoStateFilter]||turnoStateFilter) + (_localFiltro!=='todos' ? ' · '+(BASE_LABELS[_localFiltro]||_localFiltro) : '')
   : '';
+const _sisMapa = turnoMapaSistema(teams.sistema);
 function buildGrid(list, type) {
 if (!list || list.length===0) return '<div style="padding:12px 16px;color:#aaa;font-size:13px;">Nenhum</div>';
 let bg='#f0fafa', border='#e0f5f3', namecol='#1a3a3a', badgeBg='#14a085', badgeTxt='OK';
@@ -3313,10 +3643,12 @@ const colSpan = isLastItem && remainder < cols ? (cols - remainder + 1) : 1;
 const width = (25 * colSpan) + '%';
 if(!item) return `<td style="width:25%;padding:5px 4px;"></td>`;
 const name = esc(nomeTela(typeof item==='string'?item:item.name));
+const _selo = tsSeloImagem(item, type, _sisMapa);
+const _sBg = _selo ? _selo.cor : badgeBg, _sTxt = _selo ? _selo.img : badgeTxt;
 return `<td ${colSpan>1?`colspan="${colSpan}"`:''}style="width:${width};padding:5px 4px;">
 <div style="background:${bg};border-left:3px solid ${badgeBg};border-radius:4px;padding:9px 12px;display:flex;align-items:center;justify-content:space-between;gap:6px;">
 <span style="font-size:12.5px;font-weight:700;color:${namecol};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${name}</span>
-<span style="background:${badgeBg};color:#fff;font-size:10px;font-weight:800;padding:2px 7px;border-radius:3px;white-space:nowrap;letter-spacing:0.5px;flex-shrink:0;">${badgeTxt}</span>
+<span style="background:${_sBg};color:#fff;font-size:10px;font-weight:800;padding:2px 7px;border-radius:3px;white-space:nowrap;letter-spacing:0.5px;flex-shrink:0;">${_sTxt}</span>
 </div>
 </td>`;
 }).join('');
@@ -3341,7 +3673,7 @@ const html = `
 </div>
 <div style="height:4px;background:linear-gradient(90deg,#ff6b35,#ff9a3c,#ff6b35);"></div>
 <div style="padding:20px 20px 10px;">
-${section('✅','ABRIU TURNO', ok.length, '#0d7377', '#f0fafa', '#c0e8e5', buildGrid(ok,'ok'))}
+${section('✅','ABRIU TURNO' + tsResumoImagem(ok), ok.length, '#0d7377', '#f0fafa', '#c0e8e5', buildGrid(ok,'ok'))}
 ${justif.length > 0 ? section('⚠️','FALTA JUSTIFICADA', justif.length, '#b97400', '#fffbf0', '#f0d080', buildGrid(justif,'justif')) : ''}
 ${section('🔴','NÃO ABRIU TURNO', falta.length, '#c53030', '#fff5f5', '#fcc', buildGrid(falta,'falta'))}
 </div>
@@ -3636,7 +3968,7 @@ if (badge && badge.classList.contains('offline')) {
 setDbStatus('online', 'Banco online');
 }
 // Verifica se alguma chave relevante mudou comparando individualmente
-const CHAVES_MONITORADAS = ['turno','producao','apr_data','prog_diaria'];
+const CHAVES_MONITORADAS = ['turno','turno_config','producao','apr_data','prog_diaria'];
 let houveAlteracao = false;
 const primeiraVez = Object.keys(lastTsMap).length === 0;
 // Cadastro de Equipes mudou? re-sincroniza a lista de equipes ativas
@@ -3756,7 +4088,7 @@ const supaFetch = (path, timeout) => {
 try {
   // Dispara as 3 requisições principais ao mesmo tempo
   const [resPrincipal, resTimestamps, resProgDiaria] = await Promise.allSettled([
-    supaFetch('/rest/v1/turno_data?select=key,value&key=in.(turno,producao,apr_data,comp_historico)', 8000),
+    supaFetch('/rest/v1/turno_data?select=key,value&key=in.(turno,turno_config,producao,apr_data,comp_historico)', 8000),
     supaFetch('/rest/v1/turno_data?select=key,updated_at', 5000),
     supaFetch('/rest/v1/turno_data?select=key,value,updated_at&key=eq.prog_diaria&order=updated_at.desc&limit=1', 8000)
   ]);
@@ -8353,7 +8685,14 @@ body.dark #comparar-modal{
             <button id="gear-confirm-btn" onclick="gearConfirmarImport()" class="gear-btn" style="background:linear-gradient(135deg,#0d7377,#14a085);color:#fff;" onmouseover="this.style.opacity='.88'" onmouseout="this.style.opacity='1'">✅ Confirmar e Aplicar</button>
           </div>
 
-          
+          <div class="gear-section-title" style="color:#0d7377;border-bottom:2px solid #c0e8e5;margin-top:18px;">⚙️ Opções do turno</div>
+          <div class="gear-card ts-config">
+            <div class="ts-config-txt">
+              <div class="ts-config-tit" id="ts-config-tit">Júpiter laranja / GPM Obras</div>
+              <div class="ts-config-sub" id="ts-config-sub">Mostra onde cada equipe abriu o turno, na tela e na foto da câmera 📷. Vale para todos os usuários.</div>
+            </div>
+            <button type="button" role="switch" id="ts-config-switch" class="ts-switch" aria-checked="true" aria-labelledby="ts-config-tit" aria-describedby="ts-config-sub" onclick="turnoAlternarSistema()"><span class="ts-switch-trilho" aria-hidden="true"><span class="ts-switch-bola"></span></span><span class="ts-switch-txt" id="ts-config-estado">Ativado</span></button>
+          </div>
         </div>
 
         <!-- ── ABA: EQUIPES ────────────────────────────── -->
@@ -8569,7 +8908,7 @@ body.dark #comparar-modal{
       dataLines = lines.filter(l => !l.toLowerCase().startsWith('data;'));
     }
 
-    const ok = [], falta = [], justif = [];
+    const ok = [], falta = [], justif = [], sistema = {};
 
     for (const line of dataLines) {
       if (!line) continue;
@@ -8577,13 +8916,18 @@ body.dark #comparar-modal{
       const nome   = (parts[0] || '').trim().replace(/^"|"$/g, '');
       const status = (parts[1] || '').trim().toLowerCase().replace(/^"|"$/g, '');
       const obs    = (parts[2] || '').trim().replace(/^"|"$/g, '');
+      const sisTxt = (parts[3] || '').trim().toLowerCase().replace(/^"|"$/g, '');
       if (!nome) continue;
+      if (status === 'ok' && sisTxt) {
+        const sis = /j[uú]piter/.test(sisTxt) ? 'jupiter' : /gpm/.test(sisTxt) ? 'gpm' : '';
+        if (sis) sistema[nome] = sis;
+      }
       if (status === 'ok')     ok.push(nome);
       else if (status === 'falta') falta.push(nome);
       else if (status === 'justif' || status === 'justificado' || status === 'justificada') justif.push({ name: nome, obs });
     }
 
-    return { date, ok, falta, justif };
+    return { date, ok, falta, justif, sistema };
   }
 
   // ── IMPORTAR TURNO ──────────────────────────────────────
@@ -8650,6 +8994,7 @@ body.dark #comparar-modal{
       if (pane) pane.style.display = t===tab ? '' : 'none';
     });
     if (tab === 'equipes') setTimeout(function(){ if(typeof renderManageList==='function') renderManageList(); }, 50);
+    if (tab === 'turno' && typeof tsConfigAtualizarUI === 'function') tsConfigAtualizarUI();
     if (tab === 'visual') {
       var inp = document.getElementById('presence-my-name');
       if (inp && typeof presenceGetMyName === 'function') inp.value = presenceGetMyName();
@@ -8784,6 +9129,9 @@ body.dark #comparar-modal{
     const payload = _gearPayloadPendente;
 
     if (typeof teams !== 'undefined') {
+      // Júpiter/GPM: usa o que veio no arquivo; senão, mesmo dia mantém as marcações e outro dia começa do zero
+      if (payload.sistema && Object.keys(payload.sistema).length) teams.sistema = payload.sistema;
+      else if (payload.date && payload.date !== currentDate) teams.sistema = {};
       teams.ok     = payload.ok     || [];
       teams.justif = payload.justif || [];
       // Garante que todos EQUIPES_ATIVAS que não abriram aparecem em falta
@@ -8801,7 +9149,7 @@ body.dark #comparar-modal{
     }
 
     if (typeof lsSet === 'function') {
-      lsSet('turno', { date: currentDate, ok: teams.ok, justif: teams.justif, falta: teams.falta });
+      lsSet('turno', { date: currentDate, ok: teams.ok, justif: teams.justif, falta: teams.falta, sistema: teams.sistema || {} });
     }
     if (typeof dbSaveTurno === 'function') dbSaveTurno();
     try { render(); } catch(e) {}
@@ -8821,9 +9169,10 @@ body.dark #comparar-modal{
       const justf = (typeof teams !== 'undefined') ? teams.justif: [];
       const falta = (typeof teams !== 'undefined') ? teams.falta : [];
 
+      const sisM  = (typeof teams !== 'undefined') ? turnoMapaSistema(teams.sistema) : new Map();
       let csv = 'data;' + date + '\n';
-      csv += 'nome;status;obs\n';
-      ok.forEach(n    => { csv += n + ';ok;\n'; });
+      csv += 'nome;status;obs;sistema\n';
+      ok.forEach(n    => { csv += n + ';ok;;' + (sisM.get(toDisplayName(n)) || '') + '\n'; });
       justf.forEach(t => { csv += t.name + ';justif;' + (t.obs || '') + '\n'; });
       falta.forEach(n => { csv += n + ';falta;\n'; });
 
@@ -9160,6 +9509,7 @@ function gerarImagemBA() {
       const hora = String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
 
       // Gera HTML igual ao tirarPrint mas só com dados BA
+      var sisMapaBA = turnoMapaSistema(teams.sistema);
       const cardHtml = function(list, type) {
         if (!list.length) return '<div style="padding:12px 16px;color:#aaa;font-size:13px;">Nenhum</div>';
         var bg='#f0fafa', border='#e0f5f3', namecol='#1a3a3a', badgeBg='#14a085', badgeTxt='OK';
@@ -9174,10 +9524,12 @@ function gerarImagemBA() {
           var cells = row.map(function(item, idx) {
             if(!item) return '<td style="width:25%;padding:5px 4px;"></td>';
             var n = typeof item==='string'?item:(item.name||'');
+            var selo = tsSeloImagem(n, type, sisMapaBA);
+            var sBg = selo ? selo.cor : badgeBg, sTxt = selo ? selo.img : badgeTxt;
             n = (typeof nomeTela === 'function') ? esc(nomeTela(n)) : n;
             var cs = (last && idx===rem-1 && rem<COLS) ? (COLS-rem+1) : 1;
             var w  = (25*cs)+'%';
-            return '<td '+(cs>1?'colspan="'+cs+'"':'')+'style="width:'+w+';padding:5px 4px;"><div style="background:'+bg+';border-left:3px solid '+border+';border-radius:4px;padding:9px 12px;display:flex;align-items:center;justify-content:space-between;gap:6px;"><span style="font-size:12.5px;font-weight:700;color:'+namecol+';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+n+'</span><span style="background:'+badgeBg+';color:#fff;font-size:10px;font-weight:800;padding:2px 7px;border-radius:3px;white-space:nowrap;">'+badgeTxt+'</span></div></td>';
+            return '<td '+(cs>1?'colspan="'+cs+'"':'')+'style="width:'+w+';padding:5px 4px;"><div style="background:'+bg+';border-left:3px solid '+border+';border-radius:4px;padding:9px 12px;display:flex;align-items:center;justify-content:space-between;gap:6px;"><span style="font-size:12.5px;font-weight:700;color:'+namecol+';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+n+'</span><span style="background:'+sBg+';color:#fff;font-size:10px;font-weight:800;padding:2px 7px;border-radius:3px;white-space:nowrap;">'+sTxt+'</span></div></td>';
           });
           rows.push('<tr>'+cells.join('')+'</tr>');
         }
@@ -9194,7 +9546,7 @@ function gerarImagemBA() {
         '<div style="font-size:13px;color:rgba(255,255,255,0.75);margin-top:5px;letter-spacing:2px;text-transform:uppercase;">Relatório: '+currentDate+' · '+hora+' · BA</div>' +
         '</div><div style="height:4px;background:linear-gradient(90deg,#ff6b35,#ff9a3c,#ff6b35);"></div>' +
         '<div style="padding:20px 20px 10px;">' +
-        sectionHtml('✅','ABRIU TURNO', okBA.length, '#0d7377','#f0fafa','#c0e8e5', cardHtml(okBA,'ok')) +
+        sectionHtml('✅','ABRIU TURNO' + tsResumoImagem(okBA), okBA.length, '#0d7377','#f0fafa','#c0e8e5', cardHtml(okBA,'ok')) +
         (justifBA.length ? sectionHtml('⚠️','FALTA JUSTIFICADA', justifBA.length,'#b97400','#fffbf0','#f0d080',cardHtml(justifBA,'justif')) : '') +
         sectionHtml('🔴','NÃO ABRIU TURNO', faltaBA.length,'#c53030','#fff5f5','#fcc',cardHtml(faltaBA,'falta')) +
         '</div><div style="text-align:center;padding:4px 0 16px;font-size:11px;color:#aaa;">Mariuá Construção e Energia · OBRAS BA</div></div>';
