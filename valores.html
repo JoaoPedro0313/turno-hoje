@@ -291,6 +291,11 @@
   .imp-actions{display:flex;gap:10px;justify-content:flex-end;align-items:center;flex-wrap:wrap}
   .imp-msg{font-size:.85rem;font-weight:700;margin-top:10px;min-height:18px}
   .imp-msg.err{color:#c53030}.imp-msg.ok{color:#276749}
+  .imp-cola{margin:-2px 0 14px}
+  .imp-cola textarea{width:100%;min-height:78px;padding:10px 12px;border:1.5px solid #cbd5e1;border-radius:11px;font-family:inherit;font-size:.88rem;color:#1a365d;background:#fff;resize:vertical;display:block}
+  .imp-cola textarea:focus{outline:none;border-color:var(--teal);box-shadow:0 0 0 3px rgba(13,115,119,.15)}
+  .imp-cola-bar{display:flex;gap:12px;align-items:center;justify-content:flex-end;margin-top:8px;flex-wrap:wrap}
+  .imp-cola-bar a{color:var(--teal);font-weight:700;font-size:.85rem}
   tr.grp td{background:#f0fafa;font-weight:800;color:#0f3a33;border-top:2px solid #d6f0ec}
   tr.sub td{background:#fafdfd;font-weight:700;color:#0d7377;font-size:.85rem}
   .tabs{display:flex;gap:8px;margin-bottom:14px}
@@ -1582,12 +1587,13 @@ async function addValor(){
   carregarValores();
 }
 // ===== Importar arquivo (CSV/XLSX) =====
-var IMP_COLS=[], IMP_ROWS=[], IMP_AUTO=null, IMP_TIPO='';
+var IMP_COLS=[], IMP_ROWS=[], IMP_AUTO=null, IMP_TIPO='', IMP_CHECK=null, IMP_MARCAS=[];
 function finAbrirImport(){
   finMsg(''); $('imp-map').style.display='none'; $('imp-map').innerHTML='';
   $('imp-prev').style.display='none'; $('imp-prev').innerHTML='';
   var w=$('imp-warn'); if(w){ w.style.display='none'; w.textContent=''; }
-  $('imp-go').style.display='none'; $('imp-file').value=''; IMP_COLS=[]; IMP_ROWS=[]; IMP_AUTO=null; IMP_TIPO='';
+  $('imp-go').style.display='none'; $('imp-file').value=''; IMP_COLS=[]; IMP_ROWS=[]; IMP_AUTO=null; IMP_TIPO=''; IMP_CHECK=null; IMP_MARCAS=[];
+  $('imp-txt').value=''; $('imp-link').style.display='none';
   $('imp-ov').style.display='flex';
 }
 function finFecharImport(){ $('imp-ov').style.display='none'; }
@@ -1611,9 +1617,10 @@ function finParseData(v){
 }
 function finLerArquivo(ev){
   var f=ev.target.files&&ev.target.files[0]; if(!f) return;
-  IMP_AUTO=null; IMP_TIPO='';
+  finResetPrevia(); finLimparAuto();
   var nome=(f.name||'').toLowerCase();
   if(nome.endsWith('.pdf')){ finLerPDF(f); return; }
+  if(/^image\//.test(f.type||'') || /\.(png|jpe?g|webp|bmp|gif)$/.test(nome)){ finLerImagem(f); return; }
   if(typeof XLSX==='undefined'){ finMsg('Leitor de planilha não carregou. Recarregue a página.',false); return; }
   var r=new FileReader();
   r.onload=function(e){
@@ -1689,6 +1696,7 @@ async function finLerPDF(f){
     }
     var regs=finParseGPM(linhas);
     if(regs && regs.length){ IMP_AUTO=regs; IMP_TIPO='Fatura GPM (PDF)'; finPreview(); }
+    else if(finAplicarFatura(finParseFaturaTexto(linhas.join('\n')),'PDF')){ /* reconhecida */ }
     else finMsg('Não reconheci os itens nesse PDF. Se não for a fatura da GPM, use CSV/Excel.',false);
   }catch(x){ finMsg('Não consegui ler o PDF: '+x.message,false); }
 }
@@ -1712,6 +1720,174 @@ function finParseGPM(linhas){
   }
   return regs;
 }
+// ===== Fatura por print (imagem) ou texto colado da página da Conta Azul =====
+// Lê o texto de uma fatura (print via OCR, texto copiado da página da Conta Azul ou PDF)
+// e devolve { regs, marcas, check }. regs vão direto para a tabela valores.
+var FIN_RE_DIN='(?:R\\s?[$S5§]\\s?)?(\\d{1,3}(?:\\.?\\d{3})*,\\s?\\d{2})(?!\\d)';
+function finDin(s){ return finParseNum(String(s).replace(/\s/g,'')); }
+function finParseFaturaTexto(texto){
+  var t=String(texto||'').replace(/[\u00a0\u202f\u2007]/g,' ').replace(/\r/g,'');
+  var linhas=t.split('\n').map(function(l){ return l.replace(/\s+/g,' ').trim(); }).filter(Boolean);
+  var J=linhas.join(' ');
+  if(!J) return null;
+  // data: emissão; senão a primeira data do texto
+  var md=J.match(/emiss[aã]o\s*(?:em)?\s*:?\s*(\d{2}\/\d{2}\/\d{4})/i) || J.match(/(\d{2}\/\d{2}\/\d{4})/);
+  var data=md?finParseData(md[1]):null;
+  // número da venda (mesmo formato da fatura GPM em PDF, assim o aviso de duplicidade funciona)
+  var mv=J.match(/venda\s*n?[º°o.]?\s*(\d{3,})/i);
+  var obs=mv?('Venda '+mv[1]):null;
+  // fornecedor
+  var forn=null;
+  if(/\bgpm\b/i.test(J)) forn='GPM';
+  else {
+    for(var i=1;i<linhas.length;i++){
+      if(/\d{2}\.?\d{3}\.?\d{3}\/?\d{4}-?\d{2}/.test(linhas[i])){
+        forn=linhas[i-1].replace(/\s+(ltda|me|epp|eireli|s\.?\/?a\.?)\.?$/i,'').trim()||null; break;
+      }
+    }
+  }
+  // itens: começam depois do cabeçalho "Item | Quantidade | Valor unitário | Subtotal"
+  var ini=0;
+  var mh=J.match(/quantidade.{0,40}?(?:valor\s*unit[aá]rio|unit[aá]rio|pre[cç]o).{0,40}?(?:subtotal|total|valor)/i);
+  if(mh) ini=mh.index+mh[0].length;
+  var re=new RegExp('(\\S.*?)\\s+(\\S{1,7})\\s+'+FIN_RE_DIN+'\\s+'+FIN_RE_DIN,'g');
+  var trecho=J.slice(ini), regs=[], marcas=[], usados=[], m;
+  var tol=function(n){ return 0.01+Math.abs(n||0)*0.005; };
+  while((m=re.exec(trecho))){
+    var desc=m[1].replace(/^[\s|•·*\-–—]+/,'').trim(), tq=m[2];
+    var u=finDin(m[3]), sub=finDin(m[4]);
+    // às vezes o "token da quantidade" é o fim da descrição (o OCR engoliu a quantidade)
+    if(/^\(|^[A-Za-zÀ-ÿ\-]{2,}\)?$/.test(tq)){ desc=(desc+' '+tq).trim(); tq=''; }
+    if(!desc || /\b(total|desconto|juros|multa|valor liquido|vencimento|saldo)\b/.test(finNorm(desc))) continue;
+    var q=finParseNum(tq.replace(/[Oo]/g,'0').replace(/[lI|]/g,'1'));
+    var conf=false;
+    if(!(q!=null && u!=null && Math.abs(q*u-sub)<=tol(q))){
+      // quantidade lida errado: recalcula por subtotal ÷ unitário (os valores em R$ são bem mais confiáveis)
+      var r=(u>0)?Math.round(sub/u):0;
+      if(r>=1 && Math.abs(r*u-sub)<=tol(r)) q=r; else conf=true;
+    }
+    if(conf) marcas.push(regs.length);
+    regs.push({ data_ref:data, fornecedor:forn, descricao:desc, quantidade:q, valor_unitario:u, valor:sub, observacao:obs });
+    usados.push([ini+m.index, ini+m.index+m[0].length]);
+  }
+  if(!regs.length) return null;
+  // confere a soma dos itens com algum valor da fatura fora da tabela (o total)
+  var soma=Math.round(regs.reduce(function(a,r){ return a+(r.valor||0); },0)*100)/100;
+  var reD=new RegExp(FIN_RE_DIN,'g'), cands=[], md2;
+  while((md2=reD.exec(J))){
+    var p=md2.index, dentro=usados.some(function(x){ return p>=x[0] && p<x[1]; });
+    if(!dentro) cands.push(finDin(md2[1]));
+  }
+  var money=function(n){ return Number(n).toLocaleString('pt-BR',{style:'currency',currency:'BRL'}); };
+  var check={ soma:soma, total:null, ok:false, aviso:'' };
+  var igual=cands.filter(function(v){ return Math.abs(v-soma)<=0.01; });
+  if(igual.length){ check.total=igual[0]; check.ok=true; }
+  else if(cands.length){
+    var mt=J.match(new RegExp('total[^0-9R]{0,20}'+FIN_RE_DIN,'i'));
+    check.total=mt?finDin(mt[1]):Math.max.apply(null,cands);
+    check.aviso='⚠️ A soma dos itens ('+money(soma)+') não bate com o total da fatura ('+money(check.total)+'). Confira a prévia: pode faltar item ou ter valor lido errado.';
+  }
+  if(marcas.length) check.aviso=(check.aviso?check.aviso+'\n':'')+'⚠️ '+marcas.length+' item(ns) com quantidade × unitário diferente do subtotal (marcados na prévia).';
+  return { regs:regs, marcas:marcas, check:check };
+}
+function finLimparAuto(){ IMP_AUTO=null; IMP_TIPO=''; IMP_CHECK=null; IMP_MARCAS=[]; IMP_COLS=[]; IMP_ROWS=[]; }
+function finResetPrevia(){
+  ['imp-prev','imp-map','imp-warn'].forEach(function(id){ var el=$(id); if(el){ el.style.display='none'; el.innerHTML=''; } });
+  $('imp-go').style.display='none';
+}
+function finAplicarFatura(res,origem){
+  if(!res||!res.regs||!res.regs.length) return false;
+  IMP_COLS=[]; IMP_ROWS=[];
+  IMP_AUTO=res.regs; IMP_MARCAS=res.marcas||[]; IMP_CHECK=res.check||null;
+  IMP_TIPO=(res.regs[0].fornecedor==='GPM'?'Fatura GPM':'Fatura')+' ('+origem+')';
+  finPreview(); return true;
+}
+function finLerTextoColado(){
+  var t=($('imp-txt').value||'').trim(), lk=$('imp-link');
+  lk.style.display='none';
+  if(!t){ finMsg('Cole o print ou o texto da fatura no campo acima.',false); return; }
+  finResetPrevia(); finLimparAuto();
+  var url=t.match(/^https?:\/\/\S+$/i);
+  if(url){
+    lk.href=url[0]; lk.style.display='inline';
+    finMsg('Isso é o link da fatura. Abra a fatura, aperte Ctrl+A e Ctrl+C e cole aqui o texto, ou cole um print da tela.',true);
+    return;
+  }
+  if(!finAplicarFatura(finParseFaturaTexto(t),'texto colado'))
+    finMsg('Não achei os itens nesse texto. Copie a página inteira da fatura, com a tabela Item, Quantidade, Valor unitário e Subtotal.',false);
+}
+// OCR no navegador (Tesseract.js), carregado só quando alguém usa uma imagem
+var FIN_OCR_SRC='https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js', FIN_OCR_LOAD=null, FIN_OCR_SEQ=0;
+function finCarregarOCR(){
+  if(window.Tesseract) return Promise.resolve();
+  if(!FIN_OCR_LOAD) FIN_OCR_LOAD=new Promise(function(ok,fail){
+    var sc=document.createElement('script'); sc.src=FIN_OCR_SRC;
+    sc.onload=function(){ ok(); };
+    sc.onerror=function(){ FIN_OCR_LOAD=null; fail(new Error('o leitor de imagem não carregou. Verifique a internet e tente de novo.')); };
+    document.head.appendChild(sc);
+  });
+  return FIN_OCR_LOAD;
+}
+// Amplia o print e deixa o texto escuro sobre fundo branco (o OCR erra muito em texto pequeno, cinza ou azul)
+async function finImagemParaCanvas(blob){
+  var url=URL.createObjectURL(blob);
+  try{
+    var img=await new Promise(function(ok,fail){ var im=new Image(); im.onload=function(){ ok(im); }; im.onerror=function(){ fail(new Error('arquivo de imagem inválido')); }; im.src=url; });
+    var w=img.naturalWidth, h=img.naturalHeight;
+    var esc=w<1300?2:(w<2000?1.5:1);
+    if(w*h*esc*esc>16e6) esc=Math.sqrt(16e6/(w*h));
+    var cv=document.createElement('canvas'); cv.width=Math.max(1,Math.round(w*esc)); cv.height=Math.max(1,Math.round(h*esc));
+    var ctx=cv.getContext('2d'); ctx.imageSmoothingEnabled=true; ctx.imageSmoothingQuality='high';
+    ctx.fillStyle='#fff'; ctx.fillRect(0,0,cv.width,cv.height);
+    ctx.drawImage(img,0,0,cv.width,cv.height);
+    var d=ctx.getImageData(0,0,cv.width,cv.height), px=d.data, i, soma=0;
+    for(i=0;i<px.length;i+=4) soma+=px[i]+px[i+1]+px[i+2];
+    var escuro=soma/(px.length/4*3)<110; // print em tema escuro: inverte
+    var lo=255, hi=0, v;
+    for(i=0;i<px.length;i+=4){
+      v=Math.min(px[i],px[i+1],px[i+2]); if(escuro) v=255-Math.max(px[i],px[i+1],px[i+2]);
+      px[i]=v; if(v<lo) lo=v; if(v>hi) hi=v;
+    }
+    var k=255/Math.max(1,hi-lo);
+    for(i=0;i<px.length;i+=4){ v=(px[i]-lo)*k; px[i]=v; px[i+1]=v; px[i+2]=v; px[i+3]=255; }
+    ctx.putImageData(d,0,0);
+    return cv;
+  } finally { URL.revokeObjectURL(url); }
+}
+async function finLerImagem(f){
+  var seq=++FIN_OCR_SEQ, worker=null;
+  finResetPrevia(); finLimparAuto();
+  finMsg('Preparando o leitor de imagem…',true);
+  try{
+    await finCarregarOCR();
+    var cv=await finImagemParaCanvas(f);
+    worker=await Tesseract.createWorker('por',1,{ logger:function(m){
+      if(seq===FIN_OCR_SEQ && m && m.status==='recognizing text') finMsg('Lendo a imagem… '+Math.round((m.progress||0)*100)+'%',true);
+    }});
+    var r=await worker.recognize(cv);
+    if(seq!==FIN_OCR_SEQ) return; // outra imagem foi colada depois desta
+    if(!finAplicarFatura(finParseFaturaTexto(r.data&&r.data.text),'print'))
+      finMsg('Li a imagem, mas não achei os itens da fatura. Tire o print mostrando a tabela inteira (Item, Quantidade, Valor unitário, Subtotal), com o zoom da página em 100% ou mais.',false);
+  }catch(x){ if(seq===FIN_OCR_SEQ) finMsg('Não consegui ler a imagem: '+((x&&x.message)||x),false); }
+  finally{ if(worker){ try{ await worker.terminate(); }catch(e){} } }
+}
+// Ctrl+V com a janela de importação aberta: print → OCR; texto → leitor de fatura
+document.addEventListener('paste',function(e){
+  var ov=$('imp-ov'); if(!ov||ov.style.display==='none') return;
+  var cd=e.clipboardData; if(!cd) return;
+  var txt=cd.getData('text/plain')||'';
+  if(txt.trim().length>=20 || /^https?:\/\//i.test(txt.trim())){
+    if(e.target && e.target.id==='imp-txt'){ setTimeout(finLerTextoColado,0); return; }
+    e.preventDefault(); $('imp-txt').value=txt; finLerTextoColado(); return;
+  }
+  var itens=cd.items||[];
+  for(var i=0;i<itens.length;i++){
+    if(itens[i].kind==='file' && /^image\//.test(itens[i].type)){
+      var arq=itens[i].getAsFile();
+      if(arq){ e.preventDefault(); finLerImagem(arq); return; }
+    }
+  }
+});
 function finAutoMap(){
   var map={data:'',fornecedor:'',descricao:'',quantidade:'',valor_unitario:'',valor:''};
   IMP_COLS.forEach(function(c,i){
@@ -1769,20 +1945,23 @@ function finPreview(){
   var regs=finRegsValidos();
   if(IMP_AUTO){ $('imp-map').style.display='none'; }
   var warn=finVerificarDup(regs);
+  if(IMP_AUTO && IMP_CHECK && IMP_CHECK.aviso) warn=(warn?warn+'\n':'')+IMP_CHECK.aviso;
   var w=$('imp-warn'); if(w){ w.style.display=warn?'block':'none'; w.textContent=warn; }
   var head='<tr><th>Data</th><th>Fornecedor</th><th>Item</th><th>Qtd</th><th>Unit.</th><th>Total</th></tr>';
-  var body=regs.slice(0,12).map(function(r){ return '<tr><td>'+(r.data_ref?r.data_ref.split('-').reverse().join('/'):'—')+'</td><td>'+(r.fornecedor||'')+'</td><td>'+(r.descricao||'')+'</td><td>'+(r.quantidade==null?'':r.quantidade)+'</td><td>'+money(r.valor_unitario)+'</td><td>'+money(r.valor)+'</td></tr>'; }).join('');
+  var body=regs.slice(0,12).map(function(r,i){ var mk=!!IMP_AUTO && IMP_MARCAS.indexOf(i)>=0; return '<tr'+(mk?' style="background:#fffbeb"':'')+'><td>'+(r.data_ref?r.data_ref.split('-').reverse().join('/'):'—')+'</td><td>'+escHtml(r.fornecedor||'')+'</td><td>'+(mk?'⚠️ ':'')+escHtml(r.descricao||'')+'</td><td>'+(r.quantidade==null?'':r.quantidade)+'</td><td>'+money(r.valor_unitario)+'</td><td>'+money(r.valor)+'</td></tr>'; }).join('');
   var pv=$('imp-prev'); pv.style.display='block'; pv.innerHTML='<table>'+head+body+'</table>';
   $('imp-go').style.display=regs.length?'inline-block':'none';
   $('imp-go').textContent='Importar '+regs.length+' lançamento'+(regs.length===1?'':'s');
   var pref=IMP_TIPO?('✓ '+IMP_TIPO+' reconhecida. '):'';
+  if(IMP_AUTO && IMP_CHECK && IMP_CHECK.ok) pref+='A soma dos itens confere com o total da fatura ('+money(IMP_CHECK.total)+'). ';
   finMsg(regs.length?(pref+regs.length+' linha(s) prontas — confira a prévia.'):(IMP_TIPO?'Reconheci o tipo mas não achei itens.':'Nenhuma linha válida com esse mapeamento. Confira as colunas.'), regs.length>0);
 }
 async function finImportar(){
   var regs=finRegsValidos();
   if(!regs.length){ finMsg('Nada para importar.',false); return; }
   var warn=finVerificarDup(regs);
-  if(warn && !confirm(warn.replace(/^⚠️\s*/,'')+'\n\nDeseja importar mesmo assim?')) { finMsg('Importação cancelada.',false); return; }
+  if(IMP_AUTO && IMP_CHECK && IMP_CHECK.aviso) warn=(warn?warn+'\n':'')+IMP_CHECK.aviso;
+  if(warn && !confirm(warn.replace(/⚠️\s*/g,'')+'\n\nDeseja importar mesmo assim?')) { finMsg('Importação cancelada.',false); return; }
   $('imp-go').disabled=true; finMsg('Importando '+regs.length+'…',true);
   const {error}=await sb.from('valores').insert(regs);
   $('imp-go').disabled=false;
@@ -1834,12 +2013,19 @@ async function sair(){ await sb.auth.signOut(); location.reload(); }
 <div id="imp-ov" class="imp-ov" style="display:none">
   <div class="imp-box">
     <h2>📤 Importar lançamentos</h2>
-    <p>Selecione um arquivo <b>CSV</b>, <b>Excel (.xlsx)</b> ou <b>PDF</b>. Faturas da <b>GPM</b> (PDF) e planilhas <b>Jupiter</b> são reconhecidas automaticamente. Para CSV/Excel comum, a primeira linha precisa ser o cabeçalho; depois confira o mapeamento e a prévia antes de salvar.</p>
+    <p>Selecione um arquivo <b>CSV</b>, <b>Excel (.xlsx)</b>, <b>PDF</b> ou um <b>print</b> (imagem) da fatura. Faturas da <b>GPM</b> (PDF, print ou texto da página da Conta Azul) e planilhas <b>Jupiter</b> são reconhecidas automaticamente. Para CSV/Excel comum, a primeira linha precisa ser o cabeçalho; depois confira o mapeamento e a prévia antes de salvar.</p>
     <div class="imp-file">
-      <input type="file" id="imp-file" accept=".csv,.xlsx,.xls,.pdf" onchange="finLerArquivo(event)">
+      <input type="file" id="imp-file" accept=".csv,.xlsx,.xls,.pdf,.png,.jpg,.jpeg,.webp,image/*" onchange="finLerArquivo(event)">
+    </div>
+    <div class="imp-cola">
+      <textarea id="imp-txt" placeholder="Ou cole aqui (Ctrl+V) o print da fatura, ou o texto da página da Conta Azul: abra a fatura, aperte Ctrl+A, depois Ctrl+C, e cole."></textarea>
+      <div class="imp-cola-bar">
+        <a id="imp-link" href="#" target="_blank" rel="noopener" style="display:none">Abrir a fatura em outra aba</a>
+        <button class="btn ghost" type="button" onclick="finLerTextoColado()">Ler texto colado</button>
+      </div>
     </div>
     <div id="imp-map" class="imp-map" style="display:none"></div>
-    <div id="imp-warn" style="display:none;background:#fffbeb;border:1.5px solid #fde68a;color:#92660a;font-size:.85rem;font-weight:700;padding:10px 14px;border-radius:10px;margin-bottom:12px"></div>
+    <div id="imp-warn" style="display:none;white-space:pre-line;background:#fffbeb;border:1.5px solid #fde68a;color:#92660a;font-size:.85rem;font-weight:700;padding:10px 14px;border-radius:10px;margin-bottom:12px"></div>
     <div id="imp-prev" class="imp-prev" style="display:none"></div>
     <div class="imp-actions">
       <button class="btn ghost" onclick="finFecharImport()">Cancelar</button>
