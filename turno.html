@@ -401,6 +401,19 @@ body.dark #turno-hist-bar .td-faltas{background:#c53030;border:1px solid #c53030
 #page-turno .grid .card.justif .card-linha::before{content:'';width:7px;height:7px;border-radius:50%;flex-shrink:0;background:#e8a33d}
 #page-turno .grid .card.justif .justif-obs::after{display:none !important;content:none !important}
 #page-turno .grid .card.justif .justif-obs{display:block !important;position:static !important;max-width:none !important;margin-top:2px;padding:0 0 0 15px !important;background:none !important;box-shadow:none !important;border-radius:0 !important;font-size:.74rem !important;font-weight:500 !important;line-height:1.35 !important}
+/* — faixa Supervisor: mesmo visual das faixas Filial e Centro de serviço — */
+#turno-sup-filter-btns{gap:6px !important}
+#turno-sup-filter-btns button{min-height:32px;padding:0 14px !important;border-radius:16px !important;border-width:1px !important;border-style:solid !important;font-size:.8rem !important;font-weight:700 !important;letter-spacing:0 !important;transition:background .15s,color .15s,border-color .15s !important}
+#turno-sup-filter-btns button:focus-visible{outline:2px solid #fff;outline-offset:2px}
+#turno-sup-filter-btns .tf-vazio{font-size:.78rem;font-weight:600;white-space:nowrap}
+body:not(.dark) #turno-sup-filter-btns button{background:transparent !important;color:#d7e6e8 !important;border-color:rgba(255,255,255,.25) !important}
+body:not(.dark) #turno-sup-filter-btns button:hover{border-color:rgba(255,255,255,.6) !important;color:#fff !important}
+body:not(.dark) #turno-sup-filter-btns button[aria-pressed="true"]{background:#fff !important;color:#0f3b45 !important;border-color:#fff !important}
+body:not(.dark) #turno-sup-filter-btns .tf-vazio{color:#9fbfc3}
+body.dark #turno-sup-filter-btns button{background:var(--e-elev) !important;color:var(--e-texto2) !important;border-color:var(--e-linha2) !important}
+body.dark #turno-sup-filter-btns button:hover{border-color:color-mix(in srgb,var(--e-acento) 50%,var(--e-linha2)) !important;color:var(--e-texto) !important}
+body.dark #turno-sup-filter-btns button[aria-pressed="true"]{background:var(--e-acento) !important;color:#fff !important;border-color:var(--e-acento) !important}
+body.dark #turno-sup-filter-btns .tf-vazio{color:var(--e-texto2)}
 @media(max-width:600px){
   #page-turno .grid{grid-template-columns:repeat(auto-fill,minmax(180px,1fr)) !important;padding:10px 12px !important}
   #page-turno #turno-hist-bar .tf-rot{width:100%}
@@ -638,6 +651,11 @@ window.presenceOpenModal = function() { if(window._presenceOpenModal) window._pr
     <span class="tf-rot" style="font-size:0.6rem;font-weight:800;color:#aaa;letter-spacing:1.5px;text-transform:uppercase;white-space:nowrap;flex-shrink:0;">CENTRO DE SERVIÇO</span>
     <div id="turno-centro-filter-btns" style="display:flex;gap:7px;align-items:center;overflow-x:auto;scrollbar-width:none;"></div>
   </div>
+  <!-- Filtro Supervisor (liga/desliga em Configurações › Turno; nomes vêm do Cadastro de Equipes) -->
+  <div class="turno-filtro-barra" id="turno-sup-filtro" style="background:#fff;border-bottom:2px solid #e2e8f0;padding:7px 12px;display:flex;align-items:center;gap:7px;overflow-x:auto;scrollbar-width:none;">
+    <span class="tf-rot" style="font-size:0.6rem;font-weight:800;color:#aaa;letter-spacing:1.5px;text-transform:uppercase;white-space:nowrap;flex-shrink:0;">SUPERVISOR</span>
+    <div id="turno-sup-filter-btns" role="group" aria-label="Filtrar por supervisor" style="display:flex;gap:7px;align-items:center;overflow-x:auto;scrollbar-width:none;"></div>
+  </div>
 
   <div id="turno-hist-bar" style="background:#1a2a3a;padding:10px 16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;border-bottom:2px solid #0d7377;position:relative;">
     <span class="tf-rot" style="font-size:0.72rem;font-weight:800;color:rgba(255,255,255,0.6);letter-spacing:1px;text-transform:uppercase;white-space:nowrap;">CONSULTAR DIA</span>
@@ -826,14 +844,21 @@ const TURNO_SISTEMAS = {
 // em turno_config. Desligada, some das equipes, do cabeçalho e da foto da câmera; as
 // marcações já feitas continuam guardadas e voltam quando ligar de novo.
 let turnoSistemaAtivo = true;
+// Filtro por supervisor (Configurações › Turno). Também fica em turno_config e vale para
+// todos: ligado, aparece a faixa Supervisor nos filtros da tela. O supervisor escolhido
+// em si fica salvo em cada aparelho (ver turnoSupFilter).
+let turnoSupFiltroAtivo = true;
 function tsConfigAtualizarUI() {
-  const b = document.getElementById('ts-config-switch'); if (!b) return;
-  b.setAttribute('aria-checked', turnoSistemaAtivo ? 'true' : 'false');
-  const e = document.getElementById('ts-config-estado'); if (e) e.textContent = turnoSistemaAtivo ? 'Ativado' : 'Desativado';
+  [['ts-config-switch', 'ts-config-estado', turnoSistemaAtivo],
+   ['ts-sup-switch',    'ts-sup-estado',    turnoSupFiltroAtivo]].forEach(function(x) {
+    const b = document.getElementById(x[0]); if (!b) return;
+    b.setAttribute('aria-checked', x[2] ? 'true' : 'false');
+    const e = document.getElementById(x[1]); if (e) e.textContent = x[2] ? 'Ativado' : 'Desativado';
+  });
 }
 document.addEventListener('DOMContentLoaded', tsConfigAtualizarUI);
 async function dbSaveTurnoConfig() {
-  const value = { sistemaAtivo: turnoSistemaAtivo };
+  const value = { sistemaAtivo: turnoSistemaAtivo, supervisorFiltro: turnoSupFiltroAtivo };
   lsSet('turno_config', value);
   try {
     setDbStatus('syncing', 'Salvando...');
@@ -864,6 +889,16 @@ function turnoAlternarSistema(ligar) {
     : 'Júpiter / GPM desativado');
 }
 window.turnoAlternarSistema = turnoAlternarSistema;
+function turnoAlternarSupervisor(ligar) {
+  turnoSupFiltroAtivo = (typeof ligar === 'boolean') ? ligar : !turnoSupFiltroAtivo;
+  tsConfigAtualizarUI();
+  try { render(); } catch(e) {}
+  dbSaveTurnoConfig();
+  if (window.turnoAviso) window.turnoAviso(turnoSupFiltroAtivo
+    ? 'Filtro por supervisor ativado: aparece junto dos filtros da tela'
+    : 'Filtro por supervisor desativado');
+}
+window.turnoAlternarSupervisor = turnoAlternarSupervisor;
 function turnoSistemaValido(s) { return Object.prototype.hasOwnProperty.call(TURNO_SISTEMAS, s) ? s : ''; }
 // mapa salvo → Map(nome de exibição → sistema), para achar a equipe mesmo pelo nome antigo
 function turnoMapaSistema(mapa) {
@@ -1006,6 +1041,7 @@ teams.falta = [...faltaSet].filter(n => {
 }
 if (row.key==='turno_config') {
   turnoSistemaAtivo = !(row.value && row.value.sistemaAtivo === false);
+  turnoSupFiltroAtivo = !(row.value && row.value.supervisorFiltro === false);
   try { tsConfigAtualizarUI(); } catch(e) {}
 }
 if (row.key==='producao') { producao = row.value || {}; }
@@ -1449,6 +1485,10 @@ setTimeout(() => setDbStatus('local', 'Dados locais'), 2000);
 let turnoStateFilter = 'todos'; // 'todos' | 'ba' | 'mg' | 'se'
 let turnoBaseFilter  = 'todos'; // 'todos' | irc/jac | pa/ita/lv | aju
 let turnoCentroFilter = 'todos'; // mesmo id de base (irc/jac/pa/ita/aju); centro de custo = região
+// Supervisor: 'todos' ou o nome do supervisor como está no Cadastro de Equipes (salvo neste aparelho)
+const TURNO_SUP_LS = 'mariua_turno_supervisor';
+let turnoSupFilter = (function(){ try { return localStorage.getItem(TURNO_SUP_LS) || 'todos'; } catch(e) { return 'todos'; } })();
+let _supIdx = null; // equipe (nome comprimido) -> supervisor; refeito a cada sincronia do cadastro
 
 // Retorna a base (sufixo) de um nome de equipe
 function teamBaseSufixo(n) {
@@ -1933,6 +1973,7 @@ function turnoSetState(state) {
   });
   updateBaseFilterButtons();
   updateCentroFilterButtons();
+  updateSupFilterButtons();
   if (turnoModoHistorico) { turnoHistRender(); } else { render(); }
 }
 
@@ -1945,6 +1986,7 @@ function turnoSetBase(base) {
   }
   updateBaseFilterButtons();
   updateCentroFilterButtons();
+  updateSupFilterButtons();
   if (turnoModoHistorico) { turnoHistRender(); } else { render(); }
 }
 
@@ -1980,11 +2022,116 @@ function updateCentroFilterButtons() {
 function turnoSetCentro(id) {
   turnoCentroFilter = id;
   updateCentroFilterButtons();
+  updateSupFilterButtons();
   if (turnoModoHistorico) { turnoHistRender(); } else { render(); }
 }
 
-// Filtra lista de equipes por estado + filial + centro de custo ativos
-function filterByStateAndBase(arr, incluirForaDoCadastro) {
+// ── Filtro por supervisor ───────────────────────────────────────────────────
+// O supervisor de cada equipe vem do Cadastro de Equipes (CAD_INFO[codigo].supervisor).
+function turnoSupIndice() {
+  if (_supIdx) return _supIdx;
+  const m = new Map();
+  if (!Object.keys(CAD_INFO).length) return m;   // cadastro ainda não carregou: não guarda
+  Object.keys(CAD_INFO).forEach(function(c) {
+    const sup = String((CAD_INFO[c] && CAD_INFO[c].supervisor) || '').trim();
+    m.set(cadSquash(c), sup);
+    try { const d = cadSquash(toDisplayName(c)); if (d && !m.has(d)) m.set(d, sup); } catch(e) {}
+  });
+  // código antigo de equipe que mudou de base: mesmo supervisor do código novo
+  Object.keys(CAD_REBASE).forEach(function(v) {
+    const k = cadSquash(v);
+    if (!m.has(k)) m.set(k, m.get(cadSquash(CAD_REBASE[v])) || '');
+  });
+  _supIdx = m;
+  return m;
+}
+function turnoSupervisorDe(n) {
+  const nome = typeof n === 'string' ? n : ((n && n.name) || '');
+  if (!nome) return '';
+  const m = turnoSupIndice();
+  let s = m.get(cadSquash(nome));
+  if (s === undefined) { try { s = m.get(cadSquash(toDisplayName(nome))); } catch(e) {} }
+  return s || '';
+}
+// O filtro só vale com a opção ligada, um supervisor escolhido e o cadastro já carregado
+function turnoSupFiltroLigado() {
+  try {
+    return !!turnoSupFiltroAtivo && !!turnoSupFilter && turnoSupFilter !== 'todos'
+      && Object.keys(CAD_INFO).length > 0;
+  } catch(e) { return false; }
+}
+// Supervisores das equipes do cadastro que passam pelos filtros de estado, filial e centro
+function turnoSupLista() {
+  const vistos = new Map();
+  filterByStateAndBase(EQUIPES_ATIVAS.slice(), false, true).forEach(function(c) {
+    const s = turnoSupervisorDe(c); if (!s) return;
+    const k = cadNorm(s); if (!vistos.has(k)) vistos.set(k, s);
+  });
+  return Array.from(vistos, function(e) { return { k: e[0], s: e[1] }; })
+    .sort(function(a, b) { return a.s.localeCompare(b.s, 'pt-BR'); });
+}
+function updateSupFilterButtons() {
+  const barra = document.getElementById('turno-sup-filtro');
+  const container = document.getElementById('turno-sup-filter-btns');
+  if (!barra || !container) return;
+  barra.style.display = turnoSupFiltroAtivo ? 'flex' : 'none';
+  if (!turnoSupFiltroAtivo) return;
+  const aS = 'flex-shrink:0;padding:5px 14px;border-radius:20px;border:1.5px solid #0d7377;background:#0d7377;color:#fff;font-family:Barlow,sans-serif;font-size:0.72rem;font-weight:800;cursor:pointer;transition:all .18s;';
+  const iS = 'flex-shrink:0;padding:5px 14px;border-radius:20px;border:1.5px solid #e2e8f0;background:#f0f4f5;color:#888;font-family:Barlow,sans-serif;font-size:0.72rem;font-weight:800;cursor:pointer;transition:all .18s;';
+  const atualK = turnoSupFilter === 'todos' ? 'todos' : cadNorm(turnoSupFilter);
+  // mantém o foco do teclado no mesmo botão depois de redesenhar
+  const foco = document.activeElement;
+  const focoK = (foco && container.contains(foco) && foco.dataset) ? foco.dataset.chave : null;
+  function mkBtn(id, chave, nome) {
+    const ativo = atualK === chave;
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.id = 'sup-btn-' + id;
+    btn.dataset.chave = chave;
+    btn.style.cssText = ativo ? aS : iS;
+    btn.setAttribute('aria-pressed', ativo ? 'true' : 'false');
+    btn.textContent = chave === 'todos' ? 'Todos' : turnoRotuloFiltro(nome);
+    if (chave !== 'todos') btn.title = nome;
+    btn.onclick = function() { turnoSetSupervisor(chave === 'todos' ? 'todos' : nome); };
+    return btn;
+  }
+  container.innerHTML = '';
+  container.appendChild(mkBtn('todos', 'todos', 'Todos'));
+  const lista = turnoSupLista();
+  // supervisor escolhido sem equipe nos filtros atuais continua visível, para poder trocar
+  if (atualK !== 'todos' && !lista.some(function(x) { return x.k === atualK; })) {
+    lista.unshift({ k: atualK, s: turnoSupFilter });
+  }
+  lista.forEach(function(x, i) { container.appendChild(mkBtn(String(i), x.k, x.s)); });
+  if (!lista.length) {
+    const vazio = document.createElement('span');
+    vazio.className = 'tf-vazio';
+    let carregado = false; try { carregado = Object.keys(CAD_INFO).length > 0; } catch(e) {}
+    vazio.textContent = carregado
+      ? 'Nenhum supervisor no Cadastro de Equipes para este filtro'
+      : 'O Cadastro de Equipes ainda não carregou';
+    container.appendChild(vazio);
+  }
+  if (focoK !== null) {
+    const bs = container.querySelectorAll('button');
+    for (let i = 0; i < bs.length; i++) if (bs[i].dataset.chave === focoK) { bs[i].focus(); break; }
+  }
+}
+function turnoSetSupervisor(nome) {
+  turnoSupFilter = nome || 'todos';
+  try {
+    if (turnoSupFilter === 'todos') localStorage.removeItem(TURNO_SUP_LS);
+    else localStorage.setItem(TURNO_SUP_LS, turnoSupFilter);
+  } catch(e) {}
+  updateSupFilterButtons();
+  if (turnoModoHistorico) { turnoHistRender(); } else { render(); }
+}
+window.turnoSetSupervisor = turnoSetSupervisor;
+
+// Filtra lista de equipes por estado + filial + centro de custo + supervisor ativos
+// (ignorarSupervisor: usado para montar a própria lista de supervisores)
+function filterByStateAndBase(arr, incluirForaDoCadastro, ignorarSupervisor) {
+  const supK = (!ignorarSupervisor && turnoSupFiltroLigado()) ? cadNorm(turnoSupFilter) : '';
   return arr.filter(n => {
     const name = typeof n === 'string' ? n : (n.name || '');
     if (!incluirForaDoCadastro && !cadNaLista(name)) return false;   // só equipes do Cadastro de Equipes
@@ -1993,6 +2140,7 @@ function filterByStateAndBase(arr, incluirForaDoCadastro) {
     if (turnoStateFilter !== 'todos' && st !== turnoStateFilter) return false;
     if (turnoBaseFilter  !== 'todos' && teamFilial(name) !== turnoBaseFilter) return false;
     if (turnoCentroFilter !== 'todos' && teamBase(name) !== turnoCentroFilter) return false;
+    if (supK && cadNorm(turnoSupervisorDe(name)) !== supK) return false;
     return true;
   });
 }
@@ -2015,6 +2163,7 @@ function updateBaseCounts() {
 }
 
 function render() {
+try { updateSupFilterButtons(); } catch(e) {}
 if (turnoModoHistorico) { turnoHistRender(); return; }
 // Deduplicar: remove de falta qualquer nome cujo display já exista em ok ou justif
 const okDisplay     = new Set(teams.ok.map(n => toDisplayName(n)));
@@ -2046,7 +2195,7 @@ if (window.turnoDiaRotulo) turnoDiaRotulo();
 }
 // Inicializa os botões de base/filial e centro de custo ao carregar
 (function initBaseFilter() {
-  function initFiltros(){ updateBaseFilterButtons(); updateCentroFilterButtons(); }
+  function initFiltros(){ updateBaseFilterButtons(); updateCentroFilterButtons(); try { updateSupFilterButtons(); } catch(e) {} }
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initFiltros);
   } else {
@@ -2430,7 +2579,7 @@ window.turnoDefinirSistema = turnoDefinirSistema;
     return null;
   }
   function filtroAtivo() {
-    return turnoStateFilter !== 'todos' || turnoBaseFilter !== 'todos' || turnoCentroFilter !== 'todos';
+    return turnoStateFilter !== 'todos' || turnoBaseFilter !== 'todos' || turnoCentroFilter !== 'todos' || turnoSupFiltroLigado();
   }
   // equipes de "Abriu turno" na tela (filtro atual) ainda sem sistema, fora a do diálogo
   function outrasSemSistema(nome) {
@@ -3271,6 +3420,7 @@ function cadAplicar(pkg) {
     cadMontarSet();
     if (Array.isArray(teams.falta)) teams.falta = teams.falta.filter(cadNaLista);
   }
+  _supIdx = null;
   CAD_META = {
     gerente: pkg.gerente || {nome:'',base:''},
     supervisores: Array.isArray(pkg.supervisores) ? pkg.supervisores : [],
@@ -3657,9 +3807,12 @@ if (turnoCentroFilter === 'todos' && turnoBaseFilter !== 'todos') {
     .map(n => teamBase(typeof n === 'string' ? n : ((n && n.name) || ''))).filter(Boolean));
   if (_centros.size === 1) _localFiltro = [..._centros][0];
 }
-const filtroLabel  = (turnoStateFilter!=='todos'||_localFiltro!=='todos')
-  ? (STATE_LABELS[turnoStateFilter]||turnoStateFilter) + (_localFiltro!=='todos' ? ' · '+(BASE_LABELS[_localFiltro]||_localFiltro) : '')
-  : '';
+const filtroLabel  = [
+  (turnoStateFilter!=='todos'||_localFiltro!=='todos')
+    ? (STATE_LABELS[turnoStateFilter]||turnoStateFilter) + (_localFiltro!=='todos' ? ' · '+(BASE_LABELS[_localFiltro]||_localFiltro) : '')
+    : '',
+  turnoSupFiltroLigado() ? 'SUP. ' + turnoSupFilter : ''
+].filter(Boolean).join(' · ');
 const _sisMapa = turnoMapaSistema(teams.sistema);
 function buildGrid(list, type) {
 if (!list || list.length===0) return '<div style="padding:12px 16px;color:#aaa;font-size:13px;">Nenhum</div>';
@@ -8358,6 +8511,7 @@ body.dark #comparar-modal{
         partes.push(rotulo(lb || turnoBaseFilter));
       }
       if (turnoCentroFilter !== 'todos') partes.push(rotulo(CENTRO_CUSTO[turnoCentroFilter] || turnoCentroFilter));
+      if (turnoSupFiltroLigado()) partes.push('Supervisor ' + rotulo(turnoSupFilter));
     } catch(e){}
     return partes.join(' › ');
   }
@@ -8728,6 +8882,13 @@ body.dark #comparar-modal{
               <div class="ts-config-sub" id="ts-config-sub">Mostra onde cada equipe abriu o turno, na tela e na foto da câmera 📷. Vale para todos os usuários.</div>
             </div>
             <button type="button" role="switch" id="ts-config-switch" class="ts-switch" aria-checked="true" aria-labelledby="ts-config-tit" aria-describedby="ts-config-sub" onclick="turnoAlternarSistema()"><span class="ts-switch-trilho" aria-hidden="true"><span class="ts-switch-bola"></span></span><span class="ts-switch-txt" id="ts-config-estado">Ativado</span></button>
+          </div>
+          <div class="gear-card ts-config">
+            <div class="ts-config-txt">
+              <div class="ts-config-tit" id="ts-sup-tit">Filtro por supervisor</div>
+              <div class="ts-config-sub" id="ts-sup-sub">Mostra a faixa Supervisor nos filtros da tela, com os nomes do Cadastro de Equipes. Vale para todos; cada aparelho guarda o supervisor escolhido.</div>
+            </div>
+            <button type="button" role="switch" id="ts-sup-switch" class="ts-switch" aria-checked="true" aria-labelledby="ts-sup-tit" aria-describedby="ts-sup-sub" onclick="turnoAlternarSupervisor()"><span class="ts-switch-trilho" aria-hidden="true"><span class="ts-switch-bola"></span></span><span class="ts-switch-txt" id="ts-sup-estado">Ativado</span></button>
           </div>
         </div>
 
