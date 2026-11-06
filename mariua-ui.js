@@ -1,12 +1,10 @@
 /* ============================================================================
-   mariua-ui.js — BARRA DO TOPO, BUSCA GLOBAL E UTILIDADES DAS TELAS NOVAS
+   mariua-ui.js — UTILIDADES DO INÍCIO E DO PAINEL DO DIA
    ----------------------------------------------------------------------------
-   - Busca no topo (Ctrl+K ou /): telas que a pessoa pode abrir, obras da
-     carteira e equipes do turno. Obras e equipes só aparecem nas telas que
-     carregam os dados do painel (Início e Painel do dia).
+   - Relógio e selo do banco na barra do topo, iguais às outras telas.
    - A lista de telas vem do nav.js (fonte única) e do catálogo do login.
-   - Lembra menu aberto/recolhido, liga o tema escuro, mostra o estado da
-     sincronização e as iniciais de quem está logado.
+   - Lembra menu aberto/recolhido (mesma chave mariua_menu das outras telas).
+   - O tema escuro fica por conta do nav.js, como nas outras telas.
    ========================================================================== */
 (function () {
   'use strict';
@@ -146,12 +144,11 @@
   };
 
   // ─── estado da sincronização no topo ────────────────────────────────────
-  UI.sinc = function (estado, texto) {
-    var el = document.getElementById('m-sinc');
+  UI.sinc = function (estado, texto) {        // estado: 'lendo' | 'ok' | 'erro'
+    var el = document.getElementById('db-badge'), tx = document.getElementById('db-text');
     if (!el) return;
-    el.setAttribute('data-estado', estado);
-    var s = el.querySelector('span');
-    if (s) s.textContent = texto;
+    el.className = 'db-badge ' + ({ lendo: 'syncing', ok: 'online', erro: 'offline' }[estado] || 'local');
+    if (tx) tx.textContent = texto;
     el.title = texto;
   };
 
@@ -177,150 +174,37 @@
     });
   };
 
-  // ─── menu: lembra aberto/recolhido, véu no celular, nome nos ícones ─────
+  // ─── menu: grava aberto/recolhido como as outras telas ──────────────────
   function prepararMenu() {
-    var celular = window.matchMedia('(max-width:780px)').matches;
-    try { if (!celular && localStorage.getItem('mariua_menu') === 'recolhido') document.body.classList.add('sm-collapsed'); } catch (e) {}
-    var veu = document.createElement('div');
-    veu.className = 'm-veu';
-    veu.addEventListener('click', function () { document.body.classList.remove('sm-expanded'); });
-    document.body.appendChild(veu);
-    function titulos() {
-      document.querySelectorAll('.sm-item').forEach(function (a) {
-        var t = a.querySelector('.sm-tx');
-        if (t && !a.title) a.title = t.textContent;
-      });
-    }
-    titulos();
-    if (window.mariuaNav && typeof window.mariuaNav.render === 'function' && !window.mariuaNav.render.__m) {
-      var r = window.mariuaNav.render;
-      window.mariuaNav.render = function () { r.apply(this, arguments); titulos(); };
-      window.mariuaNav.render.__m = true;
-    }
     var t = window.smToggle;
     if (typeof t === 'function' && !t.__m) {
       window.smToggle = function () {
         t.apply(this, arguments);
-        try {
-          if (!window.matchMedia('(max-width:780px)').matches) {
-            localStorage.setItem('mariua_menu', document.body.classList.contains('sm-collapsed') ? 'recolhido' : 'aberto');
-          }
-        } catch (e) {}
+        try { localStorage.setItem('mariua_menu', document.body.classList.contains('sm-collapsed') ? 'recolhido' : 'aberto'); } catch (e) {}
       };
       window.smToggle.__m = true;
     }
-    document.addEventListener('keydown', function (e) {
-      if (e.key === 'Escape') document.body.classList.remove('sm-expanded');
-    });
   }
 
-  // ─── tema escuro próprio (preferência do sistema todo) ──────────────────
-  function aplicarTema() {
-    try { document.body.classList.toggle('dark', localStorage.getItem('mariua_darkmode') === '1'); } catch (e) {}
+  // ─── relógio do topo (mesmo formato das outras telas) ───────────────────
+  function relogio() {
+    var el = document.getElementById('page-time');
+    if (!el) return;
+    var dias = ['dom.', 'seg.', 'ter.', 'qua.', 'qui.', 'sex.', 'sáb.'];
+    function tick() { var d = new Date(); el.textContent = dias[d.getDay()] + ', ' + p2(d.getDate()) + '/' + p2(d.getMonth() + 1) + ' · ' + p2(d.getHours()) + ':' + p2(d.getMinutes()); }
+    tick(); setInterval(tick, 30000);
   }
 
-  // ─── avatar ─────────────────────────────────────────────────────────────
+  // ─── avatar: mesmo botão das outras telas, só o nome no título ───────────
   function pintarAvatar() {
     var b = document.getElementById('user-avatar'), u = window.MARIUA_USER;
-    if (!b || !u) return;
-    var partes = String(u.nome || u.email || '?').replace(/@.*/, '').replace(/[._-]+/g, ' ').trim().split(/\s+/);
-    var ini = (partes[0] || '?').charAt(0) + (partes.length > 1 ? partes[partes.length - 1].charAt(0) : '');
-    b.textContent = ini.toUpperCase();
-    b.setAttribute('aria-label', 'Minha conta: ' + (u.nome || u.email || ''));
-  }
-
-  // ─── busca global ───────────────────────────────────────────────────────
-  function normaliza(s) { return String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase(); }
-  function iniciarBusca() {
-    var campo = document.getElementById('m-busca-campo'), caixa = document.getElementById('m-busca-res');
-    if (!campo || !caixa) return;
-    var opcoes = [], sel = -1;
-
-    function resultados(q) {
-      var qn = normaliza(q).trim(), grupos = [];
-      var telas = UI.telas().filter(function (t) {
-        return !qn || normaliza(t.texto + ' ' + t.desc + ' ' + t.chaves + ' ' + t.grupo).indexOf(qn) >= 0;
-      }).slice(0, qn ? 6 : 8).map(function (t) {
-        return { href: t.href, icone: t.icone, titulo: t.texto, sub: t.desc, meta: t.grupo };
-      });
-      if (telas.length) grupos.push({ nome: 'Telas', itens: telas });
-      var dados = window.MariuaPainel && window.MariuaPainel.ultimo;
-      if (dados && qn.length >= 2) {
-        var obras = dados.busca.obras.filter(function (o) {
-          return normaliza(o.pep + ' ' + o.titulo + ' ' + o.mun + ' ' + o.enc).indexOf(qn) >= 0;
-        }).slice(0, 5).map(function (o) {
-          return { href: 'mapa.html', icone: 'building', titulo: o.pep, sub: [o.titulo, o.mun].filter(Boolean).join(', '), meta: o.statusTxt || '' };
-        });
-        if (obras.length) grupos.push({ nome: 'Obras na carteira', itens: obras });
-        var SIT = { ok: 'Abriu turno', justif: 'Falta justificada', falta: 'Não abriu' };
-        var eqs = dados.busca.equipes.filter(function (e) {
-          return normaliza(e.codigo + ' ' + e.enc + ' ' + e.sup).indexOf(qn) >= 0;
-        }).slice(0, 5).map(function (e) {
-          return { href: 'turno.html', icone: 'users', titulo: e.codigo,
-                   sub: [e.enc ? 'Encarregado ' + window.MariuaPainel.util.nomeProprio(e.enc) : '', e.base ? e.base.nome : ''].filter(Boolean).join(', '),
-                   meta: SIT[e.turno] || '' };
-        });
-        if (eqs.length) grupos.push({ nome: 'Equipes de hoje', itens: eqs });
-      }
-      return grupos;
-    }
-
-    function desenhar() {
-      var grupos = resultados(campo.value);
-      opcoes = [];
-      var h = '';
-      if (!grupos.length) {
-        h = '<div class="m-res-vazio">Nada encontrado. Tente o PEP, o código da equipe ou o nome da tela.</div>';
-      } else {
-        grupos.forEach(function (g) {
-          h += '<div class="m-res-grupo" role="presentation">' + UI.esc(g.nome) + '</div>';
-          g.itens.forEach(function (it) {
-            var i = opcoes.length;
-            opcoes.push(it);
-            h += '<a class="m-res-item" role="option" id="m-res-' + i + '" aria-selected="false" href="' + UI.esc(it.href) + '">' +
-                 '<i class="ti ti-' + UI.esc(it.icone) + '" aria-hidden="true"></i>' +
-                 '<span class="m-res-txt"><b>' + UI.esc(it.titulo) + '</b>' + (it.sub ? '<small>' + UI.esc(it.sub) + '</small>' : '') + '</span>' +
-                 (it.meta ? '<span class="m-res-meta">' + UI.esc(it.meta) + '</span>' : '') + '</a>';
-          });
-        });
-      }
-      caixa.innerHTML = h;
-      sel = opcoes.length ? 0 : -1;
-      marcar();
-      caixa.classList.add('aberto');
-      campo.setAttribute('aria-expanded', 'true');
-    }
-    function marcar() {
-      caixa.querySelectorAll('.m-res-item').forEach(function (a, i) { a.setAttribute('aria-selected', i === sel ? 'true' : 'false'); });
-      if (sel >= 0) {
-        campo.setAttribute('aria-activedescendant', 'm-res-' + sel);
-        var el = document.getElementById('m-res-' + sel);
-        if (el && el.scrollIntoView) el.scrollIntoView({ block: 'nearest' });
-      } else campo.removeAttribute('aria-activedescendant');
-    }
-    function fechar() { caixa.classList.remove('aberto'); campo.setAttribute('aria-expanded', 'false'); }
-
-    campo.addEventListener('input', desenhar);
-    campo.addEventListener('focus', desenhar);
-    campo.addEventListener('keydown', function (e) {
-      if (e.key === 'ArrowDown') { e.preventDefault(); if (opcoes.length) { sel = (sel + 1) % opcoes.length; marcar(); } }
-      else if (e.key === 'ArrowUp') { e.preventDefault(); if (opcoes.length) { sel = (sel - 1 + opcoes.length) % opcoes.length; marcar(); } }
-      else if (e.key === 'Enter') { if (sel >= 0 && opcoes[sel]) { e.preventDefault(); location.href = opcoes[sel].href; } }
-      else if (e.key === 'Escape') { fechar(); campo.blur(); }
-    });
-    document.addEventListener('click', function (e) { if (!e.target.closest || !e.target.closest('.m-busca')) fechar(); });
-    document.addEventListener('keydown', function (e) {
-      var alvo = document.activeElement, editando = alvo && /^(INPUT|TEXTAREA|SELECT)$/.test(alvo.tagName);
-      if ((e.ctrlKey || e.metaKey) && String(e.key).toLowerCase() === 'k') { e.preventDefault(); campo.focus(); campo.select(); }
-      else if (e.key === '/' && !editando) { e.preventDefault(); campo.focus(); }
-    });
+    if (b && u) b.title = (u.nome || u.email || '') + (u.gestor ? ' (gestor)' : '');
   }
 
   // ─── início ─────────────────────────────────────────────────────────────
   function iniciar() {
-    aplicarTema();
     prepararMenu();
-    iniciarBusca();
+    relogio();
     UI.esperarLogin().then(pintarAvatar);
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', iniciar);
