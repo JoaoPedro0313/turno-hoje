@@ -50,6 +50,7 @@
   /* Catálogo real do sistema (um arquivo = uma tela).
      index.html fica de fora de propósito: é o hub, todo mundo logado entra nele. */
   var TELAS = [
+    { id:'painel',     nome:'Painel do dia',          arquivos:['painel.html'] },
     { id:'turno',      nome:'Turno',                  arquivos:['turno.html'] },
     { id:'rdo',        nome:'RDO',                    arquivos:['rdo.html','apr.html'] },
     { id:'prog',       nome:'Programação',            arquivos:['prog.html'] },

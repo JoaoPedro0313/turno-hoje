@@ -1189,6 +1189,7 @@ async function migrarContratosPorEmail(users){
    É esse mapa que o mariua-auth.js lê em cada página do sistema.
    Os ids abaixo TÊM de ser os mesmos do catálogo TELAS do mariua-auth.js. */
 var TELAS_SISTEMA = [
+  { id:'painel',     nome:'Painel do dia' },
   { id:'turno',      nome:'Turno' },
   { id:'rdo',        nome:'RDO' },
   { id:'prog',       nome:'Programação' },
@@ -1213,7 +1214,7 @@ var TELAS_SISTEMA = [
    numa lista única em usuario_telas, então o mariua-auth.js não muda nada.
    Tela que não estiver em nenhum grupo cai automaticamente em "Outras telas". */
 var TELAS_GRUPOS = [
-  { nome:'Operação diária',   telas:['turno','rdo','prog','neoex'] },
+  { nome:'Operação diária',   telas:['painel','turno','rdo','prog','neoex'] },
   { nome:'Obras',             telas:['mapa','estagios','ocorrencias','projecao','comp'] },
   { nome:'Cadastros',         telas:['obra','equipes'] },
   { nome:'Segurança · SESMT', telas:['cursos','ensaios','brigada'] },

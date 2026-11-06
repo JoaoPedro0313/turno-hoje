@@ -115,8 +115,38 @@ var d=document.body||h;d.innerHTML='<div style="font-family:Barlow,system-ui,san
 <script src="mariua-ui.js?v=1"></script>
 <script src="mariua-painel.js?v=1"></script>
 <script>
+/* Confere se os arquivos do visual novo chegaram junto com esta página.
+   Se faltar algum, mostra qual é em vez de abrir a tela quebrada. */
+(function () {
+  var falta = [];
+  try { if (!getComputedStyle(document.documentElement).getPropertyValue('--m-topo').trim()) falta.push('mariua-ui.css'); } catch (e) {}
+  if (!window.MariuaUI) falta.push('mariua-ui.js');
+  if (!window.MariuaPainel) falta.push('mariua-painel.js');
+  try {
+    var nav = window.mariuaNav && window.mariuaNav.itens, temPainel = false;
+    if (nav) nav.grupos.forEach(function (g) { g.itens.forEach(function (i) { if (/painel\.html$/i.test(i.href)) temPainel = true; }); });
+    if (nav && !temPainel) falta.push('nav.js (a versão nova, com o Painel do dia)');
+  } catch (e) {}
+  if (!falta.length) return;
+  window.__MARIUA_FALTA = falta;
+  console.error('[mariua] Arquivos faltando ou antigos nesta pasta:', falta.join(', '));
+  if (falta.indexOf('mariua-ui.js') < 0 && falta.indexOf('mariua-ui.css') < 0 && falta.indexOf('mariua-painel.js') < 0) return;
+  var caixa = document.createElement('div');
+  caixa.setAttribute('role', 'alert');
+  caixa.style.cssText = 'font-family:Barlow,system-ui,sans-serif;max-width:560px;margin:40px auto;padding:22px 24px;border:2px solid #F3C3B4;border-radius:12px;background:#FFF4F1;color:#5C1610;line-height:1.5';
+  caixa.innerHTML = '<div style="font-size:1.1rem;font-weight:700;margin-bottom:8px">Faltam arquivos desta tela no site</div>' +
+    '<div style="font-size:.95rem">Copie para a <b>mesma pasta</b> deste arquivo, sem subpasta:</div>' +
+    '<ul style="margin:10px 0 12px;padding-left:20px;font-size:.95rem">' + falta.map(function (f) { return '<li><code>' + f + '</code></li>'; }).join('') + '</ul>' +
+    '<div style="font-size:.9rem">Depois do envio, espere o site atualizar (cerca de 1 minuto no GitHub Pages) e recarregue com <b>Ctrl+F5</b>.</div>';
+  var main = document.querySelector('main');
+  if (main) main.innerHTML = '';
+  document.body.insertBefore(caixa, document.body.firstChild);   /* primeira coisa da tela, mesmo sem o CSS */
+})();
+</script>
+<script>
 (function () {
   'use strict';
+  if (window.__MARIUA_FALTA && (!window.MariuaPainel || !window.MariuaUI)) return;
   var P = window.MariuaPainel, UI = window.MariuaUI, util = P.util, esc = UI.esc;
   var NIVEL = { critico: ['Crítico', 'alert-octagon'], atencao: ['Atenção', 'alert-triangle'], aviso: ['Aviso', 'info-circle'] };
   function $(id) { return document.getElementById(id); }

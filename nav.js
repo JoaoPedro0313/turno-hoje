@@ -22,6 +22,7 @@
       {
         id: 'obras', icone: 'briefcase', texto: 'Obras',
         itens: [
+          { href: 'painel.html',              icone: 'activity',         texto: 'Painel do dia' },
           { href: 'turno.html',               icone: 'clipboard-list',   texto: 'Turno' },
           { href: 'rdo.html',                 icone: 'file-description', texto: 'RDO' },
           { href: 'mapa.html',                icone: 'map-2',            texto: 'Mapa' },
