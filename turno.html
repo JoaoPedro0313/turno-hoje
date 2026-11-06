@@ -457,6 +457,11 @@ body.ta-arrastando,body.ta-arrastando *{cursor:grabbing !important;-webkit-user-
 body:not(.dark) #page-turno .ta-dica{color:#8f4a42}
 body.dark #page-turno .ta-dica{color:#c49494}
 @media (max-width:420px){#page-turno .ta-dica{display:none}}
+/* supervisor escolhido: a etiqueta fica só em "Não abriu turno", a única lista que ele filtra */
+#page-turno .sup-tag{font-size:.74rem;font-weight:700;padding:2px 9px;border-radius:10px;white-space:nowrap;max-width:260px;overflow:hidden;text-overflow:ellipsis}
+#page-turno .sup-tag[hidden]{display:none}
+body:not(.dark) #page-turno .sup-tag{background:#fde4e1;color:#8f2a1f;border:1px solid #f5c2bb}
+body.dark #page-turno .sup-tag{background:color-mix(in srgb,#e53e3e 18%,var(--e-cartao));color:#f3c0c0;border:1px solid color-mix(in srgb,#e53e3e 40%,var(--e-cartao))}
 /* card "fantasma" que acompanha o ponteiro */
 .ta-fantasma{position:fixed;left:0;top:0;z-index:3100;pointer-events:none;display:flex;align-items:center;gap:8px;padding:0 10px;border:1px solid #f1cdc7;border-radius:6px;background:#fff7f6;box-shadow:0 12px 28px rgba(22,50,74,.22);font-family:'Barlow',sans-serif;transition:background .12s,border-color .12s;will-change:transform}
 .ta-fantasma::before{content:'';width:7px;height:7px;border-radius:50%;flex-shrink:0;background:#b42318;transition:background .12s}
@@ -711,7 +716,7 @@ window.presenceOpenModal = function() { if(window._presenceOpenModal) window._pr
     </div>
     <div class="section">
       <div class="section-header red">
-        <div class="section-label"><div class="icon-dot"></div> Não abriu turno <span class="ta-dica" id="ta-dica" hidden data-html2canvas-ignore></span></div>
+        <div class="section-label"><div class="icon-dot"></div> Não abriu turno <span class="sup-tag" id="falta-sup-tag" hidden></span><span class="ta-dica" id="ta-dica" hidden data-html2canvas-ignore></span></div>
         <div class="section-count red" id="falta-count">0</div>
       </div>
       <div class="grid" id="falta-grid"></div>
@@ -895,7 +900,7 @@ function turnoAlternarSupervisor(ligar) {
   try { render(); } catch(e) {}
   dbSaveTurnoConfig();
   if (window.turnoAviso) window.turnoAviso(turnoSupFiltroAtivo
-    ? 'Filtro por supervisor ativado: aparece junto dos filtros da tela'
+    ? 'Filtro por supervisor ativado: filtra a lista Não abriu turno'
     : 'Filtro por supervisor desativado');
 }
 window.turnoAlternarSupervisor = turnoAlternarSupervisor;
@@ -1413,10 +1418,10 @@ function turnoHistRender(){
   const modoEl = document.getElementById('turno-hist-modo');
   buildGridOk('abriu-grid', filterByBase([...d.ok].sort()), d.sistema);
   buildGridJustif('justif-grid', filterByBase([...d.justif].sort((a,b)=>a.name.localeCompare(b.name))));
-  buildGridFalta('falta-grid', filterByBase([...d.falta].sort()));
+  buildGridFalta('falta-grid', filterByBase([...d.falta].sort(), true));
   document.getElementById('ok-count').textContent = filterByBase(d.ok).length;
   document.getElementById('justif-count').textContent = filterByBase(d.justif).length;
-  document.getElementById('falta-count').textContent = filterByBase(d.falta).length;
+  document.getElementById('falta-count').textContent = filterByBase(d.falta, true).length;
   const _psHist = document.getElementById('page-sub'); if (_psHist) _psHist.textContent = 'Histórico: ' + d.data;
   const _perm = n => !turnoAllowedStates || turnoAllowedStates.indexOf(teamState(typeof n === 'string' ? n : (n && n.name) || '')) >= 0;
   const total = d.ok.filter(_perm).length + d.justif.filter(_perm).length + d.falta.filter(_perm).length;
@@ -2063,7 +2068,7 @@ function turnoSupFiltroLigado() {
 // Supervisores das equipes do cadastro que passam pelos filtros de estado, filial e centro
 function turnoSupLista() {
   const vistos = new Map();
-  filterByStateAndBase(EQUIPES_ATIVAS.slice(), false, true).forEach(function(c) {
+  filterByStateAndBase(EQUIPES_ATIVAS.slice(), false).forEach(function(c) {
     const s = turnoSupervisorDe(c); if (!s) return;
     const k = cadNorm(s); if (!vistos.has(k)) vistos.set(k, s);
   });
@@ -2075,6 +2080,13 @@ function updateSupFilterButtons() {
   const container = document.getElementById('turno-sup-filter-btns');
   if (!barra || !container) return;
   barra.style.display = turnoSupFiltroAtivo ? 'flex' : 'none';
+  const tag = document.getElementById('falta-sup-tag');
+  if (tag) {
+    const ligado = turnoSupFiltroLigado();
+    tag.hidden = !ligado;
+    tag.textContent = ligado ? 'Supervisor: ' + turnoRotuloFiltro(turnoSupFilter) : '';
+    tag.title = ligado ? 'Esta lista mostra só as equipes de ' + turnoSupFilter + '. Abriu turno e Falta justificada mostram todas.' : '';
+  }
   if (!turnoSupFiltroAtivo) return;
   const aS = 'flex-shrink:0;padding:5px 14px;border-radius:20px;border:1.5px solid #0d7377;background:#0d7377;color:#fff;font-family:Barlow,sans-serif;font-size:0.72rem;font-weight:800;cursor:pointer;transition:all .18s;';
   const iS = 'flex-shrink:0;padding:5px 14px;border-radius:20px;border:1.5px solid #e2e8f0;background:#f0f4f5;color:#888;font-family:Barlow,sans-serif;font-size:0.72rem;font-weight:800;cursor:pointer;transition:all .18s;';
@@ -2128,10 +2140,11 @@ function turnoSetSupervisor(nome) {
 }
 window.turnoSetSupervisor = turnoSetSupervisor;
 
-// Filtra lista de equipes por estado + filial + centro de custo + supervisor ativos
-// (ignorarSupervisor: usado para montar a própria lista de supervisores)
-function filterByStateAndBase(arr, incluirForaDoCadastro, ignorarSupervisor) {
-  const supK = (!ignorarSupervisor && turnoSupFiltroLigado()) ? cadNorm(turnoSupFilter) : '';
+// Filtra lista de equipes por estado + filial + centro de custo ativos.
+// aplicarSupervisor: só a lista "Não abriu turno" passa true; Abriu turno, Falta justificada,
+// Comparar dias e o diálogo Júpiter/GPM continuam mostrando todas as equipes do filtro.
+function filterByStateAndBase(arr, incluirForaDoCadastro, aplicarSupervisor) {
+  const supK = (aplicarSupervisor && turnoSupFiltroLigado()) ? cadNorm(turnoSupFilter) : '';
   return arr.filter(n => {
     const name = typeof n === 'string' ? n : (n.name || '');
     if (!incluirForaDoCadastro && !cadNaLista(name)) return false;   // só equipes do Cadastro de Equipes
@@ -2146,7 +2159,7 @@ function filterByStateAndBase(arr, incluirForaDoCadastro, ignorarSupervisor) {
 }
 // Mantém alias usado no turnoHistExibir já existente
 // (histórico: mostra o dia como foi registrado, mesmo equipe que depois saiu do Cadastro)
-function filterByBase(arr) { return filterByStateAndBase(arr, true); }
+function filterByBase(arr, aplicarSupervisor) { return filterByStateAndBase(arr, true, aplicarSupervisor); }
 
 function updateBaseCounts() {
   const el = document.getElementById('turno-base-counts');
@@ -2175,7 +2188,7 @@ const faltaFiltrada = teams.falta.filter(n => {
 // Aplicar filtro por base
 const okFilt     = filterByStateAndBase([...teams.ok].sort());
 const justifFilt = filterByStateAndBase([...teams.justif].sort((a,b)=>a.name.localeCompare(b.name)));
-const faltaFilt  = filterByStateAndBase([...faltaFiltrada].sort());
+const faltaFilt  = filterByStateAndBase([...faltaFiltrada].sort(), false, true);
 buildGridOk('abriu-grid', okFilt, teams.sistema);
 buildGridJustif('justif-grid', justifFilt);
 buildGridFalta('falta-grid', faltaFilt);
@@ -2280,7 +2293,12 @@ g.appendChild(d);
 function buildGridFalta(id, list) {
 const g = document.getElementById(id); g.innerHTML = '';
 taAtualizarDica(list.length);
-if (!list.length) { emptyMsg(id); return; }
+if (!list.length) {
+  emptyMsg(id);
+  if (id === 'falta-grid' && turnoSupFiltroLigado() && g.firstChild)
+    g.firstChild.textContent = 'Nenhuma equipe de ' + turnoRotuloFiltro(turnoSupFilter) + ' em Não abriu turno';
+  return;
+}
 // No dia atual o card pode ser arrastado para "Falta justificada" (no histórico, não)
 const podeMover = id === 'falta-grid' && !turnoModoHistorico;
 list.forEach(name => {
@@ -2579,7 +2597,7 @@ window.turnoDefinirSistema = turnoDefinirSistema;
     return null;
   }
   function filtroAtivo() {
-    return turnoStateFilter !== 'todos' || turnoBaseFilter !== 'todos' || turnoCentroFilter !== 'todos' || turnoSupFiltroLigado();
+    return turnoStateFilter !== 'todos' || turnoBaseFilter !== 'todos' || turnoCentroFilter !== 'todos';
   }
   // equipes de "Abriu turno" na tela (filtro atual) ainda sem sistema, fora a do diálogo
   function outrasSemSistema(nome) {
@@ -3792,7 +3810,8 @@ const justif = filterByStateAndBase([...teams.justif].sort((a,b)=>a.name.localeC
 const _okD  = new Set(ok.map(n => toDisplayName(n)));
 const _jD   = new Set(justif.map(t => toDisplayName(t.name)));
 const falta = filterByStateAndBase(
-  teams.falta.filter(n => { const d=toDisplayName(n); return !_okD.has(d)&&!_jD.has(d); }).sort()
+  teams.falta.filter(n => { const d=toDisplayName(n); return !_okD.has(d)&&!_jD.has(d); }).sort(),
+  false, true
 );
 // Label do filtro ativo para o cabeçalho
 const STATE_LABELS = { todos:'TODOS OS ESTADOS', ba:'🟡 BA', mg:'🔵 MG', se:'🟣 SE' };
@@ -3807,12 +3826,9 @@ if (turnoCentroFilter === 'todos' && turnoBaseFilter !== 'todos') {
     .map(n => teamBase(typeof n === 'string' ? n : ((n && n.name) || ''))).filter(Boolean));
   if (_centros.size === 1) _localFiltro = [..._centros][0];
 }
-const filtroLabel  = [
-  (turnoStateFilter!=='todos'||_localFiltro!=='todos')
-    ? (STATE_LABELS[turnoStateFilter]||turnoStateFilter) + (_localFiltro!=='todos' ? ' · '+(BASE_LABELS[_localFiltro]||_localFiltro) : '')
-    : '',
-  turnoSupFiltroLigado() ? 'SUP. ' + turnoSupFilter : ''
-].filter(Boolean).join(' · ');
+const filtroLabel  = (turnoStateFilter!=='todos'||_localFiltro!=='todos')
+  ? (STATE_LABELS[turnoStateFilter]||turnoStateFilter) + (_localFiltro!=='todos' ? ' · '+(BASE_LABELS[_localFiltro]||_localFiltro) : '')
+  : '';
 const _sisMapa = turnoMapaSistema(teams.sistema);
 function buildGrid(list, type) {
 if (!list || list.length===0) return '<div style="padding:12px 16px;color:#aaa;font-size:13px;">Nenhum</div>';
@@ -3864,7 +3880,7 @@ const html = `
 <div style="padding:20px 20px 10px;">
 ${section('✅','ABRIU TURNO' + tsResumoImagem(ok), ok.length, '#0d7377', '#f0fafa', '#c0e8e5', buildGrid(ok,'ok'))}
 ${justif.length > 0 ? section('⚠️','FALTA JUSTIFICADA', justif.length, '#b97400', '#fffbf0', '#f0d080', buildGrid(justif,'justif')) : ''}
-${section('🔴','NÃO ABRIU TURNO', falta.length, '#c53030', '#fff5f5', '#fcc', buildGrid(falta,'falta'))}
+${section('🔴','NÃO ABRIU TURNO' + (turnoSupFiltroLigado() ? ' · SUP. ' + esc(String(turnoSupFilter).toUpperCase()) : ''), falta.length, '#c53030', '#fff5f5', '#fcc', buildGrid(falta,'falta'))}
 </div>
 <div style="text-align:center;padding:4px 0 16px;font-size:11px;color:#aaa;font-weight:600;letter-spacing:0.5px;">Mariuá Construção e Energia · OBRAS BA</div>
 </div>`;
@@ -8511,7 +8527,6 @@ body.dark #comparar-modal{
         partes.push(rotulo(lb || turnoBaseFilter));
       }
       if (turnoCentroFilter !== 'todos') partes.push(rotulo(CENTRO_CUSTO[turnoCentroFilter] || turnoCentroFilter));
-      if (turnoSupFiltroLigado()) partes.push('Supervisor ' + rotulo(turnoSupFilter));
     } catch(e){}
     return partes.join(' › ');
   }
@@ -8886,7 +8901,7 @@ body.dark #comparar-modal{
           <div class="gear-card ts-config">
             <div class="ts-config-txt">
               <div class="ts-config-tit" id="ts-sup-tit">Filtro por supervisor</div>
-              <div class="ts-config-sub" id="ts-sup-sub">Mostra a faixa Supervisor nos filtros da tela, com os nomes do Cadastro de Equipes. Vale para todos; cada aparelho guarda o supervisor escolhido.</div>
+              <div class="ts-config-sub" id="ts-sup-sub">Mostra a faixa Supervisor nos filtros da tela para filtrar a lista Não abriu turno. Vale para todos; cada aparelho guarda o supervisor escolhido.</div>
             </div>
             <button type="button" role="switch" id="ts-sup-switch" class="ts-switch" aria-checked="true" aria-labelledby="ts-sup-tit" aria-describedby="ts-sup-sub" onclick="turnoAlternarSupervisor()"><span class="ts-switch-trilho" aria-hidden="true"><span class="ts-switch-bola"></span></span><span class="ts-switch-txt" id="ts-sup-estado">Ativado</span></button>
           </div>
