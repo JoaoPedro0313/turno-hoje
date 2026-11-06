@@ -457,6 +457,24 @@ body.ta-arrastando,body.ta-arrastando *{cursor:grabbing !important;-webkit-user-
 body:not(.dark) #page-turno .ta-dica{color:#8f4a42}
 body.dark #page-turno .ta-dica{color:#c49494}
 @media (max-width:420px){#page-turno .ta-dica{display:none}}
+/* "Não abriu turno" em colunas por supervisor (opção ligada e "Todos" na faixa Supervisor) */
+#page-turno #falta-grid.por-supervisor{gap:14px 16px !important;align-items:start}
+#falta-grid .sup-col{display:flex;flex-direction:column;gap:6px;min-width:0}
+#falta-grid .sup-col-cab{display:flex;align-items:center;gap:8px;padding:2px 2px 6px;margin-bottom:2px;border-bottom:2px solid}
+#falta-grid .sup-col-nome{flex:1;min-width:0;font-size:.82rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#falta-grid .sup-col-qtd{flex-shrink:0;min-width:24px;text-align:center;font-size:.74rem;font-weight:800;padding:1px 8px;border-radius:10px}
+body:not(.dark) #falta-grid .sup-col-cab{border-color:#f1cdc7}
+body:not(.dark) #falta-grid .sup-col-nome{color:#7f1d14}
+body:not(.dark) #falta-grid .sup-col-qtd{background:#fde4e1;color:#8f2a1f}
+body:not(.dark) #falta-grid .sup-col.sem .sup-col-cab{border-color:#d9dee3}
+body:not(.dark) #falta-grid .sup-col.sem .sup-col-nome{color:#5b6b7a}
+body:not(.dark) #falta-grid .sup-col.sem .sup-col-qtd{background:#eef1f4;color:#5b6b7a}
+body.dark #falta-grid .sup-col-cab{border-color:color-mix(in srgb,#e53e3e 35%,var(--e-cartao))}
+body.dark #falta-grid .sup-col-nome{color:#f3c0c0}
+body.dark #falta-grid .sup-col-qtd{background:color-mix(in srgb,#e53e3e 18%,var(--e-cartao));color:#f3c0c0}
+body.dark #falta-grid .sup-col.sem .sup-col-cab{border-color:var(--e-linha2)}
+body.dark #falta-grid .sup-col.sem .sup-col-nome,body.dark #falta-grid .sup-col.sem .sup-col-qtd{color:var(--e-texto2)}
+body.dark #falta-grid .sup-col.sem .sup-col-qtd{background:var(--e-elev)}
 /* supervisor escolhido: a etiqueta fica só em "Não abriu turno", a única lista que ele filtra */
 #page-turno .sup-tag{font-size:.74rem;font-weight:700;padding:2px 9px;border-radius:10px;white-space:nowrap;max-width:260px;overflow:hidden;text-overflow:ellipsis}
 #page-turno .sup-tag[hidden]{display:none}
@@ -900,7 +918,7 @@ function turnoAlternarSupervisor(ligar) {
   try { render(); } catch(e) {}
   dbSaveTurnoConfig();
   if (window.turnoAviso) window.turnoAviso(turnoSupFiltroAtivo
-    ? 'Filtro por supervisor ativado: filtra a lista Não abriu turno'
+    ? 'Filtro por supervisor ativado: Não abriu turno em colunas por supervisor'
     : 'Filtro por supervisor desativado');
 }
 window.turnoAlternarSupervisor = turnoAlternarSupervisor;
@@ -2065,6 +2083,14 @@ function turnoSupFiltroLigado() {
       && Object.keys(CAD_INFO).length > 0;
   } catch(e) { return false; }
 }
+// "Não abriu turno" em colunas: opção ligada, "Todos" na faixa e cadastro carregado.
+// Com um supervisor escolhido a lista já é só dele, então volta a grade normal.
+function turnoSupColunas() {
+  try {
+    return !!turnoSupFiltroAtivo && (!turnoSupFilter || turnoSupFilter === 'todos')
+      && Object.keys(CAD_INFO).length > 0;
+  } catch(e) { return false; }
+}
 // Supervisores das equipes do cadastro que passam pelos filtros de estado, filial e centro
 function turnoSupLista() {
   const vistos = new Map();
@@ -2293,6 +2319,8 @@ g.appendChild(d);
 function buildGridFalta(id, list) {
 const g = document.getElementById(id); g.innerHTML = '';
 taAtualizarDica(list.length);
+const porSup = id === 'falta-grid' && list.length > 0 && turnoSupColunas();
+g.classList.toggle('por-supervisor', porSup);
 if (!list.length) {
   emptyMsg(id);
   if (id === 'falta-grid' && turnoSupFiltroLigado() && g.firstChild)
@@ -2301,7 +2329,7 @@ if (!list.length) {
 }
 // No dia atual o card pode ser arrastado para "Falta justificada" (no histórico, não)
 const podeMover = id === 'falta-grid' && !turnoModoHistorico;
-list.forEach(name => {
+function mkCard(name) {
 const d = document.createElement('div'); d.className = 'card absent';
 d.innerHTML = turnoCardHtml(name); // XSS fix
 if (podeMover) {
@@ -2310,8 +2338,34 @@ if (podeMover) {
   d.setAttribute('role', 'button');
   d.setAttribute('aria-label', nomeTela(name) + ': não abriu turno. Arraste para Falta justificada ou pressione Enter.');
 }
-g.appendChild(d);
+return d;
+}
+if (!porSup) { list.forEach(name => g.appendChild(mkCard(name))); return; }
+// Uma coluna por supervisor (ordem alfabética), "Sem supervisor" por último.
+// Os cards continuam dentro de #falta-grid, então arrastar para justificar funciona igual.
+const grupos = new Map();
+list.forEach(name => {
+  const s = turnoSupervisorDe(name), k = s ? cadNorm(s) : '';
+  if (!grupos.has(k)) grupos.set(k, { nome: s, equipes: [] });
+  grupos.get(k).equipes.push(name);
 });
+[...grupos.values()]
+  .sort((a, b) => !a.nome ? 1 : !b.nome ? -1 : a.nome.localeCompare(b.nome, 'pt-BR'))
+  .forEach(gr => {
+    const rot = gr.nome ? turnoRotuloFiltro(gr.nome) : 'Sem supervisor';
+    const n = gr.equipes.length;
+    const col = document.createElement('div');
+    col.className = 'sup-col' + (gr.nome ? '' : ' sem');
+    col.setAttribute('role', 'group');
+    col.setAttribute('aria-label', rot + ': ' + n + (n === 1 ? ' equipe' : ' equipes') + ' sem abrir turno');
+    const cab = document.createElement('div'); cab.className = 'sup-col-cab';
+    const nome = document.createElement('span'); nome.className = 'sup-col-nome';
+    nome.textContent = rot; nome.title = gr.nome || 'Equipes sem supervisor no Cadastro de Equipes';
+    const qtd = document.createElement('span'); qtd.className = 'sup-col-qtd'; qtd.textContent = n;
+    cab.appendChild(nome); cab.appendChild(qtd); col.appendChild(cab);
+    gr.equipes.forEach(name => col.appendChild(mkCard(name)));
+    g.appendChild(col);
+  });
 }
 
 // ══ Arrastar equipe de "Não abriu turno" para "Falta justificada" ══════════
@@ -8901,7 +8955,7 @@ body.dark #comparar-modal{
           <div class="gear-card ts-config">
             <div class="ts-config-txt">
               <div class="ts-config-tit" id="ts-sup-tit">Filtro por supervisor</div>
-              <div class="ts-config-sub" id="ts-sup-sub">Mostra a faixa Supervisor nos filtros da tela para filtrar a lista Não abriu turno. Vale para todos; cada aparelho guarda o supervisor escolhido.</div>
+              <div class="ts-config-sub" id="ts-sup-sub">Mostra a faixa Supervisor nos filtros e divide Não abriu turno em colunas por supervisor. Vale para todos; cada aparelho guarda o supervisor escolhido.</div>
             </div>
             <button type="button" role="switch" id="ts-sup-switch" class="ts-switch" aria-checked="true" aria-labelledby="ts-sup-tit" aria-describedby="ts-sup-sub" onclick="turnoAlternarSupervisor()"><span class="ts-switch-trilho" aria-hidden="true"><span class="ts-switch-bola"></span></span><span class="ts-switch-txt" id="ts-sup-estado">Ativado</span></button>
           </div>
