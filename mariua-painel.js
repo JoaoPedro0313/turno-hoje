@@ -399,8 +399,9 @@
     }
 
     // Programação
-    var antes = regs.filter(function (x) { return x.d < hoje && diasEntre(x.d, hoje) <= 7; });
+    var antes = regs.filter(function (x) { return x.d < hoje; });
     var D = antes.reduce(function (m, x) { return (!m || x.d > m) ? x.d : m; }, null);
+    var Drecente = !!(D && diasEntre(D, hoje) <= 7);   // pendências de execução só valem para programação recente
     if (regs.length && !regsHoje.length && diaSemana >= 1 && diaSemana <= 5 && hora >= REGRAS.horaProgramacao) {
       var ultima = regs.reduce(function (m, x) { return (!m || x.d > m) ? x.d : m; }, null);
       add({ cat: 'prog', nivel: 'aviso', grupo: 'prog-vazia', global: true, titulo: 'Nenhuma frente programada para hoje',
@@ -424,6 +425,7 @@
         prevF += prev; realF += real;
         var semRes = g.filter(function (x) { return !x.st && x.qReal === 0; }).length;
         var alvo = e ? e.codigo : nomeProprio(x0.enc);
+        if (!Drecente) return;
         if (semRes === g.length) {
           add({ cat: 'prog', nivel: 'aviso', grupo: 'prog-sem-resultado', titulo: 'Resultado de ' + br(D) + ' não lançado',
                 detalhe: plural(g.length, '1 frente sem quantidade realizada', '# frentes sem quantidade realizada') + '.',
@@ -439,7 +441,7 @@
                 alvo: alvo, base: base, resp: sup, desde: br(D), acao: { texto: 'Ver programação', href: 'prog.html' } });
         }
       });
-      execResumo = { data: D, previsto: prevF, realizado: realF, pct: prevF > 0 ? realF / prevF : null };
+      execResumo = { data: D, recente: Drecente, previsto: prevF, realizado: realF, pct: prevF > 0 ? realF / prevF : null };
     }
     regsHoje.forEach(function (x) {
       if (x.st !== 'CHUVA' && x.st !== 'SEM ACESSO') return;

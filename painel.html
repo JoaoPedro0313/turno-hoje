@@ -17,7 +17,7 @@ var d=document.body||h;d.innerHTML='<div style="font-family:Barlow,system-ui,san
 <title>Painel do dia · Mariuá</title>
 <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.47.0/tabler-icons.min.css">
-<link rel="stylesheet" href="mariua-ui.css?v=2">
+<link rel="stylesheet" href="mariua-ui.css?v=3">
 </head>
 <body class="sm-collapsed">
 <script>try{if(localStorage.getItem("mariua_menu")==="aberto")document.body.classList.remove("sm-collapsed");}catch(e){}
@@ -108,7 +108,7 @@ try{if(localStorage.getItem("mariua_darkmode")==="1")document.body.classList.add
 
 <script src="identidade.js?v=3"></script>
 <script src="mariua-ui.js?v=2"></script>
-<script src="mariua-painel.js?v=1"></script>
+<script src="mariua-painel.js?v=2"></script>
 <script>
 /* Confere se os arquivos desta tela chegaram junto com esta página.
    Se faltar algum, mostra qual é em vez de abrir a tela quebrada. */
@@ -218,26 +218,25 @@ try{if(localStorage.getItem("mariua_darkmode")==="1")document.body.classList.add
     var tag = href && UI.pode(href) ? 'a' : 'div';
     return '<' + tag + ' class="m-stat"' + (tag === 'a' ? ' href="' + href + '"' : '') + '>' +
       '<span class="m-stat-rot">' + rot + '</span><span class="m-stat-val">' + valor + '</span>' + (extraBarra || '') +
-      (extra ? '<span class="' + (erro ? 'm-stat-erro' : 'm-stat-ext') + '">' + extra + '</span>' : '') + '</' + tag + '>';
+      (extra ? '<span class="' + (erro === 'aviso' ? 'm-stat-aviso' : erro ? 'm-stat-erro' : 'm-stat-ext') + '">' + extra + '</span>' : '') + '</' + tag + '>';
   }
   function desenharResumo() {
     var r = analise.resumo, h = '', t = r.turno;
-    if (!t) h += stat('turno.html', 'Turno', '—', 'Nenhum turno salvo no banco.', '', true);
-    else if (!t.hoje) h += stat('turno.html', 'Turno', '—', 'Hoje ainda não importado. Último: ' + esc(t.data) + '.', '', true);
-    else {
-      var tot = t.ok + t.justif + t.falta;
-      h += stat('turno.html', 'Turno', t.ok + ' <small>de ' + tot + ' abriram</small>', t.justif + ' justificadas, ' + t.falta + ' sem abrir', tot ? barra(t.ok, t.justif, t.falta) : '');
-    }
+    var tot = t ? t.ok + t.justif + t.falta : 0;
+    if (!t || !tot) h += stat('turno.html', 'Turno', '—', 'Nenhum turno salvo no banco.', '', true);
+    else if (t.hoje) h += stat('turno.html', 'Turno', t.ok + ' <small>de ' + tot + ' abriram</small>', t.justif + ' justificadas, ' + t.falta + ' sem abrir', barra(t.ok, t.justif, t.falta));
+    else h += stat('turno.html', 'Turno de ' + util.br(util.dataDe(t.data)), t.ok + ' <small>de ' + tot + ' abriram</small>', 'O de hoje ainda não foi importado.', barra(t.ok, t.justif, t.falta), 'aviso');
     var d = r.rdo;
-    if (!d) h += stat('rdo.html', 'RDO', '—', 'Nenhum RDO no banco.', '', true);
-    else if (!d.valido) h += stat('rdo.html', 'RDO', '—', d.data ? 'Sem importar desde ' + util.br(d.data) + '.' : 'Ainda não importado.', '', true);
-    else h += stat('rdo.html', 'RDO de ' + util.br(d.data), d.lancou + ' <small>lançados</small>', d.nao ? d.nao + ' equipes sem RDO' : 'Todas as equipes lançaram');
+    if (!d || !d.lancou) h += stat('rdo.html', 'RDO', '—', d && d.data ? 'Sem RDO desde ' + util.br(d.data) + '.' : 'Nenhum RDO no banco.', '', true);
+    else if (d.valido) h += stat('rdo.html', 'RDO de ' + util.br(d.data), d.lancou + ' <small>lançados</small>', d.nao ? d.nao + ' equipes sem RDO' : 'Todas as equipes lançaram');
+    else h += stat('rdo.html', 'RDO de ' + util.br(d.data), d.lancou + ' <small>lançados</small>', 'Sem importar desde então.', '', 'aviso');
     var p = r.progHoje;
     h += stat('prog.html', 'Programação de hoje', p.frentes + ' <small>' + (p.frentes === 1 ? 'frente' : 'frentes') + '</small>',
       p.frentes ? UI.moeda(p.previsto, true) + ' previstos pelo fator K' + (p.semLigacao ? '. ' + p.semLigacao + ' sem equipe ligada' : '') : 'Nada lançado para hoje');
     var e = r.execucao;
-    if (e && e.pct != null) h += stat('prog.html', 'Execução de ' + util.br(e.data), Math.round(e.pct * 100) + '%', UI.moeda(e.realizado, true) + ' de ' + UI.moeda(e.previsto, true));
-    else h += stat('prog.html', 'Execução', '—', 'Sem programação nos últimos 7 dias.');
+    if (!e || e.pct == null) h += stat('prog.html', 'Execução', '—', 'Nenhuma programação no banco.');
+    else if (e.recente) h += stat('prog.html', 'Execução de ' + util.br(e.data), Math.round(e.pct * 100) + '%', UI.moeda(e.realizado, true) + ' de ' + UI.moeda(e.previsto, true));
+    else h += stat('prog.html', 'Execução de ' + util.br(e.data), Math.round(e.pct * 100) + '%', 'Sem programação depois desse dia.', '', 'aviso');
     h += stat('estagios.html', 'Obras paradas', String(r.obrasParadas), r.obrasParadas ? 'sem produção há ' + P.REGRAS.diasObraParada + ' dias ou mais' : 'Nenhuma obra parada');
     $('resumo').innerHTML = h;
   }
@@ -301,9 +300,10 @@ try{if(localStorage.getItem("mariua_darkmode")==="1")document.body.classList.add
   // ── turno por base ──────────────────────────────────────────────────
   function desenharPorBase() {
     var t = analise.resumo.turno, linhas = analise.resumo.porBase;
-    if (!t || !t.hoje) { $('por-base').innerHTML = '<p class="m-meta">Aparece quando o turno de hoje for importado.</p>'; return; }
+    if (!t) { $('por-base').innerHTML = '<p class="m-meta">Aparece quando houver turno salvo no banco.</p>'; return; }
     if (!linhas.length) { $('por-base').innerHTML = '<p class="m-meta">Nenhuma equipe com estes filtros.</p>'; return; }
-    $('por-base').innerHTML = linhas.map(function (l) {
+    var aviso = t.hoje ? '' : '<p class="m-stat-aviso" style="margin-bottom:6px">Turno de ' + esc(util.br(util.dataDe(t.data))) + '. O de hoje ainda não foi importado.</p>';
+    $('por-base').innerHTML = aviso + linhas.map(function (l) {
       return '<div style="display:flex;flex-direction:column;gap:5px;padding:8px 0;border-bottom:1px solid #edf2f7">' +
         '<div style="display:flex;justify-content:space-between;gap:8px"><span class="m-tit">' + esc(l.base ? l.base.nome : 'Sem base definida') + '</span>' +
         '<span class="m-num">' + l.ok + ' <span class="m-meta">de ' + l.total + '</span></span></div>' + barra(l.ok, l.justif, l.falta) +

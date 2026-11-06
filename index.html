@@ -17,7 +17,7 @@ var d=document.body||h;d.innerHTML='<div style="font-family:Barlow,system-ui,san
 <title>Mariuá - Sistema de Obras</title>
 <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.47.0/tabler-icons.min.css">
-<link rel="stylesheet" href="mariua-ui.css?v=2">
+<link rel="stylesheet" href="mariua-ui.css?v=3">
 </head>
 <body class="sm-collapsed">
 <script>try{if(localStorage.getItem("mariua_menu")==="aberto")document.body.classList.remove("sm-collapsed");}catch(e){}
@@ -87,7 +87,7 @@ try{if(localStorage.getItem("mariua_darkmode")==="1")document.body.classList.add
 
 <script src="identidade.js?v=3"></script>
 <script src="mariua-ui.js?v=2"></script>
-<script src="mariua-painel.js?v=1"></script>
+<script src="mariua-painel.js?v=2"></script>
 <script>
 /* Confere se os arquivos desta tela chegaram junto com esta página.
    Se faltar algum, mostra qual é em vez de abrir a tela quebrada. */
@@ -166,7 +166,7 @@ try{if(localStorage.getItem("mariua_darkmode")==="1")document.body.classList.add
     return '<' + tag + ' class="kpi"' + (tag === 'a' ? ' href="' + href + '"' : '') + ' style="--kc:' + cores[0] + ';--kbg:' + cores[1] + '">' +
       '<span class="kpi-ic"><i class="ti ti-' + icone + '" aria-hidden="true"></i></span>' +
       '<span class="kpi-main"><span class="kpi-num' + (valor === null ? ' loading' : '') + '">' + (valor === null ? '—' : valor) + '</span>' +
-      '<span class="kpi-lbl">' + rotulo + '</span>' + (extra ? '<span class="kpi-ext' + (erro ? ' erro' : '') + '">' + extra + '</span>' : '') + '</span></' + tag + '>';
+      '<span class="kpi-lbl">' + rotulo + '</span>' + (extra ? '<span class="kpi-ext' + (erro === 'aviso' ? ' aviso' : erro ? ' erro' : '') + '">' + extra + '</span>' : '') + '</span></' + tag + '>';
   }
   var K = {
     turno: ['turno.html', ['#0d7377', '#eef6f5'], 'clipboard-check', 'Turnos abertos'],
@@ -183,14 +183,17 @@ try{if(localStorage.getItem("mariua_darkmode")==="1")document.body.classList.add
       h = k('turno', null) + k('rdo', null) + k('prog', null) + k('cursos', null);
     } else {
       var r = a.resumo, t = r.turno, d = r.rdo, e = r.execucao, c = r.cursos;
-      h = (!t ? k('turno', '—', 'Nenhum turno no banco', true)
-        : !t.hoje ? k('turno', '—', 'Hoje ainda não importado', true)
-        : k('turno', t.ok + ' <small>de ' + (t.ok + t.justif + t.falta) + '</small>', t.falta ? t.falta + ' sem abrir' : 'Todas abriram'));
-      h += (!d ? k('rdo', '—', 'Nenhum RDO no banco', true)
-        : !d.valido ? k('rdo', '—', d.data ? 'Sem importar desde ' + util.br(d.data) : 'Ainda não importado', true)
-        : k('rdo', String(d.lancou), (d.nao ? d.nao + ' sem RDO' : 'Todas lançaram') + ' · ' + util.br(d.data)));
-      h += (e && e.pct != null) ? k('prog', Math.round(e.pct * 100) + '%', UI.moeda(e.realizado, true) + ' de ' + UI.moeda(e.previsto, true) + ' · ' + util.br(e.data))
-        : k('prog', '—', 'Sem programação recente');
+      var totT = t ? t.ok + t.justif + t.falta : 0, dT = t ? util.br(util.dataDe(t.data)) : '';
+      /* Sem dado de hoje: mostra o último disponível, com a data e o aviso em âmbar */
+      h = (!t || !totT ? k('turno', '—', 'Nenhum turno no banco', true)
+        : t.hoje ? k('turno', t.ok + ' <small>de ' + totT + '</small>', t.falta ? t.falta + ' sem abrir' : 'Todas abriram')
+        : k('turno', t.ok + ' <small>de ' + totT + '</small>', 'Turno de ' + dT + ' · hoje ainda não importado', 'aviso'));
+      h += (!d || !d.lancou ? k('rdo', '—', d && d.data ? 'Sem RDO desde ' + util.br(d.data) : 'Nenhum RDO no banco', true)
+        : d.valido ? k('rdo', String(d.lancou), (d.nao ? d.nao + ' sem RDO' : 'Todas lançaram') + ' · ' + util.br(d.data))
+        : k('rdo', String(d.lancou), 'RDO de ' + util.br(d.data) + ' · sem importar desde então', 'aviso'));
+      h += (!e || e.pct == null) ? k('prog', '—', 'Nenhuma programação no banco', true)
+        : e.recente ? k('prog', Math.round(e.pct * 100) + '%', UI.moeda(e.realizado, true) + ' de ' + UI.moeda(e.previsto, true) + ' · ' + util.br(e.data))
+        : k('prog', Math.round(e.pct * 100) + '%', 'Em ' + util.br(e.data) + ' · sem programação depois disso', 'aviso');
       h += c ? k('cursos', String(c.vencidos), c.proximos ? c.proximos + ' vencem em ' + P.REGRAS.diasAvisoVencimento + ' dias' : 'Nenhum vencendo')
         : k('cursos', '—', 'Sem dados de cursos');
     }

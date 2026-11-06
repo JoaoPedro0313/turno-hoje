@@ -261,6 +261,8 @@ a.kpi:hover{box-shadow:0 8px 22px rgba(0,0,0,.08);transform:translateY(-2px);bor
 .kpi-lbl{font-size:.74rem;font-weight:700;color:#64748b;margin-top:5px;text-transform:uppercase;letter-spacing:.4px}
 .kpi-ext{font-size:.72rem;font-weight:600;color:#94a3b8;margin-top:3px}
 .kpi-ext.erro{color:#c53030}
+.kpi-ext.aviso,.m-stat-aviso{color:#b7791f;font-weight:700}
+.m-stat-aviso{font-size:0.74rem}
 .lx .m-cartao{margin-top:4px}
 @media(max-width:560px){
   .lx{padding:18px 14px 50px} .lx-grid{grid-template-columns:1fr} .lx-hello{font-size:1.25rem}
