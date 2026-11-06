@@ -792,7 +792,28 @@ ok: [],
 justif: [],
 falta: []
 };
-let teams = { ok: [...DEFAULTS.ok], justif: [], falta: [...DEFAULTS.falta], sistema: {} };
+let teams = { ok: [...DEFAULTS.ok], justif: [], falta: [...DEFAULTS.falta], sistema: {}, horarios: {} };
+// ── Horário em que cada equipe abriu o turno ─────────────────────────────────
+// Vem da coluna "Data início" do consulta_turno (DD/MM/AAAA HH:MM:SS). Fica salvo
+// junto com o turno do dia em value.horarios = { 'CODIGO': 'HH:MM' }. Guarda pelo
+// código interno e pelo nome de exibição, para achar a equipe dos dois jeitos.
+const TURNO_HORA_LIMITE = 8;   // depois disso, a abertura aparece em laranja
+function turnoHoraDe(txt) {
+  const m = String(txt || '').match(/\d{1,2}\/\d{1,2}\/\d{4}[ T]+(\d{1,2}):(\d{2})/) || String(txt || '').match(/^\s*(\d{1,2}):(\d{2})/);
+  return m ? String(m[1]).padStart(2, '0') + ':' + m[2] : '';
+}
+function turnoGuardarHora(mapa, nome, hora) {
+  if (!nome || !hora) return;
+  const chaves = [nome];
+  try { const d = toDisplayName(nome); if (d && d !== nome) chaves.push(d); } catch (e) {}
+  chaves.forEach(function (k) { if (!mapa[k] || hora < mapa[k]) mapa[k] = hora; });   // vale a primeira abertura
+}
+function turnoHoraEquipe(nome) {
+  const h = teams.horarios || {};
+  if (h[nome]) return h[nome];
+  try { const d = toDisplayName(nome); if (h[d]) return h[d]; } catch (e) {}
+  return '';
+}
 let currentDate = DEFAULTS.date;
 // ── Onde a equipe abriu o turno: Júpiter laranja ou GPM Obras ─────────────────
 // Vale só para quem está em "Abriu turno". Fica salvo junto com o turno do dia em
@@ -961,6 +982,7 @@ teams.ok    = (v.ok    && v.ok.length)    ? [...new Set(norm(v.ok))]    : [...DE
 // CORRIGIDO: Array.isArray garante que justif=[] (vazio) seja aplicado corretamente
 teams.justif = Array.isArray(v.justif) ? v.justif : [];
 teams.sistema = (v.sistema && typeof v.sistema === 'object' && !Array.isArray(v.sistema)) ? v.sistema : {};
+teams.horarios = (v.horarios && typeof v.horarios === 'object' && !Array.isArray(v.horarios)) ? v.horarios : {};
 currentDate = v.date || DEFAULTS.date;
 const justifNms = teams.justif.map(t=>t.name);
 // CORRIGIDO: normaliza AMBOS os lados para evitar bug nome completo vs codigo curto
@@ -1141,7 +1163,7 @@ dbReconectar();
 }
 async function dbSaveTurno() {
 teams.sistema = turnoSistemaLimpo();
-const payload = { date: currentDate, ok: teams.ok, justif: teams.justif, falta: teams.falta, sistema: teams.sistema };
+const payload = { date: currentDate, ok: teams.ok, justif: teams.justif, falta: teams.falta, sistema: teams.sistema, horarios: teams.horarios || {} };
 lsSet('turno', payload);
 try {
 setDbStatus('syncing', 'Salvando...');
@@ -2057,6 +2079,17 @@ const nm = typeof name === 'string' ? name : ((name && name.name) || '');
 const sis = m.get(toDisplayName(nm)) || '';
 const d = document.createElement('div'); d.className = 'card';
 d.innerHTML = turnoCardHtml(nm, '', sis); // XSS fix
+const _hora = id === 'abriu-grid' ? turnoHoraEquipe(nm) : '';
+if (_hora) {
+  const _tarde = parseInt(_hora, 10) >= TURNO_HORA_LIMITE;
+  const _sp = document.createElement('span');
+  _sp.className = 'card-hora';
+  _sp.textContent = _hora;
+  _sp.title = 'Abriu o turno às ' + _hora + (_tarde ? ', depois das ' + TURNO_HORA_LIMITE + 'h' : '');
+  _sp.style.cssText = 'margin-left:6px;font-size:.68rem;font-weight:800;padding:1px 6px;border-radius:5px;white-space:nowrap;font-variant-numeric:tabular-nums;' +
+    (_tarde ? 'background:#fffaf0;color:#b7791f;border:1px solid #fbd38d' : 'background:#f0fafa;color:#0d7377;border:1px solid #c0e8e5');
+  (d.querySelector('.card-linha') || d).appendChild(_sp);
+}
 if (podeMarcar) {
   d.dataset.equipe = nm;
   d.tabIndex = 0;
@@ -3400,6 +3433,7 @@ const iDt   = ci('Data início');
 const iEq2  = iEq >= 0 ? iEq : ci('des_equipe');
 if (iEq2 < 0) { showImportMsg('Coluna "Equipe" não encontrada.','error'); return; }
 const abriram = [];
+const horasCsv = {};
 let dataCsv = '';
 for (let i=1; i<lines.length; i++) {
   const cols = lines[i].split(sep).map(c=>c.trim().replace(/^"|"$/g,''));
@@ -3411,6 +3445,7 @@ for (let i=1; i<lines.length; i++) {
   const resp   = iResp >= 0 ? (cols[iResp]||'').trim() : '';
   const eq = resolverEquipe(eqRaw, resp);
   if (eq && !abriram.includes(eq)) abriram.push(eq);
+  if (eq && iDt >= 0) turnoGuardarHora(horasCsv, eq, turnoHoraDe(cols[iDt]));
   // Extrai data do CSV (DD/MM/AAAA HH:MM:SS → DD/MM/AAAA)
   if (!dataCsv && iDt >= 0 && cols[iDt]) {
     const m = (cols[iDt]||'').match(/(\d{2}\/\d{2}\/\d{4})/);
@@ -3425,6 +3460,7 @@ if (dataCsv) {
   const _di = document.getElementById('date-input'); if (_di) _di.value = dataCsv;
 }
 const justifNames = teams.justif.map(t=>t.name);
+teams.horarios = horasCsv;
 teams.ok    = abriram.filter(n=>!justifNames.includes(n));
 // falta = todos EQUIPES_ATIVAS que não abriram e não têm justificativa
 teams.falta = EQUIPES_ATIVAS.filter(n=>!abriram.includes(n)&&!justifNames.includes(n));
@@ -8826,7 +8862,7 @@ body.dark #comparar-modal{
       const iSit  = headers.findIndex(h => h === 'situação' || h === 'situacao');
       const iData = headers.findIndex(h => h === 'data início' || h === 'data inicio');
 
-      const ok = [], falta = [], justif = [];
+      const ok = [], falta = [], justif = [], horarios = {};
       let date = '';
 
       // ── Detecta se CSV tem múltiplas datas (histórico mensal) ─────────────
@@ -8875,15 +8911,17 @@ body.dark #comparar-modal{
         // Mapeia situação → status (sem duplicatas via Set)
         if (situacao === 'aberto' || situacao === 'fechado/finalizado' || situacao === 'fechado') {
           okSet.add(nome);
+          if (iData >= 0 && typeof turnoGuardarHora === 'function') turnoGuardarHora(horarios, nome, turnoHoraDe(cols[iData]));
         } else if (situacao === 'cancelado' || situacao === 'ausente') {
           falta.push(nome);
         } else {
           okSet.add(nome);
+          if (iData >= 0 && typeof turnoGuardarHora === 'function') turnoGuardarHora(horarios, nome, turnoHoraDe(cols[iData]));
         }
       }
 
       ok.push(...okSet);
-      return { date, ok, falta, justif };
+      return { date, ok, falta, justif, horarios };
     }
 
     // ── FORMATO NATIVO (nome;status;obs) ─────────────────────────────────
@@ -9077,7 +9115,7 @@ body.dark #comparar-modal{
         var iDt  = hdr.findIndex(function(h){ return h==='data in\u00edcio'||h==='data inicio'; });
         var iResp= hdr.findIndex(function(h){ return h==='respons\u00e1vel'||h==='responsavel'; });
         if (iEq < 0 || iDt < 0) { if (msgEl) msgEl.textContent = '❌ Colunas Equipe/Data não encontradas.'; return; }
-        var byDate = {};
+        var byDate = {}, horasPorDia = {};
         for (var i = 1; i < lines.length; i++) {
           var cols = lines[i].split(sep).map(function(x){ return x.trim().replace(/^"|"$/g,''); });
           if (cols.length < 3) continue;
@@ -9091,7 +9129,11 @@ body.dark #comparar-modal{
           var eq = window._resolverEquipe ? window._resolverEquipe(eqRaw, respRaw) : eqRaw;
           if (!eq) continue;
           if (!byDate[date]) byDate[date] = {};
-          if (sit === 'aberto' || sit === 'fechado/finalizado' || sit === 'fechado') byDate[date][eq] = true;
+          if (sit === 'aberto' || sit === 'fechado/finalizado' || sit === 'fechado') {
+            byDate[date][eq] = true;
+            if (!horasPorDia[date]) horasPorDia[date] = {};
+            if (typeof turnoGuardarHora === 'function') turnoGuardarHora(horasPorDia[date], eq, turnoHoraDe(dateRaw));
+          }
         }
         var dates = Object.keys(byDate).sort();
         if (!dates.length) { if (msgEl) msgEl.textContent = '❌ Nenhuma data encontrada.'; return; }
@@ -9104,7 +9146,7 @@ body.dark #comparar-modal{
           var faltaList = equipes.filter(function(e){ return !okSet[e]; });
           var parts = date.split('/');
           var histKey = 'turno_hist_' + parts[0] + '-' + parts[1] + '-' + parts[2];
-          var payload = { ok: okList, justif: [], falta: faltaList, date: date, source: 'csv_hist' };
+          var payload = { ok: okList, justif: [], falta: faltaList, date: date, source: 'csv_hist', horarios: horasPorDia[date] || {} };
           try {
             var r1 = await fetch(SUPA_URL + '/rest/v1/turno_data?on_conflict=key', {
               method: 'POST',
@@ -9134,6 +9176,7 @@ body.dark #comparar-modal{
       else if (payload.date && payload.date !== currentDate) teams.sistema = {};
       teams.ok     = payload.ok     || [];
       teams.justif = payload.justif || [];
+      teams.horarios = payload.horarios || {};
       // Garante que todos EQUIPES_ATIVAS que não abriram aparecem em falta
       const _justifNms = (payload.justif||[]).map(t=>t.name||t);
       const _okSet = new Set(teams.ok.map(n=>n));
@@ -9149,7 +9192,7 @@ body.dark #comparar-modal{
     }
 
     if (typeof lsSet === 'function') {
-      lsSet('turno', { date: currentDate, ok: teams.ok, justif: teams.justif, falta: teams.falta, sistema: teams.sistema || {} });
+      lsSet('turno', { date: currentDate, ok: teams.ok, justif: teams.justif, falta: teams.falta, sistema: teams.sistema || {}, horarios: teams.horarios || {} });
     }
     if (typeof dbSaveTurno === 'function') dbSaveTurno();
     try { render(); } catch(e) {}

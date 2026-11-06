@@ -17,7 +17,7 @@ var d=document.body||h;d.innerHTML='<div style="font-family:Barlow,system-ui,san
 <title>Painel do dia · Mariuá</title>
 <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.47.0/tabler-icons.min.css">
-<link rel="stylesheet" href="mariua-ui.css?v=3">
+<link rel="stylesheet" href="mariua-ui.css?v=5">
 </head>
 <body class="sm-collapsed">
 <script>try{if(localStorage.getItem("mariua_menu")==="aberto")document.body.classList.remove("sm-collapsed");}catch(e){}
@@ -98,6 +98,10 @@ try{if(localStorage.getItem("mariua_darkmode")==="1")document.body.classList.add
       <div class="m-cartao-cab"><h2 class="m-h2" id="t-bases"><i class="ti ti-map-pin" aria-hidden="true"></i>Turno por base</h2></div>
       <div class="m-cartao-corpo" id="por-base"><div class="m-esq"></div></div>
     </section>
+    <section class="m-cartao" aria-labelledby="t-horas">
+      <div class="m-cartao-cab"><h2 class="m-h2" id="t-horas"><i class="ti ti-clock" aria-hidden="true"></i>Horário de abertura do turno</h2><span class="m-meta" id="horas-resumo"></span></div>
+      <div class="m-cartao-corpo" id="horas"><div class="m-esq"></div></div>
+    </section>
     <section class="m-cartao" aria-labelledby="t-fontes">
       <div class="m-cartao-cab"><h2 class="m-h2" id="t-fontes"><i class="ti ti-database" aria-hidden="true"></i>De onde vêm os dados</h2></div>
       <div class="m-cartao-corpo" id="fontes"><div class="m-esq"></div></div>
@@ -108,7 +112,7 @@ try{if(localStorage.getItem("mariua_darkmode")==="1")document.body.classList.add
 
 <script src="identidade.js?v=3"></script>
 <script src="mariua-ui.js?v=2"></script>
-<script src="mariua-painel.js?v=2"></script>
+<script src="mariua-painel.js?v=4"></script>
 <script>
 /* Confere se os arquivos desta tela chegaram junto com esta página.
    Se faltar algum, mostra qual é em vez de abrir a tela quebrada. */
@@ -193,6 +197,7 @@ try{if(localStorage.getItem("mariua_darkmode")==="1")document.body.classList.add
     desenharResumo();
     desenharAbasELista();
     desenharPorBase();
+    desenharHoras();
     desenharFontes();
     $('atualizado').textContent = 'Leitura às ' + UI.hora(analise.em) + '. A tela atualiza sozinha a cada 5 minutos.';
   }
@@ -224,7 +229,8 @@ try{if(localStorage.getItem("mariua_darkmode")==="1")document.body.classList.add
     var r = analise.resumo, h = '', t = r.turno;
     var tot = t ? t.ok + t.justif + t.falta : 0;
     if (!t || !tot) h += stat('turno.html', 'Turno', '—', 'Nenhum turno salvo no banco.', '', true);
-    else if (t.hoje) h += stat('turno.html', 'Turno', t.ok + ' <small>de ' + tot + ' abriram</small>', t.justif + ' justificadas, ' + t.falta + ' sem abrir', barra(t.ok, t.justif, t.falta));
+    else if (t.hoje) h += stat('turno.html', 'Turno', t.ok + ' <small>de ' + tot + ' abriram</small>', t.justif + ' justificadas, ' + t.falta + ' sem abrir' +
+      (t.horas && t.horas.depois ? ', ' + t.horas.depois + ' depois das ' + String(P.REGRAS.horaLimiteTurno).padStart(2, '0') + 'h' : ''), barra(t.ok, t.justif, t.falta));
     else h += stat('turno.html', 'Turno de ' + util.br(util.dataDe(t.data)), t.ok + ' <small>de ' + tot + ' abriram</small>', 'O de hoje ainda não foi importado.', barra(t.ok, t.justif, t.falta), 'aviso');
     var d = r.rdo;
     if (!d || !d.lancou) h += stat('rdo.html', 'RDO', '—', d && d.data ? 'Sem RDO desde ' + util.br(d.data) + '.' : 'Nenhum RDO no banco.', '', true);
@@ -234,9 +240,15 @@ try{if(localStorage.getItem("mariua_darkmode")==="1")document.body.classList.add
     h += stat('prog.html', 'Programação de hoje', p.frentes + ' <small>' + (p.frentes === 1 ? 'frente' : 'frentes') + '</small>',
       p.frentes ? UI.moeda(p.previsto, true) + ' previstos pelo fator K' + (p.semLigacao ? '. ' + p.semLigacao + ' sem equipe ligada' : '') : 'Nada lançado para hoje');
     var e = r.execucao;
-    if (!e || e.pct == null) h += stat('prog.html', 'Execução', '—', 'Nenhuma programação no banco.');
-    else if (e.recente) h += stat('prog.html', 'Execução de ' + util.br(e.data), Math.round(e.pct * 100) + '%', UI.moeda(e.realizado, true) + ' de ' + UI.moeda(e.previsto, true));
-    else h += stat('prog.html', 'Execução de ' + util.br(e.data), Math.round(e.pct * 100) + '%', 'Sem programação depois desse dia.', '', 'aviso');
+    if (!e || !e.frentes) h += stat('prog.html', 'Execução', '—', 'Nenhuma programação no banco.');
+    else {
+      var pctE = e.pct != null ? e.pct : e.pctQtd;
+      var valE = pctE != null ? Math.round(pctE * 100) + '%' : e.frentes + ' <small>frentes</small>';
+      var extE = e.pct != null ? UI.moeda(e.realizado, true) + ' de ' + UI.moeda(e.previsto, true)
+               : e.pctQtd != null ? 'Pela quantidade (sem valor do fator K).' : 'Sem quantidade prevista.';
+      h += e.recente ? stat('prog.html', 'Execução de ' + util.br(e.data), valE, extE)
+                     : stat('prog.html', 'Execução de ' + util.br(e.data), valE, 'Sem programação depois desse dia.', '', 'aviso');
+    }
     h += stat('estagios.html', 'Obras paradas', String(r.obrasParadas), r.obrasParadas ? 'sem produção há ' + P.REGRAS.diasObraParada + ' dias ou mais' : 'Nenhuma obra parada');
     $('resumo').innerHTML = h;
   }
@@ -309,6 +321,46 @@ try{if(localStorage.getItem("mariua_darkmode")==="1")document.body.classList.add
         '<span class="m-num">' + l.ok + ' <span class="m-meta">de ' + l.total + '</span></span></div>' + barra(l.ok, l.justif, l.falta) +
         (l.falta ? '<span class="m-meta">' + l.falta + ' sem abrir' + (l.justif ? ', ' + l.justif + ' justificadas' : '') + '</span>' : '') + '</div>';
     }).join('') + '<p class="m-meta" style="margin-top:10px">Verde: abriu. Amarelo: justificada. Vermelho: sem abrir.</p>';
+  }
+
+  // ── horário de abertura ─────────────────────────────────────────────
+  var verTodosHorarios = false;
+  function desenharHoras() {
+    var t = analise.resumo.turno, el = $('horas'), lim = P.REGRAS.horaLimiteTurno, limTxt = String(lim).padStart(2, '0') + 'h';
+    $('horas-resumo').textContent = '';
+    if (!t) { el.innerHTML = '<p class="m-meta">Aparece quando houver turno salvo no banco.</p>'; return; }
+    var hs = t.horas;
+    if (!hs) {
+      el.innerHTML = '<p class="m-meta" style="line-height:1.5">Os horários aparecem a partir da próxima importação do turno feita com o <b>turno.html</b> novo. ' +
+        'O arquivo consulta_turno já traz a hora de abertura na coluna "Data início"; agora ela passa a ser guardada.</p>';
+      return;
+    }
+    $('horas-resumo').textContent = (t.hoje ? '' : 'Turno de ' + util.br(util.dataDe(t.data)) + ' · ') + 'das ' + hs.primeiro + ' às ' + hs.ultimo;
+    var max = Math.max.apply(null, hs.faixas.map(function (f) { return f.n; })) || 1;
+    var barras = '<div role="img" aria-label="Aberturas por horário" style="display:flex;align-items:flex-end;gap:8px;height:120px;border-bottom:1px solid #e2e8f0;padding:0 2px">' +
+      hs.faixas.map(function (f) {
+        return '<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;gap:3px">' +
+          '<span class="m-num" style="font-size:.78rem;color:#2d3748">' + (f.n || '') + '</span>' +
+          '<span style="width:100%;max-width:48px;border-radius:4px 4px 0 0;height:' + Math.max(f.n ? 6 : 0, Math.round(f.n / max * 96)) + 'px;background:' + (f.depois ? '#f0a500' : '#14a085') + '"></span></div>';
+      }).join('') + '</div>' +
+      '<div style="display:flex;gap:8px;padding:4px 2px 0">' + hs.faixas.map(function (f) {
+        return '<span style="flex:1;text-align:center;font-size:.72rem;font-weight:700;color:' + (f.depois ? '#b7791f' : '#7b8794') + '">' + String(f.hora).padStart(2, '0') + 'h</span>';
+      }).join('') + '</div>';
+    var tarde = hs.lista.filter(function (x) { return x.depois; });
+    var lista = verTodosHorarios ? hs.lista : tarde.slice().reverse().slice(0, 6);
+    var titulo = verTodosHorarios ? 'Todas as aberturas, da primeira à última' : (tarde.length ? 'Abriram depois das ' + limTxt : 'Nenhuma equipe abriu depois das ' + limTxt);
+    var linhas = lista.map(function (x) {
+      return '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid #edf2f7;font-size:.82rem">' +
+        '<span style="min-width:0"><span class="m-cod">' + esc(x.codigo) + '</span>' + (x.enc ? ' <span class="m-meta">' + esc(x.enc) + '</span>' : '') + '</span>' +
+        '<span class="m-num" style="white-space:nowrap;padding:1px 7px;border-radius:5px;font-size:.78rem;' +
+        (x.depois ? 'background:#fffaf0;color:#b7791f;border:1px solid #fbd38d' : 'background:#f0fafa;color:#0d7377;border:1px solid #c0e8e5') + '">' + x.hora + '</span></div>';
+    }).join('');
+    el.innerHTML = barras +
+      '<p class="m-meta" style="margin:10px 0 4px">' + hs.com + ' de ' + (hs.com + hs.sem) + ' aberturas com horário' + (hs.sem ? ' (' + hs.sem + ' sem hora no arquivo)' : '') +
+      '. Em amarelo, depois das ' + limTxt + '.</p>' +
+      '<div class="m-tit" style="font-size:.82rem;margin:10px 0 2px">' + titulo + '</div>' + linhas +
+      '<button type="button" class="m-bt m-bt-peq" id="bt-horas" style="margin-top:10px">' + (verTodosHorarios ? 'Mostrar só as atrasadas' : 'Ver todos os horários (' + hs.com + ')') + '</button>';
+    $('bt-horas').addEventListener('click', function () { verTodosHorarios = !verTodosHorarios; desenharHoras(); });
   }
 
   // ── fontes de dados ─────────────────────────────────────────────────

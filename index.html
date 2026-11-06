@@ -17,7 +17,7 @@ var d=document.body||h;d.innerHTML='<div style="font-family:Barlow,system-ui,san
 <title>Mariuá - Sistema de Obras</title>
 <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.47.0/tabler-icons.min.css">
-<link rel="stylesheet" href="mariua-ui.css?v=3">
+<link rel="stylesheet" href="mariua-ui.css?v=5">
 </head>
 <body class="sm-collapsed">
 <script>try{if(localStorage.getItem("mariua_menu")==="aberto")document.body.classList.remove("sm-collapsed");}catch(e){}
@@ -87,7 +87,7 @@ try{if(localStorage.getItem("mariua_darkmode")==="1")document.body.classList.add
 
 <script src="identidade.js?v=3"></script>
 <script src="mariua-ui.js?v=2"></script>
-<script src="mariua-painel.js?v=2"></script>
+<script src="mariua-painel.js?v=4"></script>
 <script>
 /* Confere se os arquivos desta tela chegaram junto com esta página.
    Se faltar algum, mostra qual é em vez de abrir a tela quebrada. */
@@ -186,14 +186,21 @@ try{if(localStorage.getItem("mariua_darkmode")==="1")document.body.classList.add
       var totT = t ? t.ok + t.justif + t.falta : 0, dT = t ? util.br(util.dataDe(t.data)) : '';
       /* Sem dado de hoje: mostra o último disponível, com a data e o aviso em âmbar */
       h = (!t || !totT ? k('turno', '—', 'Nenhum turno no banco', true)
-        : t.hoje ? k('turno', t.ok + ' <small>de ' + totT + '</small>', t.falta ? t.falta + ' sem abrir' : 'Todas abriram')
+        : t.hoje ? k('turno', t.ok + ' <small>de ' + totT + '</small>', (t.falta ? t.falta + ' sem abrir' : 'Todas abriram') +
+            (t.horas ? ' · das ' + t.horas.primeiro + ' às ' + t.horas.ultimo : ''))
         : k('turno', t.ok + ' <small>de ' + totT + '</small>', 'Turno de ' + dT + ' · hoje ainda não importado', 'aviso'));
       h += (!d || !d.lancou ? k('rdo', '—', d && d.data ? 'Sem RDO desde ' + util.br(d.data) : 'Nenhum RDO no banco', true)
         : d.valido ? k('rdo', String(d.lancou), (d.nao ? d.nao + ' sem RDO' : 'Todas lançaram') + ' · ' + util.br(d.data))
         : k('rdo', String(d.lancou), 'RDO de ' + util.br(d.data) + ' · sem importar desde então', 'aviso'));
-      h += (!e || e.pct == null) ? k('prog', '—', 'Nenhuma programação no banco', true)
-        : e.recente ? k('prog', Math.round(e.pct * 100) + '%', UI.moeda(e.realizado, true) + ' de ' + UI.moeda(e.previsto, true) + ' · ' + util.br(e.data))
-        : k('prog', Math.round(e.pct * 100) + '%', 'Em ' + util.br(e.data) + ' · sem programação depois disso', 'aviso');
+      if (!e || !e.frentes) h += k('prog', '—', 'Nenhuma programação no banco', true);
+      else {
+        var pctE = e.pct != null ? e.pct : e.pctQtd;
+        var valE = pctE != null ? Math.round(pctE * 100) + '%' : e.frentes + ' <small>frentes</small>';
+        var extE = e.pct != null ? UI.moeda(e.realizado, true) + ' de ' + UI.moeda(e.previsto, true) + ' · ' + util.br(e.data)
+                 : e.pctQtd != null ? 'Pela quantidade, sem valor do fator K · ' + util.br(e.data)
+                 : 'Em ' + util.br(e.data) + ', sem quantidade prevista';
+        h += e.recente ? k('prog', valE, extE) : k('prog', valE, 'Em ' + util.br(e.data) + ' · sem programação depois disso', 'aviso');
+      }
       h += c ? k('cursos', String(c.vencidos), c.proximos ? c.proximos + ' vencem em ' + P.REGRAS.diasAvisoVencimento + ' dias' : 'Nenhum vencendo')
         : k('cursos', '—', 'Sem dados de cursos');
     }
@@ -298,7 +305,7 @@ try{if(localStorage.getItem("mariua_darkmode")==="1")document.body.classList.add
       if (eqs.length && UI.pode('turno.html')) {
         achou++;
         h += '<div class="lx-sec"><div class="lx-sec-tit">Equipes de hoje</div><div class="lx-grid">' + eqs.map(function (e) {
-          return cartao('turno.html', 'users', e.codigo, [e.enc ? util.nomeProprio(e.enc) : '', SIT[e.turno] || ''].filter(Boolean).join(' · '), '', ['#0d7377', '#eef6f5']);
+          return cartao('turno.html', 'users', e.codigo, [e.enc ? util.nomeProprio(e.enc) : '', (SIT[e.turno] || '') + (e.hora ? ' às ' + e.hora : '')].filter(Boolean).join(' · '), '', ['#0d7377', '#eef6f5']);
         }).join('') + '</div></div>';
       }
     }

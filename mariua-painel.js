@@ -276,6 +276,17 @@
       });
     }
     var ativos = turnoOk.concat(turnoJust, turnoFalta);
+    // horário de abertura (value.horarios, gravado pelo turno.html a partir da coluna "Data início")
+    var horaPorChave = {};
+    if (T && T.horarios && typeof T.horarios === 'object') {
+      Object.keys(T.horarios).forEach(function (k) {
+        var m = String(T.horarios[k] || '').match(/^(\d{1,2}):(\d{2})/);
+        if (!m) return;
+        var h = p2(m[1]) + ':' + m[2], sq = squash(k);
+        if (!horaPorChave[sq] || h < horaPorChave[sq]) horaPorChave[sq] = h;
+      });
+    }
+    turnoOk.forEach(function (e) { e.hora = horaPorChave[e.chave] || ''; });
 
     // RDO
     var rData = R ? dataDe(R.date) : null;
@@ -320,7 +331,7 @@
         r: r, d: d, enc: r.encarregado || '', encN: norm(r.encarregado),
         pep: norm(r.pep).replace(/\s/g, ''), obra: r.nome_obra || '', atv: r.atividade || '',
         prev: +r.valor_previsto || 0, real: +r.valor_realizado || 0,
-        qReal: +r.qtd_realizado || 0, st: norm(r.status), sup: r.supervisor || ''
+        qPrev: +r.qtd_previsto || 0, qReal: +r.qtd_realizado || 0, st: norm(r.status), sup: r.supervisor || ''
       };
       x.eq = ligar(x.encN);
       if (x.eq && !x.eq.sup && x.sup) x.eq.sup = x.sup;
@@ -379,6 +390,13 @@
               alvo: e.codigo, base: e.base, resp: e.sup, desde: depoisLimite ? limiteTxt : 'hoje',
               acao: { texto: 'Abrir no Turno', href: 'turno.html' }, peso: ph.length ? 0 : 1 });
       });
+      turnoOk.forEach(function (e) {
+        if (!e.hora || parseInt(e.hora, 10) < REGRAS.horaLimiteTurno) return;
+        add({ cat: 'turno', nivel: 'atencao', grupo: 'turno-atrasado', titulo: 'Abriu turno às ' + e.hora,
+              detalhe: 'Depois do limite das ' + limiteTxt + (e.enc ? '. Encarregado ' + nomeProprio(e.enc) : '') + '.',
+              alvo: e.codigo, base: e.base, resp: e.sup, desde: e.hora,
+              acao: { texto: 'Abrir no Turno', href: 'turno.html' }, peso: -parseInt(e.hora.replace(':', ''), 10) });
+      });
       turnoJust.forEach(function (e) {
         if (String(e.obs || '').trim()) return;
         add({ cat: 'turno', nivel: 'atencao', grupo: 'turno-justif-sem-motivo', titulo: 'Falta justificada sem motivo',
@@ -416,13 +434,15 @@
         var k = x.eq ? 'E' + x.eq.chave : 'N' + x.encN;
         (grupos[k] = grupos[k] || []).push(x);
       });
-      var prevF = 0, realF = 0;
+      var prevF = 0, realF = 0, qPrevF = 0, qRealF = 0, frentesF = 0;
       Object.keys(grupos).forEach(function (k) {
         var g = grupos[k], x0 = g[0], e = x0.eq;
         var base = e ? e.base : null, sup = (e && e.sup) || x0.sup;
         if (!passa(base, sup)) return;
-        var prev = soma(g, 'prev'), real = soma(g, 'real');
-        prevF += prev; realF += real;
+        var prev = soma(g, 'prev'), real = soma(g, 'real'), qPrev = soma(g, 'qPrev'), qReal = soma(g, 'qReal');
+        prevF += prev; realF += real; qPrevF += qPrev; qRealF += qReal; frentesF += g.length;
+        // sem valor do fator K nos registros: mede pela quantidade prevista e realizada
+        var taxa = prev > 0 ? real / prev : (qPrev > 0 ? qReal / qPrev : null);
         var semRes = g.filter(function (x) { return !x.st && x.qReal === 0; }).length;
         var alvo = e ? e.codigo : nomeProprio(x0.enc);
         if (!Drecente) return;
@@ -430,18 +450,21 @@
           add({ cat: 'prog', nivel: 'aviso', grupo: 'prog-sem-resultado', titulo: 'Resultado de ' + br(D) + ' não lançado',
                 detalhe: plural(g.length, '1 frente sem quantidade realizada', '# frentes sem quantidade realizada') + '.',
                 alvo: alvo, base: base, resp: sup, desde: br(D), acao: { texto: 'Lançar resultado', href: 'prog.html' } });
-        } else if (prev > 0 && real / prev < REGRAS.execucaoMinima) {
+        } else if (taxa != null && taxa < REGRAS.execucaoMinima) {
           var mot = {};
           g.forEach(function (x) { if (/CHUVA|SEM ACESSO|NAO EXECUTADO/.test(x.st)) mot[x.st] = (mot[x.st] || 0) + 1; });
           var ROT = { 'CHUVA': 'Chuva', 'SEM ACESSO': 'Sem acesso', 'NAO EXECUTADO': 'Não executado' };
           var motTxt = Object.keys(mot).map(function (m) { return (ROT[m] || m) + ' em ' + plural(mot[m], '1 frente', '# frentes'); }).join(', ');
           add({ cat: 'prog', nivel: 'atencao', grupo: 'prog-baixa',
                 titulo: 'Execução abaixo de ' + Math.round(REGRAS.execucaoMinima * 100) + '% em ' + br(D),
-                detalhe: 'Previsto ' + moeda(prev) + ', realizado ' + moeda(real) + ' (' + Math.round(real / prev * 100) + '%)' + (motTxt ? '. ' + motTxt : '') + '.',
+                detalhe: (prev > 0 ? 'Previsto ' + moeda(prev) + ', realizado ' + moeda(real)
+                                   : 'Previstas ' + qPrev + ' unidades, realizadas ' + qReal) +
+                         ' (' + Math.round(taxa * 100) + '%)' + (motTxt ? '. ' + motTxt : '') + '.',
                 alvo: alvo, base: base, resp: sup, desde: br(D), acao: { texto: 'Ver programação', href: 'prog.html' } });
         }
       });
-      execResumo = { data: D, recente: Drecente, previsto: prevF, realizado: realF, pct: prevF > 0 ? realF / prevF : null };
+      execResumo = { data: D, recente: Drecente, previsto: prevF, realizado: realF, frentes: frentesF,
+                     pct: prevF > 0 ? realF / prevF : null, pctQtd: qPrevF > 0 ? qRealF / qPrevF : null };
     }
     regsHoje.forEach(function (x) {
       if (x.st !== 'CHUVA' && x.st !== 'SEM ACESSO') return;
@@ -619,6 +642,18 @@
       linha.total = linha.ok + linha.justif + linha.falta;
       if (linha.total) porBase.push(linha);
     });
+    var okF = f(turnoOk), comHora = okF.filter(function (e) { return e.hora; }).sort(function (a, b) { return a.hora < b.hora ? -1 : a.hora > b.hora ? 1 : 0; });
+    var horas = null;
+    if (comHora.length) {
+      var hMin = parseInt(comHora[0].hora, 10), hMax = parseInt(comHora[comHora.length - 1].hora, 10), faixas = [];
+      for (var hh = hMin; hh <= hMax; hh++) {
+        faixas.push({ hora: hh, n: comHora.filter(function (e) { return parseInt(e.hora, 10) === hh; }).length, depois: hh >= REGRAS.horaLimiteTurno });
+      }
+      horas = { com: comHora.length, sem: okF.length - comHora.length, primeiro: comHora[0].hora, ultimo: comHora[comHora.length - 1].hora,
+                depois: comHora.filter(function (e) { return parseInt(e.hora, 10) >= REGRAS.horaLimiteTurno; }).length, faixas: faixas,
+                lista: comHora.map(function (e) { return { codigo: e.codigo, enc: e.enc ? nomeProprio(e.enc) : '', base: e.base, hora: e.hora,
+                                                            depois: parseInt(e.hora, 10) >= REGRAS.horaLimiteTurno }; }) };
+    }
     var regsHojeF = regsHoje.filter(function (x) { return passa(x.eq ? x.eq.base : null, (x.eq && x.eq.sup) || x.sup); });
     var supervisores = {};
     Object.keys(eq).forEach(function (k) { if (eq[k].sup) supervisores[nomeProprio(eq[k].sup)] = 1; });
@@ -633,7 +668,7 @@
       itens: itens,
       resumo: {
         turno: T ? { data: T.date || '', hoje: turnoHoje, ok: f(turnoOk).length, justif: f(turnoJust).length,
-                     falta: f(turnoFalta).length, depoisLimite: depoisLimite } : null,
+                     falta: f(turnoFalta).length, depoisLimite: depoisLimite, horas: horas } : null,
         rdo: rdoResumo,
         progHoje: { frentes: regsHojeF.length, previsto: soma(regsHojeF, 'prev'), semLigacao: semLigacao },
         execucao: execResumo,
@@ -662,6 +697,7 @@
   // ─── agrupamento para o Início e para o resumo de WhatsApp ───────────────
   var MODELOS = {
     'turno-nao-abriu':        ['# equipes não abriram turno', 'turno.html', 'Ver no Turno'],
+    'turno-atrasado':         ['# equipes abriram turno depois das ' + p2(REGRAS.horaLimiteTurno) + 'h', 'turno.html', 'Ver no Turno'],
     'turno-justif-sem-motivo':['# faltas justificadas sem motivo', 'turno.html', 'Ver no Turno'],
     'turno-sem-prog':         ['# equipes abriram turno sem programação', 'prog.html', 'Programar'],
     'prog-baixa':             ['# equipes abaixo da meta de execução', 'prog.html', 'Ver programação'],
@@ -712,12 +748,14 @@
     var r = a.resumo, linhas = ['*Painel do dia, ' + br(zerar(a.agora)) + '*' + (rotulo ? ' (' + rotulo + ')' : '')];
     if (r.turno) {
       linhas.push(r.turno.hoje
-        ? 'Turno: ' + r.turno.ok + ' de ' + (r.turno.ok + r.turno.justif + r.turno.falta) + ' abriram, ' + r.turno.falta + ' sem abrir, ' + r.turno.justif + ' justificadas'
+        ? 'Turno: ' + r.turno.ok + ' de ' + (r.turno.ok + r.turno.justif + r.turno.falta) + ' abriram, ' + r.turno.falta + ' sem abrir, ' + r.turno.justif + ' justificadas' +
+          (r.turno.horas ? ' (aberturas das ' + r.turno.horas.primeiro + ' às ' + r.turno.horas.ultimo + (r.turno.horas.depois ? ', ' + r.turno.horas.depois + ' depois das ' + p2(REGRAS.horaLimiteTurno) + 'h' : '') + ')' : '')
         : 'Turno: ainda não importado hoje');
     }
     if (r.rdo && r.rdo.valido) linhas.push('RDO de ' + br(r.rdo.data) + ': ' + r.rdo.lancou + ' lançados, ' + r.rdo.nao + ' faltando');
     if (r.progHoje.frentes) linhas.push('Programação de hoje: ' + r.progHoje.frentes + ' frentes, ' + moeda(r.progHoje.previsto) + ' previstos');
-    if (r.execucao && r.execucao.pct != null) linhas.push('Execução de ' + br(r.execucao.data) + ': ' + Math.round(r.execucao.pct * 100) + '% do previsto');
+    var pe = r.execucao && (r.execucao.pct != null ? r.execucao.pct : r.execucao.pctQtd);
+    if (pe != null) linhas.push('Execução de ' + br(r.execucao.data) + ': ' + Math.round(pe * 100) + '% do previsto');
     var g = agrupar(a.itens);
     linhas.push('');
     if (!g.length) linhas.push('Nada fora do previsto.');

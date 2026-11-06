@@ -222,7 +222,7 @@ a.m-stat:hover{box-shadow:0 8px 22px rgba(0,0,0,.09);transform:translateY(-1px)}
 .m-toast.on{opacity:1;transform:translate(-50%,0)}
 
 /* ─── Início: mesmo layout do Início antigo (saudação, indicadores, cartões) ─── */
-.lx{max-width:1180px;margin:0 auto;padding:26px 26px 60px}
+.lx{padding:20px 20px 50px}   /* largura toda, como as outras telas */
 .lx-head{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:6px}
 .lx-hello{font-size:1.5rem;font-weight:800;color:#1f2a35;letter-spacing:-.3px;line-height:1.1}
 .lx-sub{font-size:.9rem;color:#64748b;margin-top:4px;font-weight:600}
@@ -265,7 +265,7 @@ a.kpi:hover{box-shadow:0 8px 22px rgba(0,0,0,.08);transform:translateY(-2px);bor
 .m-stat-aviso{font-size:0.74rem}
 .lx .m-cartao{margin-top:4px}
 @media(max-width:560px){
-  .lx{padding:18px 14px 50px} .lx-grid{grid-template-columns:1fr} .lx-hello{font-size:1.25rem}
+  .lx{padding:16px 12px 50px} .lx-grid{grid-template-columns:1fr} .lx-hello{font-size:1.25rem}
   .kpi-grid{grid-template-columns:1fr 1fr;gap:8px} .kpi{padding:14px} .kpi-num{font-size:1.4rem} .kpi-ic{display:none} .lx-find{height:42px}
 }
 
