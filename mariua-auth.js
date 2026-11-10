@@ -58,6 +58,8 @@
     { id:'comp',       nome:'Comparador de postes',   arquivos:['comp.html'] },
     { id:'estagios',   nome:'Estágios de obras',      arquivos:['estagios.html'] },
     { id:'ocorrencias',nome:'Ocorrências por equipe', arquivos:['ocorrencias.html'] },
+    { id:'producao',   nome:'Produção de obras',      arquivos:['producao.html'] },
+    { id:'faturamento',nome:'Faturamento das turmas', arquivos:['faturamento.html'] },
     { id:'projecao',   nome:'Projeção / PDA',         arquivos:['projeçao.html','projecao.html'] },
     { id:'neoex',      nome:'NEOEX · apontamento',    arquivos:['neoex.html'] },
     { id:'obra',       nome:'Cadastro de obra',       arquivos:['cadastro_obra.html'] },

@@ -1178,7 +1178,8 @@ var OC_COLS={
   s:['COD_SERV','SERVICO','COD SERV'], d:['DATA_SERVICO','DATA SERVICO'], eq:['DES_EQUIPE','EQUIPE'], ce:['COD_EQUIPE'], resp:['RESPONSAVEL'],
   sup:['SUPERVISOR'], ot:['SS/OT','SS / OT','OT'], ret:['RETORNO_CAMPO','RETORNO DE CAMPO'], cs:['CENTRO_SERVICO','CENTRO SERVICO'],
   loc:['LOCALIDADE'], end:['ENDERECO','ENDERECOS'], grp:['DES_GRUPO','GRUPO'], ts:['TIPO_SERVICO','TIPO DE SERVICO'], cod:['COD_ATIVIDADE'], ativ:['DES_ATIVIDADE','ATIVIDADE'],
-  un:['UNIDADE_MEDIDA'], q:['QTD_ATIVIDADE','QUANTIDADE'], vu:['VALOR_UNITARIO'], vt:['VALOR_TOTAL'], sit:['SITUACAO']
+  un:['UNIDADE_MEDIDA'], q:['QTD_ATIVIDADE','QUANTIDADE'], vu:['VALOR_UNITARIO'], vt:['VALOR_TOTAL'], sit:['SITUACAO'],
+  pep:['COD_PEP_OBRA','PEP','COD_PEP'], obra:['NOME_OBRA','OBRA']   // obra: usada pela tela Obras › Produção
 };
 function ocParseCSV(text){
   text=String(text||'').replace(/^\uFEFF/,'');
@@ -1247,7 +1248,7 @@ async function ocImportar(file){
     var sv=servs[s];
     if(!sv){
       sv=servs[s]={s:s, d:d, eq:g(l,'eq').toUpperCase(), ce:g(l,'ce'), resp:g(l,'resp'), sup:g(l,'sup'), ot:g(l,'ot'), ret:g(l,'ret'),
-        cs:g(l,'cs'), loc:g(l,'loc'), end:g(l,'end'), grp:g(l,'grp'), ts:g(l,'ts'), at:[]};
+        cs:g(l,'cs'), loc:g(l,'loc'), end:g(l,'end'), grp:g(l,'grp'), ts:g(l,'ts'), pep:g(l,'pep'), obra:g(l,'obra'), at:[]};
       ordem.push(s);
     }
     var q=ocNumBR(g(l,'q')), vu=ocNumBR(g(l,'vu')), vt=idx.vt>=0?ocNumBR(g(l,'vt')):ocR2(q*vu);

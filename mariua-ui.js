@@ -68,6 +68,8 @@
     'comp.html':              ['Comparador de postes', 'Mudanças nos postes da Coelba', 'comparador poste coelba cava'],
     'estagios.html':          ['Estágios de obras', 'Obras por etapa e pendência', 'estagio etapa andamento pendencia material poda'],
     'ocorrencias.html':       ['Ocorrências', 'Apontado e faturado por equipe', 'ocorrencia gpm faturado apontado manutencao'],
+    'producao.html':          ['Produção de obras', 'Cavas, postes e cabos por equipe', 'producao ranking cava poste cabo lancamento equipe'],
+    'faturamento.html':       ['Faturamento das turmas', 'Valor da produção por turma e meta', 'faturamento faturado valor turma equipe meta receita'],
     'neoex.html':             ['NEOEX', 'Apontamento do GPM e planilha', 'neoex apontamento gpm planilha material'],
     'cadastro_obra.html':     ['Cadastro de obra', 'Incluir obra na carteira', 'cadastro obra nova pep carteira'],
     'valores.html':           ['Financeiro', 'Lançamentos e fornecedores', 'financeiro valor custo fornecedor lancamento'],
