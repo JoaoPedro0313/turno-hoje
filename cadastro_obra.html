@@ -1,0 +1,1872 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<!-- TRAVA DE ACESSO — não remova. Esconde a página ANTES de qualquer script e só
+     libera se o mariua-auth.js tiver realmente carregado. Procura na pasta da
+     página e, se não achar, um e dois níveis acima (telas dentro de /obras).
+     Não confia só no onerror: alguns servidores devolvem 200 com uma página de
+     erro em vez de 404, e nesse caso o script "carrega" sem valer nada. Por
+     isso, depois de cada tentativa, confere se a guarda realmente subiu. -->
+<script>(function(){var h=document.documentElement;h.className+=' mariua-check';
+var s=document.createElement('style');s.id='mariua-lock';
+s.textContent='html.mariua-check body>*{visibility:hidden!important}#mariua-ovl,#mariua-ovl *{visibility:visible!important}';
+(document.head||h).appendChild(s);
+var V='v=4',caminhos=['mariua-auth.js?'+V,'../mariua-auth.js?'+V,'../../mariua-auth.js?'+V],tentados=[];
+(function carrega(i){if(i>=caminhos.length)return;
+var t=document.createElement('script');t.src=caminhos[i];tentados.push(caminhos[i]);
+t.onload=t.onerror=function(){if(!window.__MARIUA_AUTH__)carrega(i+1);};
+(document.head||h).appendChild(t);})(0);
+setTimeout(function(){if(window.__MARIUA_AUTH__)return;
+h.className=h.className.replace(/\bmariua-check\b/,'');
+var base=location.href.replace(/[^\/]*$/,'');
+var d=document.body||h;d.innerHTML='<div style="font-family:Barlow,system-ui,sans-serif;max-width:520px;margin:12vh auto;padding:26px;border:2px solid #fed7d7;border-radius:14px;background:#fff5f5;color:#742a2a"><div style="font-size:1.05rem;font-weight:900;margin-bottom:8px;text-align:center">Login não carregou</div><div style="font-size:.85rem;font-weight:600;line-height:1.55">O arquivo <b>mariua-auth.js</b> não respondeu em nenhum destes endereços:</div><div style="font-family:monospace;font-size:.74rem;background:#fff;border:1px solid #fed7d7;border-radius:8px;padding:10px 12px;margin:10px 0;word-break:break-all">'+tentados.map(function(c){return base+c;}).join('<br>')+'</div><div style="font-size:.8rem;font-weight:600;line-height:1.5">Confira se o arquivo está na raiz do site e recarregue com <b>Ctrl+Shift+R</b>.</div><button onclick="location.reload()" style="margin-top:16px;width:100%;padding:10px 22px;border:none;border-radius:9px;background:#c53030;color:#fff;font-family:Barlow,sans-serif;font-weight:800;cursor:pointer">Recarregar</button></div>';},9000);})();</script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NEOEX — Apontamento × Planilha</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Barlow',sans-serif;background:#f0f4f5;min-height:100vh;padding-bottom:60px;padding-top:66px;padding-left:232px;transition:padding-left .22s ease}
+.top-bar{background:linear-gradient(90deg,#0a4a4d 0%,#0d7377 40%,#0f8a82 70%,#0d7377 100%);position:fixed;top:0;left:0;right:0;transition:left .22s ease;z-index:91;height:52px;border-bottom:3px solid #ff6b35;box-shadow:0 2px 16px rgba(0,0,0,0.25)}
+.top-bar-inner{display:flex;align-items:center;justify-content:space-between;height:100%;padding:0 18px;gap:12px}
+.top-bar-left{display:flex;align-items:center;gap:12px;flex-shrink:0}
+.top-bar-logo{height:34px;object-fit:contain;}
+.top-bar-title{font-size:0.68rem;font-weight:800;color:rgba(255,255,255,0.7);letter-spacing:2px;text-transform:uppercase}
+.top-bar-center{flex:1;display:flex;justify-content:center}
+.top-bar-clock{font-size:0.78rem;font-weight:700;color:rgba(255,255,255,0.6);letter-spacing:1px;font-variant-numeric:tabular-nums}
+.top-bar-right{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.back-link{display:inline-flex;align-items:center;gap:6px;font-size:0.72rem;font-weight:800;color:#fff;background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);padding:6px 12px;border-radius:8px;text-decoration:none;letter-spacing:0.5px}
+.back-link:hover{background:rgba(255,255,255,0.25)}
+.wrap{max-width:none;margin:0;padding:16px 22px}
+.sm-side{position:fixed;top:52px;left:0;bottom:0;width:232px;z-index:110;background:#fff;border-right:1px solid #e6ebee;box-shadow:2px 0 12px rgba(0,0,0,.04);display:flex;flex-direction:column;transition:width .22s ease;font-family:'Barlow',sans-serif}
+.sm-top{display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid #eef2f4;overflow:hidden}
+.sm-logo{width:34px;height:34px;flex-shrink:0;object-fit:contain;display:block}
+.sm-logo-tx{font-weight:800;color:#0d7377;letter-spacing:1px;font-size:1rem;white-space:nowrap;line-height:1.05}
+.sm-logo-tx small{display:block;font-size:.5rem;letter-spacing:2px;color:#9aa6ab;font-weight:700}
+.sm-toggle{display:flex;justify-content:center;padding:7px 0;border-bottom:1px solid #eef2f4}
+.sm-toggle button{background:#f3f6f7;border:1px solid #e6ebee;color:#0d7377;width:38px;height:30px;border-radius:8px;cursor:pointer;font-size:.95rem;display:flex;align-items:center;justify-content:center}
+.sm-toggle button:hover{background:#e7f0f0}
+.sm-nav{flex:1;overflow-y:auto;overflow-x:hidden;padding:8px;display:flex;flex-direction:column;gap:3px}
+.sm-item{display:flex;align-items:center;gap:12px;padding:9px 11px;border-radius:10px;text-decoration:none;color:#54616a;transition:background .14s,color .14s;white-space:nowrap;cursor:pointer}
+.sm-item:hover{background:#eef4f4;color:#0d7377}
+.sm-ic{width:32px;height:32px;border-radius:9px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:1rem;background:#f1f5f6}
+.sm-tx{font-size:.84rem;font-weight:700}
+.sm-item.active{background:linear-gradient(135deg,#0d7377,#14a085);color:#fff;box-shadow:0 4px 12px rgba(13,115,119,.28)}
+.sm-item.active .sm-ic{background:rgba(255,255,255,.22)}
+.sm-foot{padding:9px 14px;border-top:1px solid #eef2f4;font-size:.6rem;color:#aab4b8;font-weight:700;white-space:nowrap;overflow:hidden}.sm-group{display:flex;flex-direction:column}
+.sm-group-head{display:flex;align-items:center;gap:12px;padding:9px 11px;border-radius:10px;cursor:pointer;color:#54616a;transition:background .14s,color .14s;white-space:nowrap;user-select:none}
+.sm-group-head:hover{background:#eef4f4;color:#0d7377}
+.sm-group-head .sm-tx{flex:1}
+.sm-arrow{font-size:.7rem;color:#b8c2c6;transition:transform .18s;margin-left:auto}
+.sm-group.open .sm-arrow{transform:rotate(90deg)}
+.sm-group-items{display:none;flex-direction:column;gap:2px;padding:2px 0 4px 12px;margin-left:9px;border-left:1.5px solid #eef2f4}
+.sm-group.open .sm-group-items{display:flex}
+.sm-sub{padding:7px 11px}
+.sm-sub .sm-ic{font-size:.95rem}
+body.sm-collapsed .sm-arrow{display:none}
+body.sm-collapsed .sm-group-items{display:flex!important;padding:0;margin:0;border:none}
+  /* ao abrir no hover, volta ao comportamento normal: so o grupo aberto mostra os itens */
+  body.sm-collapsed .sm-side:hover .sm-group-items{display:none!important;flex-direction:column;gap:2px;padding:2px 0 4px 12px;margin-left:9px;border-left:1.5px solid #eef2f4}
+  body.sm-collapsed .sm-side:hover .sm-group.open .sm-group-items{display:flex!important}
+body.sm-collapsed .sm-group-head{justify-content:center;padding:9px 0}
+@media(max-width:780px){ body:not(.sm-expanded) .sm-arrow{display:none} body:not(.sm-expanded) .sm-group-items{display:flex!important;padding:0;margin:0;border:none} body:not(.sm-expanded) .sm-group-head{justify-content:center;padding:9px 0} }
+.SMGROUPCSS{}
+body.sm-collapsed{padding-left:64px;}
+body.sm-collapsed .sm-side{width:64px}
+body.sm-collapsed .sm-logo-tx,body.sm-collapsed .sm-tx,body.sm-collapsed .sm-foot{display:none}
+body.sm-collapsed .sm-top{justify-content:center;padding:12px 0}
+body.sm-collapsed .sm-item{justify-content:center;padding:9px 0}
+.bottom-bar{left:232px !important;}
+body.sm-collapsed .bottom-bar{left:64px !important;}
+@media (max-width:780px){
+  body{padding-left:64px !important;}
+  .sm-side{width:64px}
+  .sm-logo-tx,.sm-tx,.sm-foot{display:none}
+  .sm-top{justify-content:center;padding:12px 0}
+  .sm-item{justify-content:center;padding:9px 0}
+  body.sm-expanded .sm-side{width:228px;box-shadow:6px 0 24px rgba(0,0,0,.18)}
+  body.sm-expanded .sm-logo-tx,body.sm-expanded .sm-tx,body.sm-expanded .sm-foot{display:block}
+  body.sm-expanded .sm-tx{display:inline}
+  body.sm-expanded .sm-top{justify-content:flex-start;padding:12px 14px}
+  body.sm-expanded .sm-item{justify-content:flex-start;padding:9px 11px}
+  .bottom-bar,body.sm-collapsed .bottom-bar{left:64px !important;}
+}
+
+</style>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.47.0/tabler-icons.min.css">
+  <style>.sm-ic .ti{font-size:19px;line-height:1}</style>
+<style>
+/* barra lateral: abre ao passar o mouse (hover), sobrepondo o conteudo */
+body.sm-collapsed .sm-side{overflow:hidden}
+body.sm-collapsed .sm-side:hover{width:232px;box-shadow:6px 0 24px rgba(0,0,0,.18);z-index:120}
+body.sm-collapsed .sm-side:hover .sm-logo-tx,
+body.sm-collapsed .sm-side:hover .sm-foot{display:block}
+body.sm-collapsed .sm-side:hover .sm-tx{display:inline;flex:1}
+body.sm-collapsed .sm-side:hover .sm-arrow{display:block}
+body.sm-collapsed .sm-side:hover .sm-top{justify-content:flex-start;padding:12px 14px}
+body.sm-collapsed .sm-side:hover .sm-item{justify-content:flex-start;padding:9px 11px}
+body.sm-collapsed .sm-side:hover .sm-group-head{justify-content:flex-start;padding:9px 11px}
+</style>
+<style>
+/* ══ CADASTRO DE OBRA — layout ═══════════════════════════════════════════ */
+.co-wrap{max-width:1180px;margin:0 auto;padding:22px 24px 70px}
+
+/* cabeçalho + trilha dos passos */
+.co-head{display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap;margin-bottom:20px}
+.co-head h1{margin:0;font-size:1.5rem;font-weight:900;color:#12343b;letter-spacing:-.4px}
+.co-head p{margin:4px 0 0;font-size:.85rem;color:#7c8b95;font-weight:600}
+.co-passos{display:flex;align-items:center;gap:6px}
+.co-passo{display:flex;align-items:center;gap:8px;background:#fff;border:1px solid #e6ebee;
+  border-radius:24px;padding:7px 15px 7px 8px;transition:all .18s}
+.co-passo .n{width:24px;height:24px;border-radius:50%;background:#eef2f4;color:#9aa7b1;
+  display:flex;align-items:center;justify-content:center;font-size:.76rem;font-weight:900;flex-shrink:0}
+.co-passo .t{font-size:.78rem;font-weight:800;color:#9aa7b1;white-space:nowrap}
+.co-passo.ativo{border-color:#0d7377;box-shadow:0 3px 12px rgba(13,115,119,.12)}
+.co-passo.ativo .n{background:#0d7377;color:#fff}
+.co-passo.ativo .t{color:#0d7377}
+.co-passo.feito .n{background:#38a169;color:#fff}
+.co-passo.feito .t{color:#2f6f4f}
+@media(max-width:760px){ .co-passos{width:100%} .co-passo .t{display:none} .co-passo{padding:7px} }
+
+/* cartões */
+.co-card{background:#fff;border:1px solid #e6ebee;border-radius:15px;margin-bottom:16px;overflow:hidden}
+.co-card-h{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;flex-wrap:wrap;
+  padding:15px 18px;background:#fbfcfd;border-bottom:1px solid #eef2f4}
+.co-card-t{display:flex;align-items:flex-start;gap:12px;min-width:0;flex:1 1 260px}
+.co-card-h>.co-bt,.co-card-h>.co-acoes{margin-left:auto;flex:0 0 auto}
+.co-num{width:28px;height:28px;border-radius:9px;background:#0d7377;color:#fff;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;font-size:.86rem;font-weight:900}
+.co-card-t b{display:block;font-size:.95rem;font-weight:900;color:#12343b}
+.co-card-t small{display:block;font-size:.74rem;color:#8b99a4;font-weight:600;margin-top:2px}
+.co-card-b{padding:18px}
+.co-ver{background:#f0fafa;color:#0d7377;border:1px solid #c7e7e6;border-radius:6px;
+  padding:2px 7px;font-size:.62rem;font-weight:800;margin-left:6px;vertical-align:2px}
+.co-cnt{color:#8b99a4;font-weight:700;font-size:.82rem}
+
+/* botões */
+.co-bt{border:1.5px solid transparent;border-radius:9px;padding:8px 14px;cursor:pointer;
+  font-family:'Barlow',sans-serif;font-size:.78rem;font-weight:800;white-space:nowrap;transition:all .15s}
+.co-bt.ghost{background:#fff;border-color:#dbe3e8;color:#0d7377}
+.co-bt.ghost:hover{border-color:#0d7377;background:#f0fafa}
+.co-bt.teal{background:#0d7377;color:#fff}
+.co-bt.teal:hover{background:#0b5e62}
+.co-bt.danger{background:#fff;border-color:#f3d2d2;color:#c53030}
+.co-bt.danger:hover{background:#c53030;color:#fff;border-color:#c53030}
+.co-bt.baixar{background:linear-gradient(135deg,#f05a1a,#ff7a3d);color:#fff;padding:10px 20px;
+  font-size:.84rem;box-shadow:0 6px 16px rgba(240,90,26,.26)}
+.co-bt.baixar:hover{filter:brightness(1.05)}
+.co-bt.baixar:disabled{background:#e6ebee;color:#a9b4bf;box-shadow:none;cursor:not-allowed;filter:none}
+.co-acoes{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.co-copiar{display:inline-flex;align-items:center;gap:6px;padding-left:7px;border-left:1px solid #e0e7eb}
+.co-copiar select{padding:8px 10px;border:1.5px solid #dbe3e8;border-radius:9px;background:#fff;
+  font-family:'Barlow',sans-serif;font-size:.76rem;font-weight:700;color:#64748b;cursor:pointer;max-width:170px}
+
+/* campos e chips */
+.co-campo{margin-bottom:16px}
+.co-campo:last-child{margin-bottom:0}
+.co-campo-inline{display:flex;align-items:center;gap:10px;margin-bottom:0;flex-wrap:wrap}
+.co-lbl{display:block;font-size:.66rem;font-weight:800;color:#9aa7b1;letter-spacing:1.3px;
+  text-transform:uppercase;margin-bottom:7px}
+.co-campo-inline .co-lbl{margin-bottom:0}
+.co-chips{display:flex;flex-wrap:wrap;gap:7px}
+
+/* painel de configuração */
+.co-config{margin-top:4px;padding:16px;background:#f8fafb;border:1px dashed #d8e2e6;border-radius:12px}
+.co-form{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:4px 16px;align-items:end}
+.co-f{min-width:0}
+.co-f-full{grid-column:1/-1}
+.co-f label{display:block;font-size:.72rem;font-weight:800;color:#64748b;margin-bottom:5px}
+.co-f label em{color:#9aa7b1;font-weight:600;font-style:normal}
+.co-f input{width:100%;box-sizing:border-box;padding:9px 12px;border:1.5px solid #dbe3e8;border-radius:9px;
+  font-family:'Barlow',sans-serif;font-size:.84rem;font-weight:700;color:#12343b;outline:none;margin:0}
+.co-f input:focus{border-color:#0d7377;box-shadow:0 0 0 3px rgba(13,115,119,.12)}
+.co-f-bt{display:flex;align-items:flex-end}
+.co-dica{margin:12px 0 0;font-size:.72rem;color:#8b99a4;font-weight:600;line-height:1.5}
+.co-dica code{background:#eef2f4;border-radius:4px;padding:1px 5px;font-size:.92em}
+
+/* opções do passo 2 */
+.co-opcoes{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;
+  padding-bottom:14px;border-bottom:1px solid #eef2f4;margin-bottom:16px}
+.co-checks{display:flex;gap:16px;flex-wrap:wrap}
+.co-check{display:inline-flex;align-items:center;gap:7px;font-size:.76rem;font-weight:700;color:#64748b;cursor:pointer}
+.co-check input{width:16px;height:16px;accent-color:#0d7377;cursor:pointer;margin:0}
+
+/* nota explicativa recolhível */
+.co-nota{margin-top:16px;padding-top:14px;border-top:1px solid #eef2f4;font-size:.75rem;color:#8b99a4}
+.co-nota summary{cursor:pointer;font-weight:800;color:#0d7377;font-size:.76rem}
+.co-nota p{margin:8px 0 0;line-height:1.55;font-weight:600}
+
+/* status */
+.co-status{margin-top:16px;font-size:.78rem;font-weight:700;color:#8b99a4;line-height:1.5}
+.co-status:empty{margin:0}
+
+/* prévia */
+.co-preview{overflow:auto;max-height:440px;border:1px solid #eef2f4;border-radius:11px;
+  font-size:.74rem;color:#8b99a4}
+.co-preview:not(:has(table)){padding:34px;text-align:center;font-weight:700}
+.co-preview table{margin:0!important}
+.co-preview thead tr{position:sticky;top:0;z-index:2}
+.co-preview th{font-size:.64rem!important;letter-spacing:.8px;text-transform:uppercase;
+  border-bottom:1.5px solid #c7e7e6}
+.co-preview tbody tr:nth-child(even){background:#fcfdfd}
+.co-preview tbody tr:hover{background:#f0fafa}
+
+@media(max-width:620px){
+  .co-wrap{padding:16px 13px 56px}
+  .co-head h1{font-size:1.22rem}
+  .co-card-b{padding:14px}
+  .co-card-h{padding:13px 14px}
+  .co-acoes{width:100%}
+  .co-acoes .co-bt,.co-copiar{flex:1}
+  .co-copiar{padding-left:0;border-left:none}
+  .co-bt.baixar{width:100%}
+}
+</style>
+<style>
+/* ══ LARGURA TOTAL ═══════════════════════════════════════════════════════
+   A tela deixou de ter coluna centrada de 1180px: os cartões usam toda a
+   largura disponível, e os campos de constantes e a prévia se espalham. */
+.co-wrap{max-width:none;margin:0;padding:18px 26px 40px}
+@media(min-width:2200px){ .co-wrap{max-width:2100px;margin:0 auto} }
+
+/* passo 1: base e mês na mesma linha */
+.co-topo{display:grid;grid-template-columns:auto minmax(0,1fr);gap:16px 28px;align-items:start}
+.co-topo .co-campo{margin-bottom:0}
+.co-campo-cresce{min-width:0}
+.co-topo .co-campo:first-child{padding-right:26px;border-right:1px solid #eef2f4}
+@media(max-width:900px){
+  .co-topo{grid-template-columns:1fr;gap:14px}
+  .co-topo .co-campo:first-child{padding-right:0;border-right:none;
+    padding-bottom:14px;border-bottom:1px solid #eef2f4}
+}
+
+/* configuração e status ocupam a linha inteira */
+.co-config{margin-top:16px}
+.co-form{grid-template-columns:minmax(320px,2fr) minmax(170px,1fr) auto}
+@media(max-width:820px){ .co-form{grid-template-columns:1fr} }
+
+/* constantes: mais colunas quando há espaço (vence o style inline gerado) */
+#co-const-grupos > div > div[style*="grid"]{
+  grid-template-columns:repeat(auto-fit,minmax(196px,1fr))!important;
+  gap:10px 14px!important;
+}
+#co-const-grupos > div{margin-bottom:18px!important}
+
+/* prévia: passa a ser a área alta da tela, com rolagem própria */
+.co-preview{max-height:calc(100vh - 300px);min-height:360px}
+@media(max-width:820px){ .co-preview{max-height:60vh;min-height:260px} }
+
+/* cabeçalhos com mais respiro na horizontal */
+.co-card-h{padding:14px 22px}
+.co-card-b{padding:18px 22px}
+@media(max-width:620px){
+  .co-wrap{padding:14px 12px 40px}
+  .co-card-h{padding:13px 14px}
+  .co-card-b{padding:14px}
+}
+</style>
+<style>
+/* busca da prévia */
+.co-busca-bar{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:12px}
+.co-busca{position:relative;display:flex;align-items:center;flex:1 1 340px;max-width:520px;
+  background:#fff;border:1.5px solid #dbe3e8;border-radius:10px;height:42px;padding:0 10px 0 12px;
+  transition:border-color .15s,box-shadow .15s}
+.co-busca:focus-within{border-color:#0d7377;box-shadow:0 0 0 3px rgba(13,115,119,.12)}
+.co-busca-ic{font-size:.9rem;opacity:.55;flex-shrink:0}
+.co-busca input{flex:1;min-width:0;border:none;outline:none;background:none;margin:0;padding:0 10px;
+  font-family:'Barlow',sans-serif;font-size:.86rem;font-weight:700;color:#12343b}
+.co-busca input::placeholder{color:#a9b4bf;font-weight:600}
+.co-busca button{display:none;border:none;background:none;cursor:pointer;color:#a9b4bf;
+  font-size:.8rem;padding:6px 4px;line-height:1}
+.co-busca button:hover{color:#c53030}
+.co-busca.tem-texto button{display:block}
+.co-busca-res{font-size:.76rem;font-weight:700;color:#8b99a4}
+@media(max-width:620px){ .co-busca{flex:1 1 100%;max-width:none} }
+
+/* upload da carteira (bases que vêm de arquivo, ex.: Aracaju) */
+.co-arq{display:flex;align-items:center;gap:14px;padding:16px 18px;border:2px dashed #cfe3e2;border-radius:12px;
+  background:#f8fbfb;cursor:pointer;transition:border-color .15s,background .15s}
+.co-arq:hover,.co-arq.sobre{border-color:#0d7377;background:#f0fafa}
+.co-arq:focus-visible{outline:3px solid rgba(13,115,119,.35);outline-offset:2px}
+.co-arq-ic{width:44px;height:44px;border-radius:11px;background:#fff;border:1px solid #dbe3e8;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;font-size:1.25rem}
+.co-arq-tx{flex:1;min-width:0}
+.co-arq-tx b{display:block;font-size:.86rem;font-weight:800;color:#12343b;word-break:break-all}
+.co-arq-tx small{display:block;font-size:.74rem;font-weight:600;color:#8b99a4;margin-top:2px}
+.co-arq.carregado{border-style:solid;border-color:#bfe0dd;background:#f6fdfc}
+.co-arq.carregado .co-arq-tx b{color:#0d7377}
+.co-arq .co-bt{flex-shrink:0;pointer-events:none}
+@media(max-width:620px){ .co-arq{flex-wrap:wrap} .co-arq .co-bt{width:100%;text-align:center} }
+
+/* atividades: todos os serviços do contrato em todas as obras */
+.co-ativ{display:flex;align-items:center;gap:12px 14px;flex-wrap:wrap;padding:12px 14px;margin-bottom:14px;
+  border:1.5px solid #c7e7e6;border-radius:12px;background:#f6fdfc;transition:border-color .15s,background .15s}
+.co-ativ.falta{border-color:#f1dbb0;background:#fffaf0}
+.co-ativ.sobre{border-style:dashed;border-color:#0d7377;background:#f0fafa}
+.co-ativ-ic{width:38px;height:38px;border-radius:10px;background:#fff;border:1px solid #dbe3e8;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;font-size:1.05rem}
+.co-ativ-tx{flex:1 1 300px;min-width:0}
+.co-ativ-tx b{display:block;font-size:.84rem;font-weight:800;color:#12343b}
+.co-ativ-tx small{display:block;font-size:.74rem;font-weight:700;color:#0d7377;margin-top:2px;line-height:1.45}
+.co-ativ.falta .co-ativ-tx small{color:#a8701a}
+.co-ativ-qtd{display:inline-flex;align-items:center;gap:7px;font-size:.74rem;font-weight:800;color:#64748b}
+.co-ativ-qtd input{width:62px;box-sizing:border-box;padding:7px 8px;border:1.5px solid #dbe3e8;border-radius:8px;margin:0;
+  font-family:'Barlow',sans-serif;font-size:.8rem;font-weight:800;color:#12343b;text-align:center;outline:none;background:#fff}
+.co-ativ-qtd input:focus{border-color:#0d7377;box-shadow:0 0 0 3px rgba(13,115,119,.12)}
+.co-ativ .co-bt:disabled{opacity:.45;cursor:not-allowed;background:#fff;border-color:#dbe3e8}
+/* modelo teste: 1 obra x todos os serviços */
+.co-ativ-teste{display:inline-flex;align-items:center;gap:7px;padding-left:12px;border-left:1px solid #d5e9e8}
+.co-ativ-teste input{width:118px;box-sizing:border-box;padding:7px 9px;border:1.5px solid #dbe3e8;border-radius:8px;margin:0;
+  font-family:'Barlow',sans-serif;font-size:.8rem;font-weight:800;color:#12343b;outline:none;background:#fff}
+.co-ativ-teste input::placeholder{color:#a9b4bf;font-weight:700}
+.co-ativ-teste input:focus{border-color:#0d7377;box-shadow:0 0 0 3px rgba(13,115,119,.12)}
+@media(max-width:620px){ .co-ativ .co-bt{flex:1 1 auto}
+  .co-ativ-teste{width:100%;padding-left:0;border-left:none} .co-ativ-teste input{flex:1} }
+</style>
+</head>
+<body class="sm-collapsed">
+<script>try{if(localStorage.getItem("mariua_menu")==="aberto")document.body.classList.remove("sm-collapsed");}catch(e){}</script>
+
+<div class="top-bar">
+  <div class="top-bar-inner">
+    <div class="top-bar-left">
+      <img src="data:image/png;base64,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" class="top-bar-logo" alt="Mariuá">
+      <span class="top-bar-title">SISTEMA DE OBRAS</span>
+    </div>
+    <div class="top-bar-center"><div class="top-bar-clock" id="page-time"></div></div>
+    <div class="top-bar-right">
+      <a class="back-link" href="../prog.html">← PROGRAMAÇÃO</a>
+    </div>
+  </div>
+</div>
+
+
+<aside class="sm-side">
+  <!-- Menu montado por nav.js — NÃO edite os itens aqui, edite a lista em nav.js -->
+  <nav class="sm-nav"><a class="sm-item" href="../index.html"><span class="sm-ic"><i class="ti ti-home"></i></span><span class="sm-tx">Início</span></a></nav>
+</aside>
+<script src="../nav.js?v=6"></script>
+
+<div class="wrap co-wrap">
+
+  <!-- CABEÇALHO -->
+  <div class="co-head">
+    <div class="co-head-tx">
+      <h1>Cadastro de Obra</h1>
+      <p>Puxa a carteira do Google (ou do arquivo enviado, na base Aracaju) e converte para o modelo de importação — 55 colunas.</p>
+    </div>
+    <div class="co-passos" id="co-passos">
+      <div class="co-passo ativo" data-passo="1"><span class="n">1</span><span class="t">Carteira</span></div>
+      <div class="co-passo" data-passo="2"><span class="n">2</span><span class="t">Constantes</span></div>
+      <div class="co-passo" data-passo="3"><span class="n">3</span><span class="t">Exportar</span></div>
+    </div>
+  </div>
+
+  <!-- ══ 1 · CARTEIRA ══ -->
+  <section class="co-card" data-card="1">
+    <header class="co-card-h">
+      <div class="co-card-t"><span class="co-num">1</span>
+        <div><b>Carteira</b><small>Escolha a base e o mês a importar</small></div>
+      </div>
+      <button id="co-config-bt" class="co-bt ghost" onclick="coToggleConfig()">⚙️ Configurar abas</button>
+    </header>
+
+    <div class="co-card-b">
+      <input type="hidden" id="co-mes">
+      <input type="hidden" id="co-base">
+
+      <div class="co-topo">
+        <div class="co-campo">
+          <span class="co-lbl">Base</span>
+          <div id="co-base-btns" class="co-chips"></div>
+        </div>
+        <div class="co-campo co-campo-cresce" id="co-campo-mes">
+          <span class="co-lbl">Mês</span>
+          <div id="co-mes-btns" class="co-chips"></div>
+        </div>
+      </div>
+
+      <!-- base por arquivo (Aracaju): em vez de link/gid do Google, sobe o .xlsx/.csv da carteira -->
+      <div id="co-arquivo" style="display:none">
+        <input type="file" id="co-arq-input" accept=".xlsx,.xls,.xlsm,.csv" hidden onchange="coArquivoEscolhido(this)">
+        <div id="co-arq-zona" class="co-arq" role="button" tabindex="0"
+             onclick="document.getElementById('co-arq-input').click()"
+             onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}">
+          <span class="co-arq-ic">📂</span>
+          <span class="co-arq-tx"><b id="co-arq-nome">Envie o arquivo da carteira</b><small id="co-arq-info">Arraste o .xlsx ou .csv aqui, ou clique para escolher.</small></span>
+          <span class="co-bt ghost" id="co-arq-bt">Escolher arquivo</span>
+        </div>
+      </div>
+
+      <div id="co-config" class="co-config" style="display:none">
+        <div class="co-form">
+          <div class="co-f co-f-full">
+            <label for="co-link">Link ou ID da planilha <em>(da base selecionada)</em></label>
+            <input id="co-link" value="https://docs.google.com/spreadsheets/d/14ImbZb8-OCBp78jDtd0QFkSLrMG5vXA7tzrM-x6KQVo/edit?gid=1847275425">
+          </div>
+          <div class="co-f">
+            <label for="co-gid">Aba (gid) do mês selecionado</label>
+            <input id="co-gid" inputmode="numeric" placeholder="ex.: 1847275425">
+          </div>
+          <div class="co-f co-f-bt">
+            <button class="co-bt teal" onclick="coSalvarAba()">💾 Salvar aba do mês</button>
+          </div>
+        </div>
+        <p class="co-dica">Abra a aba do mês na planilha, copie o número do <code>gid</code> da URL, cole aqui e salve. Fica guardado — depois é só clicar no botão do mês.</p>
+      </div>
+
+      <div id="co-status" class="co-status"></div>
+    </div>
+  </section>
+
+  <!-- ══ 2 · CONSTANTES ══ -->
+  <section class="co-card" data-card="2">
+    <input type="hidden" id="co-estado" value="ba">
+    <header class="co-card-h">
+      <div class="co-card-t"><span class="co-num">2</span>
+        <div><b>Constantes do arquivo <span class="co-ver">v8 · 10/09</span></b>
+          <small>Base <span id="co-const-base">—</span> <span id="co-const-count"></span></small></div>
+      </div>
+      <div class="co-acoes">
+        <button id="co-const-toggle" class="co-bt ghost" onclick="coToggleConst()">⚙️ Editar constantes</button>
+        <span class="co-copiar">
+          <select id="co-copiar-de"></select>
+          <button class="co-bt ghost" onclick="coCopiarDe()">Copiar</button>
+        </span>
+        <button class="co-bt teal" onclick="coSalvarConstantes()">💾 Salvar e aplicar</button>
+        <button class="co-bt danger" onclick="coLimparConstantes()">🧹 Limpar</button>
+      </div>
+    </header>
+
+    <div id="co-const-box" class="co-card-b" style="display:none">
+      <div class="co-opcoes">
+        <div class="co-campo co-campo-inline">
+          <span class="co-lbl">Estado</span>
+          <div id="co-estado-btns" class="co-chips"></div>
+        </div>
+        <div class="co-checks">
+          <label class="co-check"><input type="checkbox" id="co-so-preenchidas" onchange="coPopularConstantes()"> Só preenchidas</label>
+          <label class="co-check"><input type="checkbox" id="co-auto-baixar" checked> Baixar CSV ao salvar</label>
+        </div>
+      </div>
+
+      <div id="co-const-grupos"></div>
+
+      <details class="co-nota">
+        <summary>Como estes campos funcionam</summary>
+        <p>Cada base guarda o seu próprio conjunto: ao trocar de base no passo 1, estes campos mudam junto.</p>
+        <p><b>Vindos da carteira, não editáveis aqui:</b> Projeto, Título, Município, Responsável, Supervisor, Postes, Latitude, Longitude.</p>
+        <p><b>Centro de serviço:</b> sigla do estado + município.</p>
+        <p><b>Contrato por base:</b> Irecê, Jacobina e Serrinha são sempre OBRAS - BA; Aracaju é sempre OBRAS-SE. Nelas o estado fica travado e Contrato, Tipo de obra, Tipo de serviço e Processo já vêm preenchidos pelo contrato, mas podem ser editados aqui. Em Feira o estado é escolhido aqui.</p>
+        <p><b>Base Aracaju (arquivo do lote):</b> Projeto = Obra; Título = “Tipo Obra - Município”; Prazo Regulado vai para <code>data_prazo_venc</code>. O arquivo não tem responsável nem supervisor, então nessa base eles são definidos aqui (responsável padrão: RAFAEL BERNARDO MAGALHAES). Todas as obras do arquivo entram, sem o filtro de Execução/Programada.</p>
+        <p><b>Status:</b> toda obra sai com o <b>STATUS*</b> definido aqui (padrão: Em Execução). O status da carteira só decide quais obras entram (Em Execução ou Programada).</p>
+      </details>
+    </div>
+  </section>
+
+  <!-- ══ 3 · PRÉVIA E EXPORTAÇÃO ══ -->
+  <section class="co-card" data-card="3">
+    <header class="co-card-h">
+      <div class="co-card-t"><span class="co-num">3</span>
+        <div><b>Prévia e exportação <span id="co-count" class="co-cnt"></span></b>
+          <small>Confira as primeiras linhas antes de gerar os arquivos</small></div>
+      </div>
+      <button id="co-baixar" class="co-bt baixar" onclick="coBaixar()" disabled>⬇️ Baixar CSV (modelo)</button>
+    </header>
+    <div class="co-card-b">
+      <div id="co-ativ" class="co-ativ">
+        <span class="co-ativ-ic">🧾</span>
+        <span class="co-ativ-tx"><b>Atividades: todos os serviços em todas as obras</b>
+          <small id="co-ativ-info">Carregando a lista de serviços…</small></span>
+        <label class="co-ativ-qtd" for="co-ativ-qtd" title="Quantidade prevista que vai em cada linha (os serviços permitem executar mais que o previsto)">Quantidade
+          <input id="co-ativ-qtd" value="1" inputmode="decimal" autocomplete="off" onchange="coAtivQtdMudou()"></label>
+        <input type="file" id="co-serv-input" accept=".csv,.xlsx,.xls,.xlsm" hidden onchange="coServEscolhido(this)">
+        <button type="button" class="co-bt ghost" onclick="document.getElementById('co-serv-input').click()" title="Envie a precificação de serviços exportada do sistema (.csv ou .xlsx)">📄 Atualizar lista de serviços</button>
+        <button type="button" id="co-baixar-ativ" class="co-bt ghost" onclick="coBaixarAtividades()" disabled>⬇️ Só atividades</button>
+        <span class="co-ativ-teste">
+          <input id="co-ativ-obra-teste" placeholder="nº da obra" inputmode="numeric" autocomplete="off" spellcheck="false" aria-label="Obra do modelo teste"
+                 title="Obra usada no modelo teste. Em branco = primeira obra da carteira" oninput="coAtivInfo()"
+                 onkeydown="if(event.key==='Enter'){event.preventDefault();coBaixarTeste();}">
+          <button type="button" id="co-baixar-teste" class="co-bt ghost" onclick="coBaixarTeste()" disabled
+                  title="Gera o arquivo de atividades com 1 obra e todos os serviços, para testar a importação antes da carteira completa">🧪 Modelo teste</button>
+        </span>
+      </div>
+      <div class="co-busca-bar">
+        <div class="co-busca">
+          <span class="co-busca-ic">🔎</span>
+          <input id="co-busca" placeholder="Pesquisar obra — PEP, título, município, responsável, status…"
+                 autocomplete="off" spellcheck="false" oninput="coPreview()"
+                 onkeydown="if(event.key==='Escape'){this.value='';coPreview();this.blur();}">
+          <button type="button" id="co-busca-x" onclick="document.getElementById('co-busca').value='';coPreview();document.getElementById('co-busca').focus();" title="Limpar">✕</button>
+        </div>
+        <span id="co-busca-res" class="co-busca-res"></span>
+      </div>
+      <div id="co-preview" class="co-preview">Carregue a carteira para ver a prévia.</div>
+    </div>
+  </section>
+
+</div>
+
+<script src="../identidade.js?v=4"></script>
+<script src="../filiais.js"></script>
+<script>
+var CO_HEADERS = ["Projeto*","Titulo da obra*","Municipio*","Contrato*","TIPO DE OBRA*","NATUREZA OBRAS","CENTRO SERVICO","RESPONSAVEL*","TIPO SERVICO*","DATA_RECEBIMENTO*","DATA_PREVISTO_RECEBIMENTO","OBRIGA VISTORIA","DATA_PREVISAO_INICIO","DATA_PREVISAO_FIM","PROCESSO","STATUS*","OBSERVACAO","Postes","fiscal_concessionaria","LATITUDE","LONGITUDE","MEDIDOR","SUPERVISOR","REFERENCIA","OS","ENDEREÇO","data_inicio","qtd_clientes","Bairro","CEP","Fator K","Interessado","Projeto Investimento","qtd_transformadores","qtd_extensao_bt","qtd_extensao_mt","reserva","lcl","ato_progressivo","lote","contra","descricao_orcamento","valor_orcamento_mao_obra","valor_orcamento_material","tipo_prioridade","psm_aux","sm","plano_manobra","origem","data_aceite","data_prazo_venc","data_limite_vist","valor_previsto_obra","odi","odd"];
+var CO_ROWS = [];
+
+// ===== status fixo =====
+// Toda obra sai com este STATUS*, em todas as bases (não depende da carteira nem do card 2).
+// A carteira continua decidindo QUAIS obras entram (só Em Execução ou Programada).
+var CO_STATUS_FIXO='Em Execução';
+
+// ===== estado -> valores fixos do contrato =====
+var CO_ESTADO_DEF={
+  ba:{sigla:'BA', nome:'Bahia',   contrato:'OBRAS - BA',    tipoObra:'BA - Construção e Manutenção', tipoServico:'CONSTRUÇÃO-BA', processo:''},
+  mg:{sigla:'MG', nome:'Minas',   contrato:'CON_MANUT-MG',  tipoObra:'',                              tipoServico:'',                processo:''},
+  se:{sigla:'SE', nome:'Sergipe', contrato:'OBRAS-SE',      tipoObra:'SE - Construção e Manutenção',  tipoServico:'SERVICOS_RDU-SE', processo:'SE_PROCESSO'}
+};
+function coEstado(){ return document.getElementById('co-estado').value || 'ba'; }
+function coPopularEstados(){
+  var box=document.getElementById('co-estado-btns'); if(!box) return;
+  var sel=coEstado(), def=coBaseDef(), fixo=!!(def.uf&&CO_ESTADO_DEF[def.uf]);
+  box.innerHTML=Object.keys(CO_ESTADO_DEF).filter(coEstadoPermitido).map(function(uf){
+    var d=CO_ESTADO_DEF[uf], ativo=(uf===sel), bloq=(fixo && !ativo);
+    var bg=ativo?'#0d7377':'#f8fafc', cor=ativo?'#fff':'#0d7377', bd=ativo?'#0d7377':'#cfe3e2';
+    return '<button onclick="coSelecionarEstado(\''+uf+'\')"'+(bloq?' disabled title="'+def.nome+' é sempre '+CO_ESTADO_DEF[def.uf].contrato+'"':'')+' style="padding:8px 16px;border-radius:9px;border:1.5px solid '+bd+';background:'+bg+';color:'+cor+';font-family:inherit;font-weight:800;font-size:.78rem;cursor:'+(bloq?'not-allowed;opacity:.4':'pointer')+';">'+d.sigla+' — '+d.nome+'</button>';
+  }).join('')
+  + (fixo?'<span style="align-self:center;margin-left:4px;font-size:.72rem;font-weight:700;color:#8b99a4;">🔒 '+def.nome+' é contrato '+CO_ESTADO_DEF[def.uf].contrato+'</span>':'');
+}
+function coSelecionarEstado(uf){
+  if(!coEstadoPermitido(uf)) return;         // trava de contrato
+  var def=coBaseDef();
+  if(def.uf && uf!==def.uf) return;          // base com contrato fixo: estado não muda
+  document.getElementById('co-estado').value=uf;
+  if(!def.uf) CO_ESTADO_BASE[coBaseId()]=uf; // Feira & cia.: guarda o estado da base
+  var d=CO_ESTADO_DEF[uf]||{}, C=coConstAtual();
+  C['Contrato*']=d.contrato||'';
+  C['TIPO DE OBRA*']=d.tipoObra||'';
+  C['TIPO SERVICO*']=d.tipoServico||'';
+  C['PROCESSO']=d.processo||'';
+  coPopularEstados();
+  coPopularConstantes();
+  coAplicarEAtualizar('Estado '+(d.sigla||uf)+': contrato, tipo de obra e tipo de serviço atualizados.');
+}
+
+function coSt(t,cor){ var el=document.getElementById('co-status'); if(el){ el.textContent=t; el.style.color=cor||'#94a3b8'; } }
+function coSheetId(link){ var m=(link||'').match(/\/d\/([a-zA-Z0-9_-]{20,})/); return m?m[1]:(link||'').trim(); }
+function coGid(){ var g=(document.getElementById('co-gid').value||'').trim(); if(g) return g; var m=(document.getElementById('co-link').value||'').match(/[?#&]gid=(\d+)/); return m?m[1]:'0'; }
+
+// parser CSV robusto
+function coParseCSV(text,sep){
+  sep=sep||',';
+  var rows=[],i=0,f='',row=[],q=false;
+  while(i<text.length){
+    var c=text[i];
+    if(q){ if(c==='"'){ if(text[i+1]==='"'){f+='"';i+=2;continue;} q=false;i++;continue;} f+=c;i++;continue; }
+    if(c==='"'){q=true;i++;continue;}
+    if(c===sep){row.push(f);f='';i++;continue;}
+    if(c==='\n'){row.push(f);rows.push(row);row=[];f='';i++;continue;}
+    if(c==='\r'){i++;continue;}
+    f+=c;i++;
+  }
+  if(f.length||row.length){row.push(f);rows.push(row);}
+  return rows;
+}
+function coNorm(s){ return (s||'').toString().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase().replace(/\s+/g,' '); }
+
+// ===== meses -> gid (salvos no Supabase) =====
+var CO_SUPA='https://eqxejfoibebcbtsqymji.supabase.co';
+var CO_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVxeGVqZm9pYmViY2J0c3F5bWppIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE4NjUzMTEsImV4cCI6MjA4NzQ0MTMxMX0.lwf7_EJ6UchEOpzhW3cVKztxDGy78gaQblRvgiEwWh8';
+var CO_H={'apikey':CO_KEY,'Authorization':'Bearer '+CO_KEY,'Content-Type':'application/json'};
+var CO_MESES=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+var CO_ANO=2026;
+// bases disponíveis
+// uf = estado aplicado ao escolher a base · fonte:'arquivo' = carteira vem de upload (.xlsx/.csv), não do Google
+// uf = contrato fixo da base: Irecê, Jacobina e Serrinha são OBRAS - BA; Aracaju é OBRAS-SE.
+//      Nessas bases o estado trava e Contrato / Tipo de obra / Tipo de serviço / Processo vêm do contrato.
+//      Sem uf (Feira): o estado é escolhido no card 2 e fica guardado para a base.
+// padrao = constantes que a base já traz preenchidas (dá pra trocar no card 2)
+var CO_BASES=[{id:'irc',nome:'Irecê',uf:'ba'},{id:'jac',nome:'Jacobina',uf:'ba'},{id:'fsa',nome:'Feira'},{id:'srr',nome:'Serrinha',uf:'ba'},
+              {id:'aju',nome:'Aracaju',uf:'se',fonte:'arquivo', padrao:{'RESPONSAVEL*':'RAFAEL BERNARDO MAGALHAES'}}];
+var CO_ESTADO_BASE={};   // estado escolhido nas bases sem contrato fixo: { fsa:'ba' }
+// valores padrão do contrato fixo da base (preenchem o card 2, mas podem ser editados)
+function coContratoFixo(id){
+  var def=coBaseDef(id), e=def.uf&&CO_ESTADO_DEF[def.uf], fx={};
+  fx['STATUS*']=CO_STATUS_FIXO;       // status padrão em todas as bases, inclusive Feira (editável)
+  if(!e) return fx;
+  fx['Contrato*']=e.contrato||'';
+  fx['TIPO DE OBRA*']=e.tipoObra||'';
+  fx['TIPO SERVICO*']=e.tipoServico||'';
+  fx['PROCESSO']=e.processo||'';      // BA não tem processo: fica vazio
+  return fx;
+}
+var CO_ARQ={};    // { baseId: { nome, hora, linhas:[[...]] } } — arquivo enviado nesta sessão
+function coBaseDef(id){ id=id||coBaseId(); for(var i=0;i<CO_BASES.length;i++){ if(CO_BASES[i].id===id) return CO_BASES[i]; } return {}; }
+function coBaseArquivo(id){ return coBaseDef(id).fonte==='arquivo'; }
+var CO_DATA={};   // { baseId: { link:'', meses:{ 'YYYY-MM': gid } } }
+var CO_BASE='irc';
+
+function coMesKey(){ return document.getElementById('co-mes').value; }
+function coBaseId(){ return document.getElementById('co-base').value || CO_BASE; }
+function coBaseObj(){ var b=coBaseId(); if(!CO_DATA[b]) CO_DATA[b]={link:'',meses:{}}; return CO_DATA[b]; }
+function coToggleConfig(){ var c=document.getElementById('co-config'); c.style.display = c.style.display==='none' ? 'block' : 'none'; }
+
+// ===== TRAVA DE CONTRATO (ESTADO) POR USUÁRIO =====
+// Mesma trava do Turno e do RDO. Lê turno_data.usuario_contrato, gravada pelo admin.html
+// (Editar usuário → Contratos de acesso), procurando o usuário pelo e-mail de login.
+// Nenhum contrato marcado = vê tudo. Diagnóstico: abra cadastro_obra.html#trava
+let coAllowedStates = null; // null = sem restrição; array = estados permitidos ([] = nenhum)
+(function(){
+  function ctNormNome(s){ return (s||'').toString().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase().replace(/\s+/g,' '); }
+  // chave de comparação de usuário: sem acento, sem espaço, maiúscula ("José da Silva" = "JOSEDASILVA")
+  function ctChaveId(s){ return ctNormNome(s).replace(/[^A-Z0-9@.]/g,''); }
+
+  const TRAVA_LS = 'mariua_trava_contrato_v1';
+  const TRAVA_CAMPOS_CONTRATO = ['contratos','contrato','estados','estado','states','state','ufs','uf','regioes','regiao','liberados','permissoes'];
+  const TRAVA_REGRAS = [
+    ['se', /\b(SE|SERGIPE|ARACAJU|AJU)\b/],
+    ['ba', /\b(BA|BAHIA|IRECE|IRC|JACOBINA|JAC|FEIRA|FSA|SERRINHA|SRR)\b/],
+    ['mg', /\b(MG|MINAS|CONGONHAL|ITAJUBA|ITA|POUSO ALEGRE)\b/]
+  ];
+
+  // Converte o valor salvo em lista de estados ['ba','mg','se']
+  function ctParseEstados(v, d){
+    d = d || 0; var out = [];
+    function add(s){ if (out.indexOf(s) < 0) out.push(s); }
+    if (v == null || d > 4) return out;
+    if (Array.isArray(v)) { v.forEach(function(x){ ctParseEstados(x, d+1).forEach(add); }); return out; }
+    if (typeof v === 'object') {
+      var achou = false;
+      TRAVA_CAMPOS_CONTRATO.forEach(function(k){ if (v[k] != null) { achou = true; ctParseEstados(v[k], d+1).forEach(add); } });
+      if (achou) return out;
+      // {se:true, ba:false} ou {'OBRAS-SE':true}
+      Object.keys(v).forEach(function(k){
+        var x = v[k];
+        if (x === true || x === 1 || x === '1' || x === 'true' || x === 'sim' || x === 'SIM') ctParseEstados(k, d+1).forEach(add);
+      });
+      return out;
+    }
+    var raw = String(v).trim();
+    if (raw === '*') return ['ba','mg','se'];
+    var t = ctNormNome(raw).replace(/[^A-Z0-9]+/g, ' ').trim();
+    if (!t) return out;
+    if (/\b(TODOS|TODAS|ALL|GERAL)\b/.test(t)) return ['ba','mg','se'];
+    TRAVA_REGRAS.forEach(function(r){ if (r[1].test(t)) add(r[0]); });
+    return out;
+  }
+  // Parte do valor que representa o(s) contrato(s)
+  function ctValorContrato(v){
+    if (v && typeof v === 'object' && !Array.isArray(v)) {
+      for (var i = 0; i < TRAVA_CAMPOS_CONTRATO.length; i++) { var k = TRAVA_CAMPOS_CONTRATO[i]; if (v[k] != null) return v[k]; }
+    }
+    return v;
+  }
+  function ctValorVazio(v){
+    v = ctValorContrato(v);
+    if (v == null) return true;
+    if (typeof v === 'string') return !v.trim();
+    if (Array.isArray(v)) return !v.length;
+    if (typeof v === 'object') return !Object.keys(v).length;
+    return false;
+  }
+  // Identificadores do usuário (nome, e-mail, login...) a partir de string ou objeto
+  function ctIdsUsuario(u, d){
+    d = d || 0; var ids = [];
+    function add(x){ if (typeof x !== 'string' && typeof x !== 'number') return; var k = ctChaveId(x); if (k.length >= 2 && ids.indexOf(k) < 0) ids.push(k); }
+    if (u == null || d > 2) return ids;
+    if (typeof u === 'string' || typeof u === 'number') { add(u); return ids; }
+    if (typeof u !== 'object') return ids;
+    ['nome','name','nomeCompleto','nome_completo','full_name','fullName','displayName','display_name',
+     'email','login','usuario','username','user_name','id','uid'].forEach(function(k){ add(u[k]); });
+    ['user','usuario','perfil','profile','user_metadata','detail'].forEach(function(k){
+      if (u[k] && typeof u[k] === 'object') ctIdsUsuario(u[k], d+1).forEach(function(i){ if (ids.indexOf(i) < 0) ids.push(i); });
+    });
+    return ids;
+  }
+  // Procura o usuário no valor de usuario_contrato (mapa {nome: contratos} ou lista [{nome, contratos}])
+  function ctAcharEntrada(val, ids){
+    if (typeof val === 'string') { try { val = JSON.parse(val); } catch(e) {} }
+    if (val && typeof val === 'object' && !Array.isArray(val)) {
+      if (val.usuarios && typeof val.usuarios === 'object') val = val.usuarios;
+      else if (val.users && typeof val.users === 'object') val = val.users;
+    }
+    var ents = [];
+    if (Array.isArray(val)) {
+      val.forEach(function(it){ if (it && typeof it === 'object') ents.push({ ids: ctIdsUsuario(it), value: it, chave: it.nome || it.email || '' }); });
+    } else if (val && typeof val === 'object') {
+      Object.keys(val).forEach(function(k){
+        var v = val[k], eIds = [ctChaveId(k)];
+        if (v && typeof v === 'object' && !Array.isArray(v)) ctIdsUsuario(v).forEach(function(i){ if (eIds.indexOf(i) < 0) eIds.push(i); });
+        ents.push({ ids: eIds, value: v, chave: k });
+      });
+    }
+    var emails = ids.filter(function(x){ return x.indexOf('@') > 0; });
+    for (var i = 0; i < ents.length; i++) {
+      if (ents[i].ids.some(function(x){ return emails.indexOf(x) >= 0; })) return ents[i];
+    }
+    for (var j = 0; j < ents.length; j++) {
+      if (ents[j].ids.some(function(x){ return ids.indexOf(x) >= 0; })) return ents[j];
+    }
+    return null;
+  }
+
+  var _travaUlt = { chave: '', ts: 0 };
+  var _travaEvento = null;   // último detail do evento mariua:user
+  var _travaDiag = null;     // resultado da última verificação (para o painel #trava)
+  const TRAVA_VERSAO = 'v4';
+
+  // Onde o login pode ter deixado o usuário: evento, variáveis globais, sessão salva no aparelho
+  function ctSessoes(){
+    var s = [];
+    function add(origem, obj){ if (obj != null && obj !== true && obj !== false) s.push({ origem: origem, obj: obj }); }
+    add('login (mariua-auth)', _travaEvento);
+    add('window.MARIUA_USER', window.MARIUA_USER);
+    add('window.__MARIUA_AUTH__', window.__MARIUA_AUTH__);
+    add('window.MARIUA_PERFIL', window.MARIUA_PERFIL);
+    try {
+      for (var i = 0; i < localStorage.length; i++) {
+        var k = localStorage.key(i);
+        if (!/^sb-.*-auth-token$/.test(k) && !/^mariua[_-]?(user|usuario|sess|session|auth|login|perfil|logado)/i.test(k)) continue;
+        if (k === 'mariua_user') continue; // nome do aparelho (identidade.js): pode ser de outra pessoa
+        var raw = localStorage.getItem(k), obj = raw;
+        try { obj = JSON.parse(raw); } catch(e) {}
+        if (obj && typeof obj === 'object' && obj.currentSession) obj = obj.currentSession;
+        add('localStorage ' + k, obj);
+      }
+    } catch(e) {}
+    try { var uc = sessionStorage.getItem('mariua_user_cache'); if (uc) add('sessionStorage mariua_user_cache', JSON.parse(uc)); } catch(e) {}
+    return s;
+  }
+  function ctIdsGlobais(){
+    var ids = [];
+    ctSessoes().forEach(function(x){ ctIdsUsuario(x.obj).forEach(function(i){ if (ids.indexOf(i) < 0) ids.push(i); }); });
+    return ids;
+  }
+  // Campo de contrato explícito num registro de usuário (não usa 'estado' solto, que pode ser outra coisa)
+  const TRAVA_CAMPOS_FORTES = ['contratos','contrato','contratos_liberados','estados_liberados','estados','ufs','liberados'];
+  function ctCampoContrato(v, d){
+    d = d || 0;
+    if (!v || typeof v !== 'object' || Array.isArray(v) || d > 3) return undefined;
+    for (var i = 0; i < TRAVA_CAMPOS_FORTES.length; i++) { if (v[TRAVA_CAMPOS_FORTES[i]] != null) return v[TRAVA_CAMPOS_FORTES[i]]; }
+    var sub = ['user','usuario','perfil','profile','user_metadata','app_metadata','detail'];
+    for (var j = 0; j < sub.length; j++) { var r = ctCampoContrato(v[sub[j]], d+1); if (r !== undefined) return r; }
+    return undefined;
+  }
+
+  // Decide a trava a partir das linhas do banco + sessão
+  function ctResolverTrava(rows, ids, sessoes){
+    rows = (rows || []).slice().sort(function(a, b){
+      function peso(k){ return k === 'usuario_contrato' ? 0 : /contrato/i.test(k) ? 1 : 2; }
+      return peso(a.key) - peso(b.key);
+    });
+    // 1) chaves de contrato (usuario_contrato e parecidas): vale o que estiver lá
+    for (var i = 0; i < rows.length; i++) {
+      if (!/contrato/i.test(rows[i].key)) continue;
+      var ent = ctAcharEntrada(rows[i].value, ids);
+      if (!ent) continue;
+      var origem = rows[i].key + ' → "' + ent.chave + '"';
+      if (ctValorVazio(ent.value)) return { estados: null, origem: origem, valor: ent.value };
+      return { estados: ctParseEstados(ent.value), origem: origem, valor: ent.value, fechada: true };
+    }
+    // 2) cadastro de usuários (chaves com "usuario"): só se o registro tiver campo de contrato
+    for (var j = 0; j < rows.length; j++) {
+      if (/contrato/i.test(rows[j].key)) continue;
+      var e2 = ctAcharEntrada(rows[j].value, ids);
+      var c2 = e2 ? ctCampoContrato(e2.value) : undefined;
+      if (c2 === undefined) continue;
+      var est2 = ctParseEstados(c2);
+      if (est2.length) return { estados: est2, origem: rows[j].key + ' → "' + e2.chave + '"', valor: c2 };
+    }
+    // 3) dados do próprio login
+    for (var k = 0; k < sessoes.length; k++) {
+      var c3 = ctCampoContrato(sessoes[k].obj);
+      if (c3 === undefined) continue;
+      var est3 = ctParseEstados(c3);
+      if (est3.length) return { estados: est3, origem: sessoes[k].origem, valor: c3 };
+    }
+    return { estados: null, origem: '' };
+  }
+
+  // Lê do banco as chaves que podem ter o contrato do usuário
+  function ctLerChavesTrava(){
+    var h = { headers: { 'apikey': CO_KEY, 'Authorization': 'Bearer ' + CO_KEY } };
+    // usuario_contrato é gravada pelo admin.html (Editar usuário → Contratos de acesso)
+    var exato = CO_SUPA + '/rest/v1/turno_data?select=key,value&key=eq.usuario_contrato';
+    return fetch(exato, h).then(function(r){ if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); });
+  }
+
+  function ctBuscarTravaUsuario(fonte){
+    if (fonte && typeof fonte === 'object') _travaEvento = fonte;
+    var sessoes = ctSessoes();
+    var ids = ctIdsUsuario(fonte);
+    ctIdsGlobais().forEach(function(i){ if (ids.indexOf(i) < 0) ids.push(i); });
+    if (!ids.length) {
+      // sem nome/e-mail, mas o próprio login pode trazer os contratos
+      var r0 = ctResolverTrava([], [], sessoes);
+      _travaDiag = { ids: [], sessoes: sessoes, res: r0, erro: r0.estados ? '' : 'Nenhum usuário logado identificado.' };
+      if (r0.estados) window.coDefinirTrava(r0.estados);
+      return Promise.resolve();
+    }
+    var chave = ids.slice().sort().join('|');
+    if (chave === _travaUlt.chave && Date.now() - _travaUlt.ts < 15000) return Promise.resolve();
+    _travaUlt = { chave: chave, ts: Date.now() };
+
+    // 1) aplica na hora a última trava conhecida deste usuário (evita mostrar tudo enquanto carrega)
+    try {
+      var c = JSON.parse(localStorage.getItem(TRAVA_LS) || 'null');
+      if (c && Array.isArray(c.ids) && c.ids.some(function(i){ return ids.indexOf(i) >= 0; })) window.coDefinirTrava(c.estados);
+    } catch(e) {}
+
+    // 2) busca a trava atual no banco
+    return ctLerChavesTrava()
+      .then(function(rows){
+        if (_travaUlt.chave !== chave) return; // outro usuário entrou enquanto buscava
+        var res = ctResolverTrava(rows, ids, sessoes);
+        if (res.fechada && !res.estados.length) console.error('Trava de contrato: valor de ' + res.origem + ' não reconhecido', res.valor, '— nenhuma equipe será exibida.');
+        _travaDiag = { ids: ids, sessoes: sessoes, rows: rows, res: res };
+        try { localStorage.setItem(TRAVA_LS, JSON.stringify({ ids: ids, estados: res.estados })); } catch(e) {}
+        window.coDefinirTrava(res.estados);
+      })
+      .catch(function(e){
+        _travaDiag = { ids: ids, sessoes: sessoes, erro: 'Não consegui ler o banco: ' + e.message };
+        console.error('Trava de contrato: não consegui ler usuario_contrato —', e.message);
+      })
+      .then(function(){ if (typeof window.coTravaFim === 'function') window.coTravaFim(); });
+  }
+
+  // ── Painel de diagnóstico: abra a página com #trava no fim do endereço (ex.: cadastro_obra.html#trava)
+  function ctTravaPainel(){
+    var old = document.getElementById('trava-diag'); if (old) old.remove();
+    var box = document.createElement('div');
+    box.id = 'trava-diag';
+    box.style.cssText = 'position:fixed;top:70px;right:12px;z-index:99999;width:min(460px,calc(100vw - 24px));max-height:calc(100vh - 90px);overflow:auto;background:#fff;color:#1a202c;border:2px solid #0d7377;border-radius:12px;box-shadow:0 12px 40px rgba(0,0,0,.3);font:600 12px/1.45 Barlow,system-ui,sans-serif;padding:14px 16px;';
+    function linha(titulo, valor, cor){
+      var d = document.createElement('div'); d.style.cssText = 'margin:0 0 9px;';
+      var t = document.createElement('div'); t.textContent = titulo; t.style.cssText = 'font-weight:900;font-size:10px;letter-spacing:1px;color:#718096;text-transform:uppercase;';
+      var v = document.createElement('div'); v.textContent = valor; v.style.cssText = 'white-space:pre-wrap;word-break:break-word;color:' + (cor || '#1a202c') + ';';
+      d.appendChild(t); d.appendChild(v); box.appendChild(d);
+    }
+    var head = document.createElement('div'); head.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;';
+    head.innerHTML = '<b style="font-size:14px;color:#0d7377">🔒 Trava de contrato · ' + TRAVA_VERSAO + '</b>';
+    var x = document.createElement('button'); x.textContent = 'Fechar'; x.style.cssText = 'border:none;background:#e53e3e;color:#fff;border-radius:7px;padding:4px 10px;font-weight:800;cursor:pointer;';
+    x.onclick = function(){ box.remove(); try { history.replaceState(null, '', location.pathname + location.search); } catch(e) {} };
+    head.appendChild(x); box.appendChild(head);
+
+    var D = _travaDiag || {};
+    var ses = (D.sessoes || ctSessoes()).map(function(s){ return s.origem + ': ' + (ctIdsUsuario(s.obj).join(', ') || '(sem nome/e-mail)'); });
+    linha('Login encontrado em', ses.length ? ses.join('\n') : 'nenhum lugar', ses.length ? '' : '#c53030');
+    linha('Usuário identificado como', (D.ids && D.ids.length) ? D.ids.join(', ') : 'NÃO IDENTIFICADO', (D.ids && D.ids.length) ? '' : '#c53030');
+    if (D.erro) linha('Erro', D.erro, '#c53030');
+    if (D.rows) {
+      linha('Chaves lidas do banco', D.rows.length ? D.rows.map(function(r){
+        var v = r.value; if (typeof v === 'string') { try { v = JSON.parse(v); } catch(e) {} }
+        var n = Array.isArray(v) ? v.length : (v && typeof v === 'object') ? Object.keys(v).length : 1;
+        return r.key + ' (' + n + ' registro' + (n !== 1 ? 's' : '') + ')';
+      }).join('\n') : 'nenhuma (a chave usuario_contrato não existe ou o banco bloqueou a leitura)', D.rows.length ? '' : '#c53030');
+      var R = D.res || {};
+      if (R.origem) {
+        linha('Contrato encontrado em', R.origem);
+        linha('Valor salvo', JSON.stringify(R.valor));
+      } else {
+        var nomes = [];
+        D.rows.filter(function(r){ return /contrato/i.test(r.key); }).forEach(function(r){
+          var v = r.value; if (typeof v === 'string') { try { v = JSON.parse(v); } catch(e) {} }
+          if (Array.isArray(v)) v.forEach(function(it){ if (it && (it.nome || it.email)) nomes.push(it.nome || it.email); });
+          else if (v && typeof v === 'object') Object.keys(v).forEach(function(k){ nomes.push(k); });
+        });
+        linha('Contrato encontrado em', 'NENHUM — este usuário não está cadastrado com o mesmo nome/e-mail. Por isso vê todas as cidades.', '#c53030');
+        if (nomes.length) linha('Nomes cadastrados na trava', nomes.slice(0, 40).join('\n'));
+      }
+    }
+    linha('Aplicado na tela agora', coAllowedStates ? (coAllowedStates.length ? coAllowedStates.join(', ').toUpperCase() : 'NENHUM ESTADO (valor não reconhecido)') : 'SEM RESTRIÇÃO (todas as cidades)', coAllowedStates ? '#276749' : '#c53030');
+    document.body.appendChild(box);
+  }
+  window.coTravaDiag = function(){
+    _travaUlt = { chave: '', ts: 0 }; // força nova leitura
+    return ctBuscarTravaUsuario(_travaEvento).then(function(){ ctTravaPainel(); return _travaDiag; });
+  };
+  function ctTravaHash(){
+    if (!/^#trava\b/i.test(location.hash)) return;
+    // espera o login terminar (até ~15 s) para não mostrar "não identificado" à toa
+    var n = 0;
+    (function esperar(){ if (ctIdsGlobais().length || ++n >= 20) window.coTravaDiag(); else setTimeout(esperar, 750); })();
+  }
+  window.addEventListener('hashchange', ctTravaHash);
+
+  document.addEventListener('mariua:user', function(e){ ctBuscarTravaUsuario(e && e.detail); });
+  // O mariua-auth.js não dispara evento: ele só preenche window.MARIUA_USER quando o login termina
+  // (depois de carregar o SDK e consultar as permissões). Intercepta essa gravação para aplicar a
+  // trava na mesma hora, em vez de depender de tentativas por tempo.
+  (function(){
+    try {
+      var d = Object.getOwnPropertyDescriptor(window, 'MARIUA_USER');
+      if (d && (d.get || !d.configurable)) return;
+      var atual = window.MARIUA_USER;
+      Object.defineProperty(window, 'MARIUA_USER', {
+        configurable: true, enumerable: true,
+        get: function(){ return atual; },
+        set: function(v){ atual = v; if (v) setTimeout(function(){ ctBuscarTravaUsuario(v); }, 0); }
+      });
+      if (atual) setTimeout(function(){ ctBuscarTravaUsuario(atual); }, 0); // depois do script terminar de carregar
+    } catch(e) {}
+  })();
+  // O evento de login pode ter disparado antes deste script: tenta pelos dados globais algumas vezes
+  (function(){
+    var n = 0;
+    function tentar(){ ctBuscarTravaUsuario(null); if (!_travaUlt.chave && ++n < 15) setTimeout(tentar, 1000); }
+    function iniciar(){ tentar(); ctTravaHash(); }
+    if (document.readyState === 'complete') setTimeout(iniciar, 0);
+    else window.addEventListener('load', iniciar);
+  })();
+
+})();
+
+// ── Trava aplicada ao Cadastro de Obra ────────────────────────────────────────
+// Estado de cada base para a trava: Irecê/Jacobina/Serrinha/Feira = BA, Aracaju = SE.
+// (Feira não tem contrato fixo — o contrato dela é escolhido no card 2 —, mas fica na Bahia.)
+var CO_BASE_ESTADO_GEO = { fsa:'ba' };
+function coBaseEstado(id){ var b=coBaseDef(id); return b.uf || CO_BASE_ESTADO_GEO[b.id] || 'ba'; }
+function coEstadoPermitido(uf){ return !coAllowedStates || coAllowedStates.indexOf(uf) >= 0; }
+function coBasePermitida(id){ return coEstadoPermitido(coBaseEstado(id)); }
+function coBasesPermitidas(){ return CO_BASES.filter(function(b){ return coBasePermitida(b.id); }); }
+// primeiro estado liberado (para bases sem contrato fixo, como Feira)
+function coEstadoLiberado(uf){ return coEstadoPermitido(uf) ? uf : ((coAllowedStates && coAllowedStates[0]) || uf); }
+
+// A carga inicial espera a trava (no máximo 8 s) para não abrir a carteira de outra cidade
+var _coTravaOk, coTravaPronta = new Promise(function(r){ _coTravaOk = r; });
+setTimeout(function(){ _coTravaOk(); }, 8000);
+window.coTravaFim = function(){ _coTravaOk(); };
+var CO_MAPA_PRONTO = false;   // true depois da primeira seleção de base
+
+function coSemBase(){
+  var box=document.getElementById('co-base-btns');
+  if(box) box.innerHTML='<span style="font-size:.78rem;font-weight:700;color:#c53030;">Nenhuma base liberada para o seu contrato.</span>';
+  document.getElementById('co-base').value='';
+  coLimparObras();
+  coSt('Seu usuário não tem nenhuma base liberada neste cadastro. Fale com o administrador.','#c53030');
+}
+function coDefinirTrava(estados){
+  if (Array.isArray(estados)) estados = estados.filter(function(s){ return ['ba','mg','se'].indexOf(s) >= 0; });
+  if (Array.isArray(estados) && estados.length === 3) estados = null;
+  var antes = JSON.stringify(coAllowedStates);
+  coAllowedStates = estados ? estados.slice().sort() : null;
+  _coTravaOk();
+  if (antes === JSON.stringify(coAllowedStates)) return;
+  if (!CO_MAPA_PRONTO) { coPopularBases(); coPopularEstados(); coPopularCopiarDe(); return; } // a carga inicial já escolhe a base certa
+  var atual = document.getElementById('co-base').value;
+  if (!atual || !coBasePermitida(atual)) {
+    var lib = coBasesPermitidas();
+    if (lib.length) coSelecionarBase(lib[0].id); else coSemBase();
+  } else {
+    coPopularBases(); coPopularEstados(); coPopularCopiarDe();
+  }
+}
+window.coDefinirTrava = coDefinirTrava;
+
+function coPopularBases(){
+  var box=document.getElementById('co-base-btns'); if(!box) return;
+  var sel=coBaseId();
+  var lista=coBasesPermitidas();   // só as bases do contrato do usuário
+  if(!lista.length){ box.innerHTML='<span style="font-size:.78rem;font-weight:700;color:#c53030;">Nenhuma base liberada para o seu contrato.</span>'; return; }
+  box.innerHTML=lista.map(function(b){
+    var d=CO_DATA[b.id]||{}; var tem=b.fonte==='arquivo' || (d.link && Object.keys(d.meses||{}).length);
+    var ativo=(b.id===sel);
+    var bg=ativo?'#0d7377':(tem?'#eef4f4':'#f8fafc');
+    var cor=ativo?'#fff':(tem?'#0d7377':'#94a3b8');
+    var bd=ativo?'#0d7377':(tem?'#cfe3e2':'#e6ecf3');
+    return '<button onclick="coSelecionarBase(\''+b.id+'\')" style="padding:8px 14px;border-radius:9px;border:1.5px solid '+bd+';background:'+bg+';color:'+cor+';font-family:inherit;font-weight:800;font-size:.78rem;cursor:pointer;">'+b.nome+'</button>';
+  }).join('');
+}
+function coSelecionarBase(id){
+  if(!coBasePermitida(id)){               // trava de contrato: base fora do contrato não abre
+    var lib=coBasesPermitidas();
+    if(!lib.length){ coSemBase(); return; }
+    id=lib[0].id;
+  }
+  document.getElementById('co-base').value=id; CO_BASE=id;
+  var def=coBaseDef(id);
+  var uf=def.uf || CO_ESTADO_BASE[id] || 'ba';
+  if(!def.uf && !coEstadoPermitido(uf)){  // Feira com estado fora do contrato: usa o liberado
+    uf=coEstadoLiberado(uf); CO_ESTADO_BASE[id]=uf;
+    var dE=CO_ESTADO_DEF[uf]||{}, CE=(CO_CONST_BASES[id]=CO_CONST_BASES[id]||{});
+    CE['Contrato*']=dE.contrato||''; CE['TIPO DE OBRA*']=dE.tipoObra||''; CE['TIPO SERVICO*']=dE.tipoServico||''; CE['PROCESSO']=dE.processo||'';
+  }
+  if(CO_ESTADO_DEF[uf]){ document.getElementById('co-estado').value=uf; }
+  coPopularEstados();
+  var d=coBaseObj();
+  document.getElementById('co-link').value=d.link||'';
+  coModoFonte();
+  coPopularBases(); coPopularMeses();
+  coPopularConstantes();   // cada base tem o seu conjunto de constantes
+  if(coBaseArquivo(id)){
+    var arq=CO_ARQ[id];
+    if(arq){ coProcessarLinhas(arq.linhas, arq.nome); }
+    else { coLimparObras(); coSt('Base '+coNomeBase(id)+': envie o arquivo da carteira para carregar as obras.','#64748b'); }
+    return;
+  }
+  var k=coMesKey(); var gid=(d.meses||{})[k];
+  if(gid){ document.getElementById('co-gid').value=gid; coCarregar(); }
+  else { coLimparObras(); coSt('Base '+coNomeBase(id)+' selecionada. Escolha o mês.','#64748b'); }
+}
+function coNomeBase(id){ for(var i=0;i<CO_BASES.length;i++){ if(CO_BASES[i].id===id) return CO_BASES[i].nome; } return id; }
+
+function coPopularMeses(){
+  var box=document.getElementById('co-mes-btns'); if(!box) return;
+  var meses=coBaseObj().meses||{};
+  var sel=coMesKey();
+  if(!sel){ var hoje=new Date(); sel=CO_ANO+'-'+('0'+(hoje.getMonth()+1)).slice(-2); document.getElementById('co-mes').value=sel; }
+  box.innerHTML=CO_MESES.map(function(nome,i){
+    var k=CO_ANO+'-'+('0'+(i+1)).slice(-2);
+    var tem=!!meses[k];
+    var ativo=(k===sel);
+    var bg=ativo?'#0d7377':(tem?'#eef4f4':'#f8fafc');
+    var cor=ativo?'#fff':(tem?'#0d7377':'#94a3b8');
+    var bd=ativo?'#0d7377':(tem?'#cfe3e2':'#e6ecf3');
+    return '<button onclick="coSelecionarMes(\''+k+'\')" style="padding:8px 12px;border-radius:9px;border:1.5px solid '+bd+';background:'+bg+';color:'+cor+';font-family:inherit;font-weight:800;font-size:.78rem;cursor:pointer;display:flex;align-items:center;gap:5px;">'
+      + nome.slice(0,3)
+      + (tem?'<span style="width:6px;height:6px;border-radius:50%;background:'+(ativo?'#7ff0d0':'#14a085')+';display:inline-block;"></span>':'')
+      + '</button>';
+  }).join('');
+}
+function coSelecionarMes(k){
+  document.getElementById('co-mes').value=k;
+  var meses=coBaseObj().meses||{}; var gid=meses[k]||'';
+  document.getElementById('co-gid').value=gid;
+  coPopularMeses();
+  if(gid){ coCarregar(); }
+  else { coSt('A base '+coNomeBase(coBaseId())+' não tem aba de '+coNomeMes(k)+' configurada. Clique em "⚙️ Configurar abas", cole o link e o gid, e salve.','#b9821c'); document.getElementById('co-config').style.display='block'; }
+}
+function coMesMudou(){ coSelecionarMes(coMesKey()); }
+
+function coCarregarMapa(){
+  return fetch(CO_SUPA+'/rest/v1/turno_data?select=value&key=eq.cadastro_obra_bases&limit=1',{headers:{apikey:CO_KEY,Authorization:'Bearer '+CO_KEY}})
+    .then(function(r){return r.ok?r.json():[];})
+    .then(function(j){ if(Array.isArray(j)&&j.length&&j[0].value) CO_DATA=j[0].value||{}; })
+    .catch(function(){})
+    .then(function(){
+      // semente: Irecê com a planilha atual + AGO/2026
+      if(!CO_DATA.irc || !CO_DATA.irc.link){ CO_DATA.irc={link:'https://docs.google.com/spreadsheets/d/14ImbZb8-OCBp78jDtd0QFkSLrMG5vXA7tzrM-x6KQVo/edit?gid=1847275425', meses:{'2026-08':'1847275425'}}; }
+      return coTravaPronta;
+    })
+    .then(function(){
+      if(!coBasePermitida(CO_BASE)){ var lib=coBasesPermitidas(); if(lib.length) CO_BASE=lib[0].id; }
+      document.getElementById('co-base').value=CO_BASE;
+      coSelecionarBase(CO_BASE);
+      CO_MAPA_PRONTO=true;
+    });
+}
+function coSalvarAba(){
+  var b=coBaseId(), k=coMesKey();
+  var link=(document.getElementById('co-link').value||'').trim();
+  var gid=(document.getElementById('co-gid').value||'').trim();
+  if(!gid){ var m=link.match(/[?#&]gid=(\d+)/); gid=m?m[1]:''; }
+  if(!/^\d+$/.test(gid)){ coSt('Informe um gid válido (só números) antes de salvar.','#c53030'); return; }
+  if(!CO_DATA[b]) CO_DATA[b]={link:'',meses:{}};
+  CO_DATA[b].link=link; CO_DATA[b].meses[k]=gid;
+  fetch(CO_SUPA+'/rest/v1/turno_data?on_conflict=key',{method:'POST',headers:Object.assign({'Prefer':'resolution=merge-duplicates,return=minimal'},CO_H),body:JSON.stringify({key:'cadastro_obra_bases',value:CO_DATA,updated_at:new Date().toISOString()})})
+    .then(function(r){ coSt(r.ok?('✅ Aba salva: '+coNomeBase(b)+' · '+coNomeMes(k)+'.'):'⚠️ Não foi possível salvar.', r.ok?'#0d7377':'#c53030'); coPopularBases(); coPopularMeses(); })
+    .catch(function(){ coSt('Falha ao salvar a aba.','#c53030'); });
+}
+function coNomeMes(k){ var p=(k||'').split('-'); return CO_MESES[(+p[1])-1]+'/'+p[0]; }
+
+var CO_CACHE={};      // 'id|gid' -> texto CSV bruto (evita rebuscar)
+var CO_LAST_TXT=null; // último CSV carregado (pra re-mapear ao mudar estado)
+function coCarregar(){
+  var id=coSheetId(document.getElementById('co-link').value);
+  if(!id){ coSt('Informe o link ou ID da planilha.','#c53030'); return; }
+  var gid=coGid();
+  var ck=id+'|'+gid;
+  if(CO_CACHE[ck]){ coProcessar(CO_CACHE[ck]); return; }  // instantâneo (já em cache)
+  var urlExport='https://docs.google.com/spreadsheets/d/'+id+'/export?format=csv&gid='+gid;
+  var urlGviz='https://docs.google.com/spreadsheets/d/'+id+'/gviz/tq?tqx=out:csv&gid='+gid+'&headers=0';
+  coSt('Carregando carteira do Google...');
+  // 1) tenta o export bruto (grade exata); 2) se falhar (CORS/erro), tenta o gviz
+  fetch(urlExport).then(function(r){ if(!r.ok) throw new Error('export HTTP '+r.status); return r.text(); })
+    .then(function(txt){ CO_CACHE[ck]=txt; coProcessar(txt); })
+    .catch(function(){
+      fetch(urlGviz).then(function(r){ if(!r.ok) throw new Error('gviz HTTP '+r.status); return r.text(); })
+        .then(function(txt){ CO_CACHE[ck]=txt; coProcessar(txt); })
+        .catch(function(e){ coSt('❌ Falha ao carregar: '+e.message+'. Verifique se a planilha está compartilhada (qualquer pessoa com o link pode ver) e se o gid está correto.','#c53030'); });
+    });
+}
+// re-mapeia com os valores fixos atuais, sem rebuscar (usado ao trocar o estado)
+function coRemapear(){ if(CO_LAST_TXT) coProcessar(CO_LAST_TXT); }
+function coProcessar(txt){
+    CO_LAST_TXT=txt;
+    return coProcessarLinhas(coParseCSV(txt));
+}
+// acha a linha de cabeçalho nas 15 primeiras e diz qual o formato:
+//  'carteira' = carteira do Google (PEP OBRA / TÍTULO / MUNICIPIO)
+//  'lote'     = arquivo de lote (Obra / Tipo Obra / MUNICIPIO / STATUS...), ex.: Aracaju
+function coAcharCabecalho(rows){
+  for(var k=0;k<Math.min(rows.length,15);k++){
+    var lin=(rows[k]||[]).map(coNorm);
+    if(lin.indexOf('PEP OBRA')>=0 || (lin.indexOf('TITULO')>=0 && lin.indexOf('MUNICIPIO')>=0)) return {idx:k, formato:'carteira'};
+    if(lin.indexOf('OBRA')>=0 && lin.indexOf('MUNICIPIO')>=0) return {idx:k, formato:'lote'};
+  }
+  return {idx:-1, formato:''};
+}
+// rows = grade [[celula,...],...] vinda do CSV do Google ou do arquivo enviado
+function coProcessarLinhas(rows, nomeArquivo){
+    var cab=coAcharCabecalho(rows), hi=cab.idx;
+    if(hi<0){
+      if(nomeArquivo) coSt('❌ Não encontrei o cabeçalho em "'+nomeArquivo+'". O arquivo precisa ter as colunas OBRA e MUNICIPIO (lote) ou PEP OBRA / TÍTULO / MUNICIPIO (carteira) nas 15 primeiras linhas.','#c53030');
+      else coSt('❌ Não encontrei o cabeçalho da carteira (PEP OBRA / TÍTULO / MUNICIPIO). Confira a aba (gid) e se a planilha está compartilhada como "qualquer pessoa com o link".','#c53030');
+      return false;
+    }
+    if(cab.formato==='lote') return coProcessarLote(rows, hi, nomeArquivo);
+    var hdr=rows[hi].map(coNorm);
+    function col(nomes){ for(var n=0;n<nomes.length;n++){ var idx=hdr.indexOf(nomes[n]); if(idx>=0) return idx; } return -1; }
+    function colLike(palavras){ for(var c=0;c<hdr.length;c++){ var ok=true; for(var w=0;w<palavras.length;w++){ if(hdr[c].indexOf(palavras[w])<0){ ok=false; break; } } if(ok) return c; } return -1; }
+    var cPep=col(['PEP OBRA','PEP']), cTit=col(['TITULO']), cMun=col(['MUNICIPIO']), cSup=col(['SUPERVISOR']),
+        cPost=col(['POSTES PREVISTOS','POSTES PREVISTO']), cLat=col(['LATITUDE']), cLon=col(['LONGITUDE']), cStat=col(['STATUS DA OBRA','STATUS']);
+    if(cPost<0) cPost=colLike(['POSTES','PREVIST']);
+    if(cPep<0){ coSt('❌ Coluna PEP OBRA não encontrada.','#c53030'); return false; }
+
+    var out=[]; var foraFiltro=0; var foraDet={};
+    for(var r=hi+1;r<rows.length;r++){
+      var row=rows[r]; if(!row) continue;
+      var pep=(row[cPep]||'').trim();
+      if(!/^[A-Za-z]-?\d{3,}/.test(pep)) continue; // só linhas de obra (B-1234567)
+      var mun=(cMun>=0?(row[cMun]||''):'').trim();
+      var reg={};
+      reg['Projeto*']=pep;
+      reg['Titulo da obra*']=(cTit>=0?(row[cTit]||''):'').replace(/[\r\n]+/g,' ').replace(/\s{2,}/g,' ').trim();
+      reg['Municipio*']=mun;
+      reg['RESPONSAVEL*']=(cSup>=0?(row[cSup]||''):'').split(' - ')[0].trim();
+      var _stPlan=(cStat>=0?(row[cStat]||''):'').trim();
+      reg['_statusDaPlanilha']=_stPlan;   // se vazio, usa a constante STATUS*
+      // as demais colunas sao preenchidas por coAplicarConstantes() (card 2)
+      reg['Postes']=coUmaLinha(cPost>=0?(row[cPost]||''):'');
+      reg['LATITUDE']=coUmaLinha(cLat>=0?(row[cLat]||''):'').replace('.',',');
+      reg['LONGITUDE']=coUmaLinha(cLon>=0?(row[cLon]||''):'').replace('.',',');
+      reg['SUPERVISOR']=(cSup>=0?(row[cSup]||''):'').split(' - ')[0].trim();
+      // só obras em Execução ou Programada
+      var _st=coNorm(_stPlan || CO_STATUS_FIXO);
+      if(_st.indexOf('EXECUCAO')<0 && _st.indexOf('PROGRAMAD')<0){ foraFiltro++; var _k=_st||'(vazio)'; foraDet[_k]=(foraDet[_k]||0)+1; continue; }
+      out.push(reg);
+    }
+    CO_ROWS=out;
+    var comPostes=out.filter(function(r){return (r['Postes']||'').trim()!=='';}).length;
+    function _nm(i){ return i>=0 ? ((rows[hi][i]||'').trim()||'(vazio)') : '(NÃO ACHOU)'; }
+    var amostra=out.slice(0,5).map(function(r){return r['Postes']||'—';}).join(', ');
+    var foraTxt=Object.keys(foraDet).sort(function(a,b){return foraDet[b]-foraDet[a];}).slice(0,4).map(function(k){return k+' ('+foraDet[k]+')';}).join(', ');
+    coSt('✅ '+out.length+' obras carregadas (só Execução/Programada)'+(foraFiltro?' · '+foraFiltro+' fora do filtro: '+foraTxt:'')+'. Postes: coluna "'+_nm(cPost)+'" (índice '+cPost+') · '+comPostes+' com valor · amostra: '+amostra,'#0d7377');
+    document.getElementById('co-count').textContent='· '+out.length+' obras';
+    var b=document.getElementById('co-baixar'); b.disabled=false; b.style.opacity='1';
+    coAplicarConstantes();
+    coPreview();
+    return true;
+}
+
+// ===== formato lote (arquivo enviado, ex.: Lote_parcial_11-2026_MARIUA.xlsx) =====
+// Obra -> Projeto* · Tipo Obra + Município -> Título · STATUS -> status da carteira
+// Prazo Regulado -> data_prazo_venc · Lote Previsto só entra no resumo
+// Todas as obras do arquivo entram (o lote já é a seleção do mês): sem filtro de Execução/Programada.
+function coProcessarLote(rows, hi, nomeArquivo){
+    var hdr=rows[hi].map(coNorm);
+    function col(nomes){ for(var n=0;n<nomes.length;n++){ var idx=hdr.indexOf(nomes[n]); if(idx>=0) return idx; } return -1; }
+    var cObra=col(['OBRA','PEP OBRA','PEP']), cTipo=col(['TIPO OBRA','TIPO DE OBRA']), cMun=col(['MUNICIPIO']),
+        cStat=col(['STATUS','STATUS DA OBRA']), cPrazo=col(['PRAZO REGULADO']), cLote=col(['LOTE PREVISTO','LOTE']);
+    var out=[], vistos={}, repetidas=0, porLote={}, muns={};
+    for(var r=hi+1;r<rows.length;r++){
+      var row=rows[r]||[];
+      var obra=coUmaLinha(row[cObra]).replace(/\.0+$/,'');
+      if(!/\d{5,}/.test(obra)) continue;               // pula linhas vazias / totais
+      if(vistos[obra]){ repetidas++; continue; } vistos[obra]=1;
+      var mun=coUmaLinha(cMun>=0?row[cMun]:'');
+      var tipo=coUmaLinha(cTipo>=0?row[cTipo]:'');
+      var reg={};
+      reg['Projeto*']=obra;
+      reg['Titulo da obra*']=[tipo,mun].filter(Boolean).join(' - ').toUpperCase();
+      reg['Municipio*']=mun;
+      reg['_statusDaPlanilha']=coUmaLinha(cStat>=0?row[cStat]:'');
+      reg['data_prazo_venc']=coDataCelula(cPrazo>=0?row[cPrazo]:'');
+      var lote=coDataCelula(cLote>=0?row[cLote]:'');
+      var lk=/^\d{2}\/\d{2}\/\d{4}$/.test(lote)?lote.slice(3):(lote||'sem lote');
+      porLote[lk]=(porLote[lk]||0)+1;
+      if(mun) muns[mun]=1;
+      out.push(reg);
+    }
+    var nomeTx=nomeArquivo?' em "'+nomeArquivo+'"':'';
+    if(cObra<0 || !out.length){ coSt('❌ Achei o cabeçalho'+nomeTx+', mas nenhuma linha com número de obra na coluna OBRA.','#c53030'); return false; }
+
+    CO_ROWS=out;
+    document.getElementById('co-count').textContent='· '+out.length+' obras';
+    var b=document.getElementById('co-baixar'); b.disabled=false; b.style.opacity='1';
+    coAplicarConstantes();
+    coPreview();
+
+    function _mes(k){ var m=k.match(/^(\d{2})\/(\d{4})$/); return m?(CO_MESES[(+m[1])-1]||'').slice(0,3).toLowerCase()+'/'+m[2]:k; }
+    var loteTx=Object.keys(porLote).sort(function(a,b){return porLote[b]-porLote[a];}).map(function(k){return _mes(k)+' ('+porLote[k]+')';}).join(', ');
+    var falta=CO_HEADERS.filter(function(h){ return /\*$/.test(h) && CO_ROWS.some(function(reg){ return !String(reg[h]||'').trim(); }); });
+    coSt('✅ '+out.length+' obras carregadas'+(nomeArquivo?' de "'+nomeArquivo+'"':'')
+      +' · '+Object.keys(muns).length+' municípios · lote previsto: '+loteTx
+      +(repetidas?' · '+repetidas+' obra(s) repetida(s) ignorada(s)':'')
+      +(falta.length?' · ⚠️ falta preencher nas constantes: '+falta.join(', '):''),
+      falta.length?'#b9821c':'#0d7377');
+    return true;
+}
+
+// célula de data: número serial do Excel, texto dd/mm/aaaa ou aaaa-mm-dd -> dd/mm/aaaa
+function coDataCelula(v){
+  var t=coUmaLinha(v); if(!t) return '';
+  if(/^\d+(\.\d+)?$/.test(t)){
+    var n=parseFloat(t);
+    if(n>20000 && n<80000){ var d=new Date((Math.floor(n)-25569)*86400000);
+      return ('0'+d.getUTCDate()).slice(-2)+'/'+('0'+(d.getUTCMonth()+1)).slice(-2)+'/'+d.getUTCFullYear(); }
+    return t;
+  }
+  var m=t.match(/^(\d{4})-(\d{2})-(\d{2})/); if(m) return m[3]+'/'+m[2]+'/'+m[1];
+  return t;
+}
+
+function coLimparObras(){
+  CO_ROWS=[];
+  var c=document.getElementById('co-count'); if(c) c.textContent='';
+  var b=document.getElementById('co-baixar'); if(b) b.disabled=true;
+  coPreview();
+}
+
+// ===== upload da carteira (bases com fonte:'arquivo') =====
+function coModoFonte(){
+  var arq=coBaseArquivo();
+  function mostra(id,v){ var el=document.getElementById(id); if(el) el.style.display=v?'':'none'; }
+  mostra('co-arquivo', arq); mostra('co-campo-mes', !arq); mostra('co-config-bt', !arq);
+  if(arq){ var cfg=document.getElementById('co-config'); if(cfg) cfg.style.display='none'; }
+  coArqRotulo();
+}
+function coArqRotulo(){
+  var z=document.getElementById('co-arq-zona'); if(!z) return;
+  var a=CO_ARQ[coBaseId()];
+  z.classList.toggle('carregado', !!a);
+  document.getElementById('co-arq-nome').textContent = a ? a.nome : 'Envie o arquivo da carteira';
+  document.getElementById('co-arq-info').textContent = a ? ('Carregado às '+a.hora+'. Arraste outro arquivo aqui ou clique para trocar.')
+                                                         : 'Arraste o .xlsx ou .csv aqui, ou clique para escolher.';
+  document.getElementById('co-arq-bt').textContent = a ? 'Trocar arquivo' : 'Escolher arquivo';
+}
+function coArquivoEscolhido(inp){ var f=inp.files&&inp.files[0]; inp.value=''; if(f) coLerArquivo(f); }
+function coLerArquivo(f){
+  var base=coBaseId(), nome=f.name||'arquivo';
+  var ext=((nome.match(/\.([a-z0-9]+)$/i)||[])[1]||'').toLowerCase();
+  if(['xlsx','xls','xlsm','csv'].indexOf(ext)<0){ coSt('❌ "'+nome+'" não é uma planilha. Envie um arquivo .xlsx, .xls ou .csv.','#c53030'); return; }
+  coSt('Lendo "'+nome+'"...','#64748b');
+  (ext==='csv' ? coLerCSVArquivo(f) : coLerPlanilha(f)).then(function(linhas){
+    // soltou a precificação de serviços em vez da carteira: atualiza a lista de serviços
+    if(coAcharCabecalho(linhas).idx<0 && coServCabecalho(linhas).idx>=0){ coImportarServicos(linhas, nome); return; }
+    if(coBaseId()!==base) return;          // trocou de base enquanto lia
+    if(coProcessarLinhas(linhas, nome)){
+      var h=new Date();
+      CO_ARQ[base]={nome:nome, hora:('0'+h.getHours()).slice(-2)+':'+('0'+h.getMinutes()).slice(-2), linhas:linhas};
+      coArqRotulo();
+    }
+  }).catch(function(e){ coSt('❌ Não consegui ler "'+nome+'": '+((e&&e.message)||e)+'.','#c53030'); });
+}
+function coLerBuffer(f){
+  return new Promise(function(ok,falha){ var r=new FileReader(); r.onload=function(){ ok(r.result); }; r.onerror=function(){ falha(new Error('falha ao ler o arquivo')); }; r.readAsArrayBuffer(f); });
+}
+function coLerCSVArquivo(f){
+  return coLerBuffer(f).then(function(buf){
+    var txt;
+    try{ txt=new TextDecoder('utf-8',{fatal:true}).decode(buf); }catch(e){ txt=new TextDecoder('windows-1252').decode(buf); }  // CSV salvo pelo Excel
+    txt=txt.replace(/^\ufeff/,'');
+    var amostra=txt.slice(0,3000);
+    var sep=(amostra.split(';').length>amostra.split(',').length)?';':',';
+    return coParseCSV(txt,sep);
+  });
+}
+// leitor de Excel (SheetJS), carregado só quando alguém sobe um .xlsx
+var CO_XLSX_URLS=['https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js','https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js'];
+var coXlsxPromessa=null;
+function coCarregarXLSX(){
+  if(window.XLSX) return Promise.resolve(window.XLSX);
+  if(coXlsxPromessa) return coXlsxPromessa;
+  coXlsxPromessa=new Promise(function(ok,falha){
+    (function tenta(i){
+      if(i>=CO_XLSX_URLS.length){ coXlsxPromessa=null; falha(new Error('o leitor de Excel não carregou (sem internet?). Salve a planilha como CSV e envie de novo')); return; }
+      var s=document.createElement('script'); s.src=CO_XLSX_URLS[i];
+      s.onload=function(){ if(window.XLSX) ok(window.XLSX); else tenta(i+1); };
+      s.onerror=function(){ tenta(i+1); };
+      document.head.appendChild(s);
+    })(0);
+  });
+  return coXlsxPromessa;
+}
+function coLerPlanilha(f){
+  return Promise.all([coCarregarXLSX(), coLerBuffer(f)]).then(function(res){
+    var X=res[0], wb=X.read(new Uint8Array(res[1]),{type:'array'});
+    function grade(nome){
+      return X.utils.sheet_to_json(wb.Sheets[nome],{header:1,raw:true,defval:''})
+        .map(function(r){ return r.map(function(v){ return v==null?'':String(v); }); });
+    }
+    // usa a primeira aba que tiver um cabeçalho reconhecível
+    for(var i=0;i<wb.SheetNames.length;i++){ var g=grade(wb.SheetNames[i]); if(coAcharCabecalho(g).idx>=0) return g; }
+    return grade(wb.SheetNames[0]);
+  });
+}
+// arrastar e soltar: vale em qualquer ponto da página quando a base é por arquivo
+(function(){
+  var z=document.getElementById('co-arq-zona');
+  function temArquivo(e){ var t=e.dataTransfer&&e.dataTransfer.types; return !!t && Array.prototype.indexOf.call(t,'Files')>=0; }
+  window.addEventListener('dragover',function(e){ if(coBaseArquivo() && temArquivo(e)){ e.preventDefault(); if(z) z.classList.add('sobre'); } });
+  window.addEventListener('dragleave',function(e){ if(z && (!e.relatedTarget || e.relatedTarget===document.documentElement)) z.classList.remove('sobre'); });
+  window.addEventListener('drop',function(e){
+    if(z) z.classList.remove('sobre');
+    if(!coBaseArquivo() || !temArquivo(e)) return;
+    e.preventDefault();
+    var f=e.dataTransfer.files&&e.dataTransfer.files[0]; if(f) coLerArquivo(f);
+  });
+})();
+
+// celula da carteira com varias linhas (ex.: 5 coordenadas empilhadas) -> so a primeira
+function coUmaLinha(v){
+  var partes=String(v==null?'':v).split(/[\r\n]+/);
+  for(var i=0;i<partes.length;i++){ var t=partes[i].trim(); if(t) return t; }
+  return '';
+}
+
+function coDataHoje(){ var d=new Date(); return ('0'+d.getDate()).slice(-2)+'/'+('0'+(d.getMonth()+1)).slice(-2)+'/'+d.getFullYear(); }
+
+function coBuscaNorm(t){
+  return String(t==null?'':t).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+}
+function coPreview(){
+  var cols=coBaseArquivo()
+    ? ['Projeto*','Titulo da obra*','Municipio*','RESPONSAVEL*','CENTRO SERVICO','TIPO SERVICO*','NATUREZA OBRAS','data_prazo_venc','STATUS*']
+    : ['Projeto*','Titulo da obra*','Municipio*','RESPONSAVEL*','CENTRO SERVICO','TIPO SERVICO*','NATUREZA OBRAS','Postes','LATITUDE','LONGITUDE','STATUS*'];
+  var cx=document.getElementById('co-busca');
+  var q=coBuscaNorm(cx?cx.value:'').trim();
+  var termos=q?q.split(/\s+/):[];
+  var bar=document.querySelector('.co-busca');
+  if(bar) bar.classList.toggle('tem-texto', !!q);
+
+  // busca em TODOS os campos da obra, não só nos que a prévia mostra;
+  // vários termos = todos precisam aparecer (busca "serrinha execucao")
+  var achadas = termos.length
+    ? CO_ROWS.filter(function(reg){
+        var alvo=''; for (var k in reg) if (Object.prototype.hasOwnProperty.call(reg,k)) alvo += ' ' + reg[k];
+        alvo = coBuscaNorm(alvo);
+        return termos.every(function(t){ return alvo.indexOf(t) >= 0; });
+      })
+    : CO_ROWS;
+
+  var limite = termos.length ? 100 : 25;
+  var h='<table style="width:100%;border-collapse:collapse;font-size:.72rem;color:#334155;"><thead><tr style="background:#f0fafa;color:#0d7377;">'+cols.map(function(c){return '<th style="text-align:left;padding:6px 8px;white-space:nowrap;">'+c+'</th>';}).join('')+'</tr></thead><tbody>';
+  achadas.slice(0,limite).forEach(function(reg){ h+='<tr style="border-bottom:1px solid #eef2f7;">'+cols.map(function(c){return '<td style="padding:6px 8px;white-space:nowrap;">'+(reg[c]||'').replace(/</g,'&lt;')+'</td>';}).join('')+'</tr>'; });
+  h+='</tbody></table>';
+  if(!achadas.length){
+    h = '<div style="padding:34px;text-align:center;color:#a9b4bf;font-weight:700;font-size:.82rem;">'
+      + (CO_ROWS.length ? 'Nenhuma obra encontrada para “'+String(cx?cx.value:'').replace(/</g,'&lt;')+'”.'
+                        : 'Carregue a carteira para ver a prévia.') + '</div>';
+  } else if(achadas.length>limite){
+    h+='<div style="font-size:.7rem;color:#94a3b8;margin:8px 10px;">Mostrando '+limite+' de '+achadas.length+' — o CSV terá todas.</div>';
+  }
+  document.getElementById('co-preview').innerHTML=h;
+
+  var res=document.getElementById('co-busca-res');
+  if(res){
+    res.textContent = !CO_ROWS.length ? ''
+      : termos.length ? achadas.length+' de '+CO_ROWS.length+' obras · o CSV continua saindo com todas'
+      : CO_ROWS.length+' obras carregadas';
+  }
+  coAtivInfo();
+}
+
+
+/* ==========================================================================
+   CONSTANTES DO ARQUIVO  —  um conjunto por base
+   CO_CONST_BASES = { irc:{ 'Contrato*':'OBRAS - BA', ... }, jac:{...} }
+   ========================================================================== */
+var CO_CONST_BASES={};
+
+// colunas que vem da carteira: nunca aparecem no painel
+var CO_CAMPOS_CARTEIRA=['Projeto*','Titulo da obra*','Municipio*','RESPONSAVEL*','SUPERVISOR','Postes','LATITUDE','LONGITUDE','CENTRO SERVICO'];
+
+// grupos do painel (o resto cai em "Outros campos")
+var CO_GRUPOS=[
+  {nome:'Responsáveis', cols:['RESPONSAVEL*','SUPERVISOR']},   // só aparece nas bases por arquivo (o lote não traz)
+  {nome:'Contrato e serviço', cols:['Contrato*','TIPO DE OBRA*','TIPO SERVICO*','NATUREZA OBRAS','STATUS*','OBRIGA VISTORIA','PROCESSO','origem','tipo_prioridade']},
+  {nome:'Datas', cols:['DATA_RECEBIMENTO*','DATA_PREVISTO_RECEBIMENTO','DATA_PREVISAO_INICIO','DATA_PREVISAO_FIM','data_inicio','data_aceite','data_prazo_venc','data_limite_vist']},
+  {nome:'Local e identificação', cols:['ENDEREÇO','Bairro','CEP','REFERENCIA','OS','MEDIDOR','fiscal_concessionaria','Interessado','OBSERVACAO']},
+  {nome:'Quantidades', cols:['qtd_clientes','qtd_transformadores','qtd_extensao_bt','qtd_extensao_mt','Fator K']},
+  {nome:'Orçamento', cols:['descricao_orcamento','valor_orcamento_mao_obra','valor_orcamento_material','valor_previsto_obra']}
+];
+
+function coConstPadrao(){
+  var d=CO_ESTADO_DEF[coEstado()]||{};
+  var C={'Contrato*':d.contrato||'', 'TIPO DE OBRA*':d.tipoObra||'', 'TIPO SERVICO*':d.tipoServico||'',
+          'PROCESSO':d.processo||'', 'NATUREZA OBRAS':'RURAL', 'STATUS*':'Em Execução',
+          'OBRIGA VISTORIA':'NÃO', 'DATA_RECEBIMENTO*':coDataHoje()};
+  var p=coBaseDef().padrao||{};
+  Object.keys(p).forEach(function(k){ C[k]=p[k]; });
+  return C;
+}
+// ao carregar as constantes salvas: preenche o padrão da base onde o campo estiver vazio
+function coAplicarPadroesBases(){
+  CO_BASES.forEach(function(b){
+    var C=CO_CONST_BASES[b.id]; if(!C) return;
+    var p=b.padrao||{}, fx=coContratoFixo(b.id);
+    Object.keys(p).forEach(function(k){ if(!String(C[k]||'').trim()) C[k]=p[k]; });
+    Object.keys(fx).forEach(function(k){ if(!Object.prototype.hasOwnProperty.call(C,k)) C[k]=fx[k]; });   // padrão do contrato, editável
+  });
+}
+// constantes da base selecionada agora
+function coConstAtual(){
+  var b=coBaseId();
+  if(!CO_CONST_BASES[b]) CO_CONST_BASES[b]=coConstPadrao();
+  var C=CO_CONST_BASES[b], fx=coContratoFixo(b);
+  Object.keys(fx).forEach(function(k){ if(!Object.prototype.hasOwnProperty.call(C,k)) C[k]=fx[k]; });   // padrão do contrato, editável
+  return C;
+}
+// base por arquivo (lote): responsável/supervisor não vêm no arquivo -> viram constantes; o prazo regulado vem do arquivo
+function coCamposCarteira(){
+  if(!coBaseArquivo()) return CO_CAMPOS_CARTEIRA;
+  return CO_CAMPOS_CARTEIRA.filter(function(h){ return h!=='RESPONSAVEL*' && h!=='SUPERVISOR'; }).concat(['data_prazo_venc']);
+}
+function coColunasConst(){
+  var cart=coCamposCarteira();
+  return CO_HEADERS.filter(function(h){ return cart.indexOf(h)<0; });
+}
+
+// ---------- status: carteira ou card 2 ----------
+// desmarcado (padrao) = o STATUS* do card 2 manda em todas as obras
+function coUsarStatusPlanilha(){
+  return false;   // desativado: o STATUS* é sempre CO_STATUS_FIXO
+}
+function coStatusPlanilhaMudou(){
+  try{ localStorage.setItem('cadastro_obra_status_planilha', coUsarStatusPlanilha()?'1':'0'); }catch(e){}
+  coAplicarEAtualizar(coUsarStatusPlanilha()?'Status vindo da carteira':'Status do card 2 em todas as obras');
+}
+function coRestaurarStatusPlanilha(){
+  var el=document.getElementById('co-status-planilha'); if(!el) return;
+  var v=null;
+  try{ v=localStorage.getItem('cadastro_obra_status_planilha'); }catch(e){}
+  el.checked=(v==='1');
+}
+
+// ---------- aplica nas obras carregadas ----------
+function coAplicarConstantes(){
+  if(!CO_ROWS.length) return;
+  var C=coConstAtual();
+  var sigla=(CO_ESTADO_DEF[coEstado()]||{}).sigla||'';
+  var cols=coColunasConst();
+  CO_ROWS.forEach(function(reg){
+    cols.forEach(function(h){ reg[h]=C[h]||''; });
+    // status: o do card 2 (padrão Em Execução). O status da carteira só serve para filtrar quais obras entram.
+    reg['STATUS*']=String(C['STATUS*']||'').trim()||CO_STATUS_FIXO;
+    reg['CENTRO SERVICO']=reg['Municipio*']?(sigla+'-'+reg['Municipio*'].toUpperCase()):'';
+    if(!reg['DATA_RECEBIMENTO*']) reg['DATA_RECEBIMENTO*']=coDataHoje();
+  });
+}
+function coAplicarEAtualizar(msg){
+  coAplicarConstantes();
+  if(CO_ROWS.length){ coPreview(); coSt((msg||'Constantes atualizadas')+' · '+CO_ROWS.length+' obras · lembre de salvar.','#0d7377'); }
+  coContarConst();
+}
+
+// ---------- abrir / fechar o painel ----------
+function coPainelConst(aberto){
+  var b=document.getElementById('co-const-box'); if(!b) return;
+  b.style.display=aberto?'block':'none';
+  var t=document.getElementById('co-const-toggle');
+  if(t) t.textContent=aberto?'\u2716\ufe0f Fechar':'\u2699\ufe0f Editar constantes';
+}
+function coToggleConst(){
+  var b=document.getElementById('co-const-box');
+  var abrir=(b.style.display==='none');
+  coPainelConst(abrir);
+  try{ localStorage.setItem('cadastro_obra_painel', abrir?'aberto':'fechado'); }catch(e){}
+}
+function coRestaurarPainelConst(){
+  var pref='fechado';
+  try{ pref=localStorage.getItem('cadastro_obra_painel')||'fechado'; }catch(e){}
+  coPainelConst(pref==='aberto');
+}
+
+// ---------- painel ----------
+function coPainelBaseLabel(){
+  var el=document.getElementById('co-const-base');
+  if(el) el.textContent=coNomeBase(coBaseId());
+}
+function coContarConst(){
+  var C=coConstAtual();
+  var n=coColunasConst().filter(function(h){ return (C[h]||'').trim()!==''; }).length;
+  var el=document.getElementById('co-const-count');
+  if(el) el.innerHTML='· <b style="color:#0d7377;">'+n+'</b> de '+coColunasConst().length+' preenchidas';
+  coAtivInfo();   // o contrato pode ter mudado: troca a lista de serviços
+}
+function coPopularConstantes(){
+  var box=document.getElementById('co-const-grupos'); if(!box) return;
+  var C=coConstAtual();
+  var so=document.getElementById('co-so-preenchidas');
+  var soPreenchidas=so&&so.checked;
+
+  // monta a lista de grupos + os campos que sobraram
+  var usados={}; CO_GRUPOS.forEach(function(g){ g.cols.forEach(function(c){ usados[c]=1; }); });
+  var editaveis=coColunasConst();
+  var sobra=editaveis.filter(function(h){ return !usados[h]; });
+  var grupos=CO_GRUPOS.map(function(g){ return {nome:g.nome, cols:g.cols.filter(function(c){ return editaveis.indexOf(c)>=0; })}; });
+  if(sobra.length) grupos.push({nome:'Outros campos', cols:sobra});
+
+  box.innerHTML=grupos.map(function(g){
+    var cols=g.cols.filter(function(h){ return !soPreenchidas || (C[h]||'').trim()!==''; });
+    if(!cols.length) return '';
+    var campos=cols.map(function(h){
+      var ehData=/^DATA|^data_/.test(h);
+      var obrig=/\*$/.test(h);
+      var val=(C[h]||'').replace(/"/g,'&quot;');
+      var cheio=(C[h]||'').trim()!=='';
+      var travado=false;   // campos do contrato e status liberados para edição
+      return '<div>'
+        + '<label style="font-size:.66rem;font-weight:800;color:'+(obrig?'#0d7377':'#64748b')+';display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:3px;" title="'+h+'">'+h+'</label>'
+        + '<input data-col="'+h+'" oninput="coConstMudou(this)" value="'+val+'"'
+        + (ehData?' placeholder="dd/mm/aaaa"':'')
+        + (travado?' readonly title="'+(h==='STATUS*'?'Status fixo: toda obra sai como '+CO_STATUS_FIXO:'Definido pelo contrato da base '+coNomeBase(coBaseId()))+'"':'')
+        + ' style="width:100%;padding:7px 9px;border:1.5px solid '+(travado?'#e2e8f0':(cheio?'#bfe0dd':'#e2e8f0'))+';border-radius:7px;font-size:.77rem;font-family:inherit;background:'+(travado?'#f1f5f6;color:#64748b;cursor:not-allowed':(cheio?'#f6fdfc':'#fff'))+';">'
+        + '</div>';
+    }).join('');
+    return '<div style="margin-bottom:14px;">'
+      + '<div style="font-size:.65rem;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:.6px;margin-bottom:7px;">'+g.nome+'</div>'
+      + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(185px,1fr));gap:9px;">'+campos+'</div>'
+      + '</div>';
+  }).join('');
+
+  if(!box.innerHTML) box.innerHTML='<div style="font-size:.74rem;color:#94a3b8;padding:8px 0;">Nenhuma constante preenchida nesta base. Desmarque "Mostrar só preenchidas" para editar.</div>';
+
+  coPainelBaseLabel(); coContarConst(); coPopularCopiarDe();
+}
+function coConstMudou(inp){
+  var h=inp.getAttribute('data-col'), v=inp.value;
+  var C=coConstAtual();
+  var ehPadraoContrato=Object.prototype.hasOwnProperty.call(coContratoFixo(),h);
+  if(v.trim()==='' && !ehPadraoContrato) delete C[h]; else C[h]=v;
+  inp.style.borderColor=v.trim()?'#bfe0dd':'#e2e8f0';
+  inp.style.background=v.trim()?'#f6fdfc':'#fff';
+  coAplicarEAtualizar('"'+h+'" alterada');
+}
+function coLimparConstantes(){
+  CO_CONST_BASES[coBaseId()]={};
+  coPopularConstantes();
+  coAplicarEAtualizar('Constantes da base '+coNomeBase(coBaseId())+' limpas');
+}
+
+// ---------- copiar de outra base ----------
+function coPopularCopiarDe(){
+  var sel=document.getElementById('co-copiar-de'); if(!sel) return;
+  var atual=coBaseId(), ant=sel.value;
+  sel.innerHTML='<option value="">copiar de...</option>'+coBasesPermitidas().filter(function(b){return b.id!==atual;}).map(function(b){
+    var n=Object.keys(CO_CONST_BASES[b.id]||{}).length;
+    return '<option value="'+b.id+'">'+b.nome+(n?' ('+n+')':' (vazia)')+'</option>';
+  }).join('');
+  if(ant && ant!==atual) sel.value=ant;
+}
+function coCopiarDe(){
+  var sel=document.getElementById('co-copiar-de'); var de=sel?sel.value:'';
+  if(!de){ coSt('Escolha de qual base copiar.','#b9821c'); return; }
+  if(!coBasePermitida(de)) return;             // trava de contrato
+  var origem=CO_CONST_BASES[de]||{}; var copia={};
+  Object.keys(origem).forEach(function(k){ copia[k]=origem[k]; });
+  CO_CONST_BASES[coBaseId()]=copia;
+  coPopularConstantes();
+  coAplicarEAtualizar('Constantes copiadas de '+coNomeBase(de));
+}
+
+// ---------- salvar / carregar ----------
+function coSalvarConstantes(){
+  var pacote={ versao:2, bases:CO_CONST_BASES, estado:coEstado(), estados:CO_ESTADO_BASE, statusPlanilha:coUsarStatusPlanilha(), quando:new Date().toISOString() };
+  var n=CO_ROWS.length;
+  coAplicarConstantes();
+  if(n) coPreview();
+  var local=false;
+  try{ localStorage.setItem('cadastro_obra_constantes', JSON.stringify(pacote)); local=true; }catch(e){}
+  coSt('Salvando...','#64748b');
+  fetch(CO_SUPA+'/rest/v1/turno_data?on_conflict=key',{method:'POST',headers:Object.assign({'Prefer':'resolution=merge-duplicates,return=minimal'},CO_H),body:JSON.stringify({key:'cadastro_obra_constantes',value:pacote,updated_at:new Date().toISOString()})})
+    .then(function(r){
+      if(r.ok) coSt('✅ Constantes da base '+coNomeBase(coBaseId())+' salvas e aplicadas'+(n?' em '+n+' obras':'')+'.','#0d7377');
+      else coSt('⚠️ Aplicado no CSV'+(local?' e salvo neste navegador':'')+', mas o Supabase recusou (HTTP '+r.status+').','#b9821c');
+    })
+    .catch(function(){ coSt('⚠️ Aplicado no CSV'+(local?' e salvo neste navegador':'')+', mas sem conexão com o Supabase.','#b9821c'); })
+    .then(function(){
+      var auto=document.getElementById('co-auto-baixar');
+      if(n && (!auto || auto.checked)) coBaixar();
+    });
+}
+function coAplicarPacote(pac){
+  if(!pac) return;
+  if(pac.versao===2 && pac.bases){ CO_CONST_BASES=pac.bases||{}; }
+  else if(pac.extras || pac.fixos){        // formato antigo: joga tudo na base atual
+    var f=pac.fixos||{}, C={};
+    Object.keys(pac.extras||{}).forEach(function(k){ C[k]=pac.extras[k]; });
+    if(f.contrato) C['Contrato*']=f.contrato;
+    if(f.tipoObra) C['TIPO DE OBRA*']=f.tipoObra;
+    if(f.tipoServico) C['TIPO SERVICO*']=f.tipoServico;
+    if(f.natureza) C['NATUREZA OBRAS']=f.natureza;
+    if(f.vistoria) C['OBRIGA VISTORIA']=f.vistoria;
+    if(f.status) C['STATUS*']=f.status;
+    CO_CONST_BASES[CO_BASE]=C;
+  }
+  if(pac.estado){ var e=document.getElementById('co-estado'); if(e) e.value=pac.estado; }
+  if(pac.estados && typeof pac.estados==='object') CO_ESTADO_BASE=pac.estados;
+  if(typeof pac.statusPlanilha==='boolean'){
+    var sp=document.getElementById('co-status-planilha'); if(sp) sp.checked=pac.statusPlanilha;
+    try{ localStorage.setItem('cadastro_obra_status_planilha', pac.statusPlanilha?'1':'0'); }catch(e){}
+  }
+}
+function coCarregarConstantes(){
+  try{ var lc=localStorage.getItem('cadastro_obra_constantes'); if(lc) coAplicarPacote(JSON.parse(lc)); }catch(e){}
+  return fetch(CO_SUPA+'/rest/v1/turno_data?select=value&key=eq.cadastro_obra_constantes&limit=1',{headers:{apikey:CO_KEY,Authorization:'Bearer '+CO_KEY}})
+    .then(function(r){return r.ok?r.json():[];})
+    .then(function(j){
+      var pac=(Array.isArray(j)&&j.length&&j[0].value)?j[0].value:null;
+      if(pac){ coAplicarPacote(pac); try{ localStorage.setItem('cadastro_obra_constantes', JSON.stringify(pac)); }catch(e){} }
+    })
+    .catch(function(){})
+    .then(function(){ coAplicarPadroesBases(); coPopularEstados(); coRestaurarStatusPlanilha(); coPopularConstantes(); coRestaurarPainelConst(); });
+}
+
+function coBaixar(){
+  if(!CO_ROWS.length) return;
+  coAplicarConstantes();   // garante que o CSV sai com as constantes da base atual
+  var sep=';';
+  var linhas=[CO_HEADERS.join(sep)];
+  CO_ROWS.forEach(function(reg){
+    linhas.push(CO_HEADERS.map(function(h){ var v=(reg[h]==null?'':String(reg[h])); if(v.indexOf(sep)>=0||v.indexOf('"')>=0||v.indexOf('\n')>=0){ v='"'+v.replace(/"/g,'""')+'"'; } return v; }).join(sep));
+  });
+  var blob=new Blob(['\ufeff'+linhas.join('\r\n')],{type:'text/csv;charset=utf-8'});
+  var nomeCsv='importar_obras_'+coSufixoArquivo()+'.csv';
+  var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=nomeCsv; a.click();
+  // junto com as obras: todos os serviços do contrato em todas as obras (modelo_imp_ativ_obra_lote)
+  if(coServLista()) setTimeout(coBaixarAtividades, 400);
+}
+// parte final do nome dos arquivos: gid da aba, ou base + nome do arquivo enviado
+function coSufixoArquivo(){
+  if(coBaseArquivo()){ var arq=CO_ARQ[coBaseId()]; return coBaseId()+'_'+((arq&&arq.nome)||'arquivo').replace(/\.[^.]+$/,'').replace(/[^\w\-]+/g,'_'); }
+  return coGid();
+}
+
+/* ==========================================================================
+   ATIVIDADES  —  todos os serviços do contrato saem em todas as obras
+   Arquivo no formato modelo_imp_ativ_obra_lote:  Projeto;cod_atividade;Quantidade;
+   A lista é por contrato e vem da precificação de serviços exportada do sistema
+   (coluna "Código Serviço"). OBRAS-SE já vem embutida; qualquer contrato pode ser
+   atualizado pelo botão "Atualizar lista de serviços" (salva no navegador e no Supabase).
+   ========================================================================== */
+var CO_SERV_PADRAO={
+  OBRASSE:{contrato:'OBRAS-SE', arquivo:'precificação_serviços_JOAO_ARAUJO_2026-09-30_16-29-39.csv', data:'30/09/2026',
+    codigos:'LMIA60003 LMIA66020 LMIA64220 LMIA64238 LMIA62041 LMIA68017 LMIA62097 LMIA68007 LMIA68010 LMIA62030 LMIA64037 LMIA62066 LMIA62067 LMIA64045 LMIA64046 LMIA60300 LMIA62062 LMIA64055 LMIA64063 LMIA64048 LMIA66061 LMIA62071 LMIA62072 LMIA62073 LMIA60002 LMIA66170 LMIA64093 LMIA64094 LMIA64098 LMIA64043 LMIA64096 LMIA62049 LMIA64084 LMIA64087 LMIA64089 LMIA64204 LMIA64218 LMIA64206 LMIA64222 LMIA64231 LMIA64223 LMIA64232 LMIA64224 LMIA64233 LMIA64225 LMIA64234 LMIA64226 LMIA60005 LMIA60006 LMIA62019 LMIA64212 LMIA66143 LMIA68001 LMIA68026 LMIA68067 LMIB68031 LMIB64024 LMIB64026 LMIB66042 LMIB62010 LMIB62011 LMIB62322 LMIB60060 LMIB60009 LMIB60062 LMIB62224 LMIB62022 LMIB60066 LMIB62266 LMIB66047 LMIC62332 LMIC60031 LMIC0 LMIC64135 LMIC62033 LMIC62246 LMIC62204 LMIC64092 LMIC61600 LMIC61610 LMIC64083 LMIC62138 LMIC62140 LMIC62261 LMIC62262 LMIC66062 LMIC64150 LMIC62069 LMIC60139 LMIC62013 LMIC64090 LMIC64086 LMIC62077 LMIC60030 LMIC66049 LMIC64239 LMIC64228 LMIC62051 LMIC64229 LMIC64230 LMIC64237 LMIC62088 LMIC66007 LMIC66005 LMIC62148 LMIC64097 LMIC60052 LMIC60055 LMIC60045 LMIC60044 LMIC62150 LMIC60047 LMIC60046 LMIC62152 LMIC60049 LMIC60054 LMIC62162 LMIC62321 LMIC60037 LMIC62034 LMIC60023 LMIC64041 LMIC62099 LMIC62061 LMIC62070 LMIC66011 LMIC64176 LMIC64177 LMIC66009 LMIC66010 LMIC64103 LMIC64104 LMIC60161 LMIC60162 LMIC64197 LMIC64201 LMIC64209 LMIC64211 LMID62045 LMID62149 LMID62074 LMID62046 LMID62055 LMID62056 LMID66003 LMID66046 LMIE0 LMIE62121 LMIE62122 LMIE62123 LMIE62124 LMIE62125 LMIE62126 LMIE62128 LMIE62130 LMIE62060 LMIE64009 LMIE62170 LMIE62007 LMIE60059 LMIE60058 LMIE62314 LMIE62250 LMIE62175 LMIE62298 LMIE60040 LMIE60007 LMIE62221 LMIE62223 LMIE60067 LMIE60073 LMIE60076 LMIE60080 LMIE60084 LMIE60088 LMIE60092 LMIE60096 LMIE60100 LMIE60104 LMIE62184 LMIE62020 LMIE62186 LMIE62188 LMIE62190 LMIE62220 LMIE62195 LMIE62200 LMIE62202 LMIE60320 LMIE60330 LMIE60350 LMIE62209 LMIE64082 LMIE62229 LMIE62225 LMIE62036 LMIE62227 LMIE62037 LMIE62231 LMIE62192 LMIE62236 LMIE64134 LMIE62238 LMIE62194 LMIE62197 LMIE60072 LMIE62199 LMIE62205 LMIE62207 LMIE62211 LMIE62213 LMIE62217 LMIE62240 LMIE62242 LMIE62244 LMIE62247 LMIF62132 LMIF62106 LMIF62107 LMIF62108 LMIF62133 LMIF62135 LMIF62137 LMIF62139 LMIF68069 LMIF68070 LMIF68071 LMIF64213 LMIG64079 LMIG64214 LMII60230 LMII60109 LMII60113 LMII62320 LMII64028 LMII62233 LMII68030 LMII60240 LMII60142 LMII62053 LMII66021 LMII66023 LMII66019 LMII60038 LMII62256 LMII62052 LMII62091 LMII62093 LMII62047 LMIJ62001 LMIJ62018 LMIK62054 LMIK62312 LMIL60010 LMIL68042 LMIL64095 LMIL68043 LMIL68077 LMIL60048 LMIL60108 LMIL60111 LMIM60050 LMIM64007 LMIM62021 LMIM62157 LMIM60126 LMIM60127 LMIM60128 LMIM62158 LMIM62080 LMIM60017 LMIN64240 LMIN64198 LMIN64200 LMIN62141 LMIN62110 LMIN64210 LMIN64208 LMIN62143 LMIN64202 LMIN62263 LMIN60026 LMIN68000 LMIO62104 LMIO64075 LMIO64010 LMIO64011 LMIO64012 LMIO60129 LMIO62272 LMIO62174 LMIO64107 LMIO62146 LMIO64174 LMIO60130 LMIO60131 LMIO60132 LMIO60133 LMIO60134 LMIO60135 LMIO62297 LMIO60137 LMIO62222 LMIO60077 LMIO60081 LMIO64069 LMIR64072 LMIR64073 LMIR60153 LMIR60085 LMIR60087 LMIR60034 LMIR60089 LMIR61700 LMIR61710 LMIR60500 LMIR60510 LMIR60091 LMIR60097 LMIR60152 LMIR64053 LMIR60099 LMIR60101 LMIR62301 LMIR60105 LMIR62177 LMIR68050 LMIR64131 LMIR60029 LMIS68098 LMIS68033 LMIS62179 LMIS62002 LMIS60027 LMIS64099 LMIT62006 LMIT60700 LMIT62181 LMIT62003 LMIT62198 LMIT68121 LMIT62193 LMIT68125 LMIT62183 LMIV62212 LMIV60163 LMID67002 LMID67005 LMID67006 LMRA62073 LMRA60002 LMRA64093 LMRA64094 LMRA64098 LMRA64043 LMRA64096 LMRA62049 LMRA64084 LMRA64087 LMRA64089 LMRA64231 LMRA64223 LMRA64232 LMRA64224 LMRA64233 LMRA64225 LMRA64234 LMRA64226 LMRB64024 LMRC60031 LMRC64135 LMRC62033 LMRC66062 LMRC64150 LMRC62069 LMRC60139 LMRC62013 LMRC64090 LMRC64086 LMRC62077 LMRC60030 LMRC64228 LMRC62051 LMRC64229 LMRC64230 LMRC64237 LMRC62088 LMRC66007 LMRC66005 LMRC64097 LMRC60052 LMRC60055 LMRC60047 LMRC60046 LMRC62152 LMRC60049 LMRC60054 LMRC62162 LMRC60023 LMRC64041 LMRC62099 LMRC64197 LMRC64201 LMRC64209 LMRC64211 LMRD62045 LMRD66003 LMRD66046 LMRE62128 LMRE62130 LMRE62170 LMRE62007 LMRE60059 LMRE60058 LMRE62314 LMRE62250 LMRE62175 LMRE62298 LMRE60040 LMRE60007 LMRE62221 LMRE62223 LMRE60067 LMRE60073 LMRE60076 LMRE60080 LMRE60084 LMRE60088 LMRE60092 LMRE60096 LMRE60100 LMRE60104 LMRE62184 LMRE62020 LMRE62186 LMRE62188 LMRE62190 LMRE62220 LMRE62195 LMRE62200 LMRE62202 LMRE60320 LMRE60330 LMRE60350 LMRE62209 LMRE64082 LMRE62229 LMRE62225 LMRE62036 LMRE62227 LMRE62037 LMRE62231 LMRE62192 LMRE62236 LMRE64134 LMRE62238 LMRE62194 LMRE62197 LMRE60072 LMRE62199 LMRE62205 LMRE62207 LMRE62211 LMRE62213 LMRE62217 LMRE62240 LMRE62242 LMRE62244 LMRE62247 LMRF62133 LMRF62135 LMRF62137 LMRF62139 LMRG64079 LMRG64214 LMRI60109 LMRI60113 LMRI60038 LMRI62256 LMRI62052 LMRI62091 LMRI62093 LMRI62047 LMRJ62001 LMRJ62018 LMRL60108 LMRL60111 LMRM60126 LMRM60127 LMRM60128 LMRM62158 LMRM60017 LMRN68000 LMRO62104 LMRO64075 LMRP60129 LMRP62272 LMRP62174 LMRP62146 LMRP62297 LMRP60137 LMRP62222 LMRP60077 LMRP60081 LMRR64069 LMRR60153 LMRR60085 LMRR60087 LMRR60034 LMRR60097 LMRR60152 LMRR60099 LMRR60101 LMRR62301 LMRR60105 LMRS62002 LMRS60027 LMRS64099 LMRT60700 LMRT62181 LMRT62003 LMRT62198 LMRT68121 LMRT62193 LMRT68125 LMRT62183 LMRV62212 LVIA60003 LVIA66020 LVIA64220 LVIA64238 LVIA62041 LVIB68017 LVIC62097 LVIC68007 LVIC68010 LVIC62030 LVIC64037 LVIC62066 LVIC62067 LVIC64045 LVIC64046 LVIC60300 LVIC62062 LVIC64055 LVIC64063 LVIC64048 LVIC66061 LVIC62071 LVIC62072 LVIC62073 LVIC60002 LVIC66170 LVIC64093 LVIC64094 LVIC64098 LVIC64043 LVIC64096 LVIC62049 LVID64084 LVID64087 LVIE64089 LVIE64204 LVIE64218 LVIE64206 LVIE64222 LVIE64231 LVIE64223 LVIE64232 LVIE64224 LVIE64233 LVIE64225 LVIE64234 LVIE64226 LVIE60005 LVIE60006 LVIE62019 LVIE64212 LVIE66143 LVIE68001 LVIE68026 LVIE68067 LVIE68031 LVIE64024 LVIE64026 LVIE66042 LVIE62010 LVIE62011 LVIE62322 LVIE60060 LVIE60009 LVIE60062 LVIE62224 LVIE62022 LVIE60066 LVIE62266 LVIE66047 LVIE62332 LVIE60031 LVIE0 LVIE64135 LVIE62033 LVIE62246 LVIE62204 LVIE64092 LVIE61600 LVIF61610 LVIF64083 LVIF62138 LVIF62140 LVIG62261 LVIG62262 LVII66062 LVII64150 LVII62069 LVII60139 LVII62013 LVIJ64090 LVIJ64086 LVIM62077 LVIM60030 LVIN66049 LVIN64239 LVIN64228 LVIN62051 LVIN64229 LVIO64230 LVIO64237 LVIP62088 LVIP66007 LVIP66005 LVIP62148 LVIP64097 LVIP60052 LVIP60055 LVIP60045 LVIP60044 LVIP62150 LVIR60047 LVIR60046 LVIR62152 LVIR60049 LVIR60054 LVIR62162 LVIS62321 LVIS60037 LVIT62034 LVIV60023 LVIV64041 LVRA64220 LVRA64238 LVRA62041 LVRB68017 LVRC62097 LVRC68007 LVRC68010 LVRC62030 LVRC64037 LVRC62066 LVRC62067 LVRC64045 LVRC64046 LVRC60300 LVRC62062 LVRC64055 LVRC64063 LVRC64048 LVRC62072 LVRC60002 LVRC66170 LVRC64094 LVRC64098 LVRC64043 LVRC64096 LVRC62049 LVRE64206 LVRE64222 LVRE64231 LVRE64223 LVRE64232 LVRE64224 LVRE64233 LVRE64225 LVRE64234 LVRE64226 LVRE60005 LVRE60006 LVRE62019 LVRE64212 LVRE66143 LVRE68001 LVRE68026 LVRE68067 LVRE68031 LVRE64024 LVRE64026 LVRE66042 LVRE62010 LVRE62011 LVRE62322 LVRE60060 LVRE60009 LVRE60062 LVRE62224 LVRE62022 LVRE60066 LVRE62266 LVRE66047 LVRE62332 LVRE60031 LVRE0 LVRE64135 LVRE62033 LVRE62246 LVRE62204 LVRE64092 LVRE61600 LVRF62138 LVRF62140 LVRG62261 LVRG62262 LVRI66062 LVRI64150 LVRI62069 LVRI60139 LVRI62013 LVRJ64090 LVRO64230 LVRO64237 LVRP62088 LVRP66007 LVRP66005 LVRP60052 LVRP60055 LVRP60045 LVRP60044 LVRP62150 LVRR62152 LVRR60049 LVRR60054 LVRR62162 LVRS62321 LVRS60037 LVRT62034 LVRV64041'.split(' ')}
+};
+var CO_SERV={versao:1, qtd:'1', contratos:{}};   // listas enviadas, por contrato: { OBRASBA:{contrato,arquivo,data,codigos:[]} }
+
+function coChaveContrato(c){ return coNorm(c).replace(/[^A-Z0-9]/g,''); }   // 'OBRAS - BA' = 'OBRAS-BA'
+function coContratoAtual(){ return String(coConstAtual()['Contrato*']||'').trim(); }
+function coServLista(contrato){
+  var k=coChaveContrato(contrato===undefined?coContratoAtual():contrato); if(!k) return null;
+  var L=((CO_SERV&&CO_SERV.contratos)||{})[k] || CO_SERV_PADRAO[k];
+  return (L && L.codigos && L.codigos.length) ? L : null;
+}
+function coAtivQtd(){
+  var el=document.getElementById('co-ativ-qtd');
+  var v=String(el?el.value:((CO_SERV&&CO_SERV.qtd)||'1')).replace(/[;\s]/g,'');
+  return v||'1';
+}
+function coAtivProjetos(){   // obras da carteira, sem repetir
+  var vistos={}, out=[];
+  CO_ROWS.forEach(function(r){ var p=String(r['Projeto*']||'').replace(/;/g,'').trim(); if(p && !vistos[p]){ vistos[p]=1; out.push(p); } });
+  return out;
+}
+function coFmtN(n){ return Number(n).toLocaleString('pt-BR'); }
+
+// faixa de atividades do passo 3 + rótulo do botão principal
+function coAtivInfo(){
+  var box=document.getElementById('co-ativ'), info=document.getElementById('co-ativ-info'); if(!box||!info) return;
+  var contrato=coContratoAtual(), L=coServLista(contrato), nObras=coAtivProjetos().length, tx;
+  if(!contrato) tx='Preencha o Contrato* no passo 2 para escolher a lista de serviços.';
+  else if(!L) tx='Sem lista de serviços para o contrato '+contrato+'. Envie a precificação desse contrato para as atividades saírem junto.';
+  else if(!nObras) tx=coFmtN(L.codigos.length)+' serviços do contrato '+contrato+' · carregue a carteira para gerar as linhas';
+  else tx=coFmtN(L.codigos.length)+' serviços do contrato '+contrato+' × '+coFmtN(nObras)+' obras = '+coFmtN(L.codigos.length*nObras)+' linhas';
+  if(L && L.data) tx+=' · lista de '+L.data;
+  info.textContent=tx;
+  info.title=(L&&L.arquivo)?('Lista: '+L.arquivo):'';
+  box.classList.toggle('falta', !L);
+  var bA=document.getElementById('co-baixar-ativ'); if(bA) bA.disabled=!(L && nObras);
+  var tI=document.getElementById('co-ativ-obra-teste'), tB=document.getElementById('co-baixar-teste');
+  if(tI) tI.placeholder=coAtivProjetos()[0]||'nº da obra';
+  if(tB) tB.disabled=!(L && coObraTeste());
+  var bB=document.getElementById('co-baixar'); if(bB) bB.textContent=L?'⬇️ Baixar obras + atividades':'⬇️ Baixar CSV (modelo)';
+}
+
+// monta e baixa o arquivo de atividades: cada obra recebe todos os serviços do contrato
+function coGerarAtividades(projs, nomeArquivo){
+  var L=coServLista(); if(!L || !projs.length) return false;
+  var qtd=coAtivQtd();
+  // igual ao modelo: separador ;, ; no fim da linha, quebra CRLF, sem BOM
+  var partes=['Projeto;cod_atividade;Quantidade;\r\n'];
+  projs.forEach(function(p){
+    partes.push(L.codigos.map(function(c){ return p+';'+c+';'+qtd+';\r\n'; }).join(''));
+  });
+  var blob=new Blob(partes,{type:'text/csv;charset=utf-8'});
+  var a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download=nomeArquivo; a.click();
+  setTimeout(function(){ URL.revokeObjectURL(a.href); },60000);
+  return true;
+}
+function coBaixarAtividades(){
+  var projs=coAtivProjetos();
+  if(!coServLista() || !projs.length){ coAtivInfo(); return false; }
+  return coGerarAtividades(projs, 'importar_atividades_'+coSufixoArquivo()+'.csv');
+}
+// modelo teste: obra digitada (ou a primeira da carteira) x todos os serviços
+function coObraTeste(){
+  var el=document.getElementById('co-ativ-obra-teste');
+  return String(el?el.value:'').replace(/[;\s]/g,'') || coAtivProjetos()[0] || '';
+}
+function coBaixarTeste(){
+  var L=coServLista(), obra=coObraTeste();
+  if(!L || !obra){ coAtivInfo(); return false; }
+  coGerarAtividades([obra], 'modelo_teste_atividades_'+obra.replace(/[^\w\-]+/g,'_')+'.csv');
+  coSt('🧪 Modelo teste gerado: obra '+obra+' × '+coFmtN(L.codigos.length)+' serviços do contrato '+L.contrato
+    +' (quantidade '+coAtivQtd()+'). Importe no sistema: se passar, a carteira completa também passa.','#0d7377');
+  return true;
+}
+
+function coAtivQtdMudou(){
+  var el=document.getElementById('co-ativ-qtd');
+  CO_SERV.qtd=coAtivQtd(); if(el) el.value=CO_SERV.qtd;
+  coSalvarServicos();
+}
+
+// ---------- salvar / carregar as listas ----------
+function coSalvarServicos(){
+  try{ localStorage.setItem('cadastro_obra_servicos', JSON.stringify(CO_SERV)); }catch(e){}
+  return fetch(CO_SUPA+'/rest/v1/turno_data?on_conflict=key',{method:'POST',headers:Object.assign({'Prefer':'resolution=merge-duplicates,return=minimal'},CO_H),
+      body:JSON.stringify({key:'cadastro_obra_servicos',value:CO_SERV,updated_at:new Date().toISOString()})})
+    .then(function(r){ return r.ok; }).catch(function(){ return false; });
+}
+function coAplicarServicos(pac){
+  if(!pac || typeof pac!=='object') return;
+  CO_SERV={versao:1, qtd:String(pac.qtd||'1'), contratos:(pac.contratos && typeof pac.contratos==='object')?pac.contratos:{}};
+}
+function coCarregarServicos(){
+  try{ var lc=localStorage.getItem('cadastro_obra_servicos'); if(lc) coAplicarServicos(JSON.parse(lc)); }catch(e){}
+  return fetch(CO_SUPA+'/rest/v1/turno_data?select=value&key=eq.cadastro_obra_servicos&limit=1',{headers:{apikey:CO_KEY,Authorization:'Bearer '+CO_KEY}})
+    .then(function(r){ return r.ok?r.json():[]; })
+    .then(function(j){
+      var pac=(Array.isArray(j)&&j.length&&j[0].value)?j[0].value:null;
+      if(pac){ coAplicarServicos(pac); try{ localStorage.setItem('cadastro_obra_servicos', JSON.stringify(pac)); }catch(e){} }
+    })
+    .catch(function(){})
+    .then(function(){ var q=document.getElementById('co-ativ-qtd'); if(q) q.value=CO_SERV.qtd||'1'; coAtivInfo(); });
+}
+
+// ---------- importar a precificação de serviços ----------
+function coServCabecalho(rows){
+  for(var k=0;k<Math.min(rows.length,20);k++){
+    var h=(rows[k]||[]).map(coNorm), c=-1;
+    ['CODIGO SERVICO','CODIGO DO SERVICO','COD_ATIVIDADE','COD ATIVIDADE'].some(function(n){ c=h.indexOf(n); return c>=0; });
+    if(c>=0) return {idx:k, cCod:c, cContrato:h.indexOf('CONTRATO'), cFim:h.indexOf('DATA VIGENCIA FINAL')};
+  }
+  return {idx:-1};
+}
+function coDataBR(t){ var m=String(t||'').match(/^(\d{2})\/(\d{2})\/(\d{4})/); return m?new Date(+m[3],+m[2]-1,+m[1]):null; }
+function coImportarServicos(rows, nome){
+  var cab=coServCabecalho(rows);
+  if(cab.idx<0){ coSt('❌ "'+nome+'" não parece a precificação de serviços: não achei a coluna "Código Serviço".','#c53030'); return false; }
+  var hoje=new Date(); hoje.setHours(0,0,0,0);
+  var grupos={}, vencidos=0, contratoBase=coContratoAtual();
+  for(var r=cab.idx+1;r<rows.length;r++){
+    var row=rows[r]||[], cod=coUmaLinha(row[cab.cCod]).replace(/;/g,'');
+    if(!cod) continue;
+    var fim=cab.cFim>=0?coDataBR(coUmaLinha(row[cab.cFim])):null;
+    if(fim && fim<hoje){ vencidos++; continue; }          // vigência encerrada: fica fora
+    var contrato=(cab.cContrato>=0?coUmaLinha(row[cab.cContrato]):'')||contratoBase;
+    var k=coChaveContrato(contrato); if(!k) continue;
+    var g=grupos[k]||(grupos[k]={contrato:contrato, vistos:{}, codigos:[]});
+    if(!g.vistos[cod]){ g.vistos[cod]=1; g.codigos.push(cod); }
+  }
+  var chaves=Object.keys(grupos);
+  if(!chaves.length){
+    coSt('❌ Nenhum serviço válido em "'+nome+'"'+(vencidos?' ('+vencidos+' com vigência encerrada)':'')
+      +(cab.cContrato<0 && !contratoBase?' · o arquivo não tem coluna Contrato e o Contrato* do passo 2 está vazio':'')+'.','#c53030');
+    return false;
+  }
+  var mData=String(nome).match(/(\d{4})-(\d{2})-(\d{2})/), data=mData?(mData[3]+'/'+mData[2]+'/'+mData[1]):coDataHoje();
+  chaves.forEach(function(k){ var g=grupos[k]; CO_SERV.contratos[k]={contrato:g.contrato, arquivo:nome, data:data, codigos:g.codigos}; });
+  var resumo=chaves.map(function(k){ return coFmtN(grupos[k].codigos.length)+' serviços do contrato '+grupos[k].contrato; }).join(', ');
+  var outro=contratoBase && !grupos[coChaveContrato(contratoBase)];
+  coAtivInfo();
+  coSt('Salvando a lista de serviços...','#64748b');
+  coSalvarServicos().then(function(ok){
+    coSt('✅ Lista atualizada: '+resumo+(vencidos?' · '+vencidos+' com vigência encerrada ficaram fora':'')
+      +(outro?' · ⚠️ a base '+coNomeBase(coBaseId())+' usa o contrato '+contratoBase+', que segue com a lista dele':'')
+      +(ok?'':' · salva só neste navegador (o Supabase não respondeu)')+'.', (outro||!ok)?'#b9821c':'#0d7377');
+  });
+  return true;
+}
+function coServEscolhido(inp){ var f=inp.files&&inp.files[0]; inp.value=''; if(f) coLerServicos(f); }
+function coLerServicos(f){
+  var nome=f.name||'arquivo', ext=((nome.match(/\.([a-z0-9]+)$/i)||[])[1]||'').toLowerCase();
+  if(['xlsx','xls','xlsm','csv'].indexOf(ext)<0){ coSt('❌ "'+nome+'" não é uma planilha. Envie a precificação em .csv ou .xlsx.','#c53030'); return; }
+  coSt('Lendo "'+nome+'"...','#64748b');
+  (ext==='csv'?coLerCSVArquivo(f):coLerPlanilha(f))
+    .then(function(linhas){ coImportarServicos(linhas, nome); })
+    .catch(function(e){ coSt('❌ Não consegui ler "'+nome+'": '+((e&&e.message)||e)+'.','#c53030'); });
+}
+// arrastar a precificação em cima da faixa de atividades (não confunde com a carteira)
+(function(){
+  var z=document.getElementById('co-ativ'); if(!z) return;
+  function temArquivo(e){ var t=e.dataTransfer&&e.dataTransfer.types; return !!t && Array.prototype.indexOf.call(t,'Files')>=0; }
+  z.addEventListener('dragover',function(e){
+    if(!temArquivo(e)) return; e.preventDefault(); e.stopPropagation(); z.classList.add('sobre');
+    var cz=document.getElementById('co-arq-zona'); if(cz) cz.classList.remove('sobre');
+  });
+  z.addEventListener('dragleave',function(e){ if(!z.contains(e.relatedTarget)) z.classList.remove('sobre'); });
+  z.addEventListener('drop',function(e){
+    if(!temArquivo(e)) return; e.preventDefault(); e.stopPropagation(); z.classList.remove('sobre');
+    var f=e.dataTransfer.files&&e.dataTransfer.files[0]; if(f) coLerServicos(f);
+  });
+})();
+
+// estados + mapa de bases/meses
+coPopularEstados();
+coCarregarConstantes().then(function(){ coCarregarMapa(); coCarregarServicos(); });
+
+</script>
+<script>
+(function(){
+  function isMobile(){return window.matchMedia('(max-width:780px)').matches;}
+  window.smToggle=function(){
+    if(isMobile()) document.body.classList.toggle('sm-expanded');
+    else document.body.classList.toggle('sm-collapsed');
+  };
+  window.smGroupToggle=function(head){
+    var g=head.parentNode; if(g) g.classList.toggle('open');
+  };
+})();
+</script>
+<script>window.addEventListener("load",function(){var _t=window.smToggle;if(typeof _t==="function"){window.smToggle=function(){_t();try{localStorage.setItem("mariua_menu",document.body.classList.contains("sm-collapsed")?"recolhido":"aberto");}catch(e){}};}});</script>
+<script>
+/* Trilha dos passos: acompanha o que já foi feito, sem tocar na lógica.
+   Passo 1 conclui quando a carteira carrega (o botão de baixar destrava);
+   passo 2 fica ativo em seguida; passo 3 conclui quando há prévia na tela. */
+(function(){
+  function marca(){
+    var carregou = !!(document.getElementById('co-baixar') && !document.getElementById('co-baixar').disabled);
+    var temPrevia = !!document.querySelector('#co-preview table');
+    var p = {};
+    document.querySelectorAll('.co-passo').forEach(function(e){ p[e.dataset.passo]=e; });
+    function set(n, cls){ if(p[n]){ p[n].className='co-passo'+(cls?' '+cls:''); } }
+    if(!carregou){ set(1,'ativo'); set(2); set(3); return; }
+    set(1,'feito');
+    set(2, temPrevia ? 'feito' : 'ativo');
+    set(3, temPrevia ? 'ativo' : '');
+  }
+  marca();
+  ['co-preview','co-status'].forEach(function(id){
+    var el=document.getElementById(id);
+    if(el && window.MutationObserver) new MutationObserver(marca).observe(el,{childList:true,subtree:true,characterData:true});
+  });
+  var bt=document.getElementById('co-baixar');
+  if(bt && window.MutationObserver) new MutationObserver(marca).observe(bt,{attributes:true,attributeFilter:['disabled']});
+})();
+</script>
+</body>
+</html>

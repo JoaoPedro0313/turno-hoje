@@ -11,7 +11,7 @@
 var s=document.createElement('style');s.id='mariua-lock';
 s.textContent='html.mariua-check body>*{visibility:hidden!important}#mariua-ovl,#mariua-ovl *{visibility:visible!important}';
 (document.head||h).appendChild(s);
-var caminhos=['mariua-auth.js?v=3','../mariua-auth.js?v=3','../../mariua-auth.js?v=3'];
+var caminhos=['mariua-auth.js?v=4','../mariua-auth.js?v=4','../../mariua-auth.js?v=4'];
 (function carrega(i){if(i>=caminhos.length)return;var t=document.createElement('script');t.src=caminhos[i];
 t.onerror=function(){carrega(i+1);};(document.head||h).appendChild(t);})(0);
 setTimeout(function(){if(window.__MARIUA_AUTH__)return;
@@ -228,7 +228,7 @@ body.dark .nx-av-ok{color:#5eead4}body.dark .nx-av-meio{color:#fbd38d}body.dark 
   <!-- Menu montado por nav.js — NÃO edite os itens aqui, edite a lista em nav.js -->
   <nav class="sm-nav"><a class="sm-item" href="../index.html"><span class="sm-ic"><i class="ti ti-home"></i></span><span class="sm-tx">Início</span></a></nav>
 </aside>
-<script src="../nav.js?v=4"></script>
+<script src="../nav.js?v=6"></script>
 
 <div class="wrap nx">
 
