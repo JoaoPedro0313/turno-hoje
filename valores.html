@@ -262,6 +262,18 @@
   .fin-pda-msg{margin-top:10px;font-size:.8rem;font-weight:700;line-height:1.5}
   .fin-pda-msg:empty{display:none}
   .fin-pda-msg.ok{color:#15803d}.fin-pda-msg.err{color:#b91c1c}.fin-pda-msg.info{color:#475569}
+  /* custo do aparelho puxado da fatura lançada em Lançamentos */
+  .fin-pda-fat-st{font-size:.82rem;font-weight:600;color:#334155;line-height:1.5;margin-bottom:10px}
+  .fin-pda-fat-st b{color:#0f3a33}
+  .fin-pda-fat-st.aviso{color:#9a3412}
+  .fin-pda-fat-cfg{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end}
+  .fin-pda-fat-cfg label{display:flex;flex-direction:column;gap:4px;font-size:.72rem;font-weight:800;color:#64748b}
+  .fin-pda-fat-cfg select,.fin-pda-fat-cfg input{margin:0;width:auto;box-sizing:border-box;height:36px;padding:0 10px;border:1.5px solid #cbd5e1;border-radius:8px;font-family:inherit;font-size:.84rem;font-weight:700;color:#1f2d3d;background:#fff;min-width:200px}
+  .fin-pda-fat-cfg .btn{padding:9px 16px;font-size:.8rem}
+  .fin-pda-fat-tbl{width:100%;border-collapse:collapse;font-size:.8rem;margin-top:12px}
+  .fin-pda-fat-tbl th{text-align:left;font-size:.68rem;text-transform:uppercase;letter-spacing:.03em;color:#64748b;padding:6px 8px;border-bottom:1px solid #e2e8f0}
+  .fin-pda-fat-tbl td{padding:6px 8px;border-bottom:1px solid #f1f5f9}
+  .fin-pda-fat-tbl .n{text-align:right;font-variant-numeric:tabular-nums}
   .fin-seg{margin-left:auto;display:inline-flex;gap:2px;background:#f1f5f9;border-radius:9px;padding:3px}
   .fin-seg:empty{display:none}
   .fin-seg button{border:0;background:transparent;font-family:inherit;font-size:.74rem;font-weight:800;color:#64748b;padding:5px 11px;border-radius:7px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;transition:background .15s,color .15s}
@@ -529,6 +541,16 @@ body.sm-collapsed .sm-side:hover .sm-group-head{justify-content:flex-start;paddi
 <p class="fin-pda-up-txt">Envie o <b>Relatório de Acesso</b> do mês e, quando houver mudança de pessoal, o <b>cadastro de funcionários</b>. Pode mandar os dois juntos ou arrastar os arquivos para este quadro. É o mesmo envio da tela PDA: fica salvo para todos e esta aba se atualiza na hora.</p>
 <div class="fin-pda-st" id="fin-pda-st"></div>
 <div class="fin-pda-msg" id="fin-pda-msg" role="status" aria-live="polite"></div>
+</div>
+<div class="fin-card" id="fin-pda-fat">
+<div class="fin-card-h">💳 Custo do aparelho (fatura em Lançamentos)</div>
+<div class="fin-pda-fat-st" id="fin-pda-fat-st">Procurando a fatura do PDA em Lançamentos…</div>
+<div class="fin-pda-fat-cfg">
+<label>Fatura do PDA lançada com o fornecedor<select id="fin-pda-fat-forn" onchange="finPdaFatPrevia()"></select></label>
+<label>Descrição contém (opcional)<input id="fin-pda-fat-filtro" placeholder="ex.: PDA, linhas, dados" oninput="finPdaFatPrevia()"></label>
+<button type="button" class="btn add" id="fin-pda-fat-salvar" onclick="finPdaFatSalvar()">Salvar</button>
+</div>
+<div id="fin-pda-fat-meses"></div>
 </div>
         <div id="fin-pda-resumo" class="fin-kpis"></div>
         <div class="fin-graphs">
@@ -803,7 +825,100 @@ var FIN_PDA_OCL=null;   // comp -> [{nome,mat,cargo,uf}]
    - Relatório de Acesso (IMEI, Matrícula, Data de Acesso) -> pda_acesso_AAAA-MM (mês mais frequente nas datas)
    - Ocioso = ativo no cadastro, sem equipe (funcionario_equipe) e sem acesso:
        no mês -> pda_ocioso_AAAA-MM; em todos os meses carregados -> pda_ocioso (o "geral" desta aba) */
-var FIN_PDA_DIARIA=0.5337;   // a mesma diária por aparelho da tela PDA
+var FIN_PDA_DIARIA=0.5337;   // a mesma diária por aparelho da tela PDA (usada só quando não há fatura em Lançamentos)
+var FIN_PDA_FATCFG=null;      // {fornecedor, filtro}: como a fatura do PDA é lançada (turno_data.pda_fatura_cfg)
+var FIN_PDA_CADN=null;        // aparelhos ativos no cadastro: divide a fatura quando o lançamento não traz quantidade
+function finPdaTxt(s){ return String(s==null?'':s).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/\s+/g,' ').trim(); }
+function finPdaMoeda(n){ return Number(n||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'}); }
+function finPdaDiariaTxt(){ return 'R$ '+FIN_PDA_DIARIA.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:4}); }
+function finPdaDias(c){ return new Date(+c.slice(0,4),+c.slice(5,7),0).getDate(); }
+// lançamentos que são a fatura do PDA: o fornecedor escolhido (e o texto da descrição, se houver); sem escolha, os que têm "PDA" no fornecedor ou na descrição
+function finPdaFatLinhas(cfg){
+  cfg=cfg||FIN_PDA_FATCFG||{};
+  var forn=finPdaTxt(cfg.fornecedor), filtro=finPdaTxt(cfg.filtro);
+  return (FIN_DATA||[]).filter(function(v){
+    var fv=finPdaTxt(v.fornecedor), dv=finPdaTxt(v.descricao);
+    if(forn) return fv===forn&&(!filtro||dv.indexOf(filtro)>=0||fv.indexOf(filtro)>=0);
+    return /\bPDA\b/.test(fv)||/\bPDA\b/.test(dv)||(filtro&&(dv.indexOf(filtro)>=0||fv.indexOf(filtro)>=0));
+  });
+}
+// por mês da data do lançamento: total da fatura, aparelhos cobrados (soma das quantidades; sem quantidade, os ativos do cadastro) e custo por aparelho
+function finPdaFatPorMes(cfg){
+  var m={};
+  finPdaFatLinhas(cfg).forEach(function(v){
+    var d=String(v.data_ref||''); if(!/^\d{4}-\d{2}/.test(d)) return;
+    var c=d.slice(0,7), x=m[c]||(m[c]={valor:0, qtd:0, n:0});
+    var val=v.valor!=null&&v.valor!==''?Number(v.valor):(Number(v.quantidade)||0)*(Number(v.valor_unitario)||0);
+    x.valor+=val||0; x.n++;
+    if(v.quantidade!=null&&Number(v.quantidade)>0) x.qtd+=Number(v.quantidade);
+  });
+  Object.keys(m).forEach(function(c){ var x=m[c]; x.porQtd=x.qtd>0; x.aparelhos=x.porQtd?x.qtd:(FIN_PDA_CADN||0); x.custo=x.aparelhos>0&&x.valor>0?x.valor/x.aparelhos:null; });
+  return m;
+}
+// custo mensal por aparelho na competência: a fatura do mês; senão a mais recente até ele (ou a mais recente de todas); senão a diária fixa
+function finPdaCusto(c,fat){
+  fat=fat||finPdaFatPorMes();
+  if(fat[c]&&fat[c].custo!=null) return {mes:fat[c].custo, fonte:'fatura', ref:c};
+  var cs=Object.keys(fat).filter(function(k){ return fat[k].custo!=null; }).sort();
+  if(cs.length){ var ate=cs.filter(function(k){ return k<=c; }); var r=ate.length?ate[ate.length-1]:cs[cs.length-1]; return {mes:fat[r].custo, fonte:'estimado', ref:r}; }
+  return {mes:FIN_PDA_DIARIA*finPdaDias(c), fonte:'fixo', ref:null};
+}
+function finPdaCustoTxt(k,c){
+  if(k.fonte==='fatura') return 'fatura de '+finCompLabel(k.ref)+' em Lançamentos';
+  if(k.fonte==='estimado') return 'sem fatura de '+finCompLabel(c)+': usando a de '+finCompLabel(k.ref);
+  return 'diária fixa '+finPdaDiariaTxt()+' × '+finPdaDias(c)+' dias (sem fatura em Lançamentos)';
+}
+async function finPdaFatCarregar(){
+  try{
+    var r=await sb.from('turno_data').select('key,value').in('key',['pda_fatura_cfg','funcionario_pda']);
+    (r.data||[]).forEach(function(row){
+      if(row.key==='pda_fatura_cfg') FIN_PDA_FATCFG=row.value||null;
+      if(row.key==='funcionario_pda'){ var n=0; String((row.value&&row.value.data)||'').split('\n').forEach(function(l){ var p=l.split('|'); if(p.length<4) return; if(/ativo/i.test(p[2])&&!/inativo/i.test(p[2])&&String(p[3]).trim()) n++; }); FIN_PDA_CADN=n; }
+    });
+  }catch(e){}
+  if(!FIN_DATA||!FIN_DATA.length){
+    try{ var q=await sb.from('valores').select('*'); if(!q.error) FIN_DATA=q.data||[]; }catch(e){}
+  }
+}
+function finPdaFatUI(){
+  var sel=$('fin-pda-fat-forn'), inp=$('fin-pda-fat-filtro'); if(!sel) return;
+  var cfg=FIN_PDA_FATCFG||{}, forns={};
+  (FIN_DATA||[]).forEach(function(v){ var f=String(v.fornecedor||'').trim(); if(f) forns[finPdaTxt(f)]=forns[finPdaTxt(f)]||f; });
+  var lista=Object.keys(forns).sort(function(a,b){ return a.localeCompare(b); });
+  sel.innerHTML='<option value="">Automático: lançamentos com "PDA"</option>'+lista.map(function(k){ return '<option value="'+escHtml(forns[k]).replace(/"/g,'&quot;')+'"'+(finPdaTxt(cfg.fornecedor)===k?' selected':'')+'>'+escHtml(forns[k])+'</option>'; }).join('');
+  if(inp&&document.activeElement!==inp) inp.value=cfg.filtro||'';
+  finPdaFatPrevia();
+}
+// mostra o que a escolha atual encontra (antes de salvar)
+function finPdaFatPrevia(){
+  var st=$('fin-pda-fat-st'), box=$('fin-pda-fat-meses'); if(!st) return;
+  var cfg={fornecedor:$('fin-pda-fat-forn').value, filtro:$('fin-pda-fat-filtro').value};
+  var fat=finPdaFatPorMes(cfg), meses=Object.keys(fat).sort().reverse();
+  var mudou=finPdaTxt(cfg.fornecedor)!==finPdaTxt((FIN_PDA_FATCFG||{}).fornecedor)||finPdaTxt(cfg.filtro)!==finPdaTxt((FIN_PDA_FATCFG||{}).filtro);
+  var bt=$('fin-pda-fat-salvar'); if(bt) bt.disabled=!mudou;
+  if(!meses.length){
+    st.className='fin-pda-fat-st aviso';
+    st.innerHTML=(cfg.fornecedor||cfg.filtro?'Nenhum lançamento encontrado com essa escolha.':'Nenhum lançamento com "PDA" no fornecedor ou na descrição.')
+      +' Enquanto não houver fatura, o custo usa a diária fixa de '+finPdaDiariaTxt()+' por aparelho. Escolha abaixo como a fatura do PDA é lançada.';
+    box.innerHTML=''; return;
+  }
+  var u=fat[meses[0]];
+  st.className='fin-pda-fat-st';
+  st.innerHTML='Fatura mais recente: <b>'+escHtml(finCompLabel(meses[0]))+'</b>, '+finPdaMoeda(u.valor)+' por '+u.aparelhos+' aparelhos'+(u.porQtd?'':' (ativos no cadastro: o lançamento não traz quantidade)')
+    +' = <b>'+(u.custo!=null?finPdaMoeda(u.custo):'—')+' por aparelho no mês</b>.'+(mudou?' <span style="color:#9a3412">Clique em Salvar para usar esta escolha.</span>':'');
+  box.innerHTML='<table class="fin-pda-fat-tbl"><thead><tr><th>Mês da fatura</th><th class="n">Lançamentos</th><th class="n">Valor</th><th class="n">Aparelhos</th><th class="n">Por aparelho/mês</th><th class="n">Por dia</th></tr></thead><tbody>'
+    +meses.slice(0,6).map(function(c){ var x=fat[c]; return '<tr><td>'+escHtml(finCompLabel(c))+'</td><td class="n">'+x.n+'</td><td class="n">'+finPdaMoeda(x.valor)+'</td><td class="n">'+x.aparelhos+(x.porQtd?'':'*')+'</td><td class="n"><b>'+(x.custo!=null?finPdaMoeda(x.custo):'—')+'</b></td><td class="n">'+(x.custo!=null?finPdaMoeda(x.custo/finPdaDias(c)):'—')+'</td></tr>'; }).join('')
+    +'</tbody></table>'+(meses.some(function(c){ return !fat[c].porQtd; })?'<div style="font-size:.72rem;color:#64748b;margin-top:6px">* Lançamento sem quantidade: dividido pelos aparelhos ativos no cadastro.</div>':'');
+}
+async function finPdaFatSalvar(){
+  var cfg={fornecedor:$('fin-pda-fat-forn').value||'', filtro:($('fin-pda-fat-filtro').value||'').trim(), atualizado:new Date().toISOString()};
+  var bt=$('fin-pda-fat-salvar'); if(bt) bt.disabled=true;
+  try{
+    await finPdaGravar([{key:'pda_fatura_cfg', value:cfg}]);
+    FIN_PDA_FATCFG=cfg; finPdaRender(); finPdaFatUI();
+    finPdaMsg('Fatura do PDA definida: '+(cfg.fornecedor?'fornecedor '+cfg.fornecedor+(cfg.filtro?' com "'+cfg.filtro+'" na descrição':''):'lançamentos com "PDA"')+'. O custo ocioso já foi recalculado.','ok');
+  }catch(e){ finPdaMsg('Não foi possível salvar a escolha da fatura: '+(e.message||e),'err'); if(bt) bt.disabled=false; }
+}
 var FIN_PDA_ENVIANDO=false;
 function finPdaNorm(s){ return String(s==null?'':s).trim(); }
 function finPdaKey(s){ return finPdaNorm(s).replace(/^0+(?=\d)/,''); }
@@ -1017,6 +1132,7 @@ async function finPdaOcioso(){
       var {data,error}=await sb.from('turno_data').select('value').eq('key','pda_ocioso').maybeSingle();
       if(error){ if(meta) meta.textContent='Não foi possível carregar ('+error.message+').'; return; }
       FIN_PDA_CACHE=(data&&data.value)||{lista:[],qtd:0,diaria:0.5337};
+      await finPdaFatCarregar();
     }
     if(!FIN_PDA_MESES){
       // competências de acesso acumuladas (pda_acesso_AAAA-MM) -> acessos por mês + linhas
@@ -1051,14 +1167,14 @@ async function finPdaOcioso(){
     finPdaRender();
     finPdaMesUI();
     finPdaUpStatus();
+    finPdaFatUI();
   }catch(e){ if(meta) meta.textContent='Erro ao carregar.'; }
 }
 function finPdaRender(){
   var d=FIN_PDA_CACHE||{};
   var lista=(d.lista||[]).filter(function(x){ return !((x.equipe||'').trim()); });
-  var diaria=Number(d.diaria||0.5337);
-  var hoje=new Date(); var diasMes=new Date(hoje.getFullYear(),hoje.getMonth()+1,0).getDate();
-  var custoMes=diaria*diasMes;
+  var hoje=new Date(), compHoje=hoje.getFullYear()+'-'+String(hoje.getMonth()+1).padStart(2,'0'), diasMes=finPdaDias(compHoje);
+  var custo=finPdaCusto(compHoje), custoMes=custo.mes, diaria=custoMes/diasMes;
   var total=custoMes*lista.length;
   var f=function(n){return 'R$ '+Number(n).toFixed(2).replace('.',',');};
   var res=$('fin-pda-resumo');
@@ -1066,10 +1182,10 @@ function finPdaRender(){
     res.innerHTML=
       '<div class="fin-kpi" style="border-left-color:#c2410c"><div class="k-lbl">Custo/mês ocioso</div><div class="k-val" style="color:#c2410c">'+f(total)+'</div><div class="k-sub">aparelhos ativos sem uso</div></div>'
      +'<div class="fin-kpi"><div class="k-lbl">Aparelhos sem acesso</div><div class="k-val">'+lista.length+'</div><div class="k-sub">ativos que nunca acessaram</div></div>'
-     +'<div class="fin-kpi"><div class="k-lbl">Custo/mês por aparelho</div><div class="k-val">'+f(custoMes)+'</div><div class="k-sub">diária '+f(diaria)+' × '+diasMes+' dias</div></div>';
+     +'<div class="fin-kpi"><div class="k-lbl">Custo/mês por aparelho</div><div class="k-val">'+f(custoMes)+'</div><div class="k-sub">'+escHtml(finPdaCustoTxt(custo,compHoje))+'</div></div>';
   }
   var meta=$('fin-pda-meta');
-  if(meta) meta.innerHTML='Diária de '+f(diaria)+' por aparelho × '+diasMes+' dias do mês. '+(d.updatedAt?'Atualizado pela PDA em '+escHtml(d.updatedAt)+'.':'')+' <span style="color:#94a3b8">Os dados vêm da tela PDA (cadastro × relatório de acesso).</span>';
+  if(meta) meta.innerHTML='Custo de '+f(custoMes)+' por aparelho no mês ('+escHtml(finPdaCustoTxt(custo,compHoje))+'), o equivalente a '+f(diaria)+' por dia. '+(d.updatedAt?'Lista atualizada em '+escHtml(d.updatedAt)+'.':'')+' <span style="color:#94a3b8">Os dados vêm da tela PDA (cadastro × relatório de acesso).</span>';
   var thead=$('fin-pda-thead'), tbody=$('fin-pda-tbody');
   if(thead) thead.innerHTML=['Funcionário','Matrícula','Cargo','Equipe','Custo/mês'].map(function(c){return '<th>'+c+'</th>';}).join('');
   if(tbody){
@@ -1162,19 +1278,19 @@ function finPdaCharts(qtdOcioso, diaria){
   if(ctxC){
     if(FIN_CHART_CUSTO) FIN_CHART_CUSTO.destroy();
     if(meses.length){
-      var algumEstimado=false;
+      var algumEstimado=false, fatM=finPdaFatPorMes(), custos={}, fontes={};
       var valsC=meses.map(function(m){
-        var p=m.split('-');var dias=new Date(+p[0],+p[1],0).getDate();
         var q=(ocMes[m]!=null)?ocMes[m]:qtdOcioso;
         if(ocMes[m]==null) algumEstimado=true;
-        return +(q*diaria*dias).toFixed(2);
+        var k=finPdaCusto(m,fatM); custos[m]=k; fontes[k.fonte]=1;
+        return +(q*k.mes).toFixed(2);
       });
       var maxC=Math.max.apply(null,valsC);
       var coresC=valsC.map(function(v){return v===maxC?'#c2410c':'#f0a36b';});
-      if(topC){ topC.textContent='Ociosos reais por mês × diária R$ '+diaria.toFixed(2).replace('.',',')+(algumEstimado?' (meses sem histórico usam o total atual: '+qtdOcioso+')':''); }
+      if(topC){ topC.textContent='Ociosos reais por mês × custo por aparelho da fatura do mês'+(fontes.estimado?' (mês sem fatura usa a mais recente)':'')+(fontes.fixo?' (sem fatura em Lançamentos: diária fixa de R$ '+FIN_PDA_DIARIA.toFixed(2).replace('.',',')+')':'')+(algumEstimado?'. Meses sem histórico de ociosos usam o total atual: '+qtdOcioso:''); }
       FIN_CHART_CUSTO=new Chart(ctxC,{type:'bar',
         data:{labels:labels,datasets:[{label:'Custo ocioso',data:valsC,backgroundColor:coresC,borderRadius:6,maxBarThickness:46}]},
-        options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){var m=meses[c.dataIndex];var q=(ocMes[m]!=null)?ocMes[m]:qtdOcioso;return 'R$ '+Number(c.parsed.y).toFixed(2).replace('.',',')+' · '+q+' ociosos';}}}},
+        options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){var m=meses[c.dataIndex];var q=(ocMes[m]!=null)?ocMes[m]:qtdOcioso;var k=custos[m];return ['R$ '+Number(c.parsed.y).toFixed(2).replace('.',',')+': '+q+' ociosos × '+finPdaMoeda(k.mes), k.fonte==='fatura'?'Fatura do mês':(k.fonte==='estimado'?'Sem fatura do mês: usando a de '+finCompLabel(k.ref):'Sem fatura: diária fixa')];}}}},
           scales:{y:{beginAtZero:true,ticks:{font:{family:'Barlow'},callback:function(v){return 'R$ '+v;}},grid:{color:'#eef2f5'}},x:{ticks:{font:{family:'Barlow',weight:'700'},color:'#555'},grid:{display:false}}}}});
     } else if(topC){ topC.textContent='Sem competências para calcular o custo por mês.'; }
   }
