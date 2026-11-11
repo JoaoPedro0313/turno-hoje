@@ -7,9 +7,9 @@
      (window.MARIUA_SB, criado pelo mariua-auth.js). Se a leitura com o login
      voltar vazia, tenta a chave pública e avisa no console: é sinal de que a
      RLS ainda não libera leitura para usuários autenticados.
-   - Cruza turno, programação, RDO, carteira de obras, cadastro de equipes e
-     SESMT e devolve uma lista de pendências, cada uma com nível, responsável
-     e um botão para a tela onde se resolve.
+   - Cruza turno, programação, RDO, carteira de obras e cadastro de equipes e
+     devolve uma lista de pendências, cada uma com nível, responsável e um
+     botão para a tela onde se resolve.
    - Não grava nada.
 
    Para mudar uma regra (horário limite, dias de obra parada...), edite REGRAS.
@@ -21,22 +21,19 @@
     horaLimiteTurno: 8,       // depois deste horário, equipe sem turno vira "crítico"
     diasObraParada: 5,        // obra em execução sem produção há este número de dias
     execucaoMinima: 0.5,      // abaixo de 50% do valor previsto vira pendência
-    diasAvisoVencimento: 30,  // cursos e brigada: avisa com esta antecedência
     diasCarteiraVelha: 7,     // carteira de obras sem sincronizar há este número de dias
     horaProgramacao: 9        // depois deste horário, dia útil sem programação vira aviso
   };
 
   var CHAVES = ['turno', 'rdo_atual', 'prog_diaria', 'obras_base', 'cadastro_equipes',
-                'sesmt_cursos', 'sesmt_brigada', 'usuario_contrato'];
+                'usuario_contrato'];
 
   var FONTES = {
     turno:            { nome: 'Turno do dia',          tela: 'turno.html' },
     rdo_atual:        { nome: 'RDO importado',         tela: 'rdo.html' },
     prog_diaria:      { nome: 'Programação',           tela: 'prog.html' },
     obras_base:       { nome: 'Carteira de obras',     tela: 'mapa.html' },
-    cadastro_equipes: { nome: 'Cadastro de equipes',   tela: 'equipes.html' },
-    sesmt_cursos:     { nome: 'Cursos (SESMT)',        tela: 'vencimento_cursos.html' },
-    sesmt_brigada:    { nome: 'Brigada (SESMT)',       tela: 'brigada.html' }
+    cadastro_equipes: { nome: 'Cadastro de equipes',   tela: 'equipes.html' }
   };
 
   var BASES = {
@@ -50,7 +47,7 @@
   };
   var ORDEM_BASES = ['JAC', 'IRC', 'FSA', 'SRR', 'PA', 'ITA', 'AJU'];
   var NIVEL_ORDEM = { critico: 0, atencao: 1, aviso: 2 };
-  var CAT_ORDEM = { turno: 0, prog: 1, rdo: 2, obras: 3, sesmt: 4, dados: 5 };
+  var CAT_ORDEM = { turno: 0, prog: 1, rdo: 2, obras: 3, dados: 4 };
 
   // ─── utilidades ─────────────────────────────────────────────────────────
   function norm(s) {
@@ -212,7 +209,7 @@
     var C = (bruto && bruto.chaves) || {};
     function val(k) { return C[k] ? C[k].valor : null; }
     var T = val('turno'), R = val('rdo_atual'), P = val('prog_diaria'), OB = val('obras_base'),
-        CAD = val('cadastro_equipes'), CUR = val('sesmt_cursos'), BRI = val('sesmt_brigada');
+        CAD = val('cadastro_equipes');
     var estados = opc.estados || null, filtroBase = opc.base || '', filtroSup = norm(opc.supervisor || '');
 
     function passa(base, sup) {
@@ -542,78 +539,6 @@
             acao: { texto: 'Ver estágio', href: 'estagios.html' }, peso: -dias });
     });
 
-    // SESMT: cursos
-    var cursosResumo = null;
-    if (CUR && Array.isArray(CUR.dados)) {
-      var nVenc = 0, nProx = 0;
-      CUR.dados.forEach(function (p) {
-        if (!p) return;
-        var certs = p.certificados || {}, nome = p.nome || p.colaborador || p.funcionario || p.name || '';
-        var base = baseDoTexto(p.base || p.filial || p.centro || p.utd);
-        var venc = [], prox = [];
-        Object.keys(certs).forEach(function (k) {
-          var d = dataDe(certs[k]);
-          if (!d) return;
-          var dd = diasEntre(hoje, d);
-          if (dd < 0) venc.push({ curso: k, d: d });
-          else if (dd <= REGRAS.diasAvisoVencimento) prox.push({ curso: k, d: d, dd: dd });
-        });
-        if (!passa(base, '')) return;
-        nVenc += venc.length; nProx += prox.length;
-        var quem = nome ? nomeProprio(nome) : 'Colaborador sem nome';
-        if (venc.length) {
-          add({ cat: 'sesmt', nivel: 'critico', grupo: 'sesmt-vencido',
-                titulo: venc.length === 1 ? 'Curso vencido: ' + venc[0].curso : venc.length + ' cursos vencidos',
-                detalhe: venc.map(function (v) { return v.curso + ' venceu em ' + br(v.d); }).join(', ') + '.',
-                alvo: quem, base: base, desde: br(venc[0].d), acao: { texto: 'Abrir cursos', href: 'vencimento_cursos.html' } });
-          var dele = nome ? regsHoje.filter(function (x) { return x.encN && nomesBatem(x.encN, nome); }) : [];
-          if (dele.length) {
-            add({ cat: 'sesmt', nivel: 'critico', grupo: 'sesmt-escalado', titulo: 'Programado hoje com curso vencido',
-                  detalhe: quem + ' é encarregado de ' + plural(dele.length, '1 frente', '# frentes') + ' hoje. Vencido: ' +
-                           venc.map(function (v) { return v.curso; }).join(', ') + '.',
-                  alvo: dele[0].eq ? dele[0].eq.codigo : quem, base: base || (dele[0].eq && dele[0].eq.base),
-                  resp: (dele[0].eq && dele[0].eq.sup) || dele[0].sup, desde: 'hoje',
-                  acao: { texto: 'Trocar na programação', href: 'prog.html' }, peso: -1 });
-          }
-        }
-        if (prox.length) {
-          add({ cat: 'sesmt', nivel: 'atencao', grupo: 'sesmt-vencendo',
-                titulo: prox.length === 1 ? prox[0].curso + ' vence em ' + prox[0].dd + ' dias' : prox.length + ' cursos vencem em breve',
-                detalhe: prox.map(function (v) { return v.curso + ' em ' + br(v.d); }).join(', ') + '.',
-                alvo: quem, base: base, desde: '', acao: { texto: 'Agendar reciclagem', href: 'vencimento_cursos.html' } });
-        }
-      });
-      cursosResumo = { vencidos: nVenc, proximos: nProx };
-    }
-
-    // SESMT: brigada
-    var brigadaResumo = null;
-    if (BRI && Array.isArray(BRI.dados)) {
-      var bVenc = 0, bProx = 0;
-      BRI.dados.forEach(function (d) {
-        if (!d) return;
-        var a = dataDe(d.recp), h = dataDe(d.hidp);
-        var prox = (a && h) ? (a <= h ? a : h) : (a || h);
-        if (!prox) return;
-        var base = baseDoTexto(d.base || d.unidade || d.local);
-        if (!passa(base, '')) return;
-        var dd = diasEntre(hoje, prox), oque = (a && +prox === +a) ? 'Recarga' : 'Teste hidrostático';
-        var nome = d.local || d.nome || d.descricao || d.numero || d.codigo || d.id || 'Item da brigada';
-        if (dd < 0) {
-          bVenc++;
-          add({ cat: 'sesmt', nivel: 'critico', grupo: 'brigada-vencido', titulo: oque + (oque === 'Recarga' ? ' vencida' : ' vencido'),
-                detalhe: 'Venceu em ' + br(prox) + '.', alvo: String(nome), base: base, desde: br(prox),
-                acao: { texto: 'Abrir brigada', href: 'brigada.html' } });
-        } else if (dd <= REGRAS.diasAvisoVencimento) {
-          bProx++;
-          add({ cat: 'sesmt', nivel: 'atencao', grupo: 'brigada-vencendo', titulo: oque + ' vence em ' + dd + ' dias',
-                detalhe: 'Data: ' + br(prox) + '.', alvo: String(nome), base: base, desde: '',
-                acao: { texto: 'Abrir brigada', href: 'brigada.html' } });
-        }
-      });
-      brigadaResumo = { vencidos: bVenc, proximos: bProx };
-    }
-
     // Fontes velhas
     if (C.obras_base) {
       var info = (OB && OB.info) || {}, quando = C.obras_base.atualizado || dataDe(info.updatedAt);
@@ -673,7 +598,7 @@
         progHoje: { frentes: regsHojeF.length, previsto: soma(regsHojeF, 'prev'), semLigacao: semLigacao },
         execucao: execResumo,
         obrasParadas: itens.filter(function (i) { return i.grupo === 'obra-parada'; }).length,
-        cursos: cursosResumo, brigada: brigadaResumo, porBase: porBase
+        porBase: porBase
       },
       fontes: Object.keys(FONTES).map(function (k) {
         return { chave: k, nome: FONTES[k].nome, tela: FONTES[k].tela, existe: !!C[k],
@@ -706,12 +631,7 @@
     'prog-obra-cancelada':    ['# frentes em obra cancelada ou retirada', 'prog.html', 'Corrigir'],
     'prog-pep-fora':          ['# frentes com PEP fora da carteira', 'prog.html', 'Conferir'],
     'rdo-nao-lancou':         ['# equipes sem RDO lançado', 'rdo.html', 'Ver no RDO'],
-    'obra-parada':            ['# obras em execução sem produção', 'estagios.html', 'Ver estágios'],
-    'sesmt-vencido':          ['# colaboradores com curso vencido', 'vencimento_cursos.html', 'Abrir cursos'],
-    'sesmt-escalado':         ['# programados hoje com curso vencido', 'prog.html', 'Trocar na programação'],
-    'sesmt-vencendo':         ['# colaboradores com curso vencendo', 'vencimento_cursos.html', 'Abrir cursos'],
-    'brigada-vencido':        ['# itens da brigada vencidos', 'brigada.html', 'Abrir brigada'],
-    'brigada-vencendo':       ['# itens da brigada vencendo', 'brigada.html', 'Abrir brigada']
+    'obra-parada':            ['# obras em execução sem produção', 'estagios.html', 'Ver estágios']
   };
   function contarPorBase(lista) {
     var semBase = lista.filter(function (i) { return !i.base; }).length;

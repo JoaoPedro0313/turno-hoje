@@ -64,9 +64,6 @@
     { id:'neoex',      nome:'NEOEX · apontamento',    arquivos:['neoex.html'] },
     { id:'obra',       nome:'Cadastro de obra',       arquivos:['cadastro_obra.html'] },
     { id:'equipes',    nome:'Cadastro de equipes',    arquivos:['equipes.html'] },
-    { id:'cursos',     nome:'Vencimento de cursos',   arquivos:['vencimento_cursos.html'] },
-    { id:'ensaios',    nome:'Ensaios · SESMT',        arquivos:['ensaios.html'] },
-    { id:'brigada',    nome:'Brigada / extintores',   arquivos:['brigada.html'] },
     { id:'permissoes', nome:'Telas × usuários',       arquivos:['permissoes.html'] },
     { id:'valores',    nome:'Financeiro',             arquivos:['valores.html'], soGestor:true },
     { id:'fatork',     nome:'Fator K por base',       arquivos:['fator_k.html'], soGestor:true },
@@ -464,7 +461,7 @@
     });
   }
 
-  /* Um módulo do menu (o grupo "Obras", "SESMT", "Financeiro"…) só aparece se
+  /* Um módulo do menu (o grupo "Obras", "Financeiro", "Gestão"…) só aparece se
      sobrou ao menos um item liberado dentro dele. Sem isso ficava o título do
      grupo sozinho, abrindo para uma lista vazia.
      Funciona pela estrutura que o nav.js gera: .sm-group > .sm-group-items > .sm-item */

@@ -12,7 +12,7 @@ s.textContent='html.mariua-check body>*{visibility:hidden!important}#mariua-ovl,
 setTimeout(function(){if(window.__MARIUA_AUTH__)return;
 h.className=h.className.replace(/\bmariua-check\b/,'');
 var d=document.body||h;d.innerHTML='<div style="font-family:Barlow,system-ui,sans-serif;max-width:420px;margin:14vh auto;padding:26px;border:2px solid #fed7d7;border-radius:14px;background:#fff5f5;text-align:center;color:#742a2a"><div style="font-size:1.05rem;font-weight:900;margin-bottom:8px">Login não carregou</div><div style="font-size:.85rem;font-weight:600;line-height:1.5">O arquivo <b>mariua-auth.js</b> não foi encontrado nesta pasta. Sem ele o sistema não libera o acesso.</div><button onclick="location.reload()" style="margin-top:16px;padding:10px 22px;border:none;border-radius:9px;background:#c53030;color:#fff;font-family:Barlow,sans-serif;font-weight:800;cursor:pointer">Recarregar</button></div>';},8000);})();</script>
-<script src="mariua-auth.js?v=4"></script>
+<script src="mariua-auth.js?v=5"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Painel do dia · Mariuá</title>
 <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -50,7 +50,7 @@ try{if(localStorage.getItem("mariua_darkmode")==="1")document.body.classList.add
 <div class="page-hdr">
   <div>
     <h2>Painel do dia</h2>
-    <p id="sub-data">O que fugiu do previsto hoje, cruzando turno, programação, RDO, obras e SESMT.</p>
+    <p id="sub-data">O que fugiu do previsto hoje, cruzando turno, programação, RDO e obras.</p>
   </div>
   <div class="m-acoes">
     <button type="button" class="m-bt" id="bt-atualizar"><i class="ti ti-refresh" aria-hidden="true"></i>Atualizar</button>
@@ -111,8 +111,8 @@ try{if(localStorage.getItem("mariua_darkmode")==="1")document.body.classList.add
 </main>
 
 <script src="identidade.js?v=3"></script>
-<script src="mariua-ui.js?v=3"></script>
-<script src="mariua-painel.js?v=4"></script>
+<script src="mariua-ui.js?v=4"></script>
+<script src="mariua-painel.js?v=5"></script>
 <script>
 /* Confere se os arquivos desta tela chegaram junto com esta página.
    Se faltar algum, mostra qual é em vez de abrir a tela quebrada. */
@@ -152,7 +152,7 @@ try{if(localStorage.getItem("mariua_darkmode")==="1")document.body.classList.add
   try { var salvo = JSON.parse(sessionStorage.getItem('mariua_painel_filtros') || '{}'); ['cat', 'base', 'sup'].forEach(function (k) { if (salvo[k] != null) estado[k] = salvo[k]; }); } catch (e) {}
   var estadosUsuario = null, analise = null, ultimaLeitura = 0;
   var LIMITE_LINHAS = 60;
-  var CATS = [['todas', 'Todas'], ['turno', 'Turno'], ['prog', 'Programação'], ['rdo', 'RDO'], ['obras', 'Obras'], ['sesmt', 'SESMT'], ['dados', 'Importações']];
+  var CATS = [['todas', 'Todas'], ['turno', 'Turno'], ['prog', 'Programação'], ['rdo', 'RDO'], ['obras', 'Obras'], ['dados', 'Importações']];
   var NIVEL = { critico: ['Crítico', 'alert-octagon'], atencao: ['Atenção', 'alert-triangle'], aviso: ['Aviso', 'info-circle'] };
   var COR = { ok: '#0d7377', justif: '#f0a500', falta: '#e53e3e' };
   var UF = { ba: 'BA', mg: 'MG', se: 'SE' };
@@ -164,7 +164,7 @@ try{if(localStorage.getItem("mariua_darkmode")==="1")document.body.classList.add
       '<span style="flex:' + falta + ';background:' + COR.falta + '"></span></div>';
   }
 
-  $('sub-data').textContent = UI.dataLonga(new Date()) + '. O que fugiu do previsto, cruzando turno, programação, RDO, obras e SESMT.';
+  $('sub-data').textContent = UI.dataLonga(new Date()) + '. O que fugiu do previsto, cruzando turno, programação, RDO e obras.';
 
   // ── leitura ─────────────────────────────────────────────────────────
   function atualizar(manual) {
@@ -292,7 +292,6 @@ try{if(localStorage.getItem("mariua_darkmode")==="1")document.body.classList.add
     $('lista').innerHTML = h;
     var bt = $('bt-todas');
     if (bt) bt.addEventListener('click', function () { estado.todas = true; desenharAbasELista(); });
-    UI.desativarTelasAusentes($('lista'));
   }
   $('abas').addEventListener('click', function (e) {
     var b = e.target.closest('.m-aba');
@@ -381,7 +380,6 @@ try{if(localStorage.getItem("mariua_darkmode")==="1")document.body.classList.add
       ? '<div class="m-alerta atencao" style="margin-top:12px"><i class="ti ti-lock-open" aria-hidden="true"></i><span>A leitura só funcionou com a chave pública. Peça ao administrador para liberar a leitura com login no banco (RLS).</span></div>'
       : '<p class="m-meta" style="margin-top:10px">Lido com o seu login.</p>';
     $('fontes').innerHTML = h;
-    UI.desativarTelasAusentes($('fontes'));
   }
 
   // ── ações do cabeçalho ──────────────────────────────────────────────

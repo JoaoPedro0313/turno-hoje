@@ -262,6 +262,25 @@
   .fin-pda-msg{margin-top:10px;font-size:.8rem;font-weight:700;line-height:1.5}
   .fin-pda-msg:empty{display:none}
   .fin-pda-msg.ok{color:#15803d}.fin-pda-msg.err{color:#b91c1c}.fin-pda-msg.info{color:#475569}
+  /* aparelhos ativos (Relatório Controle de Aparelhos) */
+  .fin-pda-lim{display:flex;align-items:center;flex-wrap:wrap;gap:8px 10px;font-size:.82rem;font-weight:600;color:#334155;margin:0 0 12px}
+  .fin-pda-lim select{height:34px;padding:0 10px;border:1.5px solid #cbd5e1;border-radius:8px;font-family:inherit;font-size:.84rem;font-weight:800;color:#1f2d3d;background:#fff;margin:0;width:auto}
+  .fin-pda-lim-rel{margin-left:auto;font-size:.76rem;color:#64748b}
+  .fin-pda-seg{display:inline-flex;gap:2px;background:#eef2f6;border-radius:9px;padding:3px;margin-left:auto}
+  .fin-pda-seg button{border:0;background:transparent;color:#475569;font-family:inherit;font-size:.76rem;font-weight:800;padding:6px 11px;border-radius:7px;cursor:pointer}
+  .fin-pda-seg button[aria-pressed="true"]{background:#fff;color:#0f3a33;box-shadow:0 1px 4px rgba(0,0,0,.12)}
+  .fin-pda-dias{display:inline-block;min-width:54px;text-align:center;font-weight:800;font-size:.76rem;border-radius:999px;padding:3px 9px;background:#f1f5f9;color:#475569}
+  .fin-pda-dias.hoje{background:#dcfce7;color:#166534}
+  .fin-pda-dias.ocioso{background:#fee2e2;color:#b91c1c}
+  .fin-pda-dup-sub{font-size:.76rem;color:#64748b;font-weight:600;margin:-4px 0 10px;line-height:1.45}
+  .fin-pda-dup-l{display:grid;grid-template-columns:minmax(150px,1.1fr) 92px minmax(0,2fr) auto;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid #f1f5f9;font-size:.82rem}
+  .fin-pda-dup-l:last-child{border-bottom:0}
+  .fin-pda-dup-l .ds{display:flex;flex-wrap:wrap;gap:4px}
+  .fin-pda-dup-l .ds .fin-pda-dias{min-width:0;font-size:.7rem;padding:2px 7px}
+  @media(max-width:700px){ .fin-pda-dup-l{grid-template-columns:1fr auto} .fin-pda-dup-l .ds{grid-column:1/-1} }
+  #fin-pda-tbl th{text-align:left;font-size:.68rem;text-transform:uppercase;letter-spacing:.03em;color:#64748b;padding:7px 8px;border-bottom:1px solid #e2e8f0;white-space:nowrap}
+  #fin-pda-tbl td{padding:7px 8px;border-bottom:1px solid #f1f5f9;white-space:nowrap}
+  #fin-pda-tbl tr.oc td{background:#fff7f5}
   /* custo do aparelho puxado da fatura lançada em Lançamentos */
   .fin-pda-fat-st{font-size:.82rem;font-weight:600;color:#334155;line-height:1.5;margin-bottom:10px}
   .fin-pda-fat-st b{color:#0f3a33}
@@ -535,10 +554,10 @@ body.sm-collapsed .sm-side:hover .sm-group-head{justify-content:flex-start;paddi
 <div class="fin-card fin-pda-up" id="fin-pda-up" ondragover="event.preventDefault();this.classList.add('arrastando')" ondragleave="this.classList.remove('arrastando')" ondrop="event.preventDefault();this.classList.remove('arrastando');finPdaEnviar(event.dataTransfer.files)">
 <div class="fin-card-hrow">
 <div class="fin-card-h">📤 Atualizar dados do PDA</div>
-<input type="file" id="fin-pda-file" accept=".csv,text/csv" multiple hidden onchange="finPdaEnviar(this.files);this.value=''">
-<button type="button" class="btn add" id="fin-pda-bt" onclick="document.getElementById('fin-pda-file').click()"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V4"/><path d="M7.5 8.5 12 4l4.5 4.5"/><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg>Enviar arquivos (CSV)</button>
+<input type="file" id="fin-pda-file" accept=".pdf,application/pdf,.csv,text/csv" multiple hidden onchange="finPdaEnviar(this.files);this.value=''">
+<button type="button" class="btn add" id="fin-pda-bt" onclick="document.getElementById('fin-pda-file').click()"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V4"/><path d="M7.5 8.5 12 4l4.5 4.5"/><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg>Enviar relatório</button>
 </div>
-<p class="fin-pda-up-txt">Envie o <b>Relatório de Acesso</b> do mês e, quando houver mudança de pessoal, o <b>cadastro de funcionários</b>. Pode mandar os dois juntos ou arrastar os arquivos para este quadro. É o mesmo envio da tela PDA: fica salvo para todos e esta aba se atualiza na hora.</p>
+<p class="fin-pda-up-txt">Envie o <b>Relatório Controle de Aparelhos</b> do GPM (PDF): é por aparelho ativo que a fatura cobra, e é com ele que esta aba calcula o custo e o ocioso. Mande um por mês, de preferência perto do fechamento da fatura. Opcional: o <b>cadastro de funcionários</b> (CSV) mostra o nome de cada usuário. Pode arrastar os arquivos para este quadro.</p>
 <div class="fin-pda-st" id="fin-pda-st"></div>
 <div class="fin-pda-msg" id="fin-pda-msg" role="status" aria-live="polite"></div>
 </div>
@@ -552,41 +571,36 @@ body.sm-collapsed .sm-side:hover .sm-group-head{justify-content:flex-start;paddi
 </div>
 <div id="fin-pda-fat-meses"></div>
 </div>
+        <div class="fin-pda-lim" id="fin-pda-lim-bar">
+          <span>Considerar <b>ocioso</b> o aparelho ativo sem acesso há</span>
+          <select id="fin-pda-lim" onchange="finPdaLimSel(this.value)" aria-label="Dias sem acesso para considerar ocioso">
+            <option value="3">3 dias ou mais</option><option value="7">7 dias ou mais</option><option value="15">15 dias ou mais</option><option value="30">30 dias ou mais</option>
+          </select>
+          <span class="fin-pda-lim-rel" id="fin-pda-lim-rel"></span>
+        </div>
         <div id="fin-pda-resumo" class="fin-kpis"></div>
         <div class="fin-graphs">
           <div class="fin-card">
-            <div class="fin-card-h">📲 Acessos por mês</div>
+            <div class="fin-card-h">📊 Dias sem acesso</div>
             <div id="fin-pda-acessos-top" style="font-size:.72rem;color:#64748b;font-weight:700;margin-bottom:8px"></div>
             <div style="height:220px"><canvas id="fin-pda-chart-acessos"></canvas></div>
           </div>
           <div class="fin-card">
-            <div class="fin-card-h">💰 Custo ocioso por mês</div>
+            <div class="fin-card-h">💰 Custo dos aparelhos por mês</div>
             <div id="fin-pda-custo-top" style="font-size:.72rem;color:#64748b;font-weight:700;margin-bottom:8px"></div>
             <div style="height:220px"><canvas id="fin-pda-chart-custo"></canvas></div>
           </div>
         </div>
-        <div class="fin-card">
-          <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:6px">
-            <div class="fin-card-h" style="margin:0">🗓️ Relação por mês</div>
-            <select id="fin-pda-mes" onchange="finPdaMesSel()" style="margin-left:auto"></select>
-          </div>
-          <div class="fin-mes-cols">
-            <div>
-              <div class="fin-mes-h" style="color:#0d7377">📲 Acessaram (PDA usado) <span id="fin-mes-ativos-cnt" class="fin-mes-cnt"></span></div>
-              <div style="overflow-x:auto;max-height:360px;overflow-y:auto">
-                <table class="fin-mes-tbl"><thead id="fin-mes-ativos-h"></thead><tbody id="fin-mes-ativos"></tbody></table>
-              </div>
-            </div>
-            <div>
-              <div class="fin-mes-h" style="color:#c2410c">💤 Ativos sem acesso (ocioso) <span id="fin-mes-ociosos-cnt" class="fin-mes-cnt"></span></div>
-              <div style="overflow-x:auto;max-height:360px;overflow-y:auto">
-                <table class="fin-mes-tbl"><thead id="fin-mes-ociosos-h"></thead><tbody id="fin-mes-ociosos"></tbody></table>
-              </div>
-            </div>
-          </div>
+        <div class="fin-card" id="fin-pda-dup-card" hidden>
+          <div class="fin-card-h">👥 Usuários com mais de um aparelho ativo</div>
+          <div class="fin-pda-dup-sub" id="fin-pda-dup-sub"></div>
+          <div id="fin-pda-dup"></div>
         </div>
         <div class="fin-card">
-          <div class="fin-card-h">📲 Aparelhos ativos sem acesso ao PDA</div>
+          <div class="fin-card-hrow">
+            <div class="fin-card-h">📲 Aparelhos ativos</div>
+            <span class="fin-pda-seg" role="group" aria-label="Quais aparelhos mostrar" id="fin-pda-seg"></span>
+          </div>
           <div id="fin-pda-meta" style="font-size:.74rem;color:#64748b;font-weight:600;margin-bottom:10px"></div>
           <div style="overflow-x:auto">
             <table id="fin-pda-tbl" style="width:100%;border-collapse:collapse;font-size:.82rem">
@@ -827,7 +841,7 @@ var FIN_PDA_OCL=null;   // comp -> [{nome,mat,cargo,uf}]
        no mês -> pda_ocioso_AAAA-MM; em todos os meses carregados -> pda_ocioso (o "geral" desta aba) */
 var FIN_PDA_DIARIA=0.5337;   // a mesma diária por aparelho da tela PDA (usada só quando não há fatura em Lançamentos)
 var FIN_PDA_FATCFG=null;      // {fornecedor, filtro}: como a fatura do PDA é lançada (turno_data.pda_fatura_cfg)
-var FIN_PDA_CADN=null;        // aparelhos ativos no cadastro: divide a fatura quando o lançamento não traz quantidade
+var FIN_PDA_CADN=null;        // aparelhos ativos no cadastro: último recurso para dividir a fatura sem quantidade
 function finPdaTxt(s){ return String(s==null?'':s).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/\s+/g,' ').trim(); }
 function finPdaMoeda(n){ return Number(n||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'}); }
 function finPdaDiariaTxt(){ return 'R$ '+FIN_PDA_DIARIA.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:4}); }
@@ -852,7 +866,10 @@ function finPdaFatPorMes(cfg){
     x.valor+=val||0; x.n++;
     if(v.quantidade!=null&&Number(v.quantidade)>0) x.qtd+=Number(v.quantidade);
   });
-  Object.keys(m).forEach(function(c){ var x=m[c]; x.porQtd=x.qtd>0; x.aparelhos=x.porQtd?x.qtd:(FIN_PDA_CADN||0); x.custo=x.aparelhos>0&&x.valor>0?x.valor/x.aparelhos:null; });
+  var aps=FIN_PDA_APS||{}, ult=Object.keys(aps).sort().pop();
+  Object.keys(m).forEach(function(c){ var x=m[c]; x.porQtd=x.qtd>0;
+    x.aparelhos=x.porQtd?x.qtd:(aps[c]?aps[c].itens.length:(ult?aps[ult].itens.length:(FIN_PDA_CADN||0)));
+    x.custo=x.aparelhos>0&&x.valor>0?x.valor/x.aparelhos:null; });
   return m;
 }
 // custo mensal por aparelho na competência: a fatura do mês; senão a mais recente até ele (ou a mais recente de todas); senão a diária fixa
@@ -873,7 +890,7 @@ async function finPdaFatCarregar(){
     var r=await sb.from('turno_data').select('key,value').in('key',['pda_fatura_cfg','funcionario_pda']);
     (r.data||[]).forEach(function(row){
       if(row.key==='pda_fatura_cfg') FIN_PDA_FATCFG=row.value||null;
-      if(row.key==='funcionario_pda'){ var n=0; String((row.value&&row.value.data)||'').split('\n').forEach(function(l){ var p=l.split('|'); if(p.length<4) return; if(/ativo/i.test(p[2])&&!/inativo/i.test(p[2])&&String(p[3]).trim()) n++; }); FIN_PDA_CADN=n; }
+      if(row.key==='funcionario_pda'){ var n=0; FIN_PDA_NOMES={}; String((row.value&&row.value.data)||'').split('\n').forEach(function(l){ var p=l.split('|'); if(p.length<2) return; if(p[0]) FIN_PDA_NOMES[finPdaMatKey(p[0])]=p[1]||''; if(p.length>=4&&/ativo/i.test(p[2])&&!/inativo/i.test(p[2])&&String(p[3]).trim()) n++; }); FIN_PDA_CADN=n; FIN_PDA_CADINFO={n:row.value.count!=null?Number(row.value.count):Object.keys(FIN_PDA_NOMES).length, quando:row.value.updatedAt||''}; }
     });
   }catch(e){}
   if(!FIN_DATA||!FIN_DATA.length){
@@ -904,11 +921,11 @@ function finPdaFatPrevia(){
   }
   var u=fat[meses[0]];
   st.className='fin-pda-fat-st';
-  st.innerHTML='Fatura mais recente: <b>'+escHtml(finCompLabel(meses[0]))+'</b>, '+finPdaMoeda(u.valor)+' por '+u.aparelhos+' aparelhos'+(u.porQtd?'':' (ativos no cadastro: o lançamento não traz quantidade)')
+  st.innerHTML='Fatura mais recente: <b>'+escHtml(finCompLabel(meses[0]))+'</b>, '+finPdaMoeda(u.valor)+' por '+u.aparelhos+' aparelhos'+(u.porQtd?'':' (aparelhos ativos do relatório: o lançamento não traz quantidade)')
     +' = <b>'+(u.custo!=null?finPdaMoeda(u.custo):'—')+' por aparelho no mês</b>.'+(mudou?' <span style="color:#9a3412">Clique em Salvar para usar esta escolha.</span>':'');
   box.innerHTML='<table class="fin-pda-fat-tbl"><thead><tr><th>Mês da fatura</th><th class="n">Lançamentos</th><th class="n">Valor</th><th class="n">Aparelhos</th><th class="n">Por aparelho/mês</th><th class="n">Por dia</th></tr></thead><tbody>'
     +meses.slice(0,6).map(function(c){ var x=fat[c]; return '<tr><td>'+escHtml(finCompLabel(c))+'</td><td class="n">'+x.n+'</td><td class="n">'+finPdaMoeda(x.valor)+'</td><td class="n">'+x.aparelhos+(x.porQtd?'':'*')+'</td><td class="n"><b>'+(x.custo!=null?finPdaMoeda(x.custo):'—')+'</b></td><td class="n">'+(x.custo!=null?finPdaMoeda(x.custo/finPdaDias(c)):'—')+'</td></tr>'; }).join('')
-    +'</tbody></table>'+(meses.some(function(c){ return !fat[c].porQtd; })?'<div style="font-size:.72rem;color:#64748b;margin-top:6px">* Lançamento sem quantidade: dividido pelos aparelhos ativos no cadastro.</div>':'');
+    +'</tbody></table>'+(meses.some(function(c){ return !fat[c].porQtd; })?'<div style="font-size:.72rem;color:#64748b;margin-top:6px">* Lançamento sem quantidade: dividido pelos aparelhos ativos do Relatório Controle de Aparelhos.</div>':'');
 }
 async function finPdaFatSalvar(){
   var cfg={fornecedor:$('fin-pda-fat-forn').value||'', filtro:($('fin-pda-fat-filtro').value||'').trim(), atualizado:new Date().toISOString()};
@@ -1043,27 +1060,28 @@ async function finPdaGravar(regs){
 }
 function finPdaMsg(t,tipo){ var m=$('fin-pda-msg'); if(m){ m.textContent=t||''; m.className='fin-pda-msg'+(tipo?' '+tipo:''); } }
 function finPdaMesNome(c){ var p=String(c).split('-'); var n=['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'][+p[1]-1]; return n?n+' de '+p[0]:c; }
-async function finPdaUpStatus(b){
+function finPdaUpStatus(){
   var box=$('fin-pda-st'); if(!box) return;
-  try{ if(!b) b=await finPdaBuscar(); }catch(e){ box.innerHTML=''; return; }
-  var comps=Object.keys(b.acessos).map(function(k){ return b.acessos[k].comp; }).filter(Boolean).sort();
-  var ult=comps[comps.length-1], quandoUlt='';
-  Object.keys(b.acessos).forEach(function(k){ if(b.acessos[k].comp===ult) quandoUlt=b.acessos[k].quando; });
-  box.innerHTML=(b.cadInfo
-      ?'<span class="fin-pda-chip ok"><i></i><span>Cadastro: <b>'+b.cadInfo.n+' funcionários</b>'+(b.cadInfo.quando?', enviado em '+escHtml(b.cadInfo.quando):'')+'</span></span>'
-      :'<span class="fin-pda-chip falta"><i></i><span>Cadastro de funcionários: <b>não enviado</b> (sem ele o ocioso não é calculado)</span></span>')
-    +(comps.length
-      ?'<span class="fin-pda-chip ok"><i></i><span>Acessos: <b>'+comps.length+(comps.length===1?' mês':' meses')+'</b>, o último de <b>'+escHtml(finCompLabel(ult))+'</b>'+(quandoUlt?' (enviado em '+escHtml(quandoUlt)+')':'')+'</span></span>'
-      :'<span class="fin-pda-chip falta"><i></i><span>Relatório de acesso: <b>nenhum mês enviado</b></span></span>');
+  var comps=Object.keys(FIN_PDA_APS||{}).sort(), ult=comps[comps.length-1];
+  box.innerHTML=(ult
+      ?'<span class="fin-pda-chip ok"><i></i><span>Aparelhos: <b>'+FIN_PDA_APS[ult].itens.length+' ativos</b> no relatório de <b>'+escHtml(finPdaDataBR(FIN_PDA_APS[ult].dataRel))+'</b>'+(comps.length>1?' ('+comps.length+' meses guardados)':'')+'</span></span>'
+      :'<span class="fin-pda-chip falta"><i></i><span>Relatório Controle de Aparelhos: <b>nenhum enviado</b></span></span>')
+    +(FIN_PDA_CADINFO
+      ?'<span class="fin-pda-chip ok"><i></i><span>Cadastro para os nomes: <b>'+FIN_PDA_CADINFO.n+' funcionários</b>'+(FIN_PDA_CADINFO.quando?', enviado em '+escHtml(FIN_PDA_CADINFO.quando):'')+'</span></span>'
+      :'<span class="fin-pda-chip"><i></i><span>Cadastro de funcionários (opcional, para os nomes): <b>não enviado</b></span></span>');
 }
 async function finPdaEnviar(lista){
   var arqs=Array.prototype.slice.call(lista||[]); if(!arqs.length||FIN_PDA_ENVIANDO) return;
   FIN_PDA_ENVIANDO=true; var bt=$('fin-pda-bt'); if(bt) bt.disabled=true;
   try{
     finPdaMsg('Lendo '+(arqs.length===1?arqs[0].name:arqs.length+' arquivos')+'…','info');
-    var cad=null, acessos=[], ruins=[];
+    var cad=null, acessos=[], ruins=[], relAps=[];
     for(var i=0;i<arqs.length;i++){
       var f=arqs[i], rows;
+      if(/\.pdf$/i.test(f.name)||f.type==='application/pdf'){
+        try{ var ra=await finPdaLerPdf(f); if(ra.itens.length&&ra.dataRel){ ra.arquivo=f.name; relAps.push(ra); } else ruins.push(f.name); }catch(e){ ruins.push(f.name+' ('+(e.message||e)+')'); }
+        continue;
+      }
       try{ rows=finPdaCsv(await finPdaLer(f)); }catch(e){ ruins.push(f.name); continue; }
       var t=finPdaTipo(rows);
       if(t==='cadastro') cad={nome:f.name, rows:rows};
@@ -1072,8 +1090,21 @@ async function finPdaEnviar(lista){
     }
     var semMes=acessos.filter(function(a){ return !a.comp; }).map(function(a){ return a.nome; });
     acessos=acessos.filter(function(a){ return a.comp; });
+    if(!cad&&!acessos.length&&!relAps.length){
+      finPdaMsg('Não reconheci '+(ruins.concat(semMes).join(', ')||'os arquivos')+'. Envie o Relatório Controle de Aparelhos do GPM (PDF) ou o cadastro de funcionários (CSV com Login, Funcionário, Situação e Aparelho).','err');
+      return;
+    }
     if(!cad&&!acessos.length){
-      finPdaMsg('Não reconheci '+(ruins.concat(semMes).join(', ')||'os arquivos')+'. Envie o Relatório de Acesso (colunas IMEI, Matrícula e Data de Acesso) ou o cadastro de funcionários (Login, Funcionário, Situação e Aparelho), em CSV.','err');
+      // só o relatório de aparelhos: um retrato por mês (o mais recente do mês substitui o anterior)
+      var agoraA=new Date(), regsA=relAps.map(function(ra){ var c=ra.dataRel.slice(0,7);
+        return {key:'pda_aparelhos_'+c, value:{v:1, comp:c, dataRel:ra.dataRel, arquivo:ra.arquivo, updatedAt:agoraA.toLocaleString('pt-BR'), qtd:ra.itens.length,
+          fmt:'id|imei|login|usuario|dias|teste|ativ|ult|build', itens:ra.itens.map(function(a){ return [a.id,a.imei,a.login,a.usuario,a.dias,a.teste?1:0,a.ativ,a.ult,a.build]; })}}; });
+      finPdaMsg('Salvando no banco…','info');
+      await finPdaGravar(regsA);
+      FIN_PDA_APS=null; await finPdaOcioso();
+      var lim=finPdaLimiar();
+      finPdaMsg('Salvo: '+relAps.map(function(ra){ var n=ra.itens.filter(function(a){ return a.dias>=lim; }).length; return 'relatório de aparelhos de '+finPdaDataBR(ra.dataRel)+' ('+ra.itens.length+' ativos, '+n+' sem acesso há '+lim+' dias ou mais)'; }).join(' e ')+'.'
+        +(ruins.length?' Ficou de fora: '+ruins.join(', ')+'.':''),'ok');
       return;
     }
     finPdaMsg('Conferindo com o que já está no banco…','info');
@@ -1104,18 +1135,19 @@ async function finPdaEnviar(lista){
       var geral=finPdaOciosos(cadRows, finPdaMatsAcesso(todos,function(m){ return m; }), mp, true);
       regs.push({key:'pda_ocioso', value:{v:1, diaria:FIN_PDA_DIARIA, qtd:geral.length, updatedAt:agora.toLocaleString('pt-BR'), lista:geral}});
     }
+    relAps.forEach(function(ra){ var c=ra.dataRel.slice(0,7);
+      regs.push({key:'pda_aparelhos_'+c, value:{v:1, comp:c, dataRel:ra.dataRel, arquivo:ra.arquivo, updatedAt:agora.toLocaleString('pt-BR'), qtd:ra.itens.length,
+        fmt:'id|imei|login|usuario|dias|teste|ativ|ult|build', itens:ra.itens.map(function(a){ return [a.id,a.imei,a.login,a.usuario,a.dias,a.teste?1:0,a.ativ,a.ult,a.build]; })}}); });
     finPdaMsg('Salvando no banco…','info');
     await finPdaGravar(regs);
-    FIN_PDA_CACHE=null; FIN_PDA_MESES=null; FIN_PDA_ACC=null; FIN_PDA_OCMES=null; FIN_PDA_OCL=null;
+    FIN_PDA_CACHE=null; FIN_PDA_MESES=null; FIN_PDA_ACC=null; FIN_PDA_OCMES=null; FIN_PDA_OCL=null; FIN_PDA_APS=null;
     await finPdaOcioso();
     var feito=[];
-    acessos.forEach(function(a){ feito.push('relatório de acesso de '+finPdaMesNome(a.comp)+' ('+a.rows.length+' acessos)'); });
-    if(cad) feito.push('cadastro ('+cad.rows.length+' funcionários)');
+    relAps.forEach(function(ra){ feito.push('relatório de aparelhos de '+finPdaDataBR(ra.dataRel)+' ('+ra.itens.length+' ativos)'); });
+    if(cad) feito.push('cadastro ('+cad.rows.length+' funcionários; os nomes já aparecem na tabela de aparelhos)');
+    acessos.forEach(function(a){ feito.push('relatório de acesso de '+finPdaMesNome(a.comp)+' ('+a.rows.length+' acessos, usado pela tela PDA)'); });
     var txt='Salvo: '+feito.join(' e ')+'.';
-    if(resumoOc.length) txt+=' Ativos sem acesso: '+resumoOc.join(', ')+'.';
-    if(!cadRows||!cadRows.length) txt+=' Falta o cadastro de funcionários no banco: o ocioso só é calculado depois que ele for enviado.';
     if(ruins.length||semMes.length) txt+=' Ficou de fora: '+ruins.concat(semMes).join(', ')+' (não reconhecido ou sem datas).';
-    txt+=' A tela PDA também já vê os dados novos.';
     finPdaMsg(txt,'ok');
   }catch(e){
     finPdaMsg('Não foi possível salvar: '+(e.message||e)+'. Nada foi alterado; tente de novo.','err');
@@ -1123,80 +1155,178 @@ async function finPdaEnviar(lista){
     FIN_PDA_ENVIANDO=false; if(bt) bt.disabled=false;
   }
 }
+/* ---------- PDA ocioso por APARELHO ATIVO ----------
+   A fatura cobra cada aparelho ativo no GPM. A base desta aba é o "Relatório Controle de Aparelhos" (PDF do GPM):
+   um retrato por mês (turno_data.pda_aparelhos_AAAA-MM). Ocioso = aparelho ativo (pago) sem acesso há N dias ou mais
+   (N em turno_data.pda_aparelhos_cfg; padrão 7). Custo = aparelhos × custo por aparelho da fatura em Lançamentos. */
+var FIN_PDA_APS=null;        // {comp:{dataRel, arquivo, updatedAt, itens:[{id,imei,login,usuario,dias,teste,ativ,ult,build}]}}
+var FIN_PDA_APCFG=null;      // {limiar}
+var FIN_PDA_NOMES={}, FIN_PDA_EQUIPES={}, FIN_PDA_CADINFO=null;
+var FIN_PDA_FILTRO='todos';
+var FIN_CHART_ACESSOS=null, FIN_CHART_CUSTO=null;
+function finPdaLimiar(){ var l=FIN_PDA_APCFG&&Number(FIN_PDA_APCFG.limiar); return l>0?l:7; }
+function finPdaApsDe(v){ return (v.itens||[]).map(function(a){ return {id:a[0], imei:a[1], login:a[2], usuario:a[3], dias:a[4], teste:!!a[5], ativ:a[6], ult:a[7], build:a[8]}; }); }
+function finPdaApsUlt(){ var cs=Object.keys(FIN_PDA_APS||{}).sort(); return cs.length?cs[cs.length-1]:null; }
+function finPdaDataBR(iso){ var m=String(iso||'').match(/^(\d{4})-(\d{2})-(\d{2})(?:\s+(\d{2}:\d{2}))?/); return m?m[3]+'/'+m[2]+'/'+m[1]+(m[4]?' '+m[4]:''):''; }
+// leitor do Relatório Controle de Aparelhos: cada valor fica na mesma linha do seu rótulo
+function finPdaLerAparelhos(paginas){
+  var ROT=['Nome:','Usuário:','Aparelho de teste?','Dias sem acesso:','IMEI:','Build','Data de ativação:','Último acesso:'];
+  var DIR={'IMEI:':1,'Build':1,'Data de ativação:':1,'Último acesso:':1};
+  var MES=['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+  var out=[], dataRel=null;
+  paginas.forEach(function(items){
+    var its=items.map(function(it){ return {s:String(it.str||'').trim(), x:it.x, y:it.y}; }).filter(function(it){ return it.s; });
+    var md=its.map(function(it){ return it.s; }).join(' ').match(/(\d{1,2}) de (janeiro|fevereiro|março|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro) de (\d{4})/i);
+    if(md&&!dataRel) dataRel=md[3]+'-'+String(MES.indexOf(md[2].toLowerCase())+1).padStart(2,'0')+'-'+md[1].padStart(2,'0');
+    var anc=its.filter(function(it){ return /^Aparelho \(\d+\)$/.test(it.s); }).sort(function(a,b){ return b.y-a.y; });
+    anc.forEach(function(a,k){
+      var piso=k+1<anc.length?anc[k+1].y:-1e9;
+      var bloco=its.filter(function(it){ return it.y<=a.y+1&&it.y>piso&&it!==a; });
+      var rot=bloco.filter(function(it){ return ROT.indexOf(it.s)>=0; });
+      var corte=Math.min.apply(null,rot.filter(function(r){ return DIR[r.s]; }).map(function(r){ return r.x; }).concat([1e9]));
+      var val=function(nome){
+        var r=rot.filter(function(x){ return x.s===nome; })[0]; if(!r) return '';
+        var c=bloco.filter(function(it){ return ROT.indexOf(it.s)<0&&Math.abs(it.y-r.y)<3&&it.x>r.x&&(DIR[nome]||it.x<corte); }).sort(function(p,q){ return p.x-q.x; });
+        return c.length?c[0].s:'';
+      };
+      var iso=function(d){ var m=String(d).match(/(\d{2})\/(\d{2})\/(\d{4})(?:\s+(\d{2}:\d{2}(?::\d{2})?))?/); return m?m[3]+'-'+m[2]+'-'+m[1]+(m[4]?' '+m[4]:''):''; };
+      var usu=val('Usuário:')||val('Nome:'), login=(usu.match(/_([^_\s]+)$/)||[])[1]||usu, dias=val('Dias sem acesso:');
+      out.push({id:a.s.match(/\((\d+)\)/)[1], imei:val('IMEI:'), login:login, usuario:usu, dias:/^\d+$/.test(dias)?+dias:null,
+        teste:/^sim$/i.test(val('Aparelho de teste?')), ativ:iso(val('Data de ativação:')), ult:iso(val('Último acesso:')), build:val('Build')});
+    });
+  });
+  if(!dataRel){ var mx=''; out.forEach(function(a){ if(a.ult&&a.ult>mx) mx=a.ult; }); dataRel=mx?mx.slice(0,10):null; }
+  // dias sem acesso que não vierem no relatório: conta pela data do relatório
+  out.forEach(function(a){ if(a.dias==null&&a.ult&&dataRel) a.dias=Math.max(0,Math.round((new Date(dataRel+'T12:00:00')-new Date(a.ult.slice(0,10)+'T12:00:00'))/864e5)); });
+  return {dataRel:dataRel, itens:out};
+}
+async function finPdaLerPdf(f){
+  if(typeof pdfjsLib==='undefined') throw new Error('o leitor de PDF não carregou; recarregue a página');
+  var pdf=await pdfjsLib.getDocument({data:new Uint8Array(await f.arrayBuffer())}).promise, pags=[];
+  for(var p=1;p<=pdf.numPages;p++){ var tc=await (await pdf.getPage(p)).getTextContent(); pags.push(tc.items.map(function(it){ return {str:it.str, x:it.transform[4], y:it.transform[5]}; })); }
+  return finPdaLerAparelhos(pags);
+}
 async function finPdaOcioso(){
-  var meta=$('fin-pda-meta'), res=$('fin-pda-resumo');
-  if(res && !FIN_PDA_CACHE) res.innerHTML='';
-  if(meta && !FIN_PDA_CACHE) meta.textContent='Carregando do banco…';
-  try{
-    if(!FIN_PDA_CACHE){
-      var {data,error}=await sb.from('turno_data').select('value').eq('key','pda_ocioso').maybeSingle();
-      if(error){ if(meta) meta.textContent='Não foi possível carregar ('+error.message+').'; return; }
-      FIN_PDA_CACHE=(data&&data.value)||{lista:[],qtd:0,diaria:0.5337};
-      await finPdaFatCarregar();
-    }
-    if(!FIN_PDA_MESES){
-      // competências de acesso acumuladas (pda_acesso_AAAA-MM) -> acessos por mês + linhas
-      var r2=await sb.from('turno_data').select('key,value').like('key','pda_acesso_%');
-      var porMes={}, accRows={};
-      if(!r2.error && r2.data){
-        r2.data.forEach(function(row){
-          var v=row&&row.value; if(!v) return;
-          var comp=v.comp || (row.key.indexOf('pda_acesso_')===0?row.key.slice('pda_acesso_'.length):null);
-          if(!comp) return;
-          var rows=finParseAcc(v.data);
-          accRows[comp]=(accRows[comp]||[]).concat(rows);
-          var n=v.count!=null?Number(v.count):rows.length;
-          porMes[comp]=(porMes[comp]||0)+n;
-        });
-      }
-      FIN_PDA_MESES=porMes; FIN_PDA_ACC=accRows;
-      // ocioso REAL por competência (pda_ocioso_AAAA-MM) -> qtd + lista nominal (v2)
-      var r3=await sb.from('turno_data').select('key,value').like('key','pda_ocioso_%');
-      var ocMes={}, ocL={};
-      if(!r3.error && r3.data){
-        r3.data.forEach(function(row){
-          var v=row&&row.value; if(!v) return;
-          var comp=v.comp || (row.key.indexOf('pda_ocioso_')===0?row.key.slice('pda_ocioso_'.length):null);
-          if(!comp) return;
-          if(v.qtd!=null) ocMes[comp]=Number(v.qtd);
-          if(Array.isArray(v.lista)) ocL[comp]=v.lista;
-        });
-      }
-      FIN_PDA_OCMES=ocMes; FIN_PDA_OCL=ocL;
-    }
-    finPdaRender();
-    finPdaMesUI();
-    finPdaUpStatus();
-    finPdaFatUI();
-  }catch(e){ if(meta) meta.textContent='Erro ao carregar.'; }
+  var meta=$('fin-pda-meta');
+  if(!FIN_PDA_APS){
+    if(meta) meta.textContent='Carregando…';
+    try{
+      var r=await sb.from('turno_data').select('key,value').or('key.like.pda_aparelhos_*,key.eq.funcionario_equipe');
+      if(r.error) throw r.error;
+      var aps={};
+      (r.data||[]).forEach(function(row){
+        var v=row.value; if(!v) return;
+        if(row.key==='pda_aparelhos_cfg'){ FIN_PDA_APCFG=v; return; }
+        if(row.key==='funcionario_equipe'){ FIN_PDA_EQUIPES={}; String(v.data||'').split('\n').forEach(function(l){ var q=l.split('|'); if(q.length>=2&&q[1]) FIN_PDA_EQUIPES[q[0]]=q[1]; }); return; }
+        if(row.key.indexOf('pda_aparelhos_')===0) aps[v.comp||row.key.slice(14)]={dataRel:v.dataRel, arquivo:v.arquivo, updatedAt:v.updatedAt, itens:finPdaApsDe(v)};
+      });
+      FIN_PDA_APS=aps;
+    }catch(e){ if(meta) meta.textContent='Não foi possível carregar ('+(e.message||e)+').'; FIN_PDA_APS={}; }
+    await finPdaFatCarregar();
+  }
+  var sl=$('fin-pda-lim'); if(sl) sl.value=String(finPdaLimiar());
+  finPdaRender(); finPdaUpStatus(); finPdaFatUI();
+}
+async function finPdaLimSel(v){
+  FIN_PDA_APCFG={limiar:Number(v)||7, atualizado:new Date().toISOString()};
+  finPdaRender();
+  try{ await finPdaGravar([{key:'pda_aparelhos_cfg', value:FIN_PDA_APCFG}]); }catch(e){ finPdaMsg('Não foi possível salvar o limite de dias: '+(e.message||e),'err'); }
+}
+function finPdaFaixas(lim){
+  var cortes=[0,1,3,7,15,30], nomes=['Hoje','1 a 2 dias','3 a 6','7 a 14','15 a 29','30 ou mais'];
+  return cortes.map(function(c,i){ return {de:c, ate:i+1<cortes.length?cortes[i+1]-1:1e9, nome:nomes[i], ocioso:c>=lim}; });
 }
 function finPdaRender(){
-  var d=FIN_PDA_CACHE||{};
-  var lista=(d.lista||[]).filter(function(x){ return !((x.equipe||'').trim()); });
-  var hoje=new Date(), compHoje=hoje.getFullYear()+'-'+String(hoje.getMonth()+1).padStart(2,'0'), diasMes=finPdaDias(compHoje);
-  var custo=finPdaCusto(compHoje), custoMes=custo.mes, diaria=custoMes/diasMes;
-  var total=custoMes*lista.length;
-  var f=function(n){return 'R$ '+Number(n).toFixed(2).replace('.',',');};
-  var res=$('fin-pda-resumo');
-  if(res){
-    res.innerHTML=
-      '<div class="fin-kpi" style="border-left-color:#c2410c"><div class="k-lbl">Custo/mês ocioso</div><div class="k-val" style="color:#c2410c">'+f(total)+'</div><div class="k-sub">aparelhos ativos sem uso</div></div>'
-     +'<div class="fin-kpi"><div class="k-lbl">Aparelhos sem acesso</div><div class="k-val">'+lista.length+'</div><div class="k-sub">ativos que nunca acessaram</div></div>'
-     +'<div class="fin-kpi"><div class="k-lbl">Custo/mês por aparelho</div><div class="k-val">'+f(custoMes)+'</div><div class="k-sub">'+escHtml(finPdaCustoTxt(custo,compHoje))+'</div></div>';
+  var f=finPdaMoeda, res=$('fin-pda-resumo'), meta=$('fin-pda-meta'), rel=$('fin-pda-lim-rel');
+  var comp=finPdaApsUlt(), lim=finPdaLimiar();
+  if(!comp){
+    if(res) res.innerHTML='<div class="fin-kpi" style="grid-column:1/-1"><div class="k-lbl">Sem relatório de aparelhos</div><div class="k-sub" style="font-size:.82rem;color:#475569">Envie o Relatório Controle de Aparelhos (PDF) do GPM no quadro acima para calcular o custo e o ocioso.</div></div>';
+    ['fin-pda-dup','fin-pda-thead','fin-pda-tbody','fin-pda-seg','fin-pda-acessos-top','fin-pda-custo-top'].forEach(function(id){ var el=$(id); if(el) el.innerHTML=''; });
+    if(meta) meta.textContent=''; if(rel) rel.textContent='';
+    var dc=$('fin-pda-dup-card'); if(dc) dc.hidden=true;
+    if(FIN_CHART_ACESSOS){ FIN_CHART_ACESSOS.destroy(); FIN_CHART_ACESSOS=null; } if(FIN_CHART_CUSTO){ FIN_CHART_CUSTO.destroy(); FIN_CHART_CUSTO=null; }
+    return;
   }
-  var meta=$('fin-pda-meta');
-  if(meta) meta.innerHTML='Custo de '+f(custoMes)+' por aparelho no mês ('+escHtml(finPdaCustoTxt(custo,compHoje))+'), o equivalente a '+f(diaria)+' por dia. '+(d.updatedAt?'Lista atualizada em '+escHtml(d.updatedAt)+'.':'')+' <span style="color:#94a3b8">Os dados vêm da tela PDA (cadastro × relatório de acesso).</span>';
-  var thead=$('fin-pda-thead'), tbody=$('fin-pda-tbody');
-  if(thead) thead.innerHTML=['Funcionário','Matrícula','Cargo','Equipe','Custo/mês'].map(function(c){return '<th>'+c+'</th>';}).join('');
-  if(tbody){
-    if(!lista.length){ tbody.innerHTML='<tr><td colspan="5" style="text-align:center;color:#94a3b8;padding:20px">Nada para mostrar. Rode a comparação na tela PDA primeiro.</td></tr>'; }
-    else tbody.innerHTML=lista.map(function(x){
-      return '<tr><td style="font-weight:700;color:#1f2d3d">'+escHtml(x.nome||'—')+'</td><td>'+escHtml(x.mat||'—')+'</td><td>'+escHtml(x.cargo||'—')+'</td><td>'+escHtml(x.equipe||'—')+'</td><td style="font-weight:800;color:#c2410c">'+f(custoMes)+'</td></tr>';
-    }).join('');
-  }
-  finPdaCharts(lista.length, diaria);
+  var snap=FIN_PDA_APS[comp], itens=snap.itens, custo=finPdaCusto(comp), cm=custo.mes;
+  var oc=itens.filter(function(a){ return a.dias>=lim; }), teste=itens.filter(function(a){ return a.teste; }).length;
+  if(rel) rel.textContent='Relatório de '+finPdaDataBR(snap.dataRel)+(snap.arquivo?' ('+snap.arquivo+')':'');
+  if(res) res.innerHTML=
+      '<div class="fin-kpi"><div class="k-lbl">Aparelhos ativos (pagos)</div><div class="k-val">'+itens.length+'</div><div class="k-sub">no relatório de '+finPdaDataBR(snap.dataRel)+(teste?' ('+teste+' de teste)':'')+'</div></div>'
+     +'<div class="fin-kpi"><div class="k-lbl">Custo mensal dos aparelhos</div><div class="k-val">'+f(cm*itens.length)+'</div><div class="k-sub">'+f(cm)+' por aparelho ('+escHtml(finPdaCustoTxt(custo,comp))+')</div></div>'
+     +'<div class="fin-kpi" style="border-left-color:#c2410c"><div class="k-lbl">Ociosos ('+lim+'+ dias sem acesso)</div><div class="k-val" style="color:#c2410c">'+oc.length+'</div><div class="k-sub">'+(itens.length?Math.round(oc.length/itens.length*100):0)+'% dos aparelhos ativos</div></div>'
+     +'<div class="fin-kpi" style="border-left-color:#c2410c"><div class="k-lbl">Custo dos ociosos</div><div class="k-val" style="color:#c2410c">'+f(cm*oc.length)+'</div><div class="k-sub">pago por mês em aparelho parado</div></div>';
+  finPdaDuplicados(itens,cm,lim);
+  finPdaTabela(itens,cm,lim,snap,custo,comp);
+  finPdaCharts(itens,lim);
 }
-var FIN_CHART_ACESSOS=null, FIN_CHART_CUSTO=null;
+function finPdaNome(login){ if(/^PERFILPDA$/i.test(login)) return 'Perfil genérico (PERFILPDA)'; return FIN_PDA_NOMES[finPdaMatKey(login)]||''; }
+function finPdaEquipe(login){ return FIN_PDA_EQUIPES[finPdaMatKey(login)]||''; }
+function finPdaDiasHtml(d,lim){ return '<span class="fin-pda-dias'+(d===0?' hoje':(d>=lim?' ocioso':''))+'">'+(d===0?'hoje':d+(d===1?' dia':' dias'))+'</span>'; }
+// mesmo usuário com vários aparelhos ativos: cada aparelho é cobrado
+function finPdaDuplicados(itens,cm,lim){
+  var card=$('fin-pda-dup-card'), box=$('fin-pda-dup'); if(!card||!box) return;
+  var g={}; itens.forEach(function(a){ var k=a.login||'(sem usuário)'; (g[k]=g[k]||[]).push(a); });
+  var dups=Object.keys(g).filter(function(k){ return g[k].length>1; }).sort(function(a,b){ return g[b].length-g[a].length; });
+  card.hidden=!dups.length; if(!dups.length){ box.innerHTML=''; return; }
+  var extra=dups.reduce(function(t,k){ return t+g[k].length-1; },0);
+  $('fin-pda-dup-sub').textContent=dups.length+(dups.length===1?' usuário tem':' usuários têm')+' mais de um aparelho ativo: '+extra+(extra===1?' aparelho a mais':' aparelhos a mais')+', '+finPdaMoeda(extra*cm)+' por mês. Confira se todos estão em uso ou se algum pode ser desativado.';
+  box.innerHTML=dups.map(function(k){
+    var l=g[k].slice().sort(function(a,b){ return b.dias-a.dias; }), nome=finPdaNome(k);
+    return '<div class="fin-pda-dup-l"><div><b>'+escHtml(k)+'</b>'+(nome?'<div style="font-size:.72rem;color:#64748b">'+escHtml(nome)+'</div>':'')+'</div>'
+      +'<div style="font-weight:800">'+l.length+' aparelhos</div>'
+      +'<div class="ds">'+l.map(function(a){ return '<span title="Aparelho '+escHtml(a.id)+', último acesso '+escHtml(finPdaDataBR(a.ult))+'">'+finPdaDiasHtml(a.dias,lim)+'</span>'; }).join('')+'</div>'
+      +'<div style="text-align:right;font-weight:800;color:#c2410c;white-space:nowrap">+'+finPdaMoeda((l.length-1)*cm)+'/mês</div></div>';
+  }).join('');
+}
+function finPdaFiltro(v){ FIN_PDA_FILTRO=v; finPdaRender(); }
+function finPdaTabela(itens,cm,lim,snap,custo,comp){
+  var seg=$('fin-pda-seg'), meta=$('fin-pda-meta'), thead=$('fin-pda-thead'), tbody=$('fin-pda-tbody');
+  var oc=itens.filter(function(a){ return a.dias>=lim; }), so=FIN_PDA_FILTRO==='ociosos';
+  if(seg) seg.innerHTML='<button type="button" aria-pressed="'+so+'" onclick="finPdaFiltro(\'ociosos\')">Ociosos ('+oc.length+')</button><button type="button" aria-pressed="'+!so+'" onclick="finPdaFiltro(\'todos\')">Todos ('+itens.length+')</button>';
+  if(meta) meta.innerHTML='Ocioso: sem acesso há '+lim+' dias ou mais na data do relatório ('+finPdaDataBR(snap.dataRel)+'). Custo de '+finPdaMoeda(cm)+' por aparelho no mês ('+escHtml(finPdaCustoTxt(custo,comp))+').'+(snap.updatedAt?' Enviado em '+escHtml(snap.updatedAt)+'.':'');
+  if(thead) thead.innerHTML=['Aparelho','Usuário','Funcionário','Equipe','Ativado em','Último acesso','Sem acesso','Custo/mês'].map(function(c,i){ return '<th'+(i>=6?' style="text-align:right"':'')+'>'+c+'</th>'; }).join('');
+  var l=(so?oc:itens).slice().sort(function(a,b){ return (b.dias-a.dias)||String(a.id).localeCompare(String(b.id)); });
+  if(tbody) tbody.innerHTML=l.length?l.map(function(a){
+    var nome=finPdaNome(a.login), eq=finPdaEquipe(a.login);
+    return '<tr class="'+(a.dias>=lim?'oc':'')+'"><td style="font-weight:700;color:#1f2d3d">'+escHtml(a.id)+(a.teste?' <span class="fin-pda-dias">teste</span>':'')+'</td><td>'+escHtml(a.login||'—')+'</td><td>'+escHtml(nome||'—')+'</td><td>'+escHtml(eq||'—')+'</td>'
+      +'<td>'+escHtml(finPdaDataBR(a.ativ)||'—')+'</td><td>'+escHtml(finPdaDataBR(a.ult)||'—')+'</td><td style="text-align:right">'+finPdaDiasHtml(a.dias,lim)+'</td><td style="text-align:right;font-weight:800;color:'+(a.dias>=lim?'#c2410c':'#334155')+'">'+finPdaMoeda(cm)+'</td></tr>';
+  }).join(''):'<tr><td colspan="8" style="text-align:center;color:#94a3b8;padding:20px">Nenhum aparelho ocioso com esse limite.</td></tr>';
+}
+function finPdaCharts(itens,lim){
+  if(typeof Chart==='undefined') return;
+  var MN=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+  // 1) quantos aparelhos em cada faixa de dias sem acesso (relatório mais recente)
+  var fx=finPdaFaixas(lim), cont=fx.map(function(x){ return itens.filter(function(a){ return a.dias>=x.de&&a.dias<=x.ate; }).length; });
+  var topA=$('fin-pda-acessos-top'), ctxA=document.getElementById('fin-pda-chart-acessos');
+  var hoje=cont[0], nOc=itens.filter(function(a){ return a.dias>=lim; }).length;
+  if(topA) topA.textContent=hoje+' de '+itens.length+' acessaram no dia do relatório; '+nOc+' estão há '+lim+' dias ou mais sem acesso';
+  if(ctxA){
+    if(FIN_CHART_ACESSOS) FIN_CHART_ACESSOS.destroy();
+    FIN_CHART_ACESSOS=new Chart(ctxA,{type:'bar',
+      data:{labels:fx.map(function(x){ return x.nome; }),datasets:[{label:'Aparelhos',data:cont,backgroundColor:fx.map(function(x){ return x.ocioso?'#ea580c':'#0d7377'; }),borderRadius:6,maxBarThickness:52}]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){ return c.parsed.y+' aparelho'+(c.parsed.y===1?'':'s')+(fx[c.dataIndex].ocioso?' (ocioso)':''); }}}},
+        scales:{y:{beginAtZero:true,ticks:{precision:0,font:{family:'Barlow'}},grid:{color:'#eef2f5'}},x:{ticks:{font:{family:'Barlow',weight:'700'},color:'#555'},grid:{display:false}}}}});
+  }
+  // 2) custo por mês: aparelhos de cada relatório × custo da fatura do mês, separando o que está ocioso
+  var comps=Object.keys(FIN_PDA_APS||{}).sort(), fat=finPdaFatPorMes();
+  var uso=[], ocs=[], info={};
+  comps.forEach(function(c){
+    var it=FIN_PDA_APS[c].itens, k=finPdaCusto(c,fat), n=it.filter(function(a){ return a.dias>=lim; }).length;
+    info[c]={k:k, n:it.length, oc:n}; uso.push(+((it.length-n)*k.mes).toFixed(2)); ocs.push(+(n*k.mes).toFixed(2));
+  });
+  var topC=$('fin-pda-custo-top'), ctxC=document.getElementById('fin-pda-chart-custo');
+  if(topC) topC.textContent=comps.length===1?'Um relatório até agora: mande um por mês para ver a evolução':'Aparelhos do relatório de cada mês × custo por aparelho da fatura do mês';
+  if(ctxC){
+    if(FIN_CHART_CUSTO) FIN_CHART_CUSTO.destroy();
+    FIN_CHART_CUSTO=new Chart(ctxC,{type:'bar',
+      data:{labels:comps.map(function(m){ var q=m.split('-'); return MN[+q[1]-1]+'/'+q[0].slice(2); }),
+        datasets:[{label:'Em uso',data:uso,backgroundColor:'#0d7377',borderRadius:4,maxBarThickness:46,stack:'c'},{label:'Ocioso',data:ocs,backgroundColor:'#ea580c',borderRadius:4,maxBarThickness:46,stack:'c'}]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,position:'bottom',labels:{font:{family:'Barlow',weight:'700'},boxWidth:12}},
+        tooltip:{callbacks:{label:function(c){ var m=comps[c.dataIndex], x=info[m]; return c.dataset.label+': '+finPdaMoeda(c.parsed.y)+' ('+(c.datasetIndex?x.oc:x.n-x.oc)+' aparelhos × '+finPdaMoeda(x.k.mes)+')'; },
+          footer:function(cs){ var m=comps[cs[0].dataIndex], x=info[m]; return 'Total: '+finPdaMoeda(x.n*x.k.mes)+' por '+x.n+' aparelhos'+(x.k.fonte==='fatura'?'':x.k.fonte==='estimado'?' (fatura de '+finCompLabel(x.k.ref)+')':' (diária fixa)'); }}}},
+        scales:{x:{stacked:true,ticks:{font:{family:'Barlow',weight:'700'},color:'#555'},grid:{display:false}},y:{stacked:true,beginAtZero:true,ticks:{font:{family:'Barlow'},callback:function(v){ return 'R$ '+v; }},grid:{color:'#eef2f5'}}}}});
+  }
+}
 function finParseAcc(data){
   // formato compacto: imei|mat|nome|email|qtd|data por linha
   var out=[]; if(!data) return out;
@@ -1209,92 +1339,6 @@ function finParseAcc(data){
 }
 var FIN_MN=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
 function finCompLabel(m){ var p=String(m).split('-'); return (FIN_MN[+p[1]-1]||p[1])+'/'+p[0]; }
-function finPdaMesUI(){
-  var sel=$('fin-pda-mes'); if(!sel) return;
-  var comps={};
-  Object.keys(FIN_PDA_ACC||{}).forEach(function(c){comps[c]=1;});
-  Object.keys(FIN_PDA_OCL||{}).forEach(function(c){comps[c]=1;});
-  var meses=Object.keys(comps).sort();
-  if(!meses.length){ sel.innerHTML='<option value="">— sem meses no banco —</option>'; finPdaMesListas(''); return; }
-  var cur=sel.value && comps[sel.value] ? sel.value : meses[meses.length-1];
-  sel.innerHTML=meses.map(function(m){return '<option value="'+m+'">'+finCompLabel(m)+'</option>';}).join('');
-  sel.value=cur;
-  finPdaMesListas(cur);
-}
-function finPdaMesListas(comp){
-  var acc=(FIN_PDA_ACC&&FIN_PDA_ACC[comp])||[];
-  var ocl=(FIN_PDA_OCL&&FIN_PDA_OCL[comp])||[];
-  // dedup acessos por matrícula (uma pessoa = uma linha; mantém o último acesso)
-  var byMat={};
-  acc.forEach(function(r){ var k=r.mat||r.nome; if(!k) return; if(!byMat[k] || (r.data>byMat[k].data)) byMat[k]={nome:r.nome,mat:r.mat,imei:r.imei,data:r.data,qtd:r.qtd}; });
-  var ativos=Object.keys(byMat).map(function(k){return byMat[k];}).sort(function(a,b){return String(a.nome).localeCompare(String(b.nome));});
-
-  var ta=$('fin-mes-ativos'), to=$('fin-mes-ociosos');
-  var tah=$('fin-mes-ativos-h'), toh=$('fin-mes-ociosos-h');
-  var ca=$('fin-mes-ativos-cnt'), co=$('fin-mes-ociosos-cnt');
-  if(ca) ca.textContent=ativos.length+(ativos.length===1?' pessoa':' pessoas');
-  if(co) co.textContent=ocl.length+(ocl.length===1?' pessoa':' pessoas');
-  if(tah) tah.innerHTML='<tr>'+['Funcionário','Matrícula','Último acesso','IMEI'].map(function(c){return '<th>'+c+'</th>';}).join('')+'</tr>';
-  if(ta){
-    ta.innerHTML=(ativos.length?ativos.map(function(x){return '<tr><td style="font-weight:700;color:#1f2d3d">'+escHtml(x.nome||'—')+'</td><td>'+escHtml(x.mat||'—')+'</td><td>'+escHtml(x.data||'—')+'</td><td style="color:#64748b">'+escHtml(x.imei||'—')+'</td></tr>';}).join('')
-        :'<tr><td colspan="4" style="text-align:center;color:#94a3b8;padding:16px">Sem acessos neste mês.</td></tr>');
-  }
-  if(toh) toh.innerHTML='<tr>'+['Funcionário','Matrícula','Cargo','Estado'].map(function(c){return '<th>'+c+'</th>';}).join('')+'</tr>';
-  if(to){
-    to.innerHTML=(ocl.length?ocl.map(function(x){return '<tr><td style="font-weight:700;color:#1f2d3d">'+escHtml(x.nome||'—')+'</td><td>'+escHtml(x.mat||'—')+'</td><td>'+escHtml(x.cargo||'—')+'</td><td style="color:#64748b">'+escHtml(x.uf||'—')+'</td></tr>';}).join('')
-        :'<tr><td colspan="4" style="text-align:center;color:#94a3b8;padding:16px">Sem lista nominal para este mês. Resuba o relatório deste mês na PDA para gerar a relação.</td></tr>');
-  }
-}
-window.finPdaMesSel=function(){ var s=$('fin-pda-mes'); finPdaMesListas(s?s.value:''); };
-function finPdaCharts(qtdOcioso, diaria){
-  if(typeof Chart==='undefined') return;
-  var MN=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
-  var porMes=FIN_PDA_MESES||{};
-  var meses=Object.keys(porMes).sort();
-  var rotulo=function(m){var p=m.split('-');return MN[+p[1]-1]+'/'+p[0].slice(2);};
-  var labels=meses.map(rotulo);
-
-  // 1) Acessos por mês
-  var topA=$('fin-pda-acessos-top');
-  var ctxA=document.getElementById('fin-pda-chart-acessos');
-  if(ctxA){
-    if(FIN_CHART_ACESSOS) FIN_CHART_ACESSOS.destroy();
-    if(meses.length){
-      var valsA=meses.map(function(m){return porMes[m];});
-      var maxA=Math.max.apply(null,valsA);
-      var coresA=valsA.map(function(v){return v===maxA?'#0d7377':'#5ec0b8';});
-      if(topA){ var pa=valsA.indexOf(maxA); topA.textContent='Pico: '+labels[pa]+' ('+maxA+' acessos)'; }
-      FIN_CHART_ACESSOS=new Chart(ctxA,{type:'bar',
-        data:{labels:labels,datasets:[{label:'Acessos',data:valsA,backgroundColor:coresA,borderRadius:6,maxBarThickness:46}]},
-        options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return c.parsed.y+' acesso'+(c.parsed.y===1?'':'s');}}}},
-          scales:{y:{beginAtZero:true,ticks:{precision:0,font:{family:'Barlow'}},grid:{color:'#eef2f5'}},x:{ticks:{font:{family:'Barlow',weight:'700'},color:'#555'},grid:{display:false}}}}});
-    } else if(topA){ topA.textContent='Sem competências de acesso no banco ainda.'; }
-  }
-
-  // 2) Custo ocioso por mês = (ocioso real do mês, se houver; senão o atual) × diária × dias do mês
-  var topC=$('fin-pda-custo-top');
-  var ctxC=document.getElementById('fin-pda-chart-custo');
-  var ocMes=FIN_PDA_OCMES||{};
-  if(ctxC){
-    if(FIN_CHART_CUSTO) FIN_CHART_CUSTO.destroy();
-    if(meses.length){
-      var algumEstimado=false, fatM=finPdaFatPorMes(), custos={}, fontes={};
-      var valsC=meses.map(function(m){
-        var q=(ocMes[m]!=null)?ocMes[m]:qtdOcioso;
-        if(ocMes[m]==null) algumEstimado=true;
-        var k=finPdaCusto(m,fatM); custos[m]=k; fontes[k.fonte]=1;
-        return +(q*k.mes).toFixed(2);
-      });
-      var maxC=Math.max.apply(null,valsC);
-      var coresC=valsC.map(function(v){return v===maxC?'#c2410c':'#f0a36b';});
-      if(topC){ topC.textContent='Ociosos reais por mês × custo por aparelho da fatura do mês'+(fontes.estimado?' (mês sem fatura usa a mais recente)':'')+(fontes.fixo?' (sem fatura em Lançamentos: diária fixa de R$ '+FIN_PDA_DIARIA.toFixed(2).replace('.',',')+')':'')+(algumEstimado?'. Meses sem histórico de ociosos usam o total atual: '+qtdOcioso:''); }
-      FIN_CHART_CUSTO=new Chart(ctxC,{type:'bar',
-        data:{labels:labels,datasets:[{label:'Custo ocioso',data:valsC,backgroundColor:coresC,borderRadius:6,maxBarThickness:46}]},
-        options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){var m=meses[c.dataIndex];var q=(ocMes[m]!=null)?ocMes[m]:qtdOcioso;var k=custos[m];return ['R$ '+Number(c.parsed.y).toFixed(2).replace('.',',')+': '+q+' ociosos × '+finPdaMoeda(k.mes), k.fonte==='fatura'?'Fatura do mês':(k.fonte==='estimado'?'Sem fatura do mês: usando a de '+finCompLabel(k.ref):'Sem fatura: diária fixa')];}}}},
-          scales:{y:{beginAtZero:true,ticks:{font:{family:'Barlow'},callback:function(v){return 'R$ '+v;}},grid:{color:'#eef2f5'}},x:{ticks:{font:{family:'Barlow',weight:'700'},color:'#555'},grid:{display:false}}}}});
-    } else if(topC){ topC.textContent='Sem competências para calcular o custo por mês.'; }
-  }
-}
 function escHtml(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function finRender(){
   var ord=$('fin-ord')?$('fin-ord').value:'data-desc';

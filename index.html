@@ -12,7 +12,7 @@ s.textContent='html.mariua-check body>*{visibility:hidden!important}#mariua-ovl,
 setTimeout(function(){if(window.__MARIUA_AUTH__)return;
 h.className=h.className.replace(/\bmariua-check\b/,'');
 var d=document.body||h;d.innerHTML='<div style="font-family:Barlow,system-ui,sans-serif;max-width:420px;margin:14vh auto;padding:26px;border:2px solid #fed7d7;border-radius:14px;background:#fff5f5;text-align:center;color:#742a2a"><div style="font-size:1.05rem;font-weight:900;margin-bottom:8px">Login não carregou</div><div style="font-size:.85rem;font-weight:600;line-height:1.5">O arquivo <b>mariua-auth.js</b> não foi encontrado nesta pasta. Sem ele o sistema não libera o acesso.</div><button onclick="location.reload()" style="margin-top:16px;padding:10px 22px;border:none;border-radius:9px;background:#c53030;color:#fff;font-family:Barlow,sans-serif;font-weight:800;cursor:pointer">Recarregar</button></div>';},8000);})();</script>
-<script src="mariua-auth.js?v=4"></script>
+<script src="mariua-auth.js?v=5"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Mariuá - Sistema de Obras</title>
 <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -78,7 +78,7 @@ try{if(localStorage.getItem("mariua_darkmode")==="1")document.body.classList.add
 
   <div class="lx-sec">
     <label class="lx-find"><i class="ti ti-search" aria-hidden="true"></i>
-      <input id="telas-q" type="search" placeholder="Buscar tela, obra ou equipe — ex.: mapa, B-1225678, extintor" autocomplete="off" spellcheck="false" aria-label="Buscar tela, obra ou equipe">
+      <input id="telas-q" type="search" placeholder="Buscar tela, obra ou equipe — ex.: mapa, B-1225678, produção" autocomplete="off" spellcheck="false" aria-label="Buscar tela, obra ou equipe">
     </label>
   </div>
   <div id="telas"></div>
@@ -86,8 +86,8 @@ try{if(localStorage.getItem("mariua_darkmode")==="1")document.body.classList.add
 </main>
 
 <script src="identidade.js?v=3"></script>
-<script src="mariua-ui.js?v=3"></script>
-<script src="mariua-painel.js?v=4"></script>
+<script src="mariua-ui.js?v=4"></script>
+<script src="mariua-painel.js?v=5"></script>
 <script>
 /* Confere se os arquivos desta tela chegaram junto com esta página.
    Se faltar algum, mostra qual é em vez de abrir a tela quebrada. */
@@ -129,8 +129,8 @@ try{if(localStorage.getItem("mariua_darkmode")==="1")document.body.classList.add
     'prog.html': ['#6b46c1', '#f3effd'], 'projeçao.html': ['#b7791f', '#fdf6e3'], 'mapa.html': ['#38a169', '#eefaf1'],
     'estagios.html': ['#0d7377', '#eef6f5'], 'ocorrencias.html': ['#c05621', '#fdefe4'], 'producao.html': ['#bd5c18', '#fbeee2'], 'faturamento.html': ['#0b6e5f', '#e3f3ef'], 'comp.html': ['#2b6cb0', '#eaf2fb'],
     'neoex.html': ['#805ad5', '#f4effd'], 'cadastro_obra.html': ['#c05621', '#fdefe4'], 'equipes.html': ['#0d7377', '#eef6f5'],
-    'permissoes.html': ['#2b6cb0', '#eaf2fb'], 'vencimento_cursos.html': ['#c53030', '#fdecec'], 'ensaios.html': ['#38a169', '#eefaf1'],
-    'brigada.html': ['#c05621', '#fdefe4'], 'valores.html': ['#276749', '#eefaf1'], 'fator_k.html': ['#0d7377', '#eef6f5'],
+    'permissoes.html': ['#2b6cb0', '#eaf2fb'],
+    'valores.html': ['#276749', '#eefaf1'], 'fator_k.html': ['#0d7377', '#eef6f5'],
     'admin.html': ['#553c9a', '#f3effd']
   };
   var SO_GESTOR = { 'valores.html': 1, 'fator_k.html': 1, 'admin.html': 1 };
@@ -171,18 +171,17 @@ try{if(localStorage.getItem("mariua_darkmode")==="1")document.body.classList.add
   var K = {
     turno: ['turno.html', ['#0d7377', '#eef6f5'], 'clipboard-check', 'Turnos abertos'],
     rdo: ['rdo.html', ['#2b6cb0', '#eaf2fb'], 'file-description', 'RDO lançados'],
-    prog: ['prog.html', ['#6b46c1', '#f3effd'], 'calendar-event', 'Programado executado'],
-    cursos: ['vencimento_cursos.html', ['#c53030', '#fdecec'], 'certificate', 'Cursos vencidos']
+    prog: ['prog.html', ['#6b46c1', '#f3effd'], 'calendar-event', 'Programado executado']
   };
   function k(id, valor, extra, erro) { var x = K[id]; return kpi(x[0], x[1], x[2], valor, x[3], extra, erro); }
   function desenharNumeros(a, err) {
     var h;
     if (err) {
-      h = k('turno', '—', 'Não carregou', 'falha') + k('rdo', '—', 'Não carregou', 'falha') + k('prog', '—', 'Não carregou', 'falha') + k('cursos', '—', 'Não carregou', 'falha');
+      h = k('turno', '—', 'Não carregou', 'falha') + k('rdo', '—', 'Não carregou', 'falha') + k('prog', '—', 'Não carregou', 'falha');
     } else if (!a) {
-      h = k('turno', null) + k('rdo', null) + k('prog', null) + k('cursos', null);
+      h = k('turno', null) + k('rdo', null) + k('prog', null);
     } else {
-      var r = a.resumo, t = r.turno, d = r.rdo, e = r.execucao, c = r.cursos;
+      var r = a.resumo, t = r.turno, d = r.rdo, e = r.execucao;
       var totT = t ? t.ok + t.justif + t.falta : 0, dT = t ? util.br(util.dataDe(t.data)) : '';
       /* Sem dado de hoje: mostra o último disponível, com a data e o aviso em âmbar */
       h = (!t || !totT ? k('turno', '—', 'Nenhum turno no banco', true)
@@ -201,12 +200,9 @@ try{if(localStorage.getItem("mariua_darkmode")==="1")document.body.classList.add
                  : 'Em ' + util.br(e.data) + ', sem quantidade prevista';
         h += e.recente ? k('prog', valE, extE) : k('prog', valE, 'Em ' + util.br(e.data) + ' · sem programação depois disso', 'aviso');
       }
-      h += c ? k('cursos', String(c.vencidos), c.proximos ? c.proximos + ' vencem em ' + P.REGRAS.diasAvisoVencimento + ' dias' : 'Nenhum vencendo')
-        : k('cursos', '—', 'Sem dados de cursos');
     }
     $('numeros').innerHTML = h;
     $('numeros').hidden = !h;
-    UI.desativarTelasAusentes($('numeros'));
   }
   function desenharPendencias(a) {
     if (!UI.podeId('painel')) return;
@@ -224,7 +220,6 @@ try{if(localStorage.getItem("mariua_darkmode")==="1")document.body.classList.add
         '<div class="m-pend-txt"><b>' + esc(g.titulo) + '</b><span>' + esc(g.detalhe || '') + '</span></div>' +
         '<span class="m-selo ' + g.nivel + '">' + n[0] + '</span>' + acao + '</div>';
     }).join('');
-    UI.desativarTelasAusentes($('pend-lista'));
     $('pend-rodape').hidden = false;
     $('pend-rodape').innerHTML = '<a class="m-link" href="painel.html">' +
       (a.itens.length === 1 ? 'Ver a pendência no Painel do dia' : 'Ver as ' + a.itens.length + ' pendências no Painel do dia') + '</a>';

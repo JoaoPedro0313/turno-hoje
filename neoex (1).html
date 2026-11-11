@@ -11,7 +11,7 @@
 var s=document.createElement('style');s.id='mariua-lock';
 s.textContent='html.mariua-check body>*{visibility:hidden!important}#mariua-ovl,#mariua-ovl *{visibility:visible!important}';
 (document.head||h).appendChild(s);
-var caminhos=['mariua-auth.js?v=4','../mariua-auth.js?v=4','../../mariua-auth.js?v=4'];
+var caminhos=['mariua-auth.js?v=5','../mariua-auth.js?v=5','../../mariua-auth.js?v=5'];
 (function carrega(i){if(i>=caminhos.length)return;var t=document.createElement('script');t.src=caminhos[i];
 t.onerror=function(){carrega(i+1);};(document.head||h).appendChild(t);})(0);
 setTimeout(function(){if(window.__MARIUA_AUTH__)return;

@@ -77,12 +77,9 @@
     'fator_k.html':           ['Fator K', 'Multiplicador de cada base', 'fator k multiplicador base contrato'],
     'permissoes.html':        ['Permissões do GPM', 'Telas do GPM por usuário', 'permissao gpm tela usuario'],
     'projeçao.html':          ['Projeção e PDA', 'Acesso e uso dos PDAs', 'projecao pda acesso ocioso'],
-    'admin.html':             ['Admin', 'Usuários e telas liberadas', 'admin usuario acesso solicitacao'],
-    'vencimento_cursos.html': ['Vencimento de cursos', 'Certificados e reciclagens', 'curso certificado nr10 nr35 sesmt vencimento'],
-    'ensaios.html':           ['Ensaios', 'Ensaios de EPI', 'ensaio epi luva sesmt'],
-    'brigada.html':           ['Brigada', 'Extintores e hidrantes', 'brigada extintor hidrante recarga sesmt']
+    'admin.html':             ['Admin', 'Usuários e telas liberadas', 'admin usuario acesso solicitacao']
   };
-  var ICONE_ID = { cursos: 'certificate', ensaios: 'shield-check', brigada: 'flame', painel: 'activity' };
+  var ICONE_ID = { painel: 'activity' };
   function arquivo(href) {
     var a = String(href || '').split('?')[0].split('#')[0].split('/').pop();
     try { a = decodeURIComponent(a); } catch (e) {}
@@ -92,7 +89,7 @@
   UI.infoTela = function (href) { return INFO[arquivo(href)] || null; };
 
   /* Lista de telas que a pessoa pode abrir: primeiro as do menu (nav.js),
-     depois as do catálogo do login que não estão no menu (SESMT, por exemplo).
+     depois as do catálogo do login que não estão no menu.
      extra = true marca as que estão fora do menu (podem não estar instaladas). */
   UI.telas = function () {
     var out = [], vistos = {};
@@ -111,14 +108,13 @@
     (window.MARIUA_TELAS || []).forEach(function (t) {
       var a = t.arquivos && t.arquivos[0];
       if (!a) return;
-      var grupo = /cursos|ensaios|brigada/.test(t.id) ? 'SESMT' : 'Outras';
-      add(a, t.nome, ICONE_ID[t.id] || 'file', grupo, true);
+      add(a, t.nome, ICONE_ID[t.id] || 'file', 'Outras', true);
     });
     return out.filter(function (t) { return UI.pode(t.href); });
   };
 
-  /* A tela existe neste site? (as do SESMT estão no catálogo mas podem não
-     ter sido publicadas). Erro de rede conta como "existe" para não esconder. */
+  /* A tela existe neste site? (uma tela do catálogo pode não ter sido
+     publicada). Erro de rede conta como "existe" para não esconder. */
   var cacheExiste = {};
   UI.telaExiste = function (href) {
     var k = arquivo(href);
@@ -128,21 +124,6 @@
         .catch(function () { return true; });
     }
     return cacheExiste[k];
-  };
-
-  /* Botões que levam a telas do SESMT ainda não publicadas ficam desativados,
-     em vez de abrir uma página que não existe. */
-  UI.desativarTelasAusentes = function (raiz) {
-    (raiz || document).querySelectorAll('a[href]').forEach(function (a) {
-      var href = a.getAttribute('href');
-      if (!/(vencimento_cursos|ensaios|brigada)\.html/.test(href)) return;
-      UI.telaExiste(href).then(function (existe) {
-        if (existe) return;
-        a.removeAttribute('href');
-        a.setAttribute('aria-disabled', 'true');
-        a.title = 'Esta tela ainda não foi publicada no site';
-      });
-    });
   };
 
   // ─── estado da sincronização no topo ────────────────────────────────────
