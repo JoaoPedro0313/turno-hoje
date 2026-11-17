@@ -29,6 +29,7 @@
           { href: 'prog.html',                icone: 'calendar-event',   texto: 'Prog. Diária' },
           { href: 'comp.html',                icone: 'git-compare',      texto: 'Comparador' },
           { href: 'estagios.html',            icone: 'layout-kanban',    texto: 'Estágios' },
+          { href: 'andamento.html',           icone: 'progress-check',   texto: 'Andamento' },
           { href: 'ocorrencias.html',         icone: 'bolt',             texto: 'Ocorrências' },
           { href: 'producao.html',            icone: 'chart-bar',        texto: 'Produção' },
           { href: 'faturamento.html',         icone: 'report-money',     texto: 'Faturamento' },

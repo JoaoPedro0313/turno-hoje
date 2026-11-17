@@ -57,6 +57,7 @@
     { id:'mapa',       nome:'Mapa de obras',          arquivos:['mapa.html'] },
     { id:'comp',       nome:'Comparador de postes',   arquivos:['comp.html'] },
     { id:'estagios',   nome:'Estágios de obras',      arquivos:['estagios.html'] },
+    { id:'andamento',  nome:'Andamento das obras',    arquivos:['andamento.html'] },
     { id:'ocorrencias',nome:'Ocorrências por equipe', arquivos:['ocorrencias.html'] },
     { id:'producao',   nome:'Produção de obras',      arquivos:['producao.html'] },
     { id:'faturamento',nome:'Faturamento das turmas', arquivos:['faturamento.html'] },
