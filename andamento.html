@@ -388,8 +388,14 @@ try{if(localStorage.getItem("mariua_darkmode")==="1")document.body.classList.add
 var AND_P = window.MariuaPainel || null;
 var REGRAS = {
   diasParada: (AND_P && AND_P.REGRAS && AND_P.REGRAS.diasObraParada) || 5,  // mesmo número do Painel do dia
-  diasForaCarteira: 60     // PEP com atividade neste período e fora da carteira vira aviso
+  diasForaCarteira: 60,    // PEP com atividade neste período e fora da carteira vira aviso
+  // PEP de verdade é uma letra e sete números (B-1207032), comparado sem hífen, espaço e acento.
+  // Lançamento com outra coisa no campo do PEP ("teste", "RENILSON-MANUT", "7804", "B-000001")
+  // conta como sem PEP: não liga a obra nenhuma e não entra no aviso de obra fora da carteira.
+  // O serviço continua valendo na produção e no faturamento da equipe.
+  pepValido: /^[A-Z]\d{7}$/
 };
+function pepOk(k) { return REGRAS.pepValido.test(k); }
 var CHAVES = ['obras_base', 'prog_diaria', 'estagios_board', 'usuario_contrato'];
 var BASES = {
   JAC: { id: 'jac', nome: 'Jacobina',         uf: 'ba' },
@@ -600,11 +606,12 @@ function montarObras(OB, est) {
 
 function indexarProg(P) {
   var regs = Array.isArray(P) ? P : ((P && Array.isArray(P.registros)) ? P.registros : []);
-  var por = {}, n = 0;
+  var por = {}, n = 0, ignorados = {};
   regs.forEach(function (r) {
     if (!r || typeof r !== 'object') return;
     var k = squash(r.pep);
     if (!k || k === 'SEMOBRA') return;
+    if (!pepOk(k)) { ignorados[String(r.pep).trim()] = 1; return; }
     var d = dataDe(r.data);
     if (!d) return;
     var st = norm(r.status);
@@ -618,11 +625,11 @@ function indexarProg(P) {
     (por[k] = por[k] || []).push(x);
     n++;
   });
-  return { por: por, n: n };
+  return { por: por, n: n, ignorados: Object.keys(ignorados) };
 }
 
 function indexarGpm(linhas) {
-  var por = {}, n = 0, semPep = 0, comCampo = false, meses = [], atual = null;
+  var por = {}, n = 0, semPep = 0, comCampo = false, meses = [], atual = null, ignorados = {};
   (linhas || []).forEach(function (l) {
     var v = parse(l.value);
     if (!v || !Array.isArray(v.servs)) return;
@@ -634,6 +641,7 @@ function indexarGpm(linhas) {
       if (Object.prototype.hasOwnProperty.call(s, 'pep')) comCampo = true;
       var k = squash(s.pep);
       if (!k) { semPep++; return; }
+      if (!pepOk(k)) { ignorados[String(s.pep).trim()] = 1; semPep++; return; }
       var d = dataDe(s.d);
       if (!d) return;
       var ret = norm(s.ret), exec = !ret || ret.indexOf('EXECUTADO') === 0;
@@ -652,7 +660,7 @@ function indexarGpm(linhas) {
       n++;
     });
   });
-  return { por: por, n: n, semPep: semPep, comCampo: comCampo, meses: meses.sort(), atualizado: atual };
+  return { por: por, n: n, semPep: semPep, comCampo: comCampo, meses: meses.sort(), atualizado: atual, ignorados: Object.keys(ignorados) };
 }
 
 function porData(a, b) { return a.d - b.d; }
@@ -761,6 +769,7 @@ function montar(bruto, gpmLinhas, estados) {
   var ob = val('obras_base'), info = (ob && ob.info) || {};
   return {
     hoje: hoje, obras: obras, fora: estados ? [] : listaFora,
+    ignorados: estados ? [] : P.ignorados.concat(G ? G.ignorados : []).filter(function (p, i, l) { return l.indexOf(p) === i; }),
     fontes: {
       carteira: { existe: !!C.obras_base, n: obras.length, atualizado: (C.obras_base && C.obras_base.atualizado) || null, info: info },
       prog: { existe: !!C.prog_diaria, n: P.n, atualizado: (C.prog_diaria && C.prog_diaria.atualizado) || null },
@@ -1314,6 +1323,7 @@ function desenharFontes() {
   else { gt = pl(g.n, 'serviço com PEP', 'serviços com PEP') + ', ' + mesTxt(g.meses[0]) + (g.meses.length > 1 ? ' a ' + mesTxt(g.meses[g.meses.length - 1]) : ''); gs = 'ok'; }
   h += linha('Apontamento do GPM', 'producao.html', gt, gs);
   if (g.carregado && g.comCampo && g.semPep) h += '<p class="m-meta" style="margin-top:8px">' + pl(g.semPep, 'serviço do GPM sem PEP ficou', 'serviços do GPM sem PEP ficaram') + ' de fora (manutenção ou obra sem PEP no GPM).</p>';
+  if (dados.ignorados.length) h += '<p class="m-meta" style="margin-top:8px">' + pl(dados.ignorados.length, 'PEP fora do padrão foi tratado', 'PEPs fora do padrão foram tratados') + ' como sem PEP e não liga' + (dados.ignorados.length === 1 ? '' : 'm') + ' a obra nenhuma: ' + esc(dados.ignorados.slice(0, 6).join(', ')) + (dados.ignorados.length > 6 ? ' e mais ' + (dados.ignorados.length - 6) : '') + '.</p>';
   h += dados.viaAnonima
     ? '<div class="m-alerta atencao" style="margin-top:12px"><i class="ti ti-lock-open" aria-hidden="true"></i><span>A leitura só funcionou com a chave pública. Peça ao administrador para liberar a leitura com login no banco (RLS).</span></div>'
     : '<p class="m-meta" style="margin-top:10px">Lido com o seu login. Esta tela só lê; nada é alterado no banco.</p>';

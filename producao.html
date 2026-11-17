@@ -645,7 +645,7 @@ function pdServicos(){
       var sup=String(s.sup||'').trim();
       out.push({s:String(s.s), d:d, m:d.slice(0,7), a:d.slice(0,4), eq:eq, base:pdBaseCentro(s.cs)||pdBaseEquipe(eq)||'sb',
         supK:sup?pdSupKey(sup):'', resp:String(s.resp||'').replace(/\s+/g,' ').trim(),
-        temCampoPep:Object.prototype.hasOwnProperty.call(s,'pep'), pep:String(s.pep||'').trim(), obra:String(s.obra||'').trim(),
+        temCampoPep:Object.prototype.hasOwnProperty.call(s,'pep'), pep:pdPepOk(s.pep)?String(s.pep).trim():'', obra:String(s.obra||'').trim(),
         ts:pdTs(s.ts), grp:pdSA(s.grp)||'SEM GRUPO', exec:exec, p:p, tem:(p.cava+p.poste+p.cabo+p.cond)>0});
     });
   });
@@ -776,6 +776,9 @@ function pdComparar(todos,semDia){
 function $(id){ return document.getElementById(id); }
 function pdEsc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function pdAttr(s){ return pdEsc(s).replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+// PEP de verdade é uma letra e sete números (B-1207032). "teste", "RENILSON-MANUT", "7804" ou "B-000001"
+// no campo do PEP contam como sem PEP: o serviço vale para a equipe, mas não vira obra no ranking.
+function pdPepOk(p){ return /^[A-Z]\d{7}$/.test(pdSA(p).replace(/[^A-Z0-9]/g,'')); }
 function pdSA(s){ return String(s==null?'':s).normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ').toUpperCase().trim(); }
 function pdPad(n){ n=String(n); return n.length<2?'0'+n:n; }
 function pdN(n,dec){ return Number(n||0).toLocaleString('pt-BR',{maximumFractionDigits:dec==null?0:dec}); }
