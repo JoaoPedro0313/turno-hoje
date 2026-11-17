@@ -54,6 +54,7 @@ var d=document.body||h;d.innerHTML='<div style="font-family:Barlow,system-ui,san
 .an-seg.cancelada{background:#4a5568}
 .an-seg.todas{flex:0 0 auto;min-width:96px;background:#fff;color:#1f2a35;box-shadow:inset 0 0 0 1.5px #d5dde3}
 .an-seg.vazio{opacity:.5}
+.an-seg.fora{flex:0 0 auto;min-width:150px;margin-left:8px;color:#2d3748;background:repeating-linear-gradient(135deg,#f7fafc 0 8px,#edf2f7 8px 16px);box-shadow:inset 0 0 0 1.5px #a0aec0}
 .an-faixa.filtrada .an-seg:not([aria-pressed="true"]){opacity:.36}
 .an-faixa.filtrada .an-seg:not([aria-pressed="true"]):hover{opacity:.7}
 .an-seg[aria-pressed="true"]{outline:3px solid #1f2a35;outline-offset:2px}
@@ -165,6 +166,10 @@ var d=document.body||h;d.innerHTML='<div style="font-family:Barlow,system-ui,san
 .an-fase.nao_iniciada{background:#fffaf0;color:#975a16;border-color:#fbd38d}
 .an-fase.concluida{background:#f0fff4;color:#276749;border-color:#c6f6d5}
 .an-fase.cancelada{background:#f7fafc;color:#4a5568;border-color:#e2e8f0}
+.an-fase.fora{background:#f7fafc;color:#4a5568;border-color:#a0aec0;border-style:dashed}
+.an-fase.fora::before{background:transparent;border:1.5px solid currentColor;width:5px;height:5px}
+.an-item.fora{border-left-style:dashed}
+.m-alerta.an-info{background:#f7fafc;border:1px solid #e2e8f0;color:#4a5568}
 .an-chips{display:flex;flex-wrap:wrap;gap:4px}
 .an-chip{display:inline-flex;align-items:center;gap:5px;font-size:.68rem;font-weight:800;color:#4a5568;background:#f7fafc;border:1px solid #e2e8f0;border-radius:20px;padding:1px 8px 1px 6px;white-space:nowrap}
 .an-chip i{width:7px;height:7px;border-radius:50%;background:var(--c,#a0aec0);flex-shrink:0}
@@ -202,7 +207,7 @@ var d=document.body||h;d.innerHTML='<div style="font-family:Barlow,system-ui,san
   .an-voltar{display:inline-flex;margin-bottom:14px}
   body.an-travado{overflow:hidden}
   .an-faixa{flex-wrap:wrap}
-  .an-seg,.an-seg.todas{flex:1 1 calc(50% - 4px)!important;min-width:0;min-height:60px}
+  .an-seg,.an-seg.todas,.an-seg.fora{flex:1 1 calc(50% - 4px)!important;min-width:0;min-height:60px;margin-left:0}
   .an-seg b{font-size:1.55rem}
   .an-grupo{top:calc(52px + env(safe-area-inset-top,0px))}
   .an-d{padding:16px 16px 28px}
@@ -215,6 +220,7 @@ var d=document.body||h;d.innerHTML='<div style="font-family:Barlow,system-ui,san
 /* tema escuro: o nav.js converte as cores; aqui só o que ele não acerta sozinho */
 body.dark .an-seg.todas{background:#111!important;color:#f2f2f2!important;box-shadow:inset 0 0 0 1.5px #303030!important}
 body.dark .an-seg[aria-pressed="true"]{outline-color:#f2f2f2!important}
+body.dark .an-seg.fora{background:repeating-linear-gradient(135deg,#141414 0 8px,#1c1c1c 8px 16px)!important;color:#f2f2f2!important;box-shadow:inset 0 0 0 1.5px #4a4a4a!important}
 body.dark .an-postes span{background:#2a2a2a!important}
 body.dark .an-postes span.f{background:#14a085!important}
 body.dark .an-postes.gpm span.f{background:#4299e1!important}
@@ -381,6 +387,9 @@ try{if(localStorage.getItem("mariua_darkmode")==="1")document.body.classList.add
    - Em andamento ..... atividade nos últimos REGRAS.diasParada dias ou frente
                         programada para hoje ou depois.
    - Não iniciada ..... nenhuma atividade registrada ainda.
+   - Fora da carteira . PEP com atividade nos últimos REGRAS.diasForaCarteira dias (ou
+                        frente programada) que não está na carteira. Aparece à parte, com o
+                        que a programação e o GPM registraram, e não entra nas contas da carteira.
    Atividade = frente da programação com quantidade realizada (ou status
    EXECUTADO / EM EXECUÇÃO), ou serviço executado no GPM. É a mesma regra de
    "obra parada" do Painel do dia, que olha só a programação.
@@ -388,7 +397,7 @@ try{if(localStorage.getItem("mariua_darkmode")==="1")document.body.classList.add
 var AND_P = window.MariuaPainel || null;
 var REGRAS = {
   diasParada: (AND_P && AND_P.REGRAS && AND_P.REGRAS.diasObraParada) || 5,  // mesmo número do Painel do dia
-  diasForaCarteira: 60,    // PEP com atividade neste período e fora da carteira vira aviso
+  diasForaCarteira: 60,    // obra fora da carteira com atividade neste período aparece em "Fora da carteira"
   // PEP de verdade é uma letra e sete números (B-1207032), comparado sem hífen, espaço e acento.
   // Lançamento com outra coisa no campo do PEP ("teste", "RENILSON-MANUT", "7804", "B-000001")
   // conta como sem PEP: não liga a obra nenhuma e não entra no aviso de obra fora da carteira.
@@ -645,7 +654,7 @@ function indexarGpm(linhas) {
       var d = dataDe(s.d);
       if (!d) return;
       var ret = norm(s.ret), exec = !ret || ret.indexOf('EXECUTADO') === 0;
-      var x = { d: d, iso: iso(d), s: String(s.s || ''), eq: String(s.eq || '').toUpperCase().trim(), resp: s.resp || '',
+      var x = { d: d, iso: iso(d), s: String(s.s || ''), eq: String(s.eq || '').toUpperCase().trim(), resp: s.resp || '', cs: s.cs || '', sup: s.sup || '',
                 ret: s.ret || '', exec: exec, obra: s.obra || '', pep: String(s.pep || '').trim(), at: [],
                 cava: 0, poste: 0, cabo: 0, cond: 0 };
       (s.at || []).forEach(function (a) {
@@ -699,6 +708,7 @@ function calcular(o, regs, servs, hoje) {
     if (!ultima || s.d > ultima.d) ultima = { d: s.d, quem: s.resp ? nomeProprio(s.resp) : s.eq, oque: s.at.length ? s.at[0].desc : 'Serviço ' + s.s, fonte: 'gpm' };
   });
   if (!sup && o.prog.length) sup = o.prog[o.prog.length - 1].sup || '';
+  if (!sup) o.gpm.forEach(function (s) { if (s.sup && s.d <= hoje) sup = s.sup; });
   o.nDias = Object.keys(dias).length;
   o.frentes = frentes; o.vPrev = vPrev; o.vReal = vReal; o.vMes = vMes; o.qPrev = qPrev; o.qReal = qReal;
   o.primeira = primeira; o.ultima = ultima; o.proxima = proxima;
@@ -736,6 +746,27 @@ function calcular(o, regs, servs, hoje) {
   return o;
 }
 
+function obraFora(k, regs, servs, est, hoje) {
+  regs = (regs || []).slice().sort(porData); servs = (servs || []).slice().sort(porData);
+  var r = regs.length ? regs[regs.length - 1] : null, s = servs.length ? servs[servs.length - 1] : null;
+  var pep = (s && s.pep) || (r && r.pep) || k;
+  if (pepOk(squash(pep))) pep = squash(pep).charAt(0) + '-' + squash(pep).slice(1);   // 'b - 0987173' → 'B-0987173'
+  var base = null;
+  for (var i = servs.length - 1; i >= 0 && !base; i--) base = baseDoTexto(servs[i].cs) || baseDoTexto(servs[i].eq);
+  var mun = '';
+  for (var j = regs.length - 1; j >= 0 && !mun; j--) mun = String(regs[j].mun || '').trim();
+  var titulo = '';
+  for (var m = servs.length - 1; m >= 0 && !titulo; m--) titulo = String(servs[m].obra || '').trim();
+  for (var n = regs.length - 1; n >= 0 && !titulo; n--) titulo = String(regs[n].obra || '').trim();
+  var o = { id: k, pep: pep, pepK: k, semPep: false, foraCarteira: true, titulo: titulo, mun: mun, utd: '', base: base,
+            statusTxt: '', status: '', encCart: '', mes: '',
+            postesPrev: 0, postesReal: 0, temPostesReal: false, postesImp: 0, temPostesImp: false, cavas: 0, temCavas: false,
+            estagio: est.col[k] || null, pend: est.tags[k] || [] };
+  calcular(o, regs, servs, hoje);
+  o.busca += ' FORA DA CARTEIRA';
+  return o;
+}
+
 /* Monta tudo a partir do que veio do banco.
    bruto = { chaves:{...}, viaAnonima }, gpm = linhas ocorr_fat_* (ou null enquanto carrega) */
 function montar(bruto, gpmLinhas, estados) {
@@ -754,24 +785,23 @@ function montar(bruto, gpmLinhas, estados) {
   // contrato do usuário (OBRAS - BA, CON_MANUT - MG, OBRAS - SE): obra sem base passa, como no Painel
   if (estados) obras = obras.filter(function (o) { return !o.base || estados.indexOf(o.base.uf) >= 0; });
 
-  // PEPs com atividade recente que não estão na carteira
-  var fora = {};
-  function marcaFora(k, x, quem) {
-    if (vistos[k] || diasEntre(x.d, hoje) > REGRAS.diasForaCarteira || x.d > hoje) return;
-    var f = fora[k] || (fora[k] = { pep: x.pep, obra: x.obra || '', ultima: x.d, quem: quem });
-    if (x.d > f.ultima) { f.ultima = x.d; f.quem = quem; }
-    if (!f.obra && x.obra) f.obra = x.obra;
-  }
-  Object.keys(P.por).forEach(function (k) { P.por[k].forEach(function (x) { if (x.prod) marcaFora(k, x, nomeProprio(x.enc)); }); });
-  if (G) Object.keys(G.por).forEach(function (k) { G.por[k].forEach(function (s) { if (s.exec) marcaFora(k, s, s.eq); }); });
-  var listaFora = Object.keys(fora).map(function (k) { return fora[k]; }).sort(function (a, b) { return b.ultima - a.ultima; });
+  var nCarteira = obras.length;
+  // obras com atividade recente (ou frente programada) que não estão na carteira
+  var foraIds = {};
+  function marca(k, x) { if (!vistos[k] && (x.d >= hoje || diasEntre(x.d, hoje) <= REGRAS.diasForaCarteira)) foraIds[k] = 1; }
+  Object.keys(P.por).forEach(function (k) { P.por[k].forEach(function (x) { if (x.prod || x.d >= hoje) marca(k, x); }); });
+  if (G) Object.keys(G.por).forEach(function (k) { G.por[k].forEach(function (s) { if (s.exec) marca(k, s); }); });
+  var fora = Object.keys(foraIds).map(function (k) { return obraFora(k, P.por[k], G ? G.por[k] : null, est, hoje); });
+  // contrato do usuário: fora da carteira só entra com a base conhecida e liberada
+  if (estados) fora = fora.filter(function (o) { return o.base && estados.indexOf(o.base.uf) >= 0; });
+  obras = obras.concat(fora);
 
   var ob = val('obras_base'), info = (ob && ob.info) || {};
   return {
-    hoje: hoje, obras: obras, fora: estados ? [] : listaFora,
+    hoje: hoje, obras: obras, nFora: fora.length,
     ignorados: estados ? [] : P.ignorados.concat(G ? G.ignorados : []).filter(function (p, i, l) { return l.indexOf(p) === i; }),
     fontes: {
-      carteira: { existe: !!C.obras_base, n: obras.length, atualizado: (C.obras_base && C.obras_base.atualizado) || null, info: info },
+      carteira: { existe: !!C.obras_base, n: nCarteira, atualizado: (C.obras_base && C.obras_base.atualizado) || null, info: info },
       prog: { existe: !!C.prog_diaria, n: P.n, atualizado: (C.prog_diaria && C.prog_diaria.atualizado) || null },
       estagios: { existe: !!C.estagios_board, n: est.n, atualizado: (C.estagios_board && C.estagios_board.atualizado) || null },
       gpm: G ? { carregado: true, n: G.n, semPep: G.semPep, comCampo: G.comCampo, meses: G.meses, atualizado: G.atualizado } : { carregado: false }
@@ -837,7 +867,7 @@ function passa(o, ignorar) {
     if (estado.base === '-') { if (o.base) return false; }
     else if (!o.base || o.base.id !== estado.base) return false;
   }
-  if (estado.status && ignorar !== 'status' && chaveStatus(o) !== estado.status) return false;
+  if (estado.status && ignorar !== 'status' && !o.foraCarteira && chaveStatus(o) !== estado.status) return false;
   if (estado.sup && ignorar !== 'sup' && o.sup !== estado.sup) return false;
   if (estado.q && ignorar !== 'q') {
     var termos = norm(estado.q).split(' ').filter(Boolean);
@@ -859,9 +889,11 @@ function opcoes(sel, lista, atual, todos) {
   sel.innerHTML = h;
 }
 function desenharFiltros() {
-  var porBase = {}, semBase = 0, sts = {}, sups = {}, l = filtradas('base');
+  var porBase = {}, semBase = 0, sts = {}, sups = {}, l = filtradas('base').filter(function (o) { return (estado.aba === 'fora') === !!o.foraCarteira; });
   l.forEach(function (o) { if (o.base) porBase[o.base.id] = (porBase[o.base.id] || 0) + 1; else semBase++; });
   dados.obras.forEach(function (o) {
+    if (o.sup) sups[o.sup] = 1;
+    if (o.foraCarteira) return;
     var k = chaveStatus(o);
     if (!sts[k]) sts[k] = { v: k, t: o.statusTxt ? frase(o.statusTxt) : 'Sem status', n: 0 };
     sts[k].n++;
@@ -905,20 +937,21 @@ function limparFiltros() {
 
 // ─── carteira de relance: números e faixa de situações ─────────────────────
 function contar(lista) {
-  var c = { todas: lista.length };
+  var c = { todas: 0, fora: 0 };
   ORDEM_FASES.forEach(function (f) { c[f] = 0; });
-  lista.forEach(function (o) { c[o.fase]++; });
+  lista.forEach(function (o) { if (o.foraCarteira) c.fora++; else { c.todas++; c[o.fase]++; } });
   return c;
 }
 function somaPostes(lista) {
   var r = 0, t = 0, n = 0;
   lista.forEach(function (o) {
-    if (o.fase === 'cancelada' || o.av.pct == null || o.av.fonte === 'status') return;
+    if (o.foraCarteira || o.fase === 'cancelada' || o.av.pct == null || o.av.fonte === 'status') return;
     r += Math.min(o.av.real, o.av.total); t += o.av.total; n++;
   });
   return { real: r, total: t, n: n };
 }
 function desenharPainel(lista, c) {
+  lista = lista.filter(function (o) { return !o.foraCarteira; });
   $('n-obras').textContent = nfmt(c.todas);
   $('n-obras-tx').textContent = (c.todas === 1 ? 'obra' : 'obras') + (temFiltro() ? ' com estes filtros' : ' na carteira');
   var ps = somaPostes(lista), h = '';
@@ -939,7 +972,9 @@ function desenharPainel(lista, c) {
     segs.map(function (f) {
       return '<button type="button" class="an-seg ' + f + (c[f] ? '' : ' vazio') + '" data-aba="' + f + '" aria-pressed="' + (estado.aba === f) + '" style="flex:' + Math.max(c[f], 0.6) + ' 1 0">' +
         '<b>' + nfmt(c[f]) + '</b><span>' + FASES[f].abas + '</span></button>';
-    }).join('');
+    }).join('') +
+    (c.fora ? '<button type="button" class="an-seg fora" data-aba="fora" aria-pressed="' + (estado.aba === 'fora') + '" title="Obras com atividade que não estão na carteira">' +
+      '<b>' + nfmt(c.fora) + '</b><span>Fora da carteira</span></button>' : '');
 }
 $('faixa').addEventListener('click', function (e) {
   var b = e.target.closest('[data-aba]');
@@ -986,7 +1021,8 @@ function comparar(a, b) {
 }
 function listaAtual(base) {
   base = base || filtradas();
-  var l = estado.aba === 'todas' ? base : base.filter(function (o) { return o.fase === estado.aba; });
+  var l = estado.aba === 'fora' ? base.filter(function (o) { return o.foraCarteira; })
+    : base.filter(function (o) { return !o.foraCarteira && (estado.aba === 'todas' || o.fase === estado.aba); });
   return l.sort(comparar);
 }
 
@@ -1010,7 +1046,10 @@ function barraPostes(o, maxTracos) {
 function metaItem(o) {
   var m = [], loc = local(o);
   if (loc) m.push('<span><i class="ti ti-map-pin" aria-hidden="true"></i>' + esc(loc) + '</span>');
-  if (o.fase === 'parada') {
+  if (o.foraCarteira) {               // sem status da carteira: só o que a programação e o GPM mostram
+    m.push('<span><i class="ti ti-clock" aria-hidden="true"></i>' + (o.ultima ? 'Última ' + rel(o.ultima.d) : 'Sem atividade ainda') + '</span>');
+    if (o.proxima) m.push('<span><i class="ti ti-calendar-event" aria-hidden="true"></i>Próxima ' + rel(o.proxima.d) + '</span>');
+  } else if (o.fase === 'parada') {
     m.push('<span class="al"><i class="ti ti-clock" aria-hidden="true"></i>' +
       (o.diasSem != null ? 'Parada há ' + pl(o.diasSem, 'dia', 'dias') : 'Paralisada na carteira') + '</span>');
   } else if (o.fase === 'nao_iniciada') {
@@ -1028,9 +1067,10 @@ function metaItem(o) {
   return m.join('');
 }
 function itemLista(o) {
-  var pct = (o.av.pct != null && o.av.fonte !== 'status') ? pctTxt(o.av.pct) : (o.fase === 'concluida' ? '100%' : '—');
-  return '<li><button type="button" class="an-item" data-id="' + esc(o.id) + '" style="--fc:' + COR_FASE[o.fase] + '"' + (estado.sel === o.id ? ' aria-current="true"' : '') +
-    ' aria-label="' + esc((o.pep || 'Obra sem PEP') + ', ' + FASES[o.fase].nome + ', ' + (pct === '—' ? 'sem postes na carteira' : pct + ' dos postes')) + '">' +
+  var pct = (o.av.pct != null && o.av.fonte !== 'status') ? pctTxt(o.av.pct) : (o.fase === 'concluida' && !o.foraCarteira ? '100%' : '—');
+  var sit = o.foraCarteira ? 'Fora da carteira' : FASES[o.fase].nome;
+  return '<li><button type="button" class="an-item' + (o.foraCarteira ? ' fora' : '') + '" data-id="' + esc(o.id) + '" style="--fc:' + (o.foraCarteira ? '#718096' : COR_FASE[o.fase]) + '"' + (estado.sel === o.id ? ' aria-current="true"' : '') +
+    ' aria-label="' + esc((o.pep || 'Obra sem PEP') + ', ' + sit + ', ' + (pct === '—' ? 'sem postes na carteira' : pct + ' dos postes')) + '">' +
     '<span class="an-item-l1"><span class="an-item-pep">' + esc(o.pep || 'Sem PEP') + '</span><span class="an-item-pct' + (pct === '—' ? ' nada' : '') + '">' + pct + '</span></span>' +
     (o.titulo ? '<span class="an-item-tit">' + esc(o.titulo) + '</span>' : '') +
     barraPostes(o, 40) +
@@ -1048,11 +1088,11 @@ function desenharLista(base) {
     return [];
   }
   var lista = listaAtual(base);
-  $('t-lista').textContent = estado.aba === 'todas' ? pl(lista.length, 'obra', 'obras') : nfmt(lista.length) + ' ' + FASES[estado.aba].abas.toLowerCase();
+  $('t-lista').textContent = estado.aba === 'todas' ? pl(lista.length, 'obra', 'obras') : estado.aba === 'fora' ? nfmt(lista.length) + ' fora da carteira' : nfmt(lista.length) + ' ' + FASES[estado.aba].abas.toLowerCase();
   if (!lista.length) {
     var msg = temFiltro() ? 'Nenhuma obra com estes filtros.'
       : { andamento: 'Nenhuma obra em andamento agora.', parada: 'Nenhuma obra parada.', nao_iniciada: 'Todas as obras já tiveram alguma atividade.',
-          concluida: 'Nenhuma obra concluída na carteira.', cancelada: 'Nenhuma obra cancelada.' }[estado.aba] || 'Nenhuma obra.';
+          concluida: 'Nenhuma obra concluída na carteira.', cancelada: 'Nenhuma obra cancelada.', fora: 'Todas as obras com atividade estão na carteira.' }[estado.aba] || 'Nenhuma obra.';
     el.innerHTML = '<div class="m-vazio"><i class="ti ti-circle-check" aria-hidden="true"></i><span>' + esc(msg) + '</span>' +
       (temFiltro() ? '<button type="button" class="m-bt m-bt-peq" data-limpar="1">Limpar filtros</button>' : '') + '</div>';
     return lista;
@@ -1122,8 +1162,9 @@ function detalhe(o) {
   var cs = [];
   if (o.estagio) cs.push(chip(o.estagio.nome, o.estagio.cor));
   o.pend.forEach(function (p) { cs.push(chip(p.nome, p.cor)); });
-  var loc = [local(o), o.statusTxt ? 'Carteira: ' + frase(o.statusTxt) : 'Sem status na carteira', o.mes ? mesTxt(o.mes) : ''].filter(Boolean).join('. ');
-  h += '<div class="an-d-l1"><h3 class="an-d-pep" tabindex="-1">' + esc(o.pep || 'Obra sem PEP') + '</h3><span class="an-fase ' + o.fase + '">' + FASES[o.fase].nome + '</span></div>' +
+  var loc = [local(o), o.foraCarteira ? 'Não está na carteira sincronizada no Mapa' : (o.statusTxt ? 'Carteira: ' + frase(o.statusTxt) : 'Sem status na carteira'), o.mes ? mesTxt(o.mes) : ''].filter(Boolean).join('. ');
+  h += '<div class="an-d-l1"><h3 class="an-d-pep" tabindex="-1">' + esc(o.pep || 'Obra sem PEP') + '</h3>' +
+    (o.foraCarteira ? '<span class="an-fase fora">Fora da carteira</span>' : '<span class="an-fase ' + o.fase + '">' + FASES[o.fase].nome + '</span>') + '</div>' +
     (o.titulo ? '<p class="an-d-tit">' + esc(o.titulo) + '</p>' : '') +
     '<p class="an-d-loc">' + esc(loc) + '.</p>' + (cs.length ? '<div class="an-chips">' + cs.join('') + '</div>' : '');
 
@@ -1135,7 +1176,7 @@ function detalhe(o) {
   } else if (a.fonte === 'status') {
     av += '<div class="an-d-av-l1"><span class="an-d-av-num">Concluída na carteira, sem postes previstos</span><span class="an-d-av-pct">100%</span></div>' + barraPostes(o);
   } else {
-    av += '<div class="an-d-av-l1"><span class="an-d-av-num">Sem postes previstos na carteira</span></div>' + barraPostes(o);
+    av += '<div class="an-d-av-l1"><span class="an-d-av-num">' + (o.foraCarteira ? 'Sem postes previstos: a obra não está na carteira' : 'Sem postes previstos na carteira') + '</span></div>' + barraPostes(o);
   }
   var gpmTxt = (gpmEstado === 'carregando' && !gpmLinhas) ? 'carregando…' : (gpmEstado === 'erro' && !gpmLinhas) ? 'não carregou' : '';
   function cel(v, un) { return v ? '<td>' + nfmt(v, 1) + (un ? ' ' + un : '') + '</td>' : '<td class="v">—</td>'; }
@@ -1153,7 +1194,7 @@ function detalhe(o) {
   var f = [];
   f.push(['Dias com atividade', o.nDias ? nfmt(o.nDias) : 'Nenhum', o.frentes ? pl(o.frentes, 'frente programada', 'frentes programadas') : '']);
   f.push(['Executado pelo fator K', o.vReal >= 1 ? UI.moeda(o.vReal) : '—', o.vPrev >= 1 ? 'de ' + UI.moeda(o.vPrev) + ' previstos' : (o.qPrev > 0 ? pctTxt(o.qReal / o.qPrev) + ' das quantidades' : '')]);
-  f.push(['Última atividade', o.ultima ? br(o.ultima.d) : '—', o.ultima ? rel(o.ultima.d) + (o.ultima.quem ? ', ' + o.ultima.quem : '') : 'Nenhuma ainda', o.fase === 'parada' && o.ultima]);
+  f.push(['Última atividade', o.ultima ? br(o.ultima.d) : '—', o.ultima ? rel(o.ultima.d) + (o.ultima.quem ? ', ' + o.ultima.quem : '') : 'Nenhuma ainda', o.fase === 'parada' && o.ultima && !o.foraCarteira]);
   f.push(['Próxima frente', o.proxima ? (+o.proxima.d === +dados.hoje ? 'Hoje' : br(o.proxima.d)) : '—', o.proxima ? ((+o.proxima.d === +dados.hoje ? '' : rel(o.proxima.d) + ', ') + (o.proxima.quem || '')) : 'Nada programado']);
   h += '<dl class="an-fatos">' + f.map(function (x) {
     return '<div class="an-fato"><dt>' + x[0] + '</dt><dd' + (x[3] ? ' class="al"' : '') + '>' + esc(x[1]) + (x[2] ? '<small>' + esc(x[2]) + '</small>' : '') + '</dd></div>';
@@ -1264,7 +1305,7 @@ function resumoObra(o) {
   var l = ['*' + (o.pep ? 'Obra ' + o.pep : 'Obra sem PEP') + '*' + (o.titulo ? ' - ' + o.titulo : '')];
   var loc = local(o);
   if (loc) l.push(loc);
-  l.push('Situação: ' + FASES[o.fase].nome + (o.statusTxt ? ' (carteira: ' + frase(o.statusTxt) + ')' : ''));
+  l.push(o.foraCarteira ? 'Situação: fora da carteira (sem status)' : 'Situação: ' + FASES[o.fase].nome + (o.statusTxt ? ' (carteira: ' + frase(o.statusTxt) + ')' : ''));
   if (o.estagio || o.pend.length) {
     l.push((o.estagio ? 'Estágio: ' + o.estagio.nome : 'Pendências') +
       (o.pend.length ? (o.estagio ? ', pendências: ' : ': ') + o.pend.map(function (p) { return p.nome; }).join(', ') : ''));
@@ -1286,6 +1327,7 @@ function desenharRegras() {
     '<dt><span class="an-fase parada">Parada</span></dt><dd>Já teve atividade, mas nenhuma há ' + d + ' dias ou mais e nada programado. Também entra a obra PARALISADA na carteira.</dd>' +
     '<dt><span class="an-fase nao_iniciada">Não iniciada</span></dt><dd>Nenhuma atividade registrada ainda, mesmo que já tenha frente programada.</dd>' +
     '<dt><span class="an-fase concluida">Concluída</span></dt><dd>ENERGIZADA na carteira.</dd>' +
+    '<dt><span class="an-fase fora">Fora da carteira</span></dt><dd>Teve atividade nos últimos ' + REGRAS.diasForaCarteira + ' dias, ou tem frente programada, mas o PEP não está na carteira sincronizada no Mapa. Aparece à parte, sem status nem postes previstos, e não entra nas contas da carteira.</dd>' +
     '</dl><p class="m-meta" style="margin-top:12px;line-height:1.5">Atividade é uma frente da programação com quantidade realizada (ou status Executado ou Em execução), ou um serviço executado no GPM. ' +
     'O avanço é postes realizados ÷ postes previstos da carteira; quando a carteira não traz o realizado, usa os postes executados no GPM.</p>';
 }
@@ -1294,14 +1336,21 @@ function desenharAvisos() {
   function aviso(ic, txt) { l.push('<div class="m-alerta atencao"><i class="ti ti-' + ic + '" aria-hidden="true"></i><span>' + txt + '</span></div>'); }
   var c = F.carteira, lim = (AND_P && AND_P.REGRAS.diasCarteiraVelha) || 7;
   if (c.atualizado && diasEntre(c.atualizado, hoje) >= lim) aviso('alert-triangle', 'A carteira não é sincronizada há ' + diasEntre(c.atualizado, hoje) + ' dias. Status e postes podem estar desatualizados.');
-  if (dados.fora.length) {
-    var mostra = dados.fora.slice(0, 4).map(function (f) { return f.pep + (f.obra ? ' (' + f.obra + ')' : ''); });
-    aviso('alert-triangle', pl(dados.fora.length, 'PEP teve', 'PEPs tiveram') + ' atividade nos últimos ' + REGRAS.diasForaCarteira + ' dias e não ' + (dados.fora.length === 1 ? 'está' : 'estão') + ' na carteira: ' +
-      esc(mostra.join(', ')) + (dados.fora.length > 4 ? ' e mais ' + (dados.fora.length - 4) : '') + '. Confira o PEP na programação ou inclua a obra na carteira.');
+  var nf = dados.obras.filter(function (o) { return o.foraCarteira; }).length;
+  if (nf && estado.aba !== 'fora') {
+    l.push('<div class="m-alerta atencao"><i class="ti ti-alert-triangle" aria-hidden="true"></i><span>' + pl(nf, 'obra teve', 'obras tiveram') + ' atividade nos últimos ' + REGRAS.diasForaCarteira +
+      ' dias e não ' + (nf === 1 ? 'está' : 'estão') + ' na carteira sincronizada no Mapa. ' + (nf === 1 ? 'Ela aparece' : 'Elas aparecem') + ' em Fora da carteira, com o que a programação e o GPM registraram.</span>' +
+      '<button type="button" class="m-bt m-bt-peq" data-ver-fora="1" style="margin-left:auto">Ver ' + (nf === 1 ? 'a obra' : 'as obras') + '</button></div>');
+  } else if (nf) {
+    l.push('<div class="m-alerta an-info"><i class="ti ti-info-circle" aria-hidden="true"></i><span>Obras com atividade nos últimos ' + REGRAS.diasForaCarteira + ' dias que não estão na carteira. Sem a carteira, a tela não tem status nem postes previstos delas. Para acompanhar o avanço, inclua a obra na planilha da carteira e sincronize no Mapa.</span></div>');
   }
   if (gpmEstado === 'erro' && !gpmLinhas) aviso('plug-connected-x', 'O apontamento do GPM não carregou' + (gpmErro ? ' (' + esc(gpmErro) + ')' : '') + '. A tela mostra só a carteira e a programação.');
   $('avisos').innerHTML = l.join('');
 }
+$('avisos').addEventListener('click', function (e) {
+  if (!e.target.closest('[data-ver-fora]')) return;
+  estado.aba = 'fora'; estado.todas = false; guardar(); desenhar();
+});
 function desenharFontes() {
   var F = dados.fontes, hoje = dados.hoje;
   function linha(nome, tela, texto, st) {
@@ -1338,12 +1387,12 @@ function exportar() {
   var SEP = ';';
   function n(v, dec) { return (v === null || v === undefined || v === '') ? '' : Number(v).toFixed(dec || 0).replace('.', ','); }
   function d(x) { return x ? p2(x.getDate()) + '/' + p2(x.getMonth() + 1) + '/' + x.getFullYear() : ''; }
-  var cols = ['PEP', 'TITULO', 'MUNICIPIO', 'BASE', 'STATUS_CARTEIRA', 'SITUACAO', 'ESTAGIO', 'PENDENCIAS', 'POSTES_PREVISTOS', 'POSTES_REALIZADOS',
+  var cols = ['PEP', 'TITULO', 'MUNICIPIO', 'BASE', 'ORIGEM', 'STATUS_CARTEIRA', 'SITUACAO', 'ESTAGIO', 'PENDENCIAS', 'POSTES_PREVISTOS', 'POSTES_REALIZADOS',
     'POSTES_A_IMPLANTAR', 'AVANCO_%', 'FONTE_AVANCO', 'CAVAS_REALIZADAS', 'DIAS_COM_ATIVIDADE', 'FRENTES', 'VALOR_PREVISTO', 'VALOR_REALIZADO',
     'PRIMEIRA_ATIVIDADE', 'ULTIMA_ATIVIDADE', 'DIAS_SEM_ATIVIDADE', 'ULTIMA_QUEM', 'PROXIMA_FRENTE', 'PROXIMA_QUEM', 'ENCARREGADO', 'SUPERVISOR',
     'GPM_SERVICOS', 'GPM_POSTES', 'GPM_CAVAS', 'GPM_CABO_M'];
   var linhas = lista.map(function (o) {
-    return [o.pep, o.titulo, nomeProprio(o.mun), nomeBase(o), o.statusTxt, FASES[o.fase].nome, o.estagio ? o.estagio.nome : '',
+    return [o.pep, o.titulo, nomeProprio(o.mun), nomeBase(o), o.foraCarteira ? 'Fora da carteira' : 'Carteira', o.statusTxt, o.foraCarteira ? '' : FASES[o.fase].nome, o.estagio ? o.estagio.nome : '',
       o.pend.map(function (p) { return p.nome; }).join(', '), o.postesPrev || '', o.temPostesReal ? o.postesReal : '', o.temPostesImp ? o.postesImp : '',
       (o.av.pct != null && o.av.fonte !== 'status') ? n(o.av.pct * 100, 1) : '', o.av.fonte === 'status' ? '' : o.av.fonte,
       o.temCavas ? o.cavas : '', o.nDias, o.frentes, n(o.vPrev, 2), n(o.vReal, 2), d(o.primeira), o.ultima ? d(o.ultima.d) : '',
@@ -1369,7 +1418,7 @@ function remontar() {
     var k = squash(pepPedido), o = dados.obras.filter(function (x) { return x.pepK === k; })[0];
     if (o) {
       estado.q = o.pep; $('f-q').value = o.pep; estado.base = estado.status = estado.sup = '';
-      estado.aba = 'todas'; estado.sel = o.id; abrir = true;
+      estado.aba = o.foraCarteira ? 'fora' : 'todas'; estado.sel = o.id; abrir = true;
     }
     pepPedido = '';
   }
@@ -1380,8 +1429,8 @@ function desenhar() {
   if (!dados) return;
   desenharFiltros();
   var base = filtradas(), c = contar(base);
-  if (estado.aba !== 'todas' && !FASES[estado.aba]) estado.aba = 'todas';
-  if (estado.aba === 'cancelada' && !c.cancelada) estado.aba = 'todas';
+  if (estado.aba !== 'todas' && estado.aba !== 'fora' && !FASES[estado.aba]) estado.aba = 'todas';
+  if ((estado.aba === 'cancelada' && !c.cancelada) || (estado.aba === 'fora' && !c.fora)) estado.aba = 'todas';
   desenharPainel(base, c);
   desenharAvisos();
   var lista = desenharLista(base);
