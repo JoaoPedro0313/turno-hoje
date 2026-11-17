@@ -294,6 +294,9 @@ try{if(localStorage.getItem("mariua_darkmode")==="1")document.body.classList.add
       <input type="search" id="f-q" placeholder="Procurar por PEP, obra, município ou encarregado" aria-label="Procurar obra">
     </label>
     <div class="an-bases" id="f-bases" role="group" aria-label="Base"></div>
+    <label class="m-campo">Carteira de
+      <select class="m-select" id="f-mes"><option value="">Todos os meses</option></select>
+    </label>
     <label class="m-campo">Status
       <select class="m-select" id="f-status"><option value="">Todos</option></select>
     </label>
@@ -370,8 +373,10 @@ try{if(localStorage.getItem("mariua_darkmode")==="1")document.body.classList.add
    ANDAMENTO DAS OBRAS
    ----------------------------------------------------------------------------
    Junta, por PEP, o que o sistema já tem de cada obra:
-   - Carteira de obras (turno_data.obras_base, sincronizada no Mapa): título,
-     município, base, status, postes previstos/realizados/à implantar e cavas.
+   - Carteira de obras de TODOS os meses, gravada pelo Mapa: a carteira atual
+     (turno_data.obras_base), a cópia de cada mês que o Mapa já abriu
+     (turno_data.mapa_mes_AAAA_MM) e o catálogo de obras (turno_data.obras_catalogo).
+     Obra que aparece em vários meses fica com os dados do mês mais recente.
    - Programação diária (turno_data.prog_diaria): cada frente com atividade,
      encarregado, quantidade prevista e realizada, valor pelo fator K e status.
    - Apontamento do GPM (turno_data.ocorr_fat_AAAA-MM, importado em Produção ou
@@ -405,7 +410,7 @@ var REGRAS = {
   pepValido: /^[A-Z]\d{7}$/
 };
 function pepOk(k) { return REGRAS.pepValido.test(k); }
-var CHAVES = ['obras_base', 'prog_diaria', 'estagios_board', 'usuario_contrato'];
+var CHAVES = ['obras_base', 'prog_diaria', 'estagios_board', 'usuario_contrato', 'obras_catalogo'];
 var BASES = {
   JAC: { id: 'jac', nome: 'Jacobina',         uf: 'ba' },
   IRC: { id: 'irc', nome: 'Irecê',            uf: 'ba' },
@@ -524,17 +529,32 @@ function lerPrincipal() {
     return { chaves: chaves, viaAnonima: res.viaAnonima, em: new Date() };
   });
 }
-// O apontamento do GPM é a parte mais pesada (um registro por mês): vem depois,
-// e a tela já abre com a carteira e a programação enquanto ele carrega.
-function lerGpm() {
+// As cópias de mês do Mapa e o apontamento do GPM são pesados (um registro por
+// mês): vêm depois, e a tela já abre com a carteira atual e a programação.
+// Primeiro pergunta só a data de cada registro; baixa de novo só o que mudou.
+var CACHE = {};
+function lerPadrao(padrao) {
   var sb = window.MARIUA_SB;
   if (!sb) return Promise.reject(new Error('O login ainda não terminou.'));
-  return sb.from('turno_data').select('key,value,updated_at').like('key', 'ocorr_fat_%').then(function (r) {
-    if (r.error) throw new Error(r.error.message || 'Erro ao ler o apontamento.');
-    if (r.data && r.data.length) return r.data;
-    return lerAnonimo(sb, 'key=like.ocorr_fat_*');
+  return sb.from('turno_data').select('key,updated_at').like('key', padrao).then(function (r) {
+    if (r.error) throw new Error(r.error.message || 'Erro ao ler o banco.');
+    var meta = r.data || [];
+    if (!meta.length) return lerAnonimo(sb, 'key=like.' + padrao.replace(/%/g, '*'));
+    var faltam = meta.filter(function (m) { var c = CACHE[m.key]; return !c || c.em !== m.updated_at; });
+    return Promise.all(faltam.map(function (m) {
+      return sb.from('turno_data').select('key,value,updated_at').eq('key', m.key).then(function (r2) {
+        if (r2.error) throw new Error(r2.error.message || 'Erro ao ler o banco.');
+        var l = (r2.data || [])[0];
+        if (l) CACHE[l.key] = { em: l.updated_at, valor: l.value };
+      });
+    })).then(function () {
+      return meta.filter(function (m) { return CACHE[m.key]; })
+        .map(function (m) { return { key: m.key, value: CACHE[m.key].valor, updated_at: m.updated_at }; });
+    });
   });
 }
+function lerGpm() { return lerPadrao('ocorr_fat_%'); }
+function lerMeses() { return lerPadrao('mapa_mes_%'); }
 
 // ─── montagem ───────────────────────────────────────────────────────────────
 function campos(o) {                         // chaves sem acento, espaço ou símbolo: 'POSTES  À IMPLANTA' → 'POSTESAIMPLANTA'
@@ -566,8 +586,7 @@ function mapaEstagios(B) {
   return out;
 }
 
-function montarObras(OB, est) {
-  var arr = (OB && Array.isArray(OB.data)) ? OB.data : (Array.isArray(OB) ? OB : []);
+function montarObras(arr, est) {
   var porId = {}, ordem = [];
   arr.forEach(function (o, idx) {
     if (!o || typeof o !== 'object') return;
@@ -577,7 +596,7 @@ function montarObras(OB, est) {
     var mun = String(pega(f, ['MUNICIPIO']) || '').trim();
     if (!pep && !titulo) return;
     var id = squash(pep) || ('SP' + squash(titulo + mun));
-    var c = { f: f, mes: mesDe(pega(f, ['MES', 'MESPREVISTO', 'DATADELANCAMENTO'])), idx: idx };
+    var c = { f: f, mes: f.MESABA || mesDe(pega(f, ['MES', 'MESPREVISTO', 'DATADELANCAMENTO'])), idx: idx };
     if (!porId[id]) { porId[id] = []; ordem.push(id); }
     porId[id].push(c);
   });
@@ -590,8 +609,8 @@ function montarObras(OB, est) {
     var pep = String(pega(f, ['PEPOBRA', 'PEP']) || '').trim();
     var statusTxt = String(pega(f, ['STATUSDAOBRA', 'STATUS', 'OBSSTATUS']) || '').trim();
     var utd = String(pega(f, ['UTD', 'BASE']) || '').trim();
-    var mes = '';
-    cs.forEach(function (c) { if (c.mes > mes) mes = c.mes; });
+    var mes = '', meses = [];
+    cs.forEach(function (c) { if (c.mes > mes) mes = c.mes; if (c.mes && meses.indexOf(c.mes) < 0) meses.push(c.mes); });
     return {
       id: id, pep: pep, pepK: squash(pep), semPep: !pep,
       titulo: String(pega(f, ['TITULO']) || '').trim(),
@@ -599,7 +618,7 @@ function montarObras(OB, est) {
       utd: utd, base: baseDoTexto(utd),
       statusTxt: statusTxt, status: norm(statusTxt),
       encCart: String(pega(f, ['ENCARREGADO']) || '').trim(),
-      mes: mes,
+      mes: mes, meses: meses.sort(),
       postesPrev: num(pega(f, ['POSTESPREVISTOS', 'POSTESPREVISTO'])),
       postesReal: num(pega(f, ['POSTESREALIZADO', 'POSTESREALIZADOS'])),
       temPostesReal: temValor(pega(f, ['POSTESREALIZADO', 'POSTESREALIZADOS'])),
@@ -759,7 +778,7 @@ function obraFora(k, regs, servs, est, hoje) {
   for (var m = servs.length - 1; m >= 0 && !titulo; m--) titulo = String(servs[m].obra || '').trim();
   for (var n = regs.length - 1; n >= 0 && !titulo; n--) titulo = String(regs[n].obra || '').trim();
   var o = { id: k, pep: pep, pepK: k, semPep: false, foraCarteira: true, titulo: titulo, mun: mun, utd: '', base: base,
-            statusTxt: '', status: '', encCart: '', mes: '',
+            statusTxt: '', status: '', encCart: '', mes: '', meses: [],
             postesPrev: 0, postesReal: 0, temPostesReal: false, postesImp: 0, temPostesImp: false, cavas: 0, temCavas: false,
             estagio: est.col[k] || null, pend: est.tags[k] || [] };
   calcular(o, regs, servs, hoje);
@@ -769,17 +788,51 @@ function obraFora(k, regs, servs, est, hoje) {
 
 /* Monta tudo a partir do que veio do banco.
    bruto = { chaves:{...}, viaAnonima }, gpm = linhas ocorr_fat_* (ou null enquanto carrega) */
-function montar(bruto, gpmLinhas, estados) {
+function montar(bruto, gpmLinhas, mesesLinhas, estados) {
   var C = (bruto && bruto.chaves) || {};
   function val(k) { return C[k] ? C[k].valor : null; }
   var hoje = zerar(new Date());
   var est = mapaEstagios(val('estagios_board'));
-  var obras = montarObras(val('obras_base'), est);
+
+  // carteira de todos os meses: atual (obras_base), cópias de mês e catálogo
+  var linhas = [], porMes = {}, vistosPep = {};
+  function addLinhas(arr, mes) {
+    var n = 0;
+    (arr || []).forEach(function (r) {
+      if (!r || typeof r !== 'object') return;
+      linhas.push(mes ? Object.assign({ _MES_ABA: mes }, r) : r); n++;
+      var p = squash(r['PEP OBRA'] || r.pep); if (p) vistosPep[p] = 1;
+    });
+    if (mes && n) porMes[mes] = (porMes[mes] || 0) + n;
+    return n;
+  }
+  var OB = val('obras_base');
+  var mesAtualCart = (C.obras_base && C.obras_base.atualizado) ? iso(C.obras_base.atualizado).slice(0, 7) : '';
+  addLinhas((OB && Array.isArray(OB.data)) ? OB.data : (Array.isArray(OB) ? OB : []), mesAtualCart);
+  (mesesLinhas || []).forEach(function (l) {          // a cópia vem depois: no mesmo mês, ela manda
+    var m = String(l.key || '').match(/(\d{4})_(\d{2})$/), v = parse(l.value) || {};
+    if (!m) return;
+    var mes = m[1] + '-' + m[2];
+    addLinhas(v.jac, mes); addLinhas(v.irc, mes); addLinhas(v.ser, mes);
+  });
+  var CAT = val('obras_catalogo'), nCat = 0;
+  ((CAT && Array.isArray(CAT.data)) ? CAT.data : (Array.isArray(CAT) ? CAT : [])).forEach(function (c) {
+    var p = c && squash(c.pep);
+    if (!p || vistosPep[p]) return;                  // só a obra que nenhum mês trouxe
+    vistosPep[p] = 1; nCat++;
+    linhas.push({ 'PEP OBRA': c.pep, 'TÍTULO': c.titulo || '', 'MUNICIPIO': c.municipio || '', 'STATUS DA OBRA': c.status || '',
+                  _MES_ABA: mesDe(c.visto) || mesDe(c.desde) || '' });
+  });
+  var obras = montarObras(linhas, est);
   var P = indexarProg(val('prog_diaria'));
   var G = gpmLinhas ? indexarGpm(gpmLinhas) : null;
   var vistos = {};
   obras.forEach(function (o) {
     if (o.pepK) vistos[o.pepK] = 1;
+    if (!o.base && o.pepK && G && G.por[o.pepK]) {      // sem base na carteira: a do centro de serviço do GPM
+      var sv = G.por[o.pepK];
+      for (var i = sv.length - 1; i >= 0 && !o.base; i--) o.base = baseDoTexto(sv[i].cs) || baseDoTexto(sv[i].eq);
+    }
     calcular(o, o.pepK ? P.por[o.pepK] : null, (o.pepK && G) ? G.por[o.pepK] : null, hoje);
   });
   // contrato do usuário (OBRAS - BA, CON_MANUT - MG, OBRAS - SE): obra sem base passa, como no Painel
@@ -791,7 +844,8 @@ function montar(bruto, gpmLinhas, estados) {
   function marca(k, x) { if (!vistos[k] && (x.d >= hoje || diasEntre(x.d, hoje) <= REGRAS.diasForaCarteira)) foraIds[k] = 1; }
   Object.keys(P.por).forEach(function (k) { P.por[k].forEach(function (x) { if (x.prod || x.d >= hoje) marca(k, x); }); });
   if (G) Object.keys(G.por).forEach(function (k) { G.por[k].forEach(function (s) { if (s.exec) marca(k, s); }); });
-  var fora = Object.keys(foraIds).map(function (k) { return obraFora(k, P.por[k], G ? G.por[k] : null, est, hoje); });
+  // só depois que os meses carregaram: antes disso o número aparece alto e cai
+  var fora = mesesLinhas === null ? [] : Object.keys(foraIds).map(function (k) { return obraFora(k, P.por[k], G ? G.por[k] : null, est, hoje); });
   // contrato do usuário: fora da carteira só entra com a base conhecida e liberada
   if (estados) fora = fora.filter(function (o) { return o.base && estados.indexOf(o.base.uf) >= 0; });
   obras = obras.concat(fora);
@@ -799,9 +853,11 @@ function montar(bruto, gpmLinhas, estados) {
   var ob = val('obras_base'), info = (ob && ob.info) || {};
   return {
     hoje: hoje, obras: obras, nFora: fora.length,
+    mesMaisRecente: Object.keys(porMes).sort().pop() || mesAtualCart,
     ignorados: estados ? [] : P.ignorados.concat(G ? G.ignorados : []).filter(function (p, i, l) { return l.indexOf(p) === i; }),
     fontes: {
-      carteira: { existe: !!C.obras_base, n: nCarteira, atualizado: (C.obras_base && C.obras_base.atualizado) || null, info: info },
+      carteira: { existe: !!C.obras_base || nCarteira > 0, n: nCarteira, atualizado: (C.obras_base && C.obras_base.atualizado) || null, info: info,
+                  meses: porMes, catalogo: nCat, mesesCarregados: mesesLinhas !== null, atual: mesAtualCart },
       prog: { existe: !!C.prog_diaria, n: P.n, atualizado: (C.prog_diaria && C.prog_diaria.atualizado) || null },
       estagios: { existe: !!C.estagios_board, n: est.n, atualizado: (C.estagios_board && C.estagios_board.atualizado) || null },
       gpm: G ? { carregado: true, n: G.n, semPep: G.semPep, comCampo: G.comCampo, meses: G.meses, atualizado: G.atualizado } : { carregado: false }
@@ -820,21 +876,22 @@ var MESES_C = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'o
 var MESES_L = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
 var ORD_OK = { 'situacao:1': 1, 'ultima:-1': 1, 'proxima:1': 1, 'avanco:-1': 1, 'avanco:1': 1, 'obra:1': 1 };
 var COR_FASE = { andamento: '#2b6cb0', parada: '#c53030', nao_iniciada: '#975a16', concluida: '#2f855a', cancelada: '#4a5568' };
-var estado = { aba: 'todas', base: '', status: '', sup: '', q: '', ord: 'situacao', dir: 1, todas: false, sel: '', tlTudo: {} };
+var estado = { aba: 'todas', base: '', status: '', sup: '', mes: '', q: '', ord: 'situacao', dir: 1, todas: false, sel: '', tlTudo: {} };
 try {
   var salvo = JSON.parse(sessionStorage.getItem('mariua_andamento_filtros') || '{}');
-  ['aba', 'base', 'status', 'sup', 'ord'].forEach(function (k) { if (typeof salvo[k] === 'string') estado[k] = salvo[k]; });
+  ['aba', 'base', 'status', 'sup', 'mes', 'ord'].forEach(function (k) { if (typeof salvo[k] === 'string') estado[k] = salvo[k]; });
   if (salvo.dir === 1 || salvo.dir === -1) estado.dir = salvo.dir;
   if (!ORD_OK[estado.ord + ':' + estado.dir]) { estado.ord = 'situacao'; estado.dir = 1; }
 } catch (e) {}
 var bruto = null, gpmLinhas = null, gpmEstado = 'carregando', gpmErro = '';
+var mesesLinhas = null, mesesEstado = 'carregando', mesesErro = '';
 var dados = null, estadosUsuario = null, ultimaLeitura = 0, lendo = false, pepPedido = '';
 try { pepPedido = new URLSearchParams(location.search).get('pep') || ''; } catch (e) {}
 var largo = window.matchMedia ? window.matchMedia('(min-width: 901px)') : { matches: true };
 
 function $(id) { return document.getElementById(id); }
 function guardar() {
-  try { sessionStorage.setItem('mariua_andamento_filtros', JSON.stringify({ aba: estado.aba, base: estado.base, status: estado.status, sup: estado.sup, ord: estado.ord, dir: estado.dir })); } catch (e) {}
+  try { sessionStorage.setItem('mariua_andamento_filtros', JSON.stringify({ aba: estado.aba, base: estado.base, status: estado.status, sup: estado.sup, mes: estado.mes, ord: estado.ord, dir: estado.dir })); } catch (e) {}
 }
 function nfmt(n, dec) { return Number(n || 0).toLocaleString('pt-BR', { maximumFractionDigits: dec == null ? 0 : dec }); }
 function pl(n, um, varios) { return n === 1 ? '1 ' + um : nfmt(n) + ' ' + varios; }
@@ -869,6 +926,7 @@ function passa(o, ignorar) {
   }
   if (estado.status && ignorar !== 'status' && !o.foraCarteira && chaveStatus(o) !== estado.status) return false;
   if (estado.sup && ignorar !== 'sup' && o.sup !== estado.sup) return false;
+  if (estado.mes && ignorar !== 'mes' && (o.foraCarteira || o.meses.indexOf(estado.mes) < 0)) return false;
   if (estado.q && ignorar !== 'q') {
     var termos = norm(estado.q).split(' ').filter(Boolean);
     for (var i = 0; i < termos.length; i++) {
@@ -878,7 +936,7 @@ function passa(o, ignorar) {
   return true;
 }
 function filtradas(ignorar) { return dados.obras.filter(function (o) { return passa(o, ignorar); }); }
-function temFiltro() { return !!(estado.base || estado.status || estado.sup || estado.q); }
+function temFiltro() { return !!(estado.base || estado.status || estado.sup || estado.mes || estado.q); }
 function opcoes(sel, lista, atual, todos) {
   var h = '<option value="">' + esc(todos) + '</option>', achou = !atual;
   lista.forEach(function (o) {
@@ -908,6 +966,9 @@ function desenharFiltros() {
   opcoes($('f-status'), Object.keys(sts).map(function (k) { return sts[k]; })
     .sort(function (a, b) { return b.n - a.n; }).map(function (s) { return { v: s.v, t: s.t + ' (' + s.n + ')' }; }), estado.status, 'Todos');
   opcoes($('f-sup'), Object.keys(sups).sort().map(function (s) { return { v: s, t: s }; }), estado.sup, 'Todos');
+  var nMes = {};
+  filtradas('mes').forEach(function (o) { if (!o.foraCarteira) o.meses.forEach(function (m) { nMes[m] = (nMes[m] || 0) + 1; }); });
+  opcoes($('f-mes'), Object.keys(nMes).sort().reverse().map(function (m) { return { v: m, t: mesTxt(m) + ' (' + nMes[m] + ')' }; }), estado.mes, 'Todos os meses');
   $('f-ord').value = estado.ord + ':' + estado.dir;
   var UF = { ba: 'BA', mg: 'MG', se: 'SE' };
   $('f-contrato').textContent = estadosUsuario ? 'Seu acesso: ' + estadosUsuario.map(function (u) { return UF[u] || u; }).join(', ') : '';
@@ -919,6 +980,7 @@ $('f-bases').addEventListener('click', function (e) {
 });
 $('f-status').addEventListener('change', function () { estado.status = this.value; estado.todas = false; guardar(); desenhar(); });
 $('f-sup').addEventListener('change', function () { estado.sup = this.value; estado.todas = false; guardar(); desenhar(); });
+$('f-mes').addEventListener('change', function () { estado.mes = this.value; estado.todas = false; guardar(); desenhar(); });
 $('f-ord').addEventListener('change', function () {
   var p = this.value.split(':'); estado.ord = p[0]; estado.dir = +p[1]; guardar(); desenharLista(filtradas()); marcarSelecionada();
 });
@@ -929,7 +991,7 @@ $('f-q').addEventListener('input', function () {
   tBusca = setTimeout(function () { estado.q = v; estado.todas = false; desenhar(); }, 150);
 });
 function limparFiltros() {
-  estado.base = estado.status = estado.sup = estado.q = '';
+  estado.base = estado.status = estado.sup = estado.mes = estado.q = '';
   estado.aba = 'todas'; estado.todas = false;
   $('f-q').value = '';
   guardar(); desenhar();
@@ -1063,6 +1125,7 @@ function metaItem(o) {
     if (o.ultima) m.push('<span><i class="ti ti-clock" aria-hidden="true"></i>Última ' + rel(o.ultima.d) + '</span>');
     m.push('<span><i class="ti ti-calendar-event" aria-hidden="true"></i>' + (o.proxima ? 'Próxima ' + rel(o.proxima.d) : 'Nada programado') + '</span>');
   }
+  if (!o.foraCarteira && o.mes && dados.mesMaisRecente && o.mes < dados.mesMaisRecente) m.push('<span><i class="ti ti-calendar" aria-hidden="true"></i>Carteira de ' + mesTxt(o.mes) + '</span>');
   if (o.pend.length) m.push('<span class="pd"><i class="ti ti-alert-triangle" aria-hidden="true"></i>' + esc(o.pend.map(function (p) { return p.nome; }).join(', ')) + '</span>');
   return m.join('');
 }
@@ -1203,6 +1266,7 @@ function detalhe(o) {
   var ps = [];
   if (o.enc) ps.push('Encarregado <b>' + esc(o.enc) + '</b>');
   if (o.sup) ps.push('Supervisor <b>' + esc(o.sup) + '</b>');
+  if (o.meses && o.meses.length) ps.push('Na carteira <b>' + (o.meses.length > 1 ? mesTxt(o.meses[0]) + ' a ' + mesTxt(o.meses[o.meses.length - 1]) + ' (' + o.meses.length + ' meses)' : mesTxt(o.meses[0])) + '</b>');
   if (o.primeira) ps.push('Começou em <b>' + br(o.primeira) + '</b>');
   var outros = o.encs.filter(function (n) { return n !== o.enc; });
   if (outros.length) ps.push('Também trabalharam <b>' + esc(outros.slice(0, 4).join(', ') + (outros.length > 4 ? ' e mais ' + (outros.length - 4) : '')) + '</b>');
@@ -1328,7 +1392,8 @@ function desenharRegras() {
     '<dt><span class="an-fase nao_iniciada">Não iniciada</span></dt><dd>Nenhuma atividade registrada ainda, mesmo que já tenha frente programada.</dd>' +
     '<dt><span class="an-fase concluida">Concluída</span></dt><dd>ENERGIZADA na carteira.</dd>' +
     '<dt><span class="an-fase fora">Fora da carteira</span></dt><dd>Teve atividade nos últimos ' + REGRAS.diasForaCarteira + ' dias, ou tem frente programada, mas o PEP não está na carteira sincronizada no Mapa. Aparece à parte, sem status nem postes previstos, e não entra nas contas da carteira.</dd>' +
-    '</dl><p class="m-meta" style="margin-top:12px;line-height:1.5">Atividade é uma frente da programação com quantidade realizada (ou status Executado ou Em execução), ou um serviço executado no GPM. ' +
+    '</dl><p class="m-meta" style="margin-top:12px;line-height:1.5">A carteira junta todos os meses que o Mapa já abriu. Obra que aparece em mais de um mês fica com o status e os postes do mês mais recente.</p>' +
+    '<p class="m-meta" style="margin-top:8px;line-height:1.5">Atividade é uma frente da programação com quantidade realizada (ou status Executado ou Em execução), ou um serviço executado no GPM. ' +
     'O avanço é postes realizados ÷ postes previstos da carteira; quando a carteira não traz o realizado, usa os postes executados no GPM.</p>';
 }
 function desenharAvisos() {
@@ -1336,7 +1401,7 @@ function desenharAvisos() {
   function aviso(ic, txt) { l.push('<div class="m-alerta atencao"><i class="ti ti-' + ic + '" aria-hidden="true"></i><span>' + txt + '</span></div>'); }
   var c = F.carteira, lim = (AND_P && AND_P.REGRAS.diasCarteiraVelha) || 7;
   if (c.atualizado && diasEntre(c.atualizado, hoje) >= lim) aviso('alert-triangle', 'A carteira não é sincronizada há ' + diasEntre(c.atualizado, hoje) + ' dias. Status e postes podem estar desatualizados.');
-  var nf = dados.obras.filter(function (o) { return o.foraCarteira; }).length;
+  var nf = filtradas().filter(function (o) { return o.foraCarteira; }).length;
   if (nf && estado.aba !== 'fora') {
     l.push('<div class="m-alerta atencao"><i class="ti ti-alert-triangle" aria-hidden="true"></i><span>' + pl(nf, 'obra teve', 'obras tiveram') + ' atividade nos últimos ' + REGRAS.diasForaCarteira +
       ' dias e não ' + (nf === 1 ? 'está' : 'estão') + ' na carteira sincronizada no Mapa. ' + (nf === 1 ? 'Ela aparece' : 'Elas aparecem') + ' em Fora da carteira, com o que a programação e o GPM registraram.</span>' +
@@ -1344,6 +1409,7 @@ function desenharAvisos() {
   } else if (nf) {
     l.push('<div class="m-alerta an-info"><i class="ti ti-info-circle" aria-hidden="true"></i><span>Obras com atividade nos últimos ' + REGRAS.diasForaCarteira + ' dias que não estão na carteira. Sem a carteira, a tela não tem status nem postes previstos delas. Para acompanhar o avanço, inclua a obra na planilha da carteira e sincronize no Mapa.</span></div>');
   }
+  if (mesesEstado === 'erro' && !mesesLinhas) aviso('plug-connected-x', 'Os meses anteriores da carteira não carregaram' + (mesesErro ? ' (' + esc(mesesErro) + ')' : '') + '. A tela mostra só a carteira atual.');
   if (gpmEstado === 'erro' && !gpmLinhas) aviso('plug-connected-x', 'O apontamento do GPM não carregou' + (gpmErro ? ' (' + esc(gpmErro) + ')' : '') + '. A tela mostra só a carteira e a programação.');
   $('avisos').innerHTML = l.join('');
 }
@@ -1362,7 +1428,16 @@ function desenharFontes() {
   function quando(d) { return d ? UI.relativo(d) : 'sem data'; }
   var h = '';
   var c = F.carteira, velha = c.atualizado && diasEntre(c.atualizado, hoje) >= ((AND_P && AND_P.REGRAS.diasCarteiraVelha) || 7);
-  h += linha('Carteira de obras', 'mapa.html', c.existe ? pl(c.n, 'obra', 'obras') + ', ' + quando(c.atualizado) : 'não encontrada', !c.existe ? 'ausente' : velha ? 'velha' : 'ok');
+  var mesesC = Object.keys(c.meses || {}).sort();
+  h += linha('Carteira de obras', 'mapa.html', c.existe ? pl(c.n, 'obra', 'obras') + (mesesC.length ? ' de ' + pl(mesesC.length, 'mês', 'meses') : '') + ', atual ' + quando(c.atualizado) : 'não encontrada', !c.existe ? 'ausente' : velha ? 'velha' : 'ok');
+  if (!c.mesesCarregados) h += '<p class="m-meta" style="margin:6px 0 4px">' + (mesesEstado === 'erro' ? 'Os meses anteriores não carregaram.' : 'Carregando os meses anteriores da carteira…') + '</p>';
+  else if (mesesC.length) {
+    var faltam = [], a = mesesC[0], ate = mesesC[mesesC.length - 1];
+    while (a < ate) { var y = +a.slice(0, 4), mm = +a.slice(5, 7) + 1; if (mm > 12) { mm = 1; y++; } a = y + '-' + p2(mm); if (a < ate && !c.meses[a]) faltam.push(a); }
+    h += '<p class="m-meta" style="margin:6px 0 4px;line-height:1.5">Meses lidos: ' + mesesC.map(function (m) { return mesTxt(m) + ' (' + nfmt(c.meses[m]) + ')'; }).join(', ') + '.' +
+      (faltam.length ? ' Sem cópia no banco: ' + faltam.map(mesTxt).join(', ') + '. Abra esses meses no Mapa uma vez para a cópia ser gravada.' : '') +
+      (c.catalogo ? ' Mais ' + pl(c.catalogo, 'obra que só está', 'obras que só estão') + ' no catálogo de obras, sem os dados completos do mês.' : '') + '</p>';
+  }
   h += linha('Programação', 'prog.html', F.prog.existe ? pl(F.prog.n, 'frente com PEP', 'frentes com PEP') + ', ' + quando(F.prog.atualizado) : 'não encontrada', F.prog.existe ? 'ok' : 'ausente');
   h += linha('Estágios', 'estagios.html', F.estagios.existe ? pl(F.estagios.n, 'obra com estágio', 'obras com estágio') : 'não encontrado', F.estagios.existe ? 'ok' : 'ausente');
   var g = F.gpm, gt, gs;
@@ -1387,12 +1462,12 @@ function exportar() {
   var SEP = ';';
   function n(v, dec) { return (v === null || v === undefined || v === '') ? '' : Number(v).toFixed(dec || 0).replace('.', ','); }
   function d(x) { return x ? p2(x.getDate()) + '/' + p2(x.getMonth() + 1) + '/' + x.getFullYear() : ''; }
-  var cols = ['PEP', 'TITULO', 'MUNICIPIO', 'BASE', 'ORIGEM', 'STATUS_CARTEIRA', 'SITUACAO', 'ESTAGIO', 'PENDENCIAS', 'POSTES_PREVISTOS', 'POSTES_REALIZADOS',
+  var cols = ['PEP', 'TITULO', 'MUNICIPIO', 'BASE', 'ORIGEM', 'MES_CARTEIRA', 'STATUS_CARTEIRA', 'SITUACAO', 'ESTAGIO', 'PENDENCIAS', 'POSTES_PREVISTOS', 'POSTES_REALIZADOS',
     'POSTES_A_IMPLANTAR', 'AVANCO_%', 'FONTE_AVANCO', 'CAVAS_REALIZADAS', 'DIAS_COM_ATIVIDADE', 'FRENTES', 'VALOR_PREVISTO', 'VALOR_REALIZADO',
     'PRIMEIRA_ATIVIDADE', 'ULTIMA_ATIVIDADE', 'DIAS_SEM_ATIVIDADE', 'ULTIMA_QUEM', 'PROXIMA_FRENTE', 'PROXIMA_QUEM', 'ENCARREGADO', 'SUPERVISOR',
     'GPM_SERVICOS', 'GPM_POSTES', 'GPM_CAVAS', 'GPM_CABO_M'];
   var linhas = lista.map(function (o) {
-    return [o.pep, o.titulo, nomeProprio(o.mun), nomeBase(o), o.foraCarteira ? 'Fora da carteira' : 'Carteira', o.statusTxt, o.foraCarteira ? '' : FASES[o.fase].nome, o.estagio ? o.estagio.nome : '',
+    return [o.pep, o.titulo, nomeProprio(o.mun), nomeBase(o), o.foraCarteira ? 'Fora da carteira' : 'Carteira', o.mes ? mesTxt(o.mes) : '', o.statusTxt, o.foraCarteira ? '' : FASES[o.fase].nome, o.estagio ? o.estagio.nome : '',
       o.pend.map(function (p) { return p.nome; }).join(', '), o.postesPrev || '', o.temPostesReal ? o.postesReal : '', o.temPostesImp ? o.postesImp : '',
       (o.av.pct != null && o.av.fonte !== 'status') ? n(o.av.pct * 100, 1) : '', o.av.fonte === 'status' ? '' : o.av.fonte,
       o.temCavas ? o.cavas : '', o.nDias, o.frentes, n(o.vPrev, 2), n(o.vReal, 2), d(o.primeira), o.ultima ? d(o.ultima.d) : '',
@@ -1412,7 +1487,7 @@ function exportar() {
 
 // ─── leitura e desenho ──────────────────────────────────────────────────────
 function remontar() {
-  dados = montar(bruto, gpmLinhas, estadosUsuario);
+  dados = montar(bruto, gpmLinhas, mesesLinhas, estadosUsuario);
   var abrir = false;
   if (pepPedido) {                      // andamento.html?pep=XXXX abre direto a obra
     var k = squash(pepPedido), o = dados.obras.filter(function (x) { return x.pepK === k; })[0];
@@ -1442,7 +1517,8 @@ function desenhar() {
   det.scrollTop = st;
   desenharRegras();
   desenharFontes();
-  $('atualizado').textContent = 'Leitura às ' + UI.hora(new Date(ultimaLeitura)) + (gpmEstado === 'carregando' && !gpmLinhas ? '. Carregando o apontamento do GPM…' : '') + '. A tela atualiza sozinha a cada 10 minutos.';
+  var carregando = [mesesEstado === 'carregando' && !mesesLinhas ? 'os meses anteriores da carteira' : '', gpmEstado === 'carregando' && !gpmLinhas ? 'o apontamento do GPM' : ''].filter(Boolean);
+  $('atualizado').textContent = 'Leitura às ' + UI.hora(new Date(ultimaLeitura)) + (carregando.length ? '. Carregando ' + carregando.join(' e ') + '…' : '') + '. A tela atualiza sozinha a cada 10 minutos.';
 }
 function atualizar(manual) {
   if (lendo) return Promise.resolve();
@@ -1453,11 +1529,17 @@ function atualizar(manual) {
     bruto = b; ultimaLeitura = Date.now();
     estadosUsuario = (AND_P && AND_P.estadosDoUsuario) ? AND_P.estadosDoUsuario(b, window.MARIUA_USER) : null;
     if (!gpmLinhas) gpmEstado = 'carregando';
+    if (!mesesLinhas) mesesEstado = 'carregando';
     remontar();
     UI.sinc('ok', 'Banco online · ' + UI.hora(b.em));
-    return lerGpm().then(function (l) { gpmLinhas = l || []; gpmEstado = 'ok'; gpmErro = ''; },
-      function (err) { console.error('[andamento] GPM', err); gpmErro = err.message || String(err); gpmEstado = gpmLinhas ? 'ok' : 'erro'; })
-      .then(function () { remontar(); if (manual) UI.toast('Obras atualizadas'); });
+    return Promise.all([
+      lerMeses().then(function (l) { mesesLinhas = l || []; mesesEstado = 'ok'; mesesErro = ''; },
+        function (err) { console.error('[andamento] meses', err); mesesErro = err.message || String(err); mesesEstado = mesesLinhas ? 'ok' : 'erro'; })
+        .then(remontar),
+      lerGpm().then(function (l) { gpmLinhas = l || []; gpmEstado = 'ok'; gpmErro = ''; },
+        function (err) { console.error('[andamento] GPM', err); gpmErro = err.message || String(err); gpmEstado = gpmLinhas ? 'ok' : 'erro'; })
+        .then(remontar)
+    ]).then(function () { if (manual) UI.toast('Obras atualizadas'); });
   }).catch(function (err) {
     console.error('[andamento]', err);
     UI.sinc('erro', 'Sem conexão');
