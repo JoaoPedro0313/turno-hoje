@@ -621,7 +621,7 @@ try{if(localStorage.getItem("mariua_darkmode")==="1")document.body.classList.add
    - Meta (turno_data.faturamento_metas, só gestor altera): R$ por turma no mês (ou por dia
      trabalhado). Mês em andamento: proporcional aos dias úteis já passados.
    ===================================================================== */
-var PD_DB=null, PD_SERVS=null, PD_METAS=null, PD_K=null, PD_KC=null;   // PD_K: manutenção (tela Fator K); PD_KC: construção (esta tela)
+var PD_DB=null, PD_SERVS=null, PD_METAS=null, PD_K=null, PD_KC=null, PD_CART=null;   // PD_CART: previsto da carteira (turno_data.carteira_previsto, gravado pela Programação visual)   // PD_K: manutenção (tela Fator K); PD_KC: construção (esta tela)
 var PD_F={ano:null, mes:null, base:'', sup:'', ts:'', grp:''};
 var PD_DIA='', PD_GRAF='mes', PD_KB='base', PD_RK_MODO='total', PD_TURMA_TODAS=false, PD_OBRAS_TODAS=false;
 var PD_ORD={col:'v', dir:-1}, PD_BUSCA='', PD_ULT=null, PD_TURMA_VIS=[];
@@ -1031,11 +1031,12 @@ function pdRender(){
   PD_TIMES=pdTimesAno(anoL);
   var A=pdAgregar(lista); PD_ULT=A;
   pdAvisoK(lista);
-  pdCartoes(A,anoL,pdComparar(todos,semDia));
+  var PV=pdPrevisto(todos); PD_ULT_PV=PV;
+  pdCartoes(A,anoL,pdComparar(todos,semDia),PV);
   pdIndicadores(A,anoL);
   pdGrafico(semDia,anoL);
   pdDiaFaixa(semDia);
-  pdKpiGrupos(A); pdGrafTurmas(A); pdPodio(A); pdOrigem(A); pdKpiTurmas(A); pdObras(A);
+  pdKpiGrupos(A); pdGrafTurmas(A); pdPodio(A); pdOrigem(A); pdKpiTurmas(A); pdObras(A,PV);
   var bt=$('pd-bt-csv'); if(bt) bt.disabled=!A.eqs.length;
 }
 function pdVazio(){
@@ -1059,8 +1060,52 @@ function pdAvisoK(lista){
   box.hidden=false;
 }
 
+// ---------- previsto da carteira ----------
+// A carteira de obras (planilha da UTD Jacobina, carregada na Programação visual) traz o valor previsto de cada obra:
+// VALOR DE SERVIÇO quando preenchido; senão VALOR DE PROJETO. Ficam de fora as obras canceladas e retiradas da carteira.
+// O faturado nessas obras cruza o apontamento do GPM pelo PEP, de todas as turmas, no mesmo período (mês ou ano).
+function pdPepN(p){ return pdSA(p).replace(/[^A-Z0-9]/g,''); }
+// percentual do previsto: com uma casa decimal abaixo de 10% (para não aparecer 0%)
+function pdPctP(p){ if(!(p>=0&&isFinite(p))) return '—'; var x=p*100; return pdN(x,x<10?1:0)+'%'; }
+function pdPrevisto(todos){
+  var b=PD_CART&&PD_CART.bases&&PD_CART.bases.jac;
+  if(!b||!b.meses) return {sem:'nada'};
+  if(PD_F.base&&PD_F.base!=='jac') return {sem:'base'};
+  var meses=PD_F.mes?[PD_F.mes]:Object.keys(b.meses).filter(function(m){ return m.slice(0,4)===String(PD_F.ano); }).sort();
+  var mapa={};
+  meses.forEach(function(m){ var c=b.meses[m]; if(!c) return; (c.obras||[]).forEach(function(o){
+    if(/CANCEL|RETIRAD/.test(pdSA(o.status))) return;
+    var k=pdPepN(o.pep); if(!k) return;
+    mapa[k]={pep:o.pep, titulo:o.titulo, valor:Number(o.valor)||0, fonte:o.fonte||'', status:o.status, mes:m};
+  }); });
+  var ks=Object.keys(mapa);
+  var rot=PD_F.mes?((b.meses[PD_F.mes]&&b.meses[PD_F.mes].aba)||PD_F.mes).replace('.','/'):'de '+PD_F.ano;
+  if(!ks.length) return {sem:'mes', rot:rot};
+  var prev=0, fontes={};
+  ks.forEach(function(k){ prev+=mapa[k].valor; if(mapa[k].fonte) fontes[mapa[k].fonte]=1; });
+  var fatPer=0, fatTot=0, comFat={}, fatPep={};
+  todos.forEach(function(s){
+    if(!s.exec||!(s.v>0)) return;
+    var k=pdPepN(s.pep); if(!k||!mapa[k]) return;
+    fatTot+=s.v;
+    if(PD_F.mes?s.m===PD_F.mes:s.a===String(PD_F.ano)){ fatPer+=s.v; comFat[k]=1; fatPep[k]=(fatPep[k]||0)+s.v; }
+  });
+  var semFat=ks.filter(function(k){ return !comFat[k]; });
+  return {mapa:mapa, n:ks.length, previsto:prev, fatPer:fatPer, fatTot:fatTot, fatPep:fatPep, nComFat:Object.keys(comFat).length,
+    semFat:semFat.length, prevSemFat:semFat.reduce(function(a,k){ return a+mapa[k].valor; },0), rot:rot,
+    fonte:fontes.servico&&!fontes.projeto?'valor de serviço':fontes.projeto&&!fontes.servico?'valor de projeto':'valor de serviço ou de projeto',
+    quando:b.atualizado_em||'', por:b.por||''};
+}
+function pdPrevistoLinha(PV){
+  if(!PV||PV.sem==='base') return '';
+  if(PV.sem==='nada') return 'Previsto da carteira: carregue a planilha na Programação visual';
+  if(PV.sem==='mes') return 'Sem carteira carregada para '+PV.rot;
+  if(!(PV.previsto>0)) return 'Carteira '+PV.rot+' sem VALOR DE PROJETO preenchido na planilha';
+  return 'Previsto na carteira '+PV.rot+': '+pdRc(PV.previsto)+' · faturado nessas obras: '+pdRc(PV.fatPer)+(PV.previsto>0?' ('+pdPctP(PV.fatPer/PV.previsto)+')':'');
+}
+
 // ---------- cartões cheios: faturamento, vindo da produção, turmas ----------
-function pdCartoes(A,anoL,C){
+function pdCartoes(A,anoL,C,PV){
   var box=$('pd-frentes'); if(!box) return;
   var Y=pdAc(), turmasAno={}, mesesAno={};
   anoL.forEach(function(s){ if(s.exec&&s.v>0){ pdSomaV(Y,s); turmasAno[s.eq]=1; mesesAno[s.m]=1; } });
@@ -1072,13 +1117,15 @@ function pdCartoes(A,anoL,C){
       +'<span class="tt">'+ico+tit+'</span>'
       +'<span class="ln"><span class="nu">'+l1+'</span><span class="rt">'+r1+'</span></span>'
       +'<span class="ln"><span class="nu">'+l2+'</span><span class="rt">'+r2+'</span></span>'
-      +(dl?'<span class="dl">'+dl+'</span>':'')+'</div>';
+      +(Array.isArray(dl)?dl:[dl]).filter(Boolean).map(function(x){ return '<span class="dl">'+x+'</span>'; }).join('')+'</div>';
   };
   var dl1='';
   if(C&&C.P>0){ var pc=(A.T.v-C.P)/C.P*100; dl1=(pc>=0?'+':'−')+pdN(Math.abs(pc))+'% sobre '+C.rot+' ('+pdRc(C.P)+')'; }
+  var dlPrev=pdPrevistoLinha(PV);
+  var ttPrev=PV&&PV.previsto?' · Previsto na carteira '+PV.rot+' ('+PV.fonte+', '+PV.n+' obras, sem canceladas e retiradas): '+pdR(PV.previsto)+'; faturado nessas obras no período: '+pdR(PV.fatPer)+'; em todos os meses: '+pdR(PV.fatTot):'';
   var c1=PD_F.mes||PD_DIA
-    ?cartao('var(--fat-forte)',PD_ICO.fat,'Faturamento',pdRc(A.T.v),rotP,pdRc(Y.v),'Ano',dl1,pdR(A.T.v)+' no período; '+pdR(Y.v)+' no ano')
-    :cartao('var(--fat-forte)',PD_ICO.fat,'Faturamento',pdRc(Y.v),'Ano '+PD_F.ano,pdRc(Y.v/nMeses),'Média/mês','',pdR(Y.v)+' no ano');
+    ?cartao('var(--fat-forte)',PD_ICO.fat,'Faturamento',pdRc(A.T.v),rotP,pdRc(Y.v),'Ano',[dl1,dlPrev],pdR(A.T.v)+' no período; '+pdR(Y.v)+' no ano'+ttPrev)
+    :cartao('var(--fat-forte)',PD_ICO.fat,'Faturamento',pdRc(Y.v),'Ano '+PD_F.ano,pdRc(Y.v/nMeses),'Média/mês',dlPrev,pdR(Y.v)+' no ano'+ttPrev);
   var pT=A.T.v?prod(A.T)/A.T.v:0, pY=Y.v?prod(Y)/Y.v:0;
   var dl2=A.T.v?['poste','cabo','cava'].map(function(c){ return PD_CATS.filter(function(x){ return x[0]===c; })[0][1]+' '+pdN(A.T.cat[c]/A.T.v*100)+'%'; }).join(' · '):'';
   var c2=cartao('var(--prod-forte)',PD_ICO.prod,'Vindo da produção',pdRc(prod(A.T))+'<small>'+pdN(pT*100)+'%</small>',rotP,pdRc(prod(Y))+'<small>'+pdN(pY*100)+'%</small>','Ano',dl2,'Postes, cavas e cabos/condutores');
@@ -1358,21 +1405,26 @@ function pdOrdenar(c){
 }
 
 // ---------- obras que mais faturaram ----------
-function pdObras(A){
+var PD_ULT_PV=null;
+function pdObras(A,PV){
+  if(PV===undefined) PV=PD_ULT_PV;
+  var temPrev=!!(PV&&PV.mapa&&PV.previsto>0);
   var box=$('pd-obras'); if(!box) return;
   if(!A.temCampo){ $('pd-obras-cap').textContent=''; box.innerHTML='<div class="pd-aviso">Os dados deste período foram importados antes da tela de produção e não trazem a obra (PEP). Importe o apontamento do GPM de novo para ver o faturamento por obra.</div>'; return; }
   var rows=A.obras.filter(function(o){ return o.v>0; }).sort(function(a,b){ return b.v-a.v; });
   $('pd-obras-cap').textContent=rows.length?pdPl(rows.length,'obra','obras'):'';
   var nota=A.semObra.v>0?'<p class="pd-nota-ob">Serviços avulsos, sem obra no GPM: '+pdR(A.semObra.v)+'.</p>':'';
+  if(temPrev&&PV.semFat) nota+='<p class="pd-nota-ob">'+pdPl(PV.semFat,'obra','obras')+' da carteira '+pdEsc(PV.rot)+' sem faturamento neste período ('+pdR(PV.prevSemFat)+' previstos).</p>';
   if(!rows.length){ box.innerHTML='<div class="fg-vazio">Nenhuma obra faturou neste recorte.</div>'+nota; return; }
   var lim=PD_OBRAS_TODAS?rows.length:Math.min(10,rows.length);
   var corpo=rows.slice(0,lim).map(function(o,i){
     var eqs=Object.keys(o.eqs).sort(), pr=o.cat.poste+o.cat.cava+o.cat.cabo;
     return '<tr><td class="pos">'+(i+1)+'</td><td class="ob">'+pdEsc(o.nome||o.pep)+'<span class="sm">PEP '+pdEsc(o.pep)+'</span></td>'
       +'<td title="'+pdAttr(eqs.join(', '))+'">'+pdEsc(eqs.slice(0,2).join(', '))+(eqs.length>2?' <span class="z">+'+(eqs.length-2)+'</span>':'')+'</td>'
-      +'<td class="n">'+pdN(o.nDias)+'</td><td class="n hl">'+pdR(o.v).slice(3)+'</td><td class="n">'+pdPct(o.v?pr/o.v:NaN)+'</td></tr>';
+      +'<td class="n">'+pdN(o.nDias)+'</td><td class="n hl">'+pdR(o.v).slice(3)+'</td><td class="n">'+pdPct(o.v?pr/o.v:NaN)+'</td>'
+      +(temPrev?(function(){ var p=PV.mapa[pdPepN(o.pep)]; return p&&p.valor>0?'<td class="n">'+pdR(p.valor).slice(3)+'</td><td class="n">'+pdPctP(o.v/p.valor)+'</td>':'<td class="n z" title="Obra fora da carteira deste período">fora</td><td class="n">—</td>'; })():'')+'</tr>';
   }).join('');
-  box.innerHTML='<div class="pd-tbl-wrap"><table class="pd-tbl obras"><thead><tr><th><span>#</span></th><th><span>Obra</span></th><th><span>Turmas</span></th><th class="n"><span>Dias</span></th><th class="n"><span>Faturado (R$)</span></th><th class="n"><span title="Parte vinda de postes, cavas e cabos">Da produção</span></th></tr></thead><tbody>'+corpo+'</tbody></table></div>'
+  box.innerHTML='<div class="pd-tbl-wrap"><table class="pd-tbl obras"><thead><tr><th><span>#</span></th><th><span>Obra</span></th><th><span>Turmas</span></th><th class="n"><span>Dias</span></th><th class="n"><span>Faturado (R$)</span></th><th class="n"><span title="Parte vinda de postes, cavas e cabos">Da produção</span></th>'+(temPrev?'<th class="n"><span title="Valor previsto da obra na carteira ('+pdAttr(PV.fonte)+')">Previsto na carteira (R$)</span></th><th class="n"><span title="Faturado no período sobre o previsto na carteira">% do previsto</span></th>':'')+'</tr></thead><tbody>'+corpo+'</tbody></table></div>'
     +(rows.length>10?'<button type="button" class="pd-mais" onclick="PD_OBRAS_TODAS=!PD_OBRAS_TODAS;pdObras(PD_ULT)">'+(PD_OBRAS_TODAS?'Mostrar só as 10 primeiras':'Mostrar todas as '+rows.length+' obras')+'</button>':'')+nota;
 }
 
@@ -1638,17 +1690,18 @@ function setDbStatus(status,msg){ var b=$('db-badge'); if(b) b.className='db-bad
 async function pdCarregar(){
   setDbStatus('syncing','Carregando…');
   try{
-    var r=await fetch(SUPA_URL+'/rest/v1/turno_data?select=key,value&or=(key.like.ocorr_fat_*,key.eq.faturamento_metas,key.eq.ocorr_fator_k,key.eq.faturamento_fator_k)',{headers:SUPA_H,cache:'no-store'});
+    var r=await fetch(SUPA_URL+'/rest/v1/turno_data?select=key,value&or=(key.like.ocorr_fat_*,key.eq.faturamento_metas,key.eq.ocorr_fator_k,key.eq.faturamento_fator_k,key.eq.carteira_previsto)',{headers:SUPA_H,cache:'no-store'});
     if(!r.ok) throw new Error('HTTP '+r.status);
-    var db={}, metas=null, fk=null, fkc=null;
+    var db={}, metas=null, fk=null, fkc=null, cart=null;
     ((await r.json())||[]).forEach(function(row){
       if(!row||!row.value) return;
       if(row.key==='faturamento_metas'){ metas=row.value; return; }
       if(row.key==='ocorr_fator_k'){ fk=row.value; return; }
       if(row.key==='faturamento_fator_k'){ fkc=row.value; return; }
+      if(row.key==='carteira_previsto'){ cart=row.value; return; }
       if(String(row.key).indexOf('ocorr_fat_')===0) db[row.value.comp||row.key.slice(10)]=row.value;
     });
-    PD_DB=db; PD_METAS=metas; PD_K=fk; PD_KC=fkc; PD_SERVS=null;
+    PD_DB=db; PD_METAS=metas; PD_K=fk; PD_KC=fkc; PD_CART=cart; PD_SERVS=null;
     setDbStatus('online','Compartilhado');
   }catch(e){ setDbStatus('offline','Sem conexão'); throw e; }
 }

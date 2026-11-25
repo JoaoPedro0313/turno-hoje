@@ -2878,6 +2878,7 @@ dash.calc("obras_plano", {
     equipe: ['CÓDIGO EQUIPE', 'CODIGO EQUIPE'], encarregado: ['ENCARREGADO'], energizacao: ['DATA ENERGIZAÇÃO REAL', 'DATA ENERGIZACAO REAL'],
     lc_executada: ['DATA EXECUÇÃO LC', 'DATA EXECUCAO LC'], pes_dp: ['PES DP'], data_pd: ['DATA PD'], status_pd: ['STATUS PES PD'],
     lat: ['LATITUDE'], lon: ['LONGITUDE'],
+    valor_projeto: ['VALOR DE PROJETO'], valor_servico: ['VALOR DE SERVIÇO', 'VALOR DE SERVICO'],
   };
   const abasDoMes = (wb) => wb.SheetNames.filter((n) => ABA.test(n.trim()));
   // Mês da aba: NOV.26 -> 2026-11-01 a 2026-11-30.
@@ -2908,6 +2909,7 @@ dash.calc("obras_plano", {
       encarregado: encarregado(v(l, 'encarregado')), energizacao: data(v(l, 'energizacao')), lc_executada: data(v(l, 'lc_executada')),
       pes_dp: texto(v(l, 'pes_dp')), data_pd: dataTexto(v(l, 'data_pd')), status_pd: texto(v(l, 'status_pd')),
       lat: coordenada(v(l, 'lat')), lon: coordenada(v(l, 'lon')),
+      valor_projeto: numero(v(l, 'valor_projeto')), valor_servico: numero(v(l, 'valor_servico')),
     }));
   };
   const api = { abasDoMes, mesDaAba, extrair };
@@ -3149,6 +3151,34 @@ dash.calc("obras_plano", {
     }
   };
 
+  // ---------- previsto da carteira (lido pela tela de Faturamento) ----------
+  // Grava em turno_data, chave carteira_previsto: por base (a planilha é da UTD Jacobina) e por mês, as obras com o valor
+  // previsto (VALOR DE SERVIÇO quando preenchido; senão VALOR DE PROJETO) e a situação.
+  const CHAVE_PREVISTO = 'carteira_previsto';
+  const gravarPrevisto = async (sb, valor) => {
+    const meses = {};
+    for (const aba of window.PVPlanilha.abasDoMes(livro)) {
+      let rows;
+      try { rows = window.PVPlanilha.extrair(window.XLSX, livro, aba); } catch (e) { continue; }
+      const c = window.PVPlanilha.mesDaAba(aba);
+      if (!c || !rows.length) continue;
+      meses[c.mes_ini.slice(0, 7)] = {
+        aba: c.aba,
+        obras: rows.map((r) => {
+          const fonte = r.valor_servico > 0 ? 'servico' : r.valor_projeto > 0 ? 'projeto' : '';
+          return { pep: r.pep, titulo: r.titulo, status: r.status, encarregado: r.encarregado, postes: r.postes, valor: fonte === 'servico' ? r.valor_servico : fonte === 'projeto' ? r.valor_projeto : 0, fonte };
+        }),
+      };
+    }
+    if (!Object.keys(meses).length) return;
+    const atual = await sb.from('turno_data').select('value').eq('key', CHAVE_PREVISTO).maybeSingle();
+    const base = (atual && atual.data && atual.data.value) || { bases: {} };
+    base.bases = base.bases || {};
+    base.bases.jac = { utd: 'UTD JACOBINA', arquivo: valor.arquivo, atualizado_em: valor.importado_em, por: valor.importado_por, meses };
+    const r = await sb.from('turno_data').upsert({ key: CHAVE_PREVISTO, value: base, updated_at: valor.importado_em });
+    if (r.error) throw r.error;
+  };
+
   // ---------- carregar planilha ----------
   const carregarXLSX = () => (window.XLSX ? Promise.resolve(window.XLSX) : new Promise((ok, falha) => {
     const s = document.createElement('script'); s.src = XLSX_URL;
@@ -3207,6 +3237,9 @@ dash.calc("obras_plano", {
       $('pv-imp-ok').disabled = true;
       const r = await sb.from('turno_data').upsert({ key: CHAVE, value: valor, updated_at: valor.importado_em });
       if (r.error) throw r.error;
+      // Previsto da carteira para a tela de Faturamento: o valor de cada obra em todas as abas de mês da planilha.
+      aviso('Gravando o previsto da carteira…');
+      try { await gravarPrevisto(sb, valor); } catch (e2) { console.error('[programação visual] previsto da carteira:', e2); }
       sinc('ok', 'Banco online · planilha gravada');
       fecharModal();
     } catch (e) {

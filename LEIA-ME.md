@@ -89,3 +89,13 @@ Para a tela aparecer no menu e nas permissões, foram alterados:
 - `index.html`: cor do cartão.
 
 Depois de publicar, recarregue com Ctrl+F5 para o navegador pegar o menu novo.
+
+### Previsto da carteira no Faturamento
+
+Quando alguém carrega a planilha da carteira na Programação visual, a tela também grava, em `turno_data` (chave `carteira_previsto`), o valor previsto de cada obra em todas as abas de mês da planilha. O valor vem de VALOR DE SERVIÇO quando estiver preenchido; senão, de VALOR DE PROJETO.
+
+A tela Faturamento das turmas usa esse previsto em dois lugares:
+- **Cartão Faturamento:** uma linha mostra “Previsto na carteira” do mês (ou do ano) e quanto já foi faturado nessas obras no período. O cruzamento é pelo PEP do apontamento do GPM, de todas as turmas, sem as obras canceladas e retiradas.
+- **Tabela de obras:** a coluna “Previsto na carteira” e o “% do previsto” de cada obra, e uma nota com as obras da carteira que ainda não faturaram no período.
+
+A planilha é da UTD Jacobina, então o previsto aparece sem filtro de base ou com a base Jacobina. Abas sem VALOR DE PROJETO preenchido (na planilha atual, janeiro a abril e outubro) aparecem como “sem VALOR DE PROJETO preenchido”.
