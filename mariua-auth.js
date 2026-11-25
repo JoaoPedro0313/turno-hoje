@@ -54,6 +54,7 @@
     { id:'turno',      nome:'Turno',                  arquivos:['turno.html'] },
     { id:'rdo',        nome:'RDO',                    arquivos:['rdo.html','apr.html'] },
     { id:'prog',       nome:'Programação',            arquivos:['prog.html'] },
+    { id:'progvisual', nome:'Programação visual',     arquivos:['programacao_visual.html'] },
     { id:'mapa',       nome:'Mapa de obras',          arquivos:['mapa.html'] },
     { id:'comp',       nome:'Comparador de postes',   arquivos:['comp.html'] },
     { id:'estagios',   nome:'Estágios de obras',      arquivos:['estagios.html'] },

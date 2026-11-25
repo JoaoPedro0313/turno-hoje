@@ -65,6 +65,7 @@
     'rdo.html':               ['RDO', 'Quem lançou o relatório diário', 'rdo apr relatorio diario lancamento'],
     'mapa.html':              ['Mapa de obras', 'Obras no mapa, raio e rotas', 'mapa obra localizacao coordenada rota gps'],
     'prog.html':              ['Programação', 'Frentes por equipe e dia', 'programacao agenda frente equipe fator k'],
+    'programacao_visual.html': ['Programação visual', 'Gantt, turmas pesadas e fechamento do mês', 'programacao visual gantt turma pesada encarregado poste meta linha viva energizacao fechamento carteira'],
     'comp.html':              ['Comparador de postes', 'Mudanças nos postes da Coelba', 'comparador poste coelba cava'],
     'estagios.html':          ['Estágios de obras', 'Obras por etapa e pendência', 'estagio etapa pendencia material poda'],
     'andamento.html':         ['Andamento das obras', 'Avanço, última e próxima frente de cada obra', 'andamento avanco progresso obra parada atividade poste pep linha do tempo'],

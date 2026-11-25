@@ -61,3 +61,31 @@ Depois de mudar qualquer arquivo de `campo/`, abra o `campo/sw.js` e troque o `V
 O celular confere se há versão nova ao abrir o app, ao voltar para ele, quando a internet volta e a cada 15 minutos com o app aberto. A versão nova baixa em segundo plano e, quando fica pronta, aparece o aviso "Nova versão do app" com Atualizar agora e Depois. Atualizar agora troca na hora: o rascunho fica salvo, um envio de fotos em andamento termina antes, e o app volta para a mesma tela. Quem toca em Depois continua na versão atual; a atualização fica como recado na tela inicial e o aviso volta na próxima vez que ele abrir o app. Em Ajustes, "Procurar atualização do app" confere na hora.
 
 Para exigir a versão nova, coloque-a em Versão mínima, nas Configurações da gestão: o aviso aparece sem o botão Depois. Na aba Celulares da gestão dá para ver quem já atualizou.
+
+## Programação visual
+
+A tela `programacao_visual.html` (menu Obras → Prog. Visual) monta a programação das obras da carteira:
+- **Gantt:** uma linha por obra.
+- **Turmas pesadas:** o que cada encarregado faz em cada dia, com cavas, postes e cabo.
+- **Quadro por equipe e programação do dia:** com o texto para copiar e mandar às equipes.
+- **Serviços por obra.**
+- **Visão geral:** fechamento do mês e postes previstos por encarregado.
+
+Para liberar a tela, vá ao Admin → Telas liberadas e marque "Programação visual" (grupo Operação diária). Gestor já vê.
+
+**Atualizar os dados:** clique em "Carregar planilha", escolha a planilha UTD JACOBINA – CARTEIRAS DE OBRAS (.xlsx), a aba do mês (por exemplo NOV.26) e a data da planilha. A programação começa no dia útil seguinte a essa data.
+
+A tela grava as obras em `turno_data` (chave `prog_visual_obras`), e todo mundo que abre a tela passa a ver a mesma programação, com o nome de quem carregou e quando. Enquanto ninguém carregar uma planilha, a tela usa a carteira de novembro que vem dentro do próprio arquivo, com dados de 24/11/2026.
+
+A leitura da planilha acontece no navegador, com o SheetJS baixado do cdnjs na primeira vez, então precisa de internet. Da planilha só entram os campos da programação. Das pessoas, só o nome do encarregado, sem a matrícula, e as coordenadas são arredondadas a cerca de 1 km.
+
+As premissas (equipes, produtividade, metas, prazo do mês, apoio entre turmas) e os serviços marcados à mão por obra ficam guardados no navegador de cada pessoa.
+
+Para a tela aparecer no menu e nas permissões, foram alterados:
+- `nav.js`: item do menu.
+- `mariua-auth.js`: catálogo de telas, id `progvisual`.
+- `admin.html`: lista de telas liberadas.
+- `mariua-ui.js`: descrição no Início.
+- `index.html`: cor do cartão.
+
+Depois de publicar, recarregue com Ctrl+F5 para o navegador pegar o menu novo.

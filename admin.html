@@ -1193,6 +1193,7 @@ var TELAS_SISTEMA = [
   { id:'turno',      nome:'Turno' },
   { id:'rdo',        nome:'RDO' },
   { id:'prog',       nome:'Programação' },
+  { id:'progvisual', nome:'Programação visual' },
   { id:'mapa',       nome:'Mapa de obras' },
   { id:'comp',       nome:'Comparador de postes' },
   { id:'estagios',   nome:'Estágios de obras' },
@@ -1214,7 +1215,7 @@ var TELAS_SISTEMA = [
    numa lista única em usuario_telas, então o mariua-auth.js não muda nada.
    Tela que não estiver em nenhum grupo cai automaticamente em "Outras telas". */
 var TELAS_GRUPOS = [
-  { nome:'Operação diária',   telas:['painel','turno','rdo','prog','neoex'] },
+  { nome:'Operação diária',   telas:['painel','turno','rdo','prog','progvisual','neoex'] },
   { nome:'Obras',             telas:['mapa','estagios','andamento','ocorrencias','producao','faturamento','projecao','comp'] },
   { nome:'Cadastros',         telas:['obra','equipes'] },
   { nome:'Gestão / sistema',  telas:['permissoes','valores','fatork','admin'] }

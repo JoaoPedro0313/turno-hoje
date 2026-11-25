@@ -27,6 +27,7 @@
           { href: 'rdo.html',                 icone: 'file-description', texto: 'RDO' },
           { href: 'mapa.html',                icone: 'map-2',            texto: 'Mapa' },
           { href: 'prog.html',                icone: 'calendar-event',   texto: 'Prog. Diária' },
+          { href: 'programacao_visual.html',  icone: 'calendar-stats',   texto: 'Prog. Visual' },
           { href: 'comp.html',                icone: 'git-compare',      texto: 'Comparador' },
           { href: 'estagios.html',            icone: 'layout-kanban',    texto: 'Estágios' },
           { href: 'andamento.html',           icone: 'progress-check',   texto: 'Andamento' },
