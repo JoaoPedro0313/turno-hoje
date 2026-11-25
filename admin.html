@@ -127,6 +127,13 @@
   .ubox-b .tl-grp-g .chk{margin:8px 0 0;font-size:.86rem}
   .amsg{font-size:.85rem;font-weight:700;margin-top:10px;min-height:18px}
   .amsg.err{color:#c53030}.amsg.ok{color:#276749}
+  .sn-txt{margin:2px 0 4px;font-size:.88rem;color:#334155;line-height:1.45}
+  .sn-campo{display:flex;gap:6px;align-items:center}
+  .sn-campo input{flex:1}
+  .sn-ver{flex:none;border:1.5px solid #e2e8f0;background:#fff;border-radius:9px;padding:8px 10px;font-family:'Barlow',sans-serif;font-weight:800;font-size:.75rem;color:#0d7377;cursor:pointer}
+  .sn-dica{margin:6px 0 0;font-size:.76rem;color:#64748b;line-height:1.4}
+  .sn-ou{display:flex;align-items:center;gap:10px;margin:16px 0 12px;color:#94a3b8;font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.5px}
+  .sn-ou::before,.sn-ou::after{content:"";flex:1;height:1px;background:#e2e8f0}
   .gest-row{display:flex;align-items:center;justify-content:space-between;padding:9px 4px;border-bottom:1px solid #eef2f7;font-size:.88rem}
   .gest-row:last-child{border-bottom:0}
 </style>
@@ -870,6 +877,30 @@ body.sm-collapsed .sm-side:hover .sm-group-head{justify-content:flex-start;paddi
     </div>
   </div>
 
+  <div class="uovl" id="user-senha-ovl">
+    <div class="ubox" style="max-width:480px">
+      <div class="ubox-h"><span>Redefinir senha · <span id="sn-titulo"></span></span>
+        <button type="button" class="ubox-x" onclick="adSenhaFechar()" aria-label="Fechar"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6L6 18"/><path d="M6 6l12 12"/></svg></button>
+      </div>
+      <div class="ubox-b" style="grid-template-columns:1fr">
+        <input id="sn-email" type="hidden">
+        <div class="fg-full">
+          <p class="sn-txt" id="sn-quem"></p>
+          <label for="sn-nova">Nova senha</label>
+          <div class="sn-campo"><input id="sn-nova" type="password" autocomplete="new-password" placeholder="mínimo 6 caracteres"><button type="button" class="sn-ver" id="sn-ver" onclick="adSenhaVer()" aria-pressed="false">Mostrar</button></div>
+          <label for="sn-conf">Repita a nova senha</label>
+          <input id="sn-conf" type="password" autocomplete="new-password" placeholder="repita a senha" onkeydown="if(event.key==='Enter')adSenhaDefinir()">
+          <button type="button" class="btn add" style="width:100%;margin-top:12px;" onclick="adSenhaDefinir()">Definir nova senha</button>
+          <p class="sn-dica">Vale na hora: a pessoa já entra com essa senha. Passe a senha para ela pessoalmente ou por um canal seguro.</p>
+          <div class="sn-ou"><span>ou</span></div>
+          <button type="button" class="btn ghost" style="width:100%;" onclick="adSenhaEmail()">Enviar link de redefinição por e-mail</button>
+          <p class="sn-dica">A pessoa recebe um e-mail com um link para criar a senha ela mesma.</p>
+          <div id="sn-msg" class="amsg" role="status"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 const SUPA_URL='https://eqxejfoibebcbtsqymji.supabase.co';
@@ -1089,12 +1120,65 @@ function editarUsuario(email){
   var _b=document.querySelector('#user-edit-ovl .ubox-b'); if(_b) _b.scrollTop=0;
 }
 function fecharEdicao(){ $('user-edit-ovl').classList.remove('open'); }
+// ===== REDEFINIR SENHA (só gestor) =====
+// "Definir nova senha" usa a função admin_redefinir_senha do banco (arquivo redefinir_senha.sql);
+// "Enviar link" usa o e-mail de recuperação do Supabase, o mesmo do "Esqueci minha senha".
+function adSenhaAbrir(email){
+  var u=(window.USERS||[]).find(function(x){return x.email===email;}); if(!u) return;
+  $('sn-email').value=u.email;
+  $('sn-titulo').textContent=u.nome||u.email;
+  $('sn-quem').textContent='Usuário '+(u.nome?u.nome+' · ':'')+u.email+'. Escolha como a pessoa vai voltar a entrar.';
+  ['sn-nova','sn-conf'].forEach(function(id){ $(id).value=''; $(id).type='password'; });
+  $('sn-ver').textContent='Mostrar'; $('sn-ver').setAttribute('aria-pressed','false');
+  $('sn-msg').textContent=''; $('sn-msg').className='amsg';
+  $('user-senha-ovl').classList.add('open');
+  setTimeout(function(){ $('sn-nova').focus(); },60);
+}
+function adSenhaFechar(){ $('user-senha-ovl').classList.remove('open'); }
+function adSenhaVer(){
+  var ver=$('sn-nova').type==='password';
+  ['sn-nova','sn-conf'].forEach(function(id){ $(id).type=ver?'text':'password'; });
+  $('sn-ver').textContent=ver?'Ocultar':'Mostrar'; $('sn-ver').setAttribute('aria-pressed',String(ver));
+}
+async function adSenhaDefinir(){
+  var email=$('sn-email').value, a=$('sn-nova').value, b=$('sn-conf').value, m=$('sn-msg');
+  if(a.length<6){ m.className='amsg err'; m.textContent='A senha precisa ter pelo menos 6 caracteres.'; $('sn-nova').focus(); return; }
+  if(a!==b){ m.className='amsg err'; m.textContent='As duas senhas não são iguais.'; $('sn-conf').focus(); return; }
+  m.className='amsg'; m.textContent='Salvando…';
+  var r=await sb.rpc('admin_redefinir_senha',{p_email:email,p_senha:a});
+  if(r.error){
+    var t=String(r.error.message||'')+' '+String(r.error.code||'');
+    m.className='amsg err';
+    m.textContent=/PGRST202|admin_redefinir_senha|does not exist|não existe/i.test(t)
+      ?'Falta criar a função no banco: rode o arquivo redefinir_senha.sql no SQL Editor do Supabase (uma vez só) e tente de novo. Enquanto isso, use o envio do link por e-mail.'
+      :'Não deu para redefinir: '+(r.error.message||r.error);
+    return;
+  }
+  ['sn-nova','sn-conf'].forEach(function(id){ $(id).value=''; });
+  m.className='amsg ok'; m.textContent='Senha redefinida. '+email+' já pode entrar com a nova senha.';
+}
+async function adSenhaEmail(){
+  var email=$('sn-email').value, m=$('sn-msg');
+  m.className='amsg'; m.textContent='Enviando…';
+  var destino=location.origin+location.pathname.replace(/[^\/]*$/,'')+'index.html';
+  var r=await sb.auth.resetPasswordForEmail(email,{redirectTo:destino});
+  if(r.error){
+    m.className='amsg err';
+    m.textContent=/rate limit|too many|seconds/i.test(r.error.message||'')
+      ?'O Supabase segurou o envio por excesso de e-mails. Espere alguns minutos ou defina a senha aqui mesmo.'
+      :'Não deu para enviar: '+r.error.message;
+    return;
+  }
+  m.className='amsg ok'; m.textContent='Link enviado para '+email+'. Se não chegar em alguns minutos, peça para conferir a caixa de spam.';
+}
 // fecha com ESC ou clique fora da caixa
 document.addEventListener('keydown',function(e){
   if(e.key==='Escape'&&$('user-edit-ovl')&&$('user-edit-ovl').classList.contains('open')) fecharEdicao();
+  if(e.key==='Escape'&&$('user-senha-ovl')&&$('user-senha-ovl').classList.contains('open')) adSenhaFechar();
 });
 document.addEventListener('click',function(e){
   if(e.target&&e.target.id==='user-edit-ovl') fecharEdicao();
+  if(e.target&&e.target.id==='user-senha-ovl') adSenhaFechar();
 });
 // busca de funcionário para vincular
 window.FUNC_CACHE={};
@@ -1807,6 +1891,7 @@ var AD_F={sit:'',perfil:'',ct:'',vinc:''}, AD_SEL={}, AD_VIS=[];
 var AD_CT_NOME={ba:'OBRAS - BA',mg:'CON_MANUT - MG',se:'OBRAS - SE'};
 var AD_ICO_FILTRO='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 5h18l-7 8v6l-4-2v-4Z"/></svg>';
 var AD_ICO_LAPIS='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>';
+var AD_ICO_CHAVE='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="7.5" cy="15.5" r="4.5"/><path d="M10.7 12.3L20 3"/><path d="M16 7l3 3"/><path d="M18.5 4.5l2 2"/></svg>';
 
 function adEsc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
 function adContratosDe(u){
@@ -1901,6 +1986,7 @@ function adRender(){
       +'<td>'+(u.ativo?'<span class="u-sit on">Ativo</span>':'<span class="u-sit off">Inativo</span>')+'</td>'
       +'<td><span class="u-act">'
         +'<button type="button" class="u-ic" title="Editar" aria-label="Editar '+adEsc(u.nome||u.email)+'" onclick="editarUsuario(window.USERS['+i+'].email)">'+AD_ICO_LAPIS+'</button>'
+        +'<button type="button" class="u-ic" title="Redefinir senha" aria-label="Redefinir a senha de '+adEsc(u.nome||u.email)+'" onclick="adSenhaAbrir(window.USERS['+i+'].email)">'+AD_ICO_CHAVE+'</button>'
         +'<button type="button" class="u-sw'+(u.ativo?' on':'')+'" title="'+(u.ativo?'Desativar':'Ativar')+'" aria-label="'+(u.ativo?'Desativar ':'Ativar ')+adEsc(u.nome||u.email)+'" onclick="toggleAtivo(window.USERS['+i+'].email,'+(u.ativo?'false':'true')+')"></button>'
       +'</span></td>'
       +'</tr>');

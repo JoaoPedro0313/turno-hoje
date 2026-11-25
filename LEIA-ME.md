@@ -90,6 +90,20 @@ Para a tela aparecer no menu e nas permissões, foram alterados:
 
 Depois de publicar, recarregue com Ctrl+F5 para o navegador pegar o menu novo.
 
+**Mês da carteira:** o filtro no cabeçalho da tela, com setas ‹ ›, troca a aba (mês) mostrada na programação. Junto com o mês mudam as obras, o prazo do mês e os botões de período.
+
+A carga da planilha grava todas as abas de mês: uma chave por mês (`prog_visual_mes_AAAA-MM`), e a lista de meses em `prog_visual_obras`. Cada mês só é lido do banco quando alguém o escolhe. O mês escolhido fica guardado no navegador de cada pessoa.
+
+**Programação do dia → Programação Diária:** na visão Programação do dia, o botão “Enviar para a Programação Diária” transforma os serviços do dia em lançamentos da Prog. Diária (`prog.html`, chave `prog_diaria`):
+- **Encarregado:** vem do Cadastro de Equipes, ligado pelo código da equipe ou pelo nome. Equipes que não ligam sozinhas (as de apoio, por exemplo) são escolhidas na janela.
+- **Atividade:** sai do catálogo da Prog. Diária, com uma sugestão por serviço que dá para trocar.
+- **Valores:** quantidade prevista do dia e valor previsto (quantidade × valor da atividade).
+- **Repetidos:** lançamento com o mesmo dia, encarregado, PEP e atividade não entra de novo.
+- **Escolhas guardadas:** o encarregado de cada equipe, a atividade de cada serviço e o programador ficam guardados no navegador.
+- **Origem:** os lançamentos levam `origem: programacao_visual`.
+
+A Prog. Diária grava a lista inteira de lançamentos de uma vez. Por isso, se ela estiver aberta em outra aba, recarregue antes de editar, para não sobrescrever o que acabou de ser enviado.
+
 ### Previsto da carteira no Faturamento
 
 Quando alguém carrega a planilha da carteira na Programação visual, a tela também grava, em `turno_data` (chave `carteira_previsto`), o valor previsto de cada obra em todas as abas de mês da planilha. O valor vem de VALOR DE SERVIÇO quando estiver preenchido; senão, de VALOR DE PROJETO.
@@ -99,3 +113,9 @@ A tela Faturamento das turmas usa esse previsto em dois lugares:
 - **Tabela de obras:** a coluna “Previsto na carteira” e o “% do previsto” de cada obra, e uma nota com as obras da carteira que ainda não faturaram no período.
 
 A planilha é da UTD Jacobina, então o previsto aparece sem filtro de base ou com a base Jacobina. Abas sem VALOR DE PROJETO preenchido (na planilha atual, janeiro a abril e outubro) aparecem como “sem VALOR DE PROJETO preenchido”.
+
+## Redefinir a senha de um usuário (Admin)
+
+Na lista de usuários do Admin, o botão de chave, ao lado do lápis, abre “Redefinir senha” com duas opções:
+- **Definir nova senha:** o gestor digita a senha nova (mínimo de 6 caracteres, duas vezes) e a pessoa já entra com ela. Serve para quem não tem acesso ao e-mail. Usa a função `admin_redefinir_senha` do banco. Antes do primeiro uso, rode o arquivo `redefinir_senha.sql` uma vez no SQL Editor do Supabase. A função só aceita gestor (`is_gestor()`) e grava a senha criptografada.
+- **Enviar link por e-mail:** a pessoa recebe o e-mail de recuperação do Supabase (o mesmo do “Esqueci minha senha”) e cria a senha ela mesma. O link leva para o `index.html`, que já trata a troca. Essa opção não precisa do arquivo SQL. O Supabase limita quantos e-mails saem por hora.
