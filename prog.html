@@ -5102,6 +5102,85 @@ return (itens.length > 1 && itens[0].porAtividade)
 ? itens.map(a => a.descricao + ': ' + progQtdFmt(a.qtd)).join('\n') : '';
 }
 
+// ===== REALIZADO =====
+// Previsto x realizado de uma lista {qtd_previsto, qtd_realizado, fator_k}.
+// QTD: mesma regra do previsto. Prevista igual em todas = essa quantidade, e o
+// realizado vira a media (4 e 4 previstos, 4 e 2 feitos = 3 de 4); diferente =
+// soma. STATUS %: media do % de cada atividade com previsto, porque 4 postes e
+// 300 m de cabo nao se somam (uma feita e outra nao = 50%). Uma atividade so:
+// realizado / previsto, como sempre foi.
+function progRegTotaisReal(itens){
+const lista = itens || [];
+const n = v => Math.max(0, Number(v) || 0);
+const prev = lista.map(a => n(a.qtd_previsto)), real = lista.map(a => n(a.qtd_realizado));
+const com = prev.filter(q => q > 0);
+const div = (lista.length > 1 && com.length === prev.length && com.every(q => q === com[0])) ? lista.length : 1;
+const soma = v => v.reduce((s,q) => s + q, 0);
+const r2 = v => Math.round(v * 100) / 100, r3 = v => Math.round(v * 1000) / 1000;
+const pcts = prev.map((q,i) => q > 0 ? real[i] / q * 100 : null).filter(p => p !== null);
+return {
+qtdPrev: r3(soma(prev) / div),
+qtdReal: r3(soma(real) / div),
+valorPrev: r2(lista.reduce((s,a,i) => s + prev[i] * n(a.fator_k), 0)),
+valorReal: r2(lista.reduce((s,a,i) => s + real[i] * n(a.fator_k), 0)),
+pct: pcts.length ? soma(pcts) / pcts.length : 0
+};
+}
+// Linhas do realizado de um registro. Com quantidade por atividade: uma por
+// atividade. Registro antigo: uma linha so, com a QTD e o fator K do registro.
+function progRegLinhasReal(r){
+if (!r) return [];
+if (progRegTemQtdPorAtiv(r)) return r.atividades.map(a => ({
+descricao: a.descricao || a.cod, qtd_previsto: Math.max(0, Number(a.qtd_previsto) || 0),
+qtd_realizado: Math.max(0, Number(a.qtd_realizado) || 0), fator_k: Number(a.fator_k) || 0 }));
+return [{ descricao: r.atividade || r.atividade_cod || '', qtd_previsto: Math.max(0, Number(r.qtd_previsto) || 0),
+qtd_realizado: Math.max(0, Number(r.qtd_realizado) || 0), fator_k: Number(r.fator_k) || Number(r.valor_unitario) || 0 }];
+}
+// Realizado que o registro ja tinha, por atividade, para editar a programacao
+// sem perder o que foi lancado. Registro antigo: o mesmo realizado em todas.
+function progRegRealAnterior(r){
+if (!r) return () => 0;
+const n = v => Math.max(0, Number(v) || 0);
+const itens = progRegTemQtdPorAtiv(r)
+? r.atividades.map(a => ({ cod: a.cod, descricao: a.descricao, real: n(a.qtd_realizado) }))
+: progRegItens(r).map(a => ({ cod: a.cod, descricao: a.descricao, real: n(r.qtd_realizado) }));
+const usados = new Set();
+return a => {
+let i = itens.findIndex((x,k) => !usados.has(k) && progNorm(x.cod) === progNorm(a.cod) && progNorm(x.descricao) === progNorm(a.descricao));
+if (i < 0) i = itens.findIndex((x,k) => !usados.has(k) && progNorm(x.cod) === progNorm(a.cod));
+if (i < 0) return 0;
+usados.add(i);
+return itens[i].real;
+};
+}
+// Ja lancou o realizado? Quantidade, valor ou ocorrencia preenchidos.
+function progRegLancado(r){
+return !!r && ((Number(r.qtd_realizado) || 0) > 0 || (Number(r.valor_realizado) || 0) > 0 || String(r.status || '').trim() !== '');
+}
+// "4 + 2" na ordem das atividades, como a coluna do previsto.
+function progRegRealTexto(r){
+const l = progRegLinhasReal(r);
+if (l.length > 1) return l.map(a => progQtdFmt(a.qtd_realizado)).join(' + ');
+return progQtdFmt(Number(r && r.qtd_realizado) || 0);
+}
+function progRegRealDica(r){
+const l = progRegLinhasReal(r);
+return l.length > 1 ? l.map(a => a.descricao + ': ' + progQtdFmt(a.qtd_realizado) + ' de ' + progQtdFmt(a.qtd_previsto)).join('\n') : '';
+}
+// Celula REAL. da lista: abre o lancamento do realizado. Dia que ja chegou e
+// ainda sem nada lancado mostra LANCAR; o resto mostra a quantidade.
+function progRealCelula(r, idx){
+const hoje = (typeof progHoje === 'function') ? progHoje() : '';
+const fonte = "font-family:'Barlow',sans-serif;cursor:pointer;";
+if (!progRegLancado(r) && r.data && hoje && r.data <= hoje) {
+return '<button type="button" onclick="progRealAbrir(' + idx + ')" title="Lançar o realizado" style="' + fonte +
+'background:#f8f5ff;border:1px solid #e9d8fd;color:#7e3af2;border-radius:10px;padding:2px 9px;font-size:0.62rem;font-weight:800;letter-spacing:0.3px;">LANÇAR</button>';
+}
+const dica = progRegRealDica(r);
+return '<button type="button" onclick="progRealAbrir(' + idx + ')" title="' + progAtivEsc((dica ? dica + '\n\n' : '') + 'Clique para lançar ou corrigir o realizado') + '" style="' + fonte +
+'background:none;border:none;padding:0;font-size:inherit;font-weight:700;color:' + (progRegLancado(r) ? '#1a365d' : '#94a3b8') + ';text-decoration:underline dotted #c9a9fb;text-underline-offset:3px;">' + progRegRealTexto(r) + '</button>';
+}
+
 function progAtivPickChave(a){ return progNorm(a.cod) + '|' + progNorm(a.descricao); }
 function progAtivPickTem(a){ return PROG_ATIV_SEL.some(s => progAtivPickChave(s) === progAtivPickChave(a)); }
 
@@ -5780,12 +5859,16 @@ const atParts = atSel.split('|');
 const fk = parseFloat(atParts[2]) || 0;
 const totAtiv = progAtivQtdTotais(PROG_ATIV_SEL);
 const prev = totAtiv.qtd;
-const real = parseFloat(document.getElementById('pf-qtd-real').value) || 0;
-// quantidade prevista de cada atividade, na ordem de atividade_cod
+// quantidade prevista de cada atividade, na ordem de atividade_cod. O realizado
+// lancado em REGISTROS continua valendo quando a programacao e editada.
+const realAnterior = progRegRealAnterior(progEditIdx !== null ? progRegistros[progEditIdx] : null);
 const atividades = PROG_ATIV_SEL.map(a => ({
 cod: a.cod, descricao: a.descricao, tipo: a.tipo || '',
-fator_k: parseFloat(a.fatorK) || 0, qtd_previsto: progQtdNum(a.qtd)
+fator_k: parseFloat(a.fatorK) || 0, qtd_previsto: progQtdNum(a.qtd),
+qtd_realizado: realAnterior(a)
 }));
+const totReal = progRegTotaisReal(atividades);
+const real = totReal.qtdReal;
 const qtd_colab = parseInt(document.getElementById('pf-qtd-colab').value) || 0;
 const alojados = document.getElementById('pf-alojados').value;
 const turno = (document.getElementById('pf-turno') || {}).value || 'DIA INTEIRO';
@@ -5793,8 +5876,8 @@ const nomeObra = document.getElementById('pf-nome-obra').value;
 const municipio = document.getElementById('pf-municipio').value;
 const ar = document.getElementById('pf-ar').value;
 const vprev = totAtiv.valor;
-const vreal = fk * real;
-const status = prev > 0 ? ((real / prev) * 100) : 0;
+const vreal = totReal.valorReal;
+const status = totReal.pct;
 const reg = {
 id: progEditIdx!==null ? progRegistros[progEditIdx].id : Date.now().toString(36),
 data, supervisor: sup, programador: prog, encarregado: enc,
@@ -6306,7 +6389,7 @@ tbody.innerHTML = filtered.map((r,i) => `
 <td style="padding:9px 12px;font-size:0.71rem;font-weight:600;color:#1a365d;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${r.atividade||''}">${r.atividade||'-'}</td>
 <td style="padding:9px 8px;"><span style="background:${tipoColor[r.tipo]||'#888'}20;color:${tipoColor[r.tipo]||'#888'};font-size:0.62rem;font-weight:800;padding:2px 8px;border-radius:10px;white-space:nowrap;">${r.tipo||'-'}</span></td>
 <td class="_s23" style="white-space:nowrap;" title="${progAtivEsc(progRegQtdDica(r))}">${progRegQtdTexto(r)}</td>
-<td class="_s23">${r.qtd_realizado||0}</td>
+<td class="_s23" style="white-space:nowrap;">${progRealCelula(r, progRegistros.indexOf(r))}</td>
 <td style="padding:9px 8px;text-align:center;"><span style="background:${statusBg(r.status_pct)};color:${statusColor(r.status_pct)};font-size:0.7rem;font-weight:800;padding:2px 9px;border-radius:10px;white-space:nowrap;">${r.status_pct?.toFixed(1)||0}%</span></td>
 <td style="padding:9px 10px;text-align:right;font-weight:700;color:#276749;white-space:nowrap;">${fmtR(r.valor_previsto)}</td>
 <td style="padding:9px 10px;text-align:right;font-weight:700;color:#276749;white-space:nowrap;">${fmtR(r.valor_realizado)}</td>
@@ -7805,7 +7888,7 @@ const fk = parseFloat(r.fator_k) || 0;
 const colab = parseInt(document.getElementById('pa2-colab').value) || 0;
 // a quantidade de cada atividade vai junto, numa copia propria; zerada se pedido
 const atividades = Array.isArray(r.atividades)
-? r.atividades.map(a => Object.assign({}, a, zerar ? { qtd_previsto: 0 } : {}))
+? r.atividades.map(a => Object.assign({}, a, zerar ? { qtd_previsto: 0, qtd_realizado: 0 } : {}))
 : r.atividades;
 
 const novo = Object.assign({}, r, {
@@ -7817,10 +7900,10 @@ qtd_colab: colab,
 atividades: atividades,
 qtd_previsto: prev,
 qtd_realizado: real,
-status_pct: prev > 0 ? (real / prev) * 100 : 0,
-// com quantidade por atividade, fator K x QTD nao da o valor: usa o do registro
+// com quantidade por atividade, fator K x QTD nao da o valor nem a %: usa os do registro
+status_pct: zerar ? 0 : (Number(r.status_pct) || (prev > 0 ? (real / prev) * 100 : 0)),
 valor_previsto: zerar ? 0 : (Number(r.valor_previsto) || fk * prev),
-valor_realizado: fk * real,
+valor_realizado: zerar ? 0 : (Number(r.valor_realizado) || fk * real),
 apoio_de: r.encarregado || '',      // fica registrado de quem esta dando apoio
 criado_em: new Date().toISOString()
 });
@@ -7842,6 +7925,183 @@ window.progApoioBuscar = progApoioBuscar;
 window.progApoioEscolher = progApoioEscolher;
 window.progApoioTecla = progApoioTecla;
 window.progApoioSalvar = progApoioSalvar;
+</script>
+
+<div id="prog-real-modal" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,.55);z-index:9100;align-items:center;justify-content:center;padding:16px;">
+  <div role="dialog" aria-modal="true" aria-labelledby="pr-titulo" onkeydown="progRealTecla(event)" style="background:#fff;border-radius:14px;max-width:560px;width:100%;max-height:92vh;overflow-y:auto;box-shadow:0 18px 50px rgba(0,0,0,.3);font-family:'Barlow',sans-serif;">
+    <div style="background:linear-gradient(135deg,#7e3af2,#9f7aea);color:#fff;padding:14px 18px;border-radius:14px 14px 0 0;">
+      <div id="pr-titulo" style="font-size:0.92rem;font-weight:900;letter-spacing:.4px;">✅ REALIZADO</div>
+      <div style="font-size:0.68rem;font-weight:600;opacity:.92;margin-top:2px;">Quanto a equipe fez de cada atividade programada.</div>
+    </div>
+    <div style="padding:16px 18px;">
+      <div id="pr-resumo" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:11px 13px;font-size:0.72rem;font-weight:700;color:#475569;line-height:1.5;margin-bottom:14px;"></div>
+
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px;">
+        <span style="font-size:.66rem;font-weight:900;color:#64748b;letter-spacing:.5px;">REALIZADO POR ATIVIDADE</span>
+        <button type="button" onclick="progRealIgualPrevisto()" title="Preenche cada atividade com a quantidade prevista" style="padding:3px 10px;background:#f8f5ff;border:1px solid #e9d8fd;border-radius:20px;font-family:'Barlow',sans-serif;font-size:0.62rem;font-weight:800;color:#7e3af2;cursor:pointer;letter-spacing:.3px;">IGUAL AO PREVISTO</button>
+      </div>
+      <div id="pr-itens"></div>
+
+      <label for="pr-ocorrencia" style="display:block;margin-top:12px;font-size:.66rem;font-weight:900;color:#64748b;letter-spacing:.5px;">OCORRÊNCIA</label>
+      <select id="pr-ocorrencia" style="width:100%;margin-top:4px;padding:9px 11px;border:1.5px solid #e0e8f0;border-radius:9px;font-family:'Barlow',sans-serif;font-size:.8rem;font-weight:700;color:#1a365d;background:#fff;">
+        <option value="">Selecione...</option>
+        <option value="EXECUTADO">✅ EXECUTADO</option>
+        <option value="EM EXECUÇÃO">🔵 EM EXECUÇÃO</option>
+        <option value="NÃO EXECUTADO">🔴 NÃO EXECUTADO</option>
+        <option value="SEM ACESSO">🟡 SEM ACESSO</option>
+        <option value="CHUVA">🟡 CHUVA</option>
+      </select>
+
+      <div id="pr-conta" style="font-size:0.7rem;font-weight:700;color:#475569;margin-top:12px;line-height:1.55;"></div>
+      <div id="pr-msg" style="font-size:0.72rem;font-weight:800;margin-top:8px;"></div>
+      <div style="display:flex;gap:8px;margin-top:14px;">
+        <button type="button" id="pr-salvar" onclick="progRealSalvar()" style="flex:1;padding:10px;background:linear-gradient(135deg,#7e3af2,#9f7aea);border:none;border-radius:9px;font-family:'Barlow',sans-serif;font-size:.78rem;font-weight:800;color:#fff;cursor:pointer;letter-spacing:.4px;">SALVAR REALIZADO</button>
+        <button type="button" onclick="progRealFechar()" style="padding:10px 16px;background:#e2e8f0;border:none;border-radius:9px;font-family:'Barlow',sans-serif;font-size:.78rem;font-weight:800;color:#475569;cursor:pointer;">FECHAR</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ===== LANCAR O REALIZADO (aba REGISTROS) =====
+// Depois do dia programado, o programador lanca quanto a equipe fez de cada
+// atividade. Grava no proprio registro: o qtd_realizado de cada atividade (na
+// lista "atividades") e os campos de sempre (qtd_realizado, valor_realizado,
+// status_pct, status), que o Andamento, o Painel e a Prog. Visual ja leem.
+// O registro e achado pelo id na hora de salvar: a lista pode ser trocada pela
+// sincronizacao com a janela aberta, e o indice sozinho poderia gravar no
+// registro errado.
+let PROG_REAL_REF = null;
+
+function progRealChave(r){
+return r ? [r.data, progNorm(r.encarregado), progNorm(r.pep), progNorm(r.atividade_cod), progTurnoCurto(r.turno)].join('|') : '';
+}
+function progRealRegistro(){
+if(!PROG_REAL_REF) return null;
+if(PROG_REAL_REF.id) return progRegistros.find(x => x && x.id === PROG_REAL_REF.id) || null;
+return progRegistros.find(x => progRealChave(x) === PROG_REAL_REF.chave) || null;
+}
+function progRealMsg(t, cor){
+const el = document.getElementById('pr-msg');
+if(el){ el.textContent = t || ''; el.style.color = cor || '#64748b'; }
+}
+// Linhas do registro com o que esta digitado na janela.
+function progRealLinhasDaTela(r){
+const linhas = progRegLinhasReal(r);
+const inps = document.querySelectorAll('#pr-itens input[data-real]');
+if(inps.length !== linhas.length) return null;
+inps.forEach(inp => {
+const a = linhas[+inp.getAttribute('data-real')];
+if(a) a.qtd_realizado = progQtdNum(inp.value);
+});
+return linhas;
+}
+function progRealConta(){
+const el = document.getElementById('pr-conta');
+const r = progRealRegistro();
+const linhas = r ? progRealLinhasDaTela(r) : null;
+if(!el || !linhas) return;
+const t = progRegTotaisReal(linhas);
+const brl = v => 'R$ ' + v.toLocaleString('pt-BR',{minimumFractionDigits:2, maximumFractionDigits:2});
+el.innerHTML = 'Valor realizado: <b style="color:#276749;">' + brl(t.valorReal) + '</b>' +
+(t.valorPrev > 0 ? ' de ' + brl(t.valorPrev) + ' previstos' : '') +
+'<br>Status: <b>' + t.pct.toLocaleString('pt-BR',{minimumFractionDigits:1, maximumFractionDigits:1}) + '%</b>';
+}
+function progRealAbrir(idx){
+const r = progRegistros[idx];
+const m = document.getElementById('prog-real-modal');
+if(!r || !m) return;
+PROG_REAL_REF = { id: r.id || null, chave: progRealChave(r) };
+document.getElementById('pr-resumo').innerHTML =
+'<b>' + esc(r.data ? r.data.split('-').reverse().join('/') : '') + '</b> · ' + esc(r.encarregado || '') + ' · ' + esc(progTurnoCurto(r.turno)) +
+'<br>' + esc(r.pep || '') + (r.nome_obra ? ' — ' + esc(r.nome_obra) : '') + (r.municipio ? ' · ' + esc(r.municipio) : '');
+const linhas = progRegLinhasReal(r);
+const varias = linhas.length > 1;
+document.getElementById('pr-itens').innerHTML = linhas.map((a,i) =>
+'<div style="display:flex;align-items:center;gap:10px;padding:9px 11px;border:1px solid #e2e8f0;border-radius:10px;margin-bottom:6px;">' +
+'<div style="flex:1;min-width:0;">' +
+'<div style="font-size:0.74rem;font-weight:800;color:#1a365d;line-height:1.25;overflow-wrap:anywhere;">' + (varias ? (i+1) + '. ' : '') + esc(a.descricao) + '</div>' +
+'<div style="font-size:0.64rem;font-weight:700;color:#94a3b8;margin-top:2px;">' + (a.qtd_previsto > 0 ? 'Previsto: ' + progQtdFmt(a.qtd_previsto) : 'Sem quantidade prevista') + '</div>' +
+'</div>' +
+'<input type="text" inputmode="decimal" autocomplete="off" data-real="' + i + '" value="' + progAtivEsc(progQtdTxt(a.qtd_realizado)) + '" placeholder="0"' +
+' aria-label="Realizado de ' + progAtivEsc(a.descricao) + '" oninput="progRealInput(this)"' +
+' onfocus="this.style.borderColor=\'#7e3af2\';this.select()" onblur="this.style.borderColor=\'#e0e8f0\'"' +
+' style="width:84px;flex-shrink:0;padding:8px 10px;border:1.5px solid #e0e8f0;border-radius:9px;font-family:\'Barlow\',sans-serif;font-size:.85rem;font-weight:800;color:#1a365d;text-align:center;outline:none;box-sizing:border-box;background:#fff;">' +
+'</div>').join('');
+// ocorrencia que nao esta na lista (registro antigo) nao pode sumir ao salvar
+const sel = document.getElementById('pr-ocorrencia');
+sel.querySelectorAll('option[data-extra]').forEach(o => o.remove());
+const st = String(r.status || '');
+if(st && !Array.from(sel.options).some(o => o.value === st)){
+const o = document.createElement('option');
+o.value = st; o.textContent = st; o.setAttribute('data-extra', '1');
+sel.appendChild(o);
+}
+sel.value = st;
+const bt = document.getElementById('pr-salvar');
+if(bt) bt.disabled = false;
+progRealMsg('');
+progRealConta();
+m.style.display = 'flex';
+setTimeout(function(){ const p = document.querySelector('#pr-itens input[data-real]'); if(p) p.focus(); }, 60);
+}
+function progRealInput(el){
+if(/[^0-9.,]/.test(el.value)) el.value = el.value.replace(/[^0-9.,]/g, '');
+progRealConta();
+}
+function progRealIgualPrevisto(){
+const linhas = progRegLinhasReal(progRealRegistro());
+document.querySelectorAll('#pr-itens input[data-real]').forEach(inp => {
+const a = linhas[+inp.getAttribute('data-real')];
+if(a && a.qtd_previsto > 0) inp.value = progQtdTxt(a.qtd_previsto);
+});
+progRealConta();
+}
+// Enter passa para a proxima atividade; na ultima, salva. Esc fecha.
+function progRealTecla(ev){
+if(ev.key === 'Escape'){ ev.preventDefault(); progRealFechar(); return; }
+const alvo = ev.target;
+if(ev.key !== 'Enter' || !alvo || !alvo.hasAttribute || !alvo.hasAttribute('data-real')) return;
+ev.preventDefault();
+const inps = Array.from(document.querySelectorAll('#pr-itens input[data-real]'));
+const i = inps.indexOf(alvo);
+if(i >= 0 && i < inps.length - 1) inps[i + 1].focus(); else progRealSalvar();
+}
+function progRealFechar(){
+const m = document.getElementById('prog-real-modal');
+if(m) m.style.display = 'none';
+PROG_REAL_REF = null;
+}
+function progRealSalvar(){
+const r = progRealRegistro();
+const linhas = r ? progRealLinhasDaTela(r) : null;
+if(!r || !linhas){
+progRealMsg('❌ Este registro mudou ou foi excluído enquanto a janela estava aberta. Feche e abra de novo.', '#c53030');
+return;
+}
+const t = progRegTotaisReal(linhas);
+if(progRegTemQtdPorAtiv(r)){
+r.atividades = r.atividades.map((a,i) => Object.assign({}, a, { qtd_realizado: linhas[i].qtd_realizado }));
+}
+r.qtd_realizado = t.qtdReal;
+r.valor_realizado = t.valorReal;
+r.status_pct = t.pct;
+r.status = document.getElementById('pr-ocorrencia').value || '';
+progSaveToStorage();
+progRenderStats();
+progRenderList();
+if(typeof progRenderDash === 'function') progRenderDash();
+const bt = document.getElementById('pr-salvar');
+if(bt) bt.disabled = true;
+progRealMsg('✅ Realizado salvo.', '#276749');
+setTimeout(progRealFechar, 900);
+}
+window.progRealAbrir = progRealAbrir;
+window.progRealFechar = progRealFechar;
+window.progRealInput = progRealInput;
+window.progRealIgualPrevisto = progRealIgualPrevisto;
+window.progRealTecla = progRealTecla;
+window.progRealSalvar = progRealSalvar;
 </script>
 
 </body>
