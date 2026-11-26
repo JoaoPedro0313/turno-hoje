@@ -393,6 +393,15 @@ const PROG_ATIVIDADES_BASE = PROG_ATIVIDADES.slice();
         <input type="hidden" id="pf-atividade">
       </div>
       <div id="pf-ativ-detalhe" style="display:none;font-size:0.64rem;font-weight:700;color:#64748b;margin-top:4px;line-height:1.4;"></div>
+      <!-- REALIZADO: so aparece editando um registro ja programado -->
+      <div id="pf-real-box" style="display:none;margin-top:12px;padding-top:10px;border-top:1px dashed #e2e8f0;">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px;">
+          <span class="_s1" style="margin-bottom:0;">REALIZADO</span>
+          <button type="button" onclick="progRealFormIgualPrevisto()" title="Preenche cada atividade com a quantidade prevista" style="padding:2px 9px;background:#f8f5ff;border:1px solid #e9d8fd;border-radius:20px;font-family:'Barlow',sans-serif;font-size:0.6rem;font-weight:800;color:#7e3af2;cursor:pointer;letter-spacing:.3px;">IGUAL AO PREVISTO</button>
+        </div>
+        <div id="pf-real-itens"></div>
+        <div id="pf-real-conta" style="font-size:0.64rem;font-weight:700;color:#64748b;margin-top:4px;line-height:1.4;"></div>
+      </div>
     </div>
     <div>
       <label class="_s1">VALOR UNITÁRIO (Fator K)</label>
@@ -629,6 +638,23 @@ const PROG_ATIVIDADES_BASE = PROG_ATIVIDADES.slice();
   <div id="prog-dash-cards" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;margin-bottom:16px;"></div>
 
   <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:14px;margin-bottom:16px;" id="prog-dash-sup-grid"></div>
+
+  <!-- PREVISTO X REALIZADO POR ENCARREGADO (grafico). So a disposicao fica aqui;
+       as cores vao no proprio elemento, para o tema escuro do nav.js converter. -->
+  <style>
+  #prog-dash-pxr .pde-row{display:grid;grid-template-columns:minmax(120px,230px) 1fr 58px;gap:12px;align-items:center;padding:8px 0}
+  #prog-dash-pxr .pde-nome{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  #prog-dash-pxr .pde-barras{display:flex;flex-direction:column;gap:4px;min-width:0}
+  #prog-dash-pxr .pde-pct{text-align:right}
+  @media (max-width:640px){#prog-dash-pxr .pde-row{grid-template-columns:1fr auto;row-gap:5px}#prog-dash-pxr .pde-nome{grid-column:1;grid-row:1}#prog-dash-pxr .pde-pct{grid-column:2;grid-row:1}#prog-dash-pxr .pde-barras{grid-column:1/-1;grid-row:2}}
+  </style>
+  <div style="background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,0.1);margin-bottom:16px;">
+    <div style="background:linear-gradient(135deg,#0b5e62,#14a085);padding:14px 20px;">
+      <div style="color:#fff;font-size:0.82rem;font-weight:800;letter-spacing:0.5px;">📊 PREVISTO X REALIZADO POR ENCARREGADO</div>
+      <div style="color:rgba(255,255,255,0.6);font-size:0.65rem;font-weight:600;margin-top:2px;">Valor pelo fator K das programações lançadas, do maior previsto para o menor</div>
+    </div>
+    <div id="prog-dash-pxr" style="padding:12px 20px 14px;"></div>
+  </div>
 
   <div style="background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,0.1);margin-bottom:16px;">
     <div style="background:linear-gradient(135deg,#0b5e62,#14a085);padding:14px 20px;">
@@ -5153,6 +5179,13 @@ usados.add(i);
 return itens[i].real;
 };
 }
+// Realizado de cada atividade, na ordem de atividade_cod (para o formulario).
+// Registro antigo: o realizado do registro em todas, como valia o previsto.
+function progRegReais(r){
+const n = v => Math.max(0, Number(v) || 0);
+if (progRegTemQtdPorAtiv(r)) return r.atividades.map(a => n(a.qtd_realizado));
+return progRegItens(r).map(() => n(r && r.qtd_realizado));
+}
 // Ja lancou o realizado? Quantidade, valor ou ocorrencia preenchidos.
 function progRegLancado(r){
 return !!r && ((Number(r.qtd_realizado) || 0) > 0 || (Number(r.valor_realizado) || 0) > 0 || String(r.status || '').trim() !== '');
@@ -5225,6 +5258,7 @@ det.style.display = partes.length ? 'block' : 'none';
 const qp = document.getElementById('pf-qtd-prev');
 if(qp) qp.value = t.qtd > 0 ? String(t.qtd) : '';
 if(typeof progCalcValores === 'function') progCalcValores();
+progRealFormAtualizar();
 }
 function progAtivPickRender(){
 const box = document.getElementById('pf-ativ-chips');
@@ -5233,6 +5267,7 @@ if(!box) return;
 if(!PROG_ATIV_SEL.length){
 box.style.display = 'none'; box.innerHTML = '';
 if(busca) busca.placeholder = 'Digite para buscar e clique para adicionar...';
+progRealFormRender();
 return;
 }
 box.style.display = 'flex';
@@ -5256,6 +5291,78 @@ const el = box.querySelector('input[data-qtd="' + foco.i + '"]');
 if (el) { el.focus(); try { el.setSelectionRange(foco.a, foco.b); } catch(e) {} }
 }
 if(busca) busca.placeholder = PROG_ATIV_SEL.length + (PROG_ATIV_SEL.length === 1 ? ' atividade escolhida' : ' atividades escolhidas') + ' — digite para somar outra...';
+progRealFormRender();
+}
+// ===== REALIZADO NO FORMULARIO =====
+// Editando um registro ja programado (lapis em REGISTROS), o formulario mostra
+// o realizado de cada atividade e a OCORRENCIA. Programacao nova nao mostra:
+// realizado vem depois. O texto digitado fica em PROG_ATIV_SEL[i].real.
+function progRealFormAtivo(){ return typeof progEditIdx !== 'undefined' && progEditIdx !== null; }
+function progRealFormLinhas(){
+return PROG_ATIV_SEL.map(a => ({ qtd_previsto: progQtdNum(a.qtd), qtd_realizado: progQtdNum(a.real), fator_k: parseFloat(a.fatorK) || 0 }));
+}
+function progRealFormRender(){
+const edit = progRealFormAtivo();
+// a OCORRENCIA do formulario (escondida na programacao) volta na edicao
+const occ = document.getElementById('pf-ocorrencia');
+if(occ && occ.parentElement) occ.parentElement.style.display = edit ? '' : 'none';
+const box = document.getElementById('pf-real-box');
+const cont = document.getElementById('pf-real-itens');
+if(!box || !cont) return;
+if(!edit || !PROG_ATIV_SEL.length){ box.style.display = 'none'; cont.innerHTML = ''; return; }
+const ativo = document.activeElement;
+const foco = (ativo && cont.contains(ativo) && ativo.getAttribute('data-freal') !== null)
+? { i: ativo.getAttribute('data-freal'), a: ativo.selectionStart, b: ativo.selectionEnd } : null;
+const varias = PROG_ATIV_SEL.length > 1;
+cont.innerHTML = PROG_ATIV_SEL.map((a,i) =>
+'<div style="display:flex;align-items:center;gap:10px;padding:6px 10px;border:1px solid #e2e8f0;border-radius:9px;margin-bottom:5px;background:#fff;">' +
+'<div style="flex:1;min-width:0;">' +
+'<div style="font-size:0.68rem;font-weight:800;color:#1a365d;line-height:1.25;overflow-wrap:anywhere;">' + (varias ? (i+1) + '. ' : '') + progAtivEsc(a.descricao) + '</div>' +
+'<div data-fprev="' + i + '" style="font-size:0.6rem;font-weight:700;color:#94a3b8;margin-top:1px;"></div>' +
+'</div>' +
+'<input type="text" inputmode="decimal" autocomplete="off" data-freal="' + i + '" value="' + progAtivEsc(a.real || '') + '" placeholder="0"' +
+' aria-label="Realizado de ' + progAtivEsc(a.descricao) + '" oninput="progRealFormInput(' + i + ', this)"' +
+' onfocus="this.style.borderColor=\'#7e3af2\'" onblur="this.style.borderColor=\'#e0e8f0\'"' +
+' style="width:74px;flex-shrink:0;padding:6px 8px;border:1.5px solid #e0e8f0;border-radius:8px;font-family:\'Barlow\',sans-serif;font-size:0.8rem;font-weight:800;color:#1a365d;text-align:center;outline:none;box-sizing:border-box;background:#fff;">' +
+'</div>').join('');
+if(foco){
+const el = cont.querySelector('input[data-freal="' + foco.i + '"]');
+if(el){ el.focus(); try { el.setSelectionRange(foco.a, foco.b); } catch(e) {} }
+}
+box.style.display = 'block';
+progRealFormAtualizar();
+}
+// Previsto de cada linha e a conta, sem redesenhar (o previsto pode mudar enquanto edita).
+function progRealFormAtualizar(){
+const box = document.getElementById('pf-real-box');
+if(!box || box.style.display === 'none') return;
+PROG_ATIV_SEL.forEach((a,i) => {
+const el = box.querySelector('[data-fprev="' + i + '"]');
+const q = progQtdNum(a.qtd);
+if(el) el.textContent = q > 0 ? 'Previsto: ' + progQtdFmt(q) : 'Sem quantidade prevista';
+});
+const t = progRegTotaisReal(progRealFormLinhas());
+const brl = v => 'R$ ' + v.toLocaleString('pt-BR',{minimumFractionDigits:2, maximumFractionDigits:2});
+const conta = document.getElementById('pf-real-conta');
+if(conta) conta.innerHTML = 'Valor realizado: <b style="color:#276749;">' + brl(t.valorReal) + '</b>' +
+(t.valorPrev > 0 ? ' de ' + brl(t.valorPrev) + ' previstos' : '') +
+' · Status: <b>' + t.pct.toLocaleString('pt-BR',{minimumFractionDigits:1, maximumFractionDigits:1}) + '%</b>';
+}
+function progRealFormInput(i, el){
+const a = PROG_ATIV_SEL[i];
+if(!a || !el) return;
+if(/[^0-9.,]/.test(el.value)) el.value = el.value.replace(/[^0-9.,]/g, '');
+a.real = el.value;
+progRealFormAtualizar();
+}
+function progRealFormIgualPrevisto(){
+PROG_ATIV_SEL.forEach((a,i) => {
+const q = progQtdNum(a.qtd);
+if(q > 0) a.real = progQtdTxt(q);
+const el = document.querySelector('#pf-real-itens input[data-freal="' + i + '"]');
+if(el) el.value = a.real || '';
+});
+progRealFormAtualizar();
 }
 function progAtivPickFiltrar(){
 if(PROG_ATIV_SEM_DD) return;
@@ -5351,13 +5458,14 @@ if(ev.key === 'Enter'){ ev.preventDefault(); if(PROG_ATIV_ACHADAS.length) progAt
 if(ev.key === 'Escape'){ const dd = document.getElementById('pf-ativ-dd'); if(dd) dd.style.display = 'none'; return; }
 if(ev.key === 'Backspace' && !ev.target.value && PROG_ATIV_SEL.length){ progAtivPickDel(PROG_ATIV_SEL.length - 1); }
 }
-// Recompoe a escolha ao editar um registro salvo (qtds: quantidade de cada
-// atividade, na mesma ordem dos codigos).
-function progAtivPickRestaurar(cods, descricoes, qtds){
+// Recompoe a escolha ao editar um registro salvo (qtds e reais: previsto e
+// realizado de cada atividade, na mesma ordem dos codigos).
+function progAtivPickRestaurar(cods, descricoes, qtds, reais){
 PROG_ATIV_SEL = [];
 const lista = (cods || '').split('+').map(c => c.trim()).filter(Boolean);
 const descs = (descricoes || '').split(' + ').map(d => d.trim());
 const qs = Array.isArray(qtds) ? qtds : [];
+const rs = Array.isArray(reais) ? reais : null;
 lista.forEach((c,i) => {
 let a = null;
 if(typeof PROG_ATIVIDADES !== 'undefined'){
@@ -5365,8 +5473,10 @@ a = PROG_ATIVIDADES.find(x => x.cod === c && (!descs[i] || progNorm(x.descricao)
  || PROG_ATIVIDADES.find(x => x.cod === c);
 }
 // atividade que saiu da lista nao pode sumir do registro antigo
-PROG_ATIV_SEL.push(a ? { cod:a.cod, descricao:a.descricao, fatorK:a.fatorK, tipo:a.tipo, qtd:progQtdTxt(qs[i]) }
-: { cod:c, descricao:descs[i] || c, fatorK:0, tipo:'', qtd:progQtdTxt(qs[i]) });
+const item = a ? { cod:a.cod, descricao:a.descricao, fatorK:a.fatorK, tipo:a.tipo, qtd:progQtdTxt(qs[i]) }
+: { cod:c, descricao:descs[i] || c, fatorK:0, tipo:'', qtd:progQtdTxt(qs[i]) };
+if(rs) item.real = progQtdTxt(rs[i]);
+PROG_ATIV_SEL.push(item);
 });
 progAtivPickAplicar();
 }
@@ -5383,6 +5493,8 @@ window.progAtivPickLimpar = progAtivPickLimpar;
 window.progAtivQtdInput = progAtivQtdInput;
 window.progAtivQtdTecla = progAtivQtdTecla;
 window.progAtivQtdFoco = progAtivQtdFoco;
+window.progRealFormInput = progRealFormInput;
+window.progRealFormIgualPrevisto = progRealFormIgualPrevisto;
 
 // O tipo do servico sai da propria lista de atividades, senao um tipo novo
 // criado pelo usuario nao teria opcao correspondente aqui.
@@ -5865,7 +5977,8 @@ const realAnterior = progRegRealAnterior(progEditIdx !== null ? progRegistros[pr
 const atividades = PROG_ATIV_SEL.map(a => ({
 cod: a.cod, descricao: a.descricao, tipo: a.tipo || '',
 fator_k: parseFloat(a.fatorK) || 0, qtd_previsto: progQtdNum(a.qtd),
-qtd_realizado: realAnterior(a)
+// editando: o que esta no campo REALIZADO; senao, o que o registro ja tinha
+qtd_realizado: (a.real !== undefined) ? progQtdNum(a.real) : realAnterior(a)
 }));
 const totReal = progRegTotaisReal(atividades);
 const real = totReal.qtdReal;
@@ -6408,7 +6521,16 @@ progSwitchTab('form');
 setTimeout(() => {
 const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val || ''; };
 set('pf-data', r.data);
-const occ = document.getElementById('pf-ocorrencia'); if(occ) occ.value = r.status || '';
+const occ = document.getElementById('pf-ocorrencia');
+if(occ){
+// ocorrencia que nao esta na lista (registro antigo) nao pode sumir ao salvar
+occ.querySelectorAll('option[data-extra]').forEach(o => o.remove());
+const st = String(r.status || '');
+if(st && !Array.from(occ.options).some(o => o.value === st)){
+const o = document.createElement('option'); o.value = st; o.textContent = st; o.setAttribute('data-extra', '1'); occ.appendChild(o);
+}
+occ.value = st;
+}
 set('pf-supervisor', r.supervisor);
 progFillEncarregados(r.supervisor);
 set('pf-encarregado', r.encarregado);
@@ -6429,8 +6551,8 @@ set('pf-tipo', r.tipo);
 progOnTipoChange();
 setTimeout(() => {
 set('pf-qtd-real', r.qtd_realizado);
-// quantidade de cada atividade; registro antigo: a QTD PREVISTO em todas
-if (typeof progAtivPickRestaurar === 'function') progAtivPickRestaurar(r.atividade_cod, r.atividade, progRegItens(r).map(a => a.qtd));
+// previsto e realizado de cada atividade; registro antigo: os do registro em todas
+if (typeof progAtivPickRestaurar === 'function') progAtivPickRestaurar(r.atividade_cod, r.atividade, progRegItens(r).map(a => a.qtd), progRegReais(r));
 progCalcValores();
 }, 50);
 }, 50);
@@ -6445,9 +6567,86 @@ progRenderDash();
 }
 function progRenderDash() {
 progRenderDashCards();
+progRenderDashPxR();
 progRenderDashEnc();
 progRenderDashAtiv();
 }
+// ===== PREVISTO X REALIZADO POR ENCARREGADO (grafico) =====
+// Valor previsto e realizado (fator K) de cada encarregado, a partir das
+// programacoes lancadas: os mesmos numeros dos cartoes TOTAL PREVISTO e TOTAL
+// REALIZADO. O nome junta as variacoes com e sem matricula.
+let PROG_DASH_PXR_TODOS = false;
+const PROG_DASH_PXR_TOPO = 15;
+function progDashPxRLinhas(){
+const g = {};
+progRegistros.forEach(r => {
+if(!r) return;
+const nome = progLayoutNome(r.encarregado) || 'SEM ENCARREGADO';
+const k = progNorm(nome);
+if(!g[k]) g[k] = { nome: nome, vp: 0, vr: 0, n: 0, lanc: 0 };
+g[k].vp += Number(r.valor_previsto) || 0;
+g[k].vr += Number(r.valor_realizado) || 0;
+g[k].n++;
+if(progRegLancado(r)) g[k].lanc++;
+});
+return Object.values(g);
+}
+function progDashPxRAlternar(){
+PROG_DASH_PXR_TODOS = !PROG_DASH_PXR_TODOS;
+progRenderDashPxR();
+}
+function progRenderDashPxR(){
+const el = document.getElementById('prog-dash-pxr');
+if(!el) return;
+const todas = progDashPxRLinhas();
+const com = todas.filter(x => x.vp > 0 || x.vr > 0)
+.sort((a,b) => b.vp - a.vp || b.vr - a.vr || a.nome.localeCompare(b.nome, 'pt'));
+const semValor = todas.length - com.length;
+const brl = v => 'R$ ' + v.toLocaleString('pt-BR', v >= 100 ? {maximumFractionDigits:0} : {minimumFractionDigits:2, maximumFractionDigits:2});
+const brl2 = v => 'R$ ' + v.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
+const pctTxt = p => p.toLocaleString('pt-BR', {maximumFractionDigits:0}) + '%';
+const COR_P = '#9f7aea', TXT_P = '#6b46c1', COR_R = '#2f855a', TXT_R = '#276749';
+const legenda = '<div style="display:flex;justify-content:flex-end;gap:16px;font-size:0.66rem;font-weight:800;color:#475569;margin-bottom:4px;">' +
+'<span style="display:inline-flex;align-items:center;gap:6px;"><i style="display:inline-block;width:16px;height:9px;border-radius:3px;background:' + COR_P + ';"></i>Previsto</span>' +
+'<span style="display:inline-flex;align-items:center;gap:6px;"><i style="display:inline-block;width:16px;height:9px;border-radius:3px;background:' + COR_R + ';"></i>Realizado</span></div>';
+if(!com.length){
+el.innerHTML = '<div style="padding:14px 4px;font-size:0.76rem;font-weight:700;color:#64748b;line-height:1.5;">' +
+'Ainda não há valor previsto nem realizado. Informe a quantidade das atividades ao programar e lance o realizado em REGISTROS para ver o gráfico.</div>';
+return;
+}
+const mostra = PROG_DASH_PXR_TODOS ? com : com.slice(0, PROG_DASH_PXR_TOPO);
+const max = Math.max.apply(null, mostra.map(x => Math.max(x.vp, x.vr))) || 1;
+const barra = (v, cor, txt, rot) =>
+'<div style="display:flex;align-items:center;gap:8px;" aria-label="' + rot + ': ' + brl2(v) + '">' +
+'<div style="flex:1;height:10px;background:#f1f5f9;border-radius:5px;overflow:hidden;">' +
+'<div style="height:100%;width:' + Math.min(100, v / max * 100).toFixed(2) + '%;' + (v > 0 ? 'min-width:3px;' : '') + 'background:' + cor + ';border-radius:5px;"></div></div>' +
+'<div style="width:78px;flex-shrink:0;text-align:right;font-size:0.68rem;font-weight:800;color:' + txt + ';white-space:nowrap;">' + brl(v) + '</div></div>';
+const linhas = mostra.map((x,i) => {
+const p = x.vp > 0 ? x.vr / x.vp * 100 : null;
+const cor = p === null ? ['#64748b','#f1f5f9'] : p >= 100 ? ['#276749','#f0fff4'] : p >= 50 ? ['#b7791f','#fffbeb'] : ['#c53030','#fff5f5'];
+const dica = x.nome + '\nPrevisto: ' + brl2(x.vp) + '\nRealizado: ' + brl2(x.vr) +
+(p === null ? '' : '\nRealizado sobre previsto: ' + p.toLocaleString('pt-BR', {maximumFractionDigits:1}) + '%') +
+'\n' + x.n + (x.n === 1 ? ' programação, ' : ' programações, ') + x.lanc + ' com realizado lançado';
+return '<div class="pde-row" title="' + progAtivEsc(dica) + '" style="' + (i < mostra.length - 1 ? 'border-bottom:1px solid #f0f4f8;' : '') + '">' +
+'<div class="pde-nome" style="font-size:0.74rem;font-weight:800;color:#1a365d;">' + esc(x.nome) + '</div>' +
+'<div class="pde-barras">' + barra(x.vp, COR_P, TXT_P, 'Previsto') + barra(x.vr, COR_R, TXT_R, 'Realizado') + '</div>' +
+'<div class="pde-pct"><span style="display:inline-block;background:' + cor[1] + ';color:' + cor[0] + ';font-size:0.7rem;font-weight:800;padding:3px 9px;border-radius:10px;">' +
+(p === null ? '—' : pctTxt(p)) + '</span></div></div>';
+}).join('');
+const tp = com.reduce((s,x) => s + x.vp, 0), tr = com.reduce((s,x) => s + x.vr, 0);
+const rodape = '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-top:10px;padding-top:10px;border-top:2px solid #e2e8f0;">' +
+'<div style="font-size:0.72rem;font-weight:800;color:#1a365d;">Total: <span style="color:' + TXT_P + ';">' + brl2(tp) + '</span> previstos, ' +
+'<span style="color:' + TXT_R + ';">' + brl2(tr) + '</span> realizados' + (tp > 0 ? ' (' + pctTxt(tr / tp * 100) + ')' : '') + '</div>' +
+(com.length > PROG_DASH_PXR_TOPO
+? '<button type="button" onclick="progDashPxRAlternar()" style="padding:5px 12px;background:#f8f5ff;border:1px solid #e9d8fd;border-radius:20px;font-family:\'Barlow\',sans-serif;font-size:0.64rem;font-weight:800;color:#7e3af2;cursor:pointer;letter-spacing:.3px;">' +
+(PROG_DASH_PXR_TODOS ? 'MOSTRAR SÓ OS ' + PROG_DASH_PXR_TOPO + ' MAIORES' : 'MOSTRAR TODOS (' + com.length + ')') + '</button>'
+: '') + '</div>' +
+(semValor ? '<div style="font-size:0.64rem;font-weight:600;color:#94a3b8;margin-top:6px;">' + semValor +
+(semValor === 1 ? ' encarregado com programação sem valor (sem quantidade prevista nem realizado) ficou fora.'
+: ' encarregados com programação sem valor (sem quantidade prevista nem realizado) ficaram fora.') + '</div>' : '');
+el.innerHTML = legenda + linhas + rodape;
+}
+window.progDashPxRAlternar = progDashPxRAlternar;
 function progRenderDashCards() {
 const el = document.getElementById('prog-dash-cards');
 if (!el) return;
