@@ -5011,8 +5011,96 @@ progFillTiposServico();
 // existindo como hidden no formato cod|descricao|fatorK, entao quem salva,
 // edita e calcula nao mudou: os codigos vao juntos com "+" e as descricoes
 // com " + ".
-let PROG_ATIV_SEL = [];      // atividades escolhidas, na ordem
+//
+// QUANTIDADE POR ATIVIDADE: cada atividade escolhida tem o seu campo de
+// quantidade prevista (4 postes, 300 m de cabo). O valor previsto e a soma de
+// quantidade x fator K de cada uma. O registro guarda a lista em "atividades"
+// ({cod, descricao, tipo, fator_k, qtd_previsto}) e continua com os campos de
+// sempre (atividade_cod, qtd_previsto, valor_previsto...), que as outras telas
+// leem.
+let PROG_ATIV_SEL = [];      // atividades escolhidas, na ordem (qtd = texto digitado)
 let PROG_ATIV_ACHADAS = [];  // resultado da busca atual
+let PROG_ATIV_SEM_DD = false; // volta para a busca sem abrir a lista
+
+// Quantidade no jeito brasileiro: "2,5", "2.5", "1.000" e "1.250,5" valem.
+// Vazio ou invalido vira 0.
+function progQtdNum(v){
+if (typeof v === 'number') return (isFinite(v) && v > 0) ? v : 0;
+let s = String(v == null ? '' : v).replace(/\s/g, '');
+if (!s) return 0;
+if (s.indexOf(',') >= 0) s = s.replace(/\./g, '').replace(',', '.');
+else if (/^\d{1,3}(\.\d{3})+$/.test(s)) s = s.replace(/\./g, '');
+const n = parseFloat(s);
+return (isFinite(n) && n > 0) ? n : 0;
+}
+// Para o campo: 2.5 -> "2,5"; 4 -> "4"; 0 -> "".
+function progQtdTxt(n){
+n = progQtdNum(n);
+return n > 0 ? String(Math.round(n * 1000) / 1000).replace('.', ',') : '';
+}
+// Para ler: 1500 -> "1.500"; 2.5 -> "2,5".
+function progQtdFmt(n){
+return (Number(n) || 0).toLocaleString('pt-BR', { maximumFractionDigits: 3 });
+}
+// Quantidade e valor previstos da escolha. Uma atividade, ou a mesma
+// quantidade em todas: QTD PREVISTO = essa quantidade, como era antes
+// (4 postes escavados e implantados = 4). Quantidades diferentes: QTD PREVISTO
+// = soma. O valor e sempre a soma de quantidade x fator K de cada atividade.
+function progAtivQtdTotais(itens){
+const lista = itens || [];
+const qs = lista.map(a => progQtdNum(a.qtd));
+const com = qs.filter(q => q > 0);
+const iguais = com.length === qs.length && com.every(q => q === com[0]);
+const valor = lista.reduce((s,a,i) => s + qs[i] * (parseFloat(a.fatorK) || 0), 0);
+return {
+qtd: !com.length ? 0 : (iguais ? com[0] : com.reduce((s,q) => s + q, 0)),
+valor: Math.round(valor * 100) / 100,
+fk: lista.reduce((s,a) => s + (parseFloat(a.fatorK) || 0), 0)
+};
+}
+// Atividades de um registro salvo, com a quantidade de cada uma. Registro de
+// antes da quantidade por atividade (ou que perdeu a lista): todas com a
+// QTD PREVISTO do registro, que era o que valia.
+function progRegItens(r){
+if (!r) return [];
+const num = v => Math.max(0, Number(v) || 0);   // gravado e numero, nao texto digitado
+const cods = String(r.atividade_cod || '').split('+').map(c => c.trim()).filter(Boolean);
+const descs = String(r.atividade || '').split(' + ').map(d => d.trim());
+if (progRegTemQtdPorAtiv(r)) {
+return r.atividades.map(a => ({ cod: a.cod, descricao: a.descricao || a.cod, qtd: num(a.qtd_previsto), porAtividade: true }));
+}
+const q = num(r.qtd_previsto);
+return cods.map((c,i) => ({ cod: c, descricao: descs[i] || c, qtd: q, porAtividade: false }));
+}
+// A lista so vale se bate com os codigos do registro: uma tela antiga que
+// trocou a atividade sem conhecer a lista nao pode deixar quantidade errada.
+function progRegTemQtdPorAtiv(r){
+const lista = r && Array.isArray(r.atividades) ? r.atividades : null;
+if (!lista || !lista.length) return false;
+const cods = String(r.atividade_cod || '').split('+').map(c => c.trim()).filter(Boolean);
+return lista.length === cods.length && lista.every((a,i) => a && progNorm(a.cod) === progNorm(cods[i]));
+}
+// "4" ou, com varias atividades, "4 + 300" na ordem das atividades.
+function progRegQtdTexto(r){
+const itens = progRegItens(r);
+if (itens.length > 1 && itens[0].porAtividade) return itens.map(a => progQtdFmt(a.qtd)).join(' + ');
+return progQtdFmt(Number(r && r.qtd_previsto) || 0);
+}
+// Varias atividades com quantidade propria: "ESCAVACAO (4) + IMPLANTACAO (4)".
+// Nos outros casos devolve '' e quem chama usa o texto de sempre.
+function progRegAtivComQtd(r){
+const itens = progRegItens(r);
+if (itens.length > 1 && itens[0].porAtividade && itens.some(a => a.qtd > 0)) {
+return itens.map(a => a.descricao + (a.qtd ? ' (' + progQtdFmt(a.qtd) + ')' : '')).join(' + ');
+}
+return '';
+}
+// Dica da coluna QTD PREV: uma linha por atividade.
+function progRegQtdDica(r){
+const itens = progRegItens(r);
+return (itens.length > 1 && itens[0].porAtividade)
+? itens.map(a => a.descricao + ': ' + progQtdFmt(a.qtd)).join('\n') : '';
+}
 
 function progAtivPickChave(a){ return progNorm(a.cod) + '|' + progNorm(a.descricao); }
 function progAtivPickTem(a){ return PROG_ATIV_SEL.some(s => progAtivPickChave(s) === progAtivPickChave(a)); }
@@ -5037,18 +5125,26 @@ progAtivPickRender();
 progAtivPickValor();
 if (typeof progSemObraSugerir === 'function') progSemObraSugerir();
 }
-// Mostra o valor unitario e, quando ha mais de uma, de onde ele saiu.
+// Mostra o valor previsto e a conta: quantidade x fator K de cada atividade.
 function progAtivPickValor(){
+const t = progAtivQtdTotais(PROG_ATIV_SEL);
+const brl = v => 'R$ ' + v.toLocaleString('pt-BR',{minimumFractionDigits:2, maximumFractionDigits:2});
 const vu = document.getElementById('pf-vunit');
-const fk = PROG_ATIV_SEL.reduce((s,a) => s + (parseFloat(a.fatorK) || 0), 0);
-if(vu) vu.value = fk > 0 ? 'R$ ' + fk.toLocaleString('pt-BR',{minimumFractionDigits:2}) : (PROG_ATIV_SEL.length ? '-' : '');
+if(vu) vu.value = t.fk > 0 ? brl(t.fk) : (PROG_ATIV_SEL.length ? '-' : '');
 const det = document.getElementById('pf-ativ-detalhe');
 if(det){
-det.innerHTML = (PROG_ATIV_SEL.length > 1)
-? 'Fator K somado: ' + PROG_ATIV_SEL.map(a => (parseFloat(a.fatorK)||0).toLocaleString('pt-BR',{minimumFractionDigits:2}) + ' <span style="color:#94a3b8;">(' + progAtivEsc(a.descricao) + ')</span>').join(' + ')
+const varias = PROG_ATIV_SEL.length > 1;
+const partes = PROG_ATIV_SEL.filter(a => progQtdNum(a.qtd) > 0).map(a =>
+progQtdFmt(progQtdNum(a.qtd)) + ' × ' + brl(parseFloat(a.fatorK) || 0) +
+(varias ? ' <span style="color:#94a3b8;">(' + progAtivEsc(a.descricao) + ')</span>' : ''));
+det.innerHTML = partes.length
+? 'Valor previsto: ' + partes.join(' + ') + ' = <b style="color:#276749;">' + brl(t.valor) + '</b>'
 : '';
-det.style.display = (PROG_ATIV_SEL.length > 1) ? 'block' : 'none';
+det.style.display = partes.length ? 'block' : 'none';
 }
+// o QTD PREVISTO escondido acompanha, para quem ainda le o campo
+const qp = document.getElementById('pf-qtd-prev');
+if(qp) qp.value = t.qtd > 0 ? String(t.qtd) : '';
 if(typeof progCalcValores === 'function') progCalcValores();
 }
 function progAtivPickRender(){
@@ -5061,14 +5157,29 @@ if(busca) busca.placeholder = 'Digite para buscar e clique para adicionar...';
 return;
 }
 box.style.display = 'flex';
+// Redesenhar no meio da digitacao (a lista de atividades sincronizou, por
+// exemplo) nao pode tirar o cursor do campo de quantidade.
+const ativo = document.activeElement;
+const foco = (ativo && box.contains(ativo) && ativo.getAttribute('data-qtd') !== null)
+? { i: ativo.getAttribute('data-qtd'), a: ativo.selectionStart, b: ativo.selectionEnd } : null;
 box.innerHTML = PROG_ATIV_SEL.map((a,i) =>
-'<span style="display:inline-flex;align-items:center;gap:5px;background:rgba(126,58,242,0.1);border:1px solid rgba(126,58,242,0.35);border-radius:20px;padding:3px 5px 3px 10px;font-size:0.68rem;font-weight:800;color:#5b21b6;max-width:100%;">' +
-'<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + (i+1) + '. ' + progAtivEsc(a.descricao) + '</span>' +
-'<button type="button" onclick="progAtivPickDel(' + i + ')" title="Retirar esta atividade" style="border:none;background:#7e3af2;color:#fff;width:16px;height:16px;border-radius:50%;font-size:0.62rem;font-weight:900;cursor:pointer;line-height:1;flex-shrink:0;">×</button></span>'
+'<span style="display:inline-flex;align-items:center;gap:6px;background:rgba(126,58,242,0.1);border:1px solid rgba(126,58,242,0.35);border-radius:20px;padding:3px 5px 3px 10px;font-size:0.68rem;font-weight:800;color:#5b21b6;max-width:100%;">' +
+'<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;">' + (i+1) + '. ' + progAtivEsc(a.descricao) + '</span>' +
+'<input type="text" inputmode="decimal" autocomplete="off" data-qtd="' + i + '" value="' + progAtivEsc(a.qtd || '') + '" placeholder="qtd"' +
+' aria-label="Quantidade prevista de ' + progAtivEsc(a.descricao) + '" title="Quantidade prevista"' +
+' oninput="progAtivQtdInput(' + i + ', this)" onkeydown="progAtivQtdTecla(event, ' + i + ')"' +
+' onfocus="progAtivQtdFoco(this, true)" onblur="progAtivQtdFoco(this, false)"' +
+' style="width:62px;flex-shrink:0;padding:2px 6px;border:1px solid rgba(126,58,242,0.45);border-radius:10px;background:#fff;font-family:\'Barlow\',sans-serif;font-size:0.74rem;font-weight:800;color:#1a365d;text-align:center;outline:none;box-sizing:border-box;">' +
+'<button type="button" onclick="progAtivPickDel(' + i + ')" title="Retirar esta atividade" aria-label="Retirar ' + progAtivEsc(a.descricao) + '" style="border:none;background:#7e3af2;color:#fff;width:16px;height:16px;border-radius:50%;font-size:0.62rem;font-weight:900;cursor:pointer;line-height:1;flex-shrink:0;">×</button></span>'
 ).join('');
+if (foco) {
+const el = box.querySelector('input[data-qtd="' + foco.i + '"]');
+if (el) { el.focus(); try { el.setSelectionRange(foco.a, foco.b); } catch(e) {} }
+}
 if(busca) busca.placeholder = PROG_ATIV_SEL.length + (PROG_ATIV_SEL.length === 1 ? ' atividade escolhida' : ' atividades escolhidas') + ' — digite para somar outra...';
 }
 function progAtivPickFiltrar(){
+if(PROG_ATIV_SEM_DD) return;
 const dd = document.getElementById('pf-ativ-dd');
 const q = progNorm(document.getElementById('pf-ativ-busca').value);
 if(!dd || typeof PROG_ATIVIDADES === 'undefined') return;
@@ -5100,11 +5211,48 @@ dd.style.display = 'block';
 function progAtivPickAdd(i){
 const a = PROG_ATIV_ACHADAS[i];
 if(!a) return;
-PROG_ATIV_SEL.push({ cod:a.cod, descricao:a.descricao, fatorK:a.fatorK, tipo:a.tipo });
+PROG_ATIV_SEL.push({ cod:a.cod, descricao:a.descricao, fatorK:a.fatorK, tipo:a.tipo, qtd:'' });
 const busca = document.getElementById('pf-ativ-busca');
-if(busca){ busca.value = ''; busca.focus(); }
+if(busca) busca.value = '';
 progAtivPickAplicar();
+// O cursor vai para a quantidade da atividade que acabou de entrar;
+// Enter ali volta para a busca, para somar outra.
+const dd = document.getElementById('pf-ativ-dd');
+if(dd) dd.style.display = 'none';
+const q = document.querySelector('#pf-ativ-chips input[data-qtd="' + (PROG_ATIV_SEL.length - 1) + '"]');
+if(q) q.focus(); else if(busca) busca.focus();
+}
+// Digitar a quantidade guarda o texto e refaz a conta, sem redesenhar.
+function progAtivQtdInput(i, el){
+const a = PROG_ATIV_SEL[i];
+if(!a || !el) return;
+if(/[^0-9.,]/.test(el.value)) el.value = el.value.replace(/[^0-9.,]/g, '');
+a.qtd = el.value;
+progAtivPickValor();
+}
+// Enter volta para a busca. Letra digitada na quantidade tambem vai para a
+// busca: quem ja estava digitando a proxima atividade nao perde o que digitou.
+function progAtivQtdTecla(ev, i){
+const busca = document.getElementById('pf-ativ-busca');
+if(!busca) return;
+if(ev.key === 'Enter'){
+ev.preventDefault();
+PROG_ATIV_SEM_DD = true;
+try { busca.focus(); } finally { PROG_ATIV_SEM_DD = false; }
+return;
+}
+if(ev.key && ev.key.length === 1 && /\p{L}/u.test(ev.key) && !ev.ctrlKey && !ev.metaKey && !ev.altKey){
+ev.preventDefault();
+busca.focus();
+busca.value += ev.key;
 progAtivPickFiltrar();
+}
+}
+function progAtivQtdFoco(el, on){
+if(!el) return;
+el.style.borderColor = on ? '#7e3af2' : 'rgba(126,58,242,0.45)';
+el.style.boxShadow = on ? '0 0 0 2px rgba(126,58,242,0.25)' : 'none';
+if(on){ const dd = document.getElementById('pf-ativ-dd'); if(dd) dd.style.display = 'none'; }
 }
 function progAtivPickDel(i){
 PROG_ATIV_SEL.splice(i, 1);
@@ -5124,11 +5272,13 @@ if(ev.key === 'Enter'){ ev.preventDefault(); if(PROG_ATIV_ACHADAS.length) progAt
 if(ev.key === 'Escape'){ const dd = document.getElementById('pf-ativ-dd'); if(dd) dd.style.display = 'none'; return; }
 if(ev.key === 'Backspace' && !ev.target.value && PROG_ATIV_SEL.length){ progAtivPickDel(PROG_ATIV_SEL.length - 1); }
 }
-// Recompoe a escolha ao editar um registro salvo.
-function progAtivPickRestaurar(cods, descricoes){
+// Recompoe a escolha ao editar um registro salvo (qtds: quantidade de cada
+// atividade, na mesma ordem dos codigos).
+function progAtivPickRestaurar(cods, descricoes, qtds){
 PROG_ATIV_SEL = [];
 const lista = (cods || '').split('+').map(c => c.trim()).filter(Boolean);
 const descs = (descricoes || '').split(' + ').map(d => d.trim());
+const qs = Array.isArray(qtds) ? qtds : [];
 lista.forEach((c,i) => {
 let a = null;
 if(typeof PROG_ATIVIDADES !== 'undefined'){
@@ -5136,8 +5286,8 @@ a = PROG_ATIVIDADES.find(x => x.cod === c && (!descs[i] || progNorm(x.descricao)
  || PROG_ATIVIDADES.find(x => x.cod === c);
 }
 // atividade que saiu da lista nao pode sumir do registro antigo
-PROG_ATIV_SEL.push(a ? { cod:a.cod, descricao:a.descricao, fatorK:a.fatorK, tipo:a.tipo }
-: { cod:c, descricao:descs[i] || c, fatorK:0, tipo:'' });
+PROG_ATIV_SEL.push(a ? { cod:a.cod, descricao:a.descricao, fatorK:a.fatorK, tipo:a.tipo, qtd:progQtdTxt(qs[i]) }
+: { cod:c, descricao:descs[i] || c, fatorK:0, tipo:'', qtd:progQtdTxt(qs[i]) });
 });
 progAtivPickAplicar();
 }
@@ -5151,6 +5301,9 @@ window.progAtivPickAdd = progAtivPickAdd;
 window.progAtivPickDel = progAtivPickDel;
 window.progAtivPickTecla = progAtivPickTecla;
 window.progAtivPickLimpar = progAtivPickLimpar;
+window.progAtivQtdInput = progAtivQtdInput;
+window.progAtivQtdTecla = progAtivQtdTecla;
+window.progAtivQtdFoco = progAtivQtdFoco;
 
 // O tipo do servico sai da propria lista de atividades, senao um tipo novo
 // criado pelo usuario nao teria opcao correspondente aqui.
@@ -5588,9 +5741,11 @@ if (typeof progAtivPickValor === 'function') progAtivPickValor();
 function progCalcValores() {
 const sel = document.getElementById('pf-atividade').value;
 const fk = sel ? parseFloat(sel.split('|')[2]) || 0 : 0;
-const prev = parseFloat(document.getElementById('pf-qtd-prev').value) || 0;
+// previsto: quantidade de cada atividade x fator K dela
+const t = progAtivQtdTotais(PROG_ATIV_SEL);
+const prev = t.qtd;
 const real = parseFloat(document.getElementById('pf-qtd-real').value) || 0;
-const vprev = fk * prev;
+const vprev = t.valor;
 const vreal = fk * real;
 const status = prev > 0 ? ((real / prev) * 100).toFixed(1) + '%' : '-';
 document.getElementById('pf-vprev').value = vprev > 0 ? 'R$ ' + vprev.toLocaleString('pt-BR',{minimumFractionDigits:2}) : '-';
@@ -5623,15 +5778,21 @@ return;
 }
 const atParts = atSel.split('|');
 const fk = parseFloat(atParts[2]) || 0;
-const prev = parseFloat(document.getElementById('pf-qtd-prev').value) || 0;
+const totAtiv = progAtivQtdTotais(PROG_ATIV_SEL);
+const prev = totAtiv.qtd;
 const real = parseFloat(document.getElementById('pf-qtd-real').value) || 0;
+// quantidade prevista de cada atividade, na ordem de atividade_cod
+const atividades = PROG_ATIV_SEL.map(a => ({
+cod: a.cod, descricao: a.descricao, tipo: a.tipo || '',
+fator_k: parseFloat(a.fatorK) || 0, qtd_previsto: progQtdNum(a.qtd)
+}));
 const qtd_colab = parseInt(document.getElementById('pf-qtd-colab').value) || 0;
 const alojados = document.getElementById('pf-alojados').value;
 const turno = (document.getElementById('pf-turno') || {}).value || 'DIA INTEIRO';
 const nomeObra = document.getElementById('pf-nome-obra').value;
 const municipio = document.getElementById('pf-municipio').value;
 const ar = document.getElementById('pf-ar').value;
-const vprev = fk * prev;
+const vprev = totAtiv.valor;
 const vreal = fk * real;
 const status = prev > 0 ? ((real / prev) * 100) : 0;
 const reg = {
@@ -5639,6 +5800,7 @@ id: progEditIdx!==null ? progRegistros[progEditIdx].id : Date.now().toString(36)
 data, supervisor: sup, programador: prog, encarregado: enc,
 qtd_colab, alojados, turno, pep, nome_obra: nomeObra, municipio, ar_coelba: ar,
 atividade_cod: atParts[0], atividade: atParts[1], tipo, fator_k: fk,
+atividades,
 status: document.getElementById('pf-ocorrencia').value || '',
 qtd_previsto: prev, qtd_realizado: real, status_pct: status,
 valor_unitario: fk, valor_previsto: vprev, valor_realizado: vreal,
@@ -6143,7 +6305,7 @@ tbody.innerHTML = filtered.map((r,i) => `
 <td style="padding:9px 12px;white-space:nowrap;font-size:0.72rem;font-weight:600;">${r.municipio||'-'}</td>
 <td style="padding:9px 12px;font-size:0.71rem;font-weight:600;color:#1a365d;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${r.atividade||''}">${r.atividade||'-'}</td>
 <td style="padding:9px 8px;"><span style="background:${tipoColor[r.tipo]||'#888'}20;color:${tipoColor[r.tipo]||'#888'};font-size:0.62rem;font-weight:800;padding:2px 8px;border-radius:10px;white-space:nowrap;">${r.tipo||'-'}</span></td>
-<td class="_s23">${r.qtd_previsto||0}</td>
+<td class="_s23" style="white-space:nowrap;" title="${progAtivEsc(progRegQtdDica(r))}">${progRegQtdTexto(r)}</td>
 <td class="_s23">${r.qtd_realizado||0}</td>
 <td style="padding:9px 8px;text-align:center;"><span style="background:${statusBg(r.status_pct)};color:${statusColor(r.status_pct)};font-size:0.7rem;font-weight:800;padding:2px 9px;border-radius:10px;white-space:nowrap;">${r.status_pct?.toFixed(1)||0}%</span></td>
 <td style="padding:9px 10px;text-align:right;font-weight:700;color:#276749;white-space:nowrap;">${fmtR(r.valor_previsto)}</td>
@@ -6183,9 +6345,9 @@ if (typeof progSemObraToggle === 'function') progSemObraToggle();
 set('pf-tipo', r.tipo);
 progOnTipoChange();
 setTimeout(() => {
-if (typeof progAtivPickRestaurar === 'function') progAtivPickRestaurar(r.atividade_cod, r.atividade);
-set('pf-qtd-prev', r.qtd_previsto);
 set('pf-qtd-real', r.qtd_realizado);
+// quantidade de cada atividade; registro antigo: a QTD PREVISTO em todas
+if (typeof progAtivPickRestaurar === 'function') progAtivPickRestaurar(r.atividade_cod, r.atividade, progRegItens(r).map(a => a.qtd));
 progCalcValores();
 }, 50);
 }, 50);
@@ -6467,13 +6629,15 @@ let semObra = 0, semCod = 0;
 ordem.forEach(r => {
 const pep = String(r.pep || '').replace(/;/g, '').trim();
 if(!pep || progNorm(pep) === progNorm(PROG_SEM_OBRA_PEP)){ semObra++; return; }
-const cods = String(r.atividade_cod || '').split('+').map(c => c.replace(/;/g, '').trim()).filter(Boolean);
-if(!cods.length){ semCod++; return; }
-const q = Number(r.qtd_previsto) || 0;
-cods.forEach(c => {
-const k = progNorm(pep) + '|' + progNorm(c);
-const it = soma.get(k) || { pep: pep, cod: c, qtd: 0 };
-it.qtd += q;
+// quantidade de cada atividade (registro antigo: a QTD PREVISTO em todas)
+const itens = progRegItens(r)
+.map(a => ({ cod: String(a.cod || '').replace(/;/g, '').trim(), qtd: a.qtd }))
+.filter(a => a.cod);
+if(!itens.length){ semCod++; return; }
+itens.forEach(a => {
+const k = progNorm(pep) + '|' + progNorm(a.cod);
+const it = soma.get(k) || { pep: pep, cod: a.cod, qtd: 0 };
+it.qtd += a.qtd;
 soma.set(k, it);
 });
 });
@@ -6629,7 +6793,9 @@ l.push('*EQUIPE ' + g.encarregado + '*' + (g.colab ? ' · ' + g.colab + ' colabo
 g.itens.forEach(r => {
 l.push('• ' + (r.pep||'') + ' — ' + (r.nome_obra||''));
 l.push('   ' + [r.municipio, r.ar_coelba ? 'AR: ' + r.ar_coelba : ''].filter(Boolean).join(' · '));
-l.push('   ' + [r.atividade, progTurnoCurto(r.turno), (r.qtd_previsto ? 'prev.: ' + r.qtd_previsto : '')].filter(Boolean).join(' · '));
+// varias atividades com quantidade propria: a quantidade vai junto de cada uma
+const ativQtd = progRegAtivComQtd(r);
+l.push('   ' + [ativQtd || r.atividade, progTurnoCurto(r.turno), (!ativQtd && r.qtd_previsto ? 'prev.: ' + progQtdFmt(r.qtd_previsto) : '')].filter(Boolean).join(' · '));
 });
 l.push('');
 });
@@ -7637,6 +7803,10 @@ const prev = zerar ? 0 : (parseFloat(r.qtd_previsto) || 0);
 const real = zerar ? 0 : (parseFloat(r.qtd_realizado) || 0);
 const fk = parseFloat(r.fator_k) || 0;
 const colab = parseInt(document.getElementById('pa2-colab').value) || 0;
+// a quantidade de cada atividade vai junto, numa copia propria; zerada se pedido
+const atividades = Array.isArray(r.atividades)
+? r.atividades.map(a => Object.assign({}, a, zerar ? { qtd_previsto: 0 } : {}))
+: r.atividades;
 
 const novo = Object.assign({}, r, {
 id: Date.now().toString(36) + 'a',
@@ -7644,10 +7814,12 @@ encarregado: enc,
 supervisor: sup,
 turno: turno,
 qtd_colab: colab,
+atividades: atividades,
 qtd_previsto: prev,
 qtd_realizado: real,
 status_pct: prev > 0 ? (real / prev) * 100 : 0,
-valor_previsto: fk * prev,
+// com quantidade por atividade, fator K x QTD nao da o valor: usa o do registro
+valor_previsto: zerar ? 0 : (Number(r.valor_previsto) || fk * prev),
 valor_realizado: fk * real,
 apoio_de: r.encarregado || '',      // fica registrado de quem esta dando apoio
 criado_em: new Date().toISOString()
