@@ -5167,12 +5167,12 @@ function progRegRealDica(r){
 const l = progRegLinhasReal(r);
 return l.length > 1 ? l.map(a => a.descricao + ': ' + progQtdFmt(a.qtd_realizado) + ' de ' + progQtdFmt(a.qtd_previsto)).join('\n') : '';
 }
-// Celula REAL. da lista: abre o lancamento do realizado. Dia que ja chegou e
-// ainda sem nada lancado mostra LANCAR; o resto mostra a quantidade.
+// Celula REAL. da lista: abre o lancamento do realizado. Registro sem nada
+// lancado mostra LANCAR, qualquer que seja a data (a programacao de amanha
+// tambem); o resto mostra a quantidade.
 function progRealCelula(r, idx){
-const hoje = (typeof progHoje === 'function') ? progHoje() : '';
 const fonte = "font-family:'Barlow',sans-serif;cursor:pointer;";
-if (!progRegLancado(r) && r.data && hoje && r.data <= hoje) {
+if (!progRegLancado(r)) {
 return '<button type="button" onclick="progRealAbrir(' + idx + ')" title="Lançar o realizado" style="' + fonte +
 'background:#f8f5ff;border:1px solid #e9d8fd;color:#7e3af2;border-radius:10px;padding:2px 9px;font-size:0.62rem;font-weight:800;letter-spacing:0.3px;">LANÇAR</button>';
 }
@@ -5320,7 +5320,7 @@ PROG_ATIV_SEM_DD = true;
 try { busca.focus(); } finally { PROG_ATIV_SEM_DD = false; }
 return;
 }
-if(ev.key && ev.key.length === 1 && /\p{L}/u.test(ev.key) && !ev.ctrlKey && !ev.metaKey && !ev.altKey){
+if(ev.key && ev.key.length === 1 && /[A-Za-zÀ-ÖØ-öø-ÿ]/.test(ev.key) && !ev.ctrlKey && !ev.metaKey && !ev.altKey){
 ev.preventDefault();
 busca.focus();
 busca.value += ev.key;
